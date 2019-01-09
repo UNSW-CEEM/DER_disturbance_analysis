@@ -1,9 +1,9 @@
 
-process_raw_time_series_data <- function(time_series_data, start_time, end_time){
+process_raw_time_series_data <- function(time_series_data){
+  suppressWarnings(time_series_data <- time_series_data[!is.na(as.numeric(time_series_data$c_id)),])
   processed_time_series_data <- time_series_data %>%
     mutate(ts = ymd_hms(ts,tz = "Etc/UTC")) %>% 
     mutate(ts = with_tz(ts,"Australia/Brisbane"))%>% 
-    filter(ts>=start_time & ts<=end_time) %>%
     mutate(d = ifelse(is.na(d), 5, d)) %>%
     mutate(d = as.numeric(d))%>%
     mutate(c_id = as.numeric(c_id))%>%
@@ -42,8 +42,8 @@ explicit_filtering <- function(master_data_table, sample_rate, regions){
   time_series_data <- filter(time_series_data, s_state %in% regions)
 }
   
-combine_data_tables <- function(time_series_data, circuit_details, site_details, start_time, end_time) {
-  time_series_data <- process_raw_time_series_data(time_series_data, start_time, end_time)
+combine_data_tables <- function(time_series_data, circuit_details, site_details) {
+  time_series_data <- process_raw_time_series_data(time_series_data)
   circuit_details <- process_raw_circuit_details(circuit_details)
   site_details <- process_raw_site_details(site_details)
   time_series_data <- left_join(time_series_data, circuit_details, by="c_id") 
