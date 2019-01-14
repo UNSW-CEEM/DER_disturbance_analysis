@@ -20,11 +20,11 @@ process_raw_circuit_details <- function(circuit_details){
 
 process_raw_site_details <- function(site_details){
   v1 <- aggregate(s_state ~ site_id, data = site_details, first)
-  v2 <- aggregate(pv_installation_year_month ~ site_id, data = site_details, 
-                  first)
-  processed_site_details <- merge(v1, v2, by=c("site_id"))
+  #v2 <- aggregate(pv_installation_year_month ~ site_id, data = site_details, 
+  #                first)
   v2 <- aggregate(dc ~ site_id, data = site_details, sum)
-  processed_site_details <- merge(processed_site_details, v2, by=c("site_id"))
+  processed_site_details <- merge(v1, v2, by=c("site_id"))
+  #processed_site_details <- merge(processed_site_details, v2, by=c("site_id"))
   return(processed_site_details)}
 
 perform_power_calculations <- function(master_data_table){
