@@ -1,6 +1,8 @@
 
 process_raw_time_series_data <- function(time_series_data){
-  suppressWarnings(time_series_data <- time_series_data[!is.na(as.numeric(time_series_data$c_id)),])
+  suppressWarnings(
+    time_series_data <- time_series_data[
+      !is.na(as.numeric(time_series_data$c_id)),])
   processed_time_series_data <- time_series_data %>%
     mutate(ts = ymd_hms(ts,tz = "Etc/UTC")) %>% 
     mutate(ts = with_tz(ts,"Australia/Brisbane"))%>% 
@@ -17,9 +19,12 @@ process_raw_circuit_details <- function(circuit_details){
 }
 
 process_raw_site_details <- function(site_details){
-  v1 <- aggregate( s_state ~ site_id, data = site_details, first)
-  v2 <- aggregate( dc ~ site_id, data = site_details, sum)
+  v1 <- aggregate(s_state ~ site_id, data = site_details, first)
+  v2 <- aggregate(pv_installation_year_month ~ site_id, data = site_details, 
+                  first)
   processed_site_details <- merge(v1, v2, by=c("site_id"))
+  v2 <- aggregate(dc ~ site_id, data = site_details, sum)
+  processed_site_details <- merge(processed_site_details, v2, by=c("site_id"))
   return(processed_site_details)}
 
 perform_power_calculations <- function(master_data_table){
@@ -37,12 +42,29 @@ implicit_filtering <- function(time_series_data){
   return(time_series_data)
 }
 
-explicit_filtering <- function(master_data_table, sample_rate, regions){
-  time_series_data <- filter(time_series_data, d==sample_rate)
-  time_series_data <- filter(time_series_data, s_state %in% regions)
+site_catergorisation <- function(combined_data){
+  combined_data <- combined_data %>%
+    mutate(pv_installation_year_month=
+             ifelse(pv_installation_year_month=="", "2005-01", 
+                    pv_installation_year_month)) %>% 
+    mutate(pv_installation_year_month=
+             ifelse(is.na(pv_installation_year_month), 
+                    "2005-01", pv_installation_year_month)) %>% 
+    mutate(pv_installation_year_month=
+             ifelse(nchar(pv_installation_year_month)==10,
+                    pv_installation_year_month, 
+                    paste0(pv_installation_year_month, "-28"))) %>% 
+    mutate(pv_installation_year_month=
+             ymd(pv_installation_year_month)) %>% 
+    mutate(Standard_Version= 
+             ifelse(pv_installation_year_month<"2015-10-09", "AS4777.3:2005", 
+                    ifelse(pv_installation_year_month>="2016-10-09", 
+                           "AS4777.2:2015", "Transition")))
+  return(combined_data)
 }
   
-combine_data_tables <- function(time_series_data, circuit_details, site_details) {
+combine_data_tables <- function(time_series_data, circuit_details, 
+                                site_details) {
   time_series_data <- process_raw_time_series_data(time_series_data)
   circuit_details <- process_raw_circuit_details(circuit_details)
   site_details <- process_raw_site_details(site_details)
