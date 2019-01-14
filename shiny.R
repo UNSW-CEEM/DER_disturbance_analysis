@@ -129,6 +129,7 @@ server <- function(input,output,session){
     })
   })
 
+  # Create plots when update plots button is clicked.
   observeEvent(input$update_plots, {
     # Filter data based on user selections
     combined_data_f <- filter(v$combined_data, d==duration())
@@ -155,6 +156,7 @@ server <- function(input,output,session){
     }
   })
   
+  # Save data from aggregate pv power plot
   observe({
     volumes <- c("wd"=getwd())
     shinyFileSave(input, "save", roots=volumes, session=session)
