@@ -37,3 +37,4 @@ rsconnect/
 
 # Test data
 test_data/*
+*.feather

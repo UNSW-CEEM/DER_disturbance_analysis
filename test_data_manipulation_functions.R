@@ -29,16 +29,19 @@ test_that("Test the preprocessing of the site_details data",{
   site_id <- c(101, 101, 300)
   s_state <- c("NSW", "NSW", "SA")
   dc <- c(60, 60, 10)
-  #pv_installation_year_month <- c("2017-01", "2017-10", "2018-01")
-  test_site_details <- data.frame(site_id, s_state, dc,
+  ac <- c(59, 60, 8)
+  pv_installation_year_month <- c("2017-01", "2017-10", "2018-01")
+  test_site_details <- data.frame(site_id, s_state, dc, ac,
+                                  pv_installation_year_month,
                                   stringsAsFactors = FALSE)
   # Test output data
   site_id <- c(101, 300)
   s_state <- c("NSW", "SA")
-  dc <- c(120, 10)
-  #pv_installation_year_month <- c("2017-01", "2018-01")
-  expected_answer <- data.frame(site_id, s_state, 
-                                dc, stringsAsFactors = FALSE)
+  sum_dc <- c(120, 10)
+  first_ac <- c(59, 8)
+  pv_installation_year_month <- c("2017-01", "2018-01")
+  expected_answer <- data.frame(site_id, s_state, pv_installation_year_month,
+                                sum_dc, first_ac, stringsAsFactors = FALSE)
   # Call processing function
   processed_site_details = process_raw_site_details(test_site_details)
   # Test the answer matches the expected answer
@@ -66,22 +69,52 @@ test_that("Test the power calculations",{
   expect_equal(test_combined_data, expected_answer, tolerance=0.0001)
 }) 
 
-test_that("Test the impilict filtering function",{
+test_that("Test the circuit details filtering function",{
   # Test input data
   con_type <- c("ac_load_net", "load_air_conditioner", "ac_load", 
                 "load_hot_water", "pv_inverter", "pv_inverter_net",
-                "pv_site", "pv_site_net", "ac_load_net", "load_air_conditioner", 
-                "ac_load", "load_hot_water", "pv_inverter", "pv_inverter_net",
                 "pv_site", "pv_site_net")
-  dc <- c(1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 100001, 100001, 
-          100001, 100001, 100001, 100001, 100001, 100001)
-  test_combined_data <- data.frame(con_type, dc, stringsAsFactors = FALSE)
+  id <- c(1001, 1002, 1003, 1000, 1000, 1001, 1002, 1003)
+  test_combined_data <- data.frame(con_type, id, stringsAsFactors = FALSE)
   # Test output data
   con_type <- c("pv_inverter_net", "pv_site", "pv_site_net")
-  dc <- c(1000, 1000, 1000)
-  expected_answer <- data.frame(con_type, dc, stringsAsFactors = FALSE)
+  id <- c(1001, 1002, 1003)
+  expected_answer <- data.frame(con_type, id, stringsAsFactors = FALSE)
   # Call processing function
-  test_combined_data = implicit_filtering(test_combined_data)
+  test_combined_data = process_raw_circuit_details(test_combined_data)
   # Test the answer matches the expected answer
   expect_equal(test_combined_data, expected_answer, tolerance=0.0001)
+}) 
+
+test_that("Test the standard catergorisation function",{
+  # Test input data
+  site_id <- c(101, 50, 10002, 89, 567, 111, 1)
+  s_state <- c("NSW", "NSW", "SA", "VIC", "QLD", "SA", "TAS")
+  sum_dc <- c(60, 60, 10, 60, 60, 10, 11)
+  first_ac <- c(60, 60, 10, 60, 60, 10, 11)
+  pv_installation_year_month <- c("", NA, "2015-01", "2015-10-09", "2015-11",
+                                  "2016-10-09", "2017-10")
+  test_site_details <- data.frame(site_id, s_state, sum_dc, first_ac,
+                                  pv_installation_year_month,
+                                  stringsAsFactors = FALSE)
+  # Test output data
+  site_id <- c(101, 50, 10002, 89, 567, 111, 1)
+  s_state <- c("NSW", "NSW", "SA", "VIC", "QLD", "SA", "TAS")
+  sum_dc <- c(60, 60, 10, 60, 60, 10, 11)
+  first_ac <- c(60, 60, 10, 60, 60, 10, 11)
+  pv_installation_year_month <- c(ymd("2005-01-28"), ymd("2005-01-28"), 
+                                  ymd("2015-01-28"), ymd("2015-10-09"),
+                                  ymd("2015-11-28"), ymd("2016-10-09"), 
+                                  ymd("2017-10-28"))
+  Standard_Version <- c("AS4777.3:2005", "AS4777.3:2005", 
+                        "AS4777.3:2005", "Transition",
+                        "Transition", "AS4777.2:2015", 
+                        "AS4777.2:2015")
+  expected_answer <- data.frame(site_id, s_state, sum_dc, first_ac,
+                                pv_installation_year_month, Standard_Version,
+                                stringsAsFactors = FALSE)
+  # Call processing function
+  processed_site_details = site_catergorisation(test_site_details)
+  # Test the answer matches the expected answer
+  expect_identical(processed_site_details, expected_answer)
 }) 
