@@ -16,6 +16,26 @@ library(stringr)
 library(fasttime)
 source("data_manipulation_functions.R")
 source("filter_and_aggregate.R")
+source("upscale_function.R")
+
+upscale <- function(performace_data, install_capacity){
+  performace_data <- group_by(performace_data, ts, s_state, Standard_Version, 
+                              Grouping)  
+  performace_data <- summarise(performace_data , power_kW=sum(power_kW),
+                               sample_capacity=sum(first_ac))
+  performace_data <- as.data.frame(performace_data)
+  performace_data <- performace_data %>%
+    mutate(date=as.Date(ts))
+  install_capacity <- filter(install_capacity, date < max(performace_data$date))
+  install_capacity <- group_by(install_capacity, Standard_Version, Grouping,  s_state)
+  install_capacity <- summarise(install_capacity, standard_capacity=max(standard_capacity))
+  install_capacity <- as.data.frame(install_capacity)
+  performance_and_install <- inner_join(performace_data, install_capacity,
+                     by=c("Grouping", "Standard_Version", "s_state"))
+  performance_and_install <- performance_and_install %>%
+    mutate(power_kW=(power_kW/sample_capacity)*standard_capacity)
+  return(performance_and_install)
+}
 
 ui <- fluidPage(
   #Title of Page
@@ -46,6 +66,8 @@ ui <- fluidPage(
       materialSwitch("Std_Agg_Indiv", label=strong("AS47777 Aggregated:"), 
                      status="primary"),
       uiOutput("StdVersion"),
+      materialSwitch(inputId="raw_upscale", label=strong("Upscaled Data"), 
+                     status="primary", right=FALSE),
       uiOutput("update_plots")
       ),
     #Output
@@ -59,6 +81,7 @@ ui <- fluidPage(
 )
 server <- function(input,output,session){
   hide("Std_Agg_Indiv")
+  hide("raw_upscale")
   # Get input from GUI
   time_series_file <- reactive({input$time_series})
   circuit_details_file <- reactive({input$circuit_details})
@@ -66,6 +89,7 @@ server <- function(input,output,session){
   region <- reactive({input$region})
   duration <- reactive({input$duration})
   standards <- reactive({input$StdVersion})
+  raw_upscale <- reactive({input$raw_upscale})
   start_time <- reactive({
     date_as_str <- as.character(input$date[1])
     time_as_str <- substr(input$time_start, 12,19)
@@ -85,7 +109,8 @@ server <- function(input,output,session){
   # Store the main data table in a reactive value so it is accessable outside 
   # the observe event that creates it.
   v <- reactiveValues(combined_data = data.frame(),
-                      agg_power = data.frame())
+                      agg_power = data.frame(),
+                      install_data = data.frame())
   
   # This is the event that runs when the "Load data" button on the GUI is
   # Clicked. 
@@ -143,6 +168,7 @@ server <- function(input,output,session){
       v$combined_data <- combine_data_tables(time_series_data, circuit_details, 
                                              site_details)
       removeNotification(id)
+
       print(as.numeric(Sys.time()) - t1, digits=15)
       # Filtering option widgets are rendered after the data is loaded, this is 
       # because they are only usable once there is data to filter. Additionally
@@ -182,7 +208,9 @@ server <- function(input,output,session){
                                           "AS4777.2:2015"),
                              justified=TRUE, status="primary", individual=TRUE,
                              checkIcon=list(yes=icon("ok", lib="glyphicon"), 
-                                            no=icon("remove", lib="glyphicon")))})
+                                            no=icon("remove", lib="glyphicon")))
+        })
+      show("raw_upscale")
       output$update_plots <- renderUI({
         actionButton("update_plots", "Update plots")
         })
@@ -194,6 +222,12 @@ server <- function(input,output,session){
       removeNotification(id)
     })
     print(as.numeric(Sys.time()) - t0, digits=15)
+    
+    intall_data_file <- "cumulative_capacity_and_number.csv"
+    install_data <- read.csv(file=intall_data_file, header=TRUE, 
+                             stringsAsFactors = FALSE)
+    v$install_data <- process_install_data(install_data)
+    
   })
 
   # Create plots when update plots button is clicked.
@@ -205,8 +239,13 @@ server <- function(input,output,session){
                                 state=region(), standards=standards())
     combined_data_f <- filter(combined_data_f, 
                               ts>=start_time() & ts<= end_time())
+    if(raw_upscale()){
+      x<-1
+      combined_data_f <- upscale(combined_data_f, v$install_data)
+    }
+    
     # Check that the filter does not result in an empty dataframe.
-    if (length(combined_data_f$ts) > 0){
+    if(length(combined_data_f$ts) > 0){
       # For first plot just aggregate filtered data.
       v$agg_power <- vector_groupby(combined_data_f, 
                                     agg_on_standard=agg_on_standard())

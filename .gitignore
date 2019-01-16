@@ -39,3 +39,4 @@ rsconnect/
 test_data/*
 *.feather
 *.pdf
+cumulative_capacity_and_number.csv

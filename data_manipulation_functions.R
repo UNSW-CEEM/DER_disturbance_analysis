@@ -66,6 +66,32 @@ perform_power_calculations <- function(master_data_table){
   return(master_data_table)
 }
 
+process_install_data <- function(install_data){
+  install_data <- install_data %>% 
+    mutate(pv_installation_year_month=index) %>%
+    filter(Grouping %in% c(5, 4)) %>%
+    mutate(Grouping=ifelse(Grouping==5, "30-100kW" ,"<30 kW"))
+  install_data <-site_catergorisation(install_data)
+  install_data <- setnames(install_data, c("pv_installation_year_month", "State"),
+                   c("date", "s_state"))
+  installed_start_standard <- group_by(install_data, Standard_Version, Grouping, 
+                                      s_state)
+  installed_start_standard <- summarise(installed_start_standard , 
+                                        initial_cap=min(Capacity))
+  installed_start_standard <- as.data.frame(installed_start_standard)
+  install_data <- inner_join(install_data, installed_start_standard, 
+                             by=c("Standard_Version", "Grouping", "s_state"))
+  install_data <- install_data %>% 
+    mutate(standard_capacity=Capacity-initial_cap)
+  return(install_data)
+}
+
+size_grouping <- function(site_details){
+  site_details <- site_details %>%
+    mutate(Grouping=ifelse(first_ac>=30, "30-100kW" ,"<30 kW"))
+  return(site_details)
+}
+
 site_catergorisation <- function(combined_data){
   combined_data <- combined_data %>%
     mutate(pv_installation_year_month=
@@ -101,6 +127,7 @@ combine_data_tables <- function(time_series_data, circuit_details,
   print(as.numeric(Sys.time()) - t0, digits=15)
   t0 <- as.numeric(Sys.time())
   site_details <- site_catergorisation(site_details)
+  site_details <- size_grouping(site_details)
   print("site_catergorisation")
   print(as.numeric(Sys.time()) - t0, digits=15)
   t0 <- as.numeric(Sys.time())
