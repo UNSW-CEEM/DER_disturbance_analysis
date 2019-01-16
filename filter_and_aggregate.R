@@ -1,6 +1,7 @@
 
-vector_filter <- function(data, duration, state){
-  column_value_pairs <- list(list('d', duration), list('s_state', state))
+vector_filter <- function(data, duration, state, standards){
+  column_value_pairs <- list(list('d', duration), list('s_state', state),
+                             list('Standard_Version', standards))
   for (column_value_pair in column_value_pairs) {
     data <- eval(parse(text = paste("filter(data,", column_value_pair[[1]], 
                                     "%in% column_value_pair[[2]] )"))) 

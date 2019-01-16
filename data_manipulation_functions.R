@@ -44,6 +44,10 @@ process_raw_circuit_details <- function(circuit_details){
 }
 
 process_raw_site_details <- function(site_details){
+  if("pv_install_date" %in% colnames(site_details)){
+    data <- setnames(site_details, c("pv_install_date"),
+                     c("pv_installation_year_month"))
+  }
   site_details <- site_details %>% 
     group_by(site_id)
   processed_site_details <- site_details %>%

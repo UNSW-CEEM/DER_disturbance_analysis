@@ -25,15 +25,15 @@ ui <- fluidPage(
   sidebarLayout(
     sidebarPanel(
       textInput("time_series", "Time series file", 
-                value="test_data/2018-08-25 aemo data/2018-08-25_sa_qld_fault_aemo.feather"),
+                value="C:/Users/user/Documents/GitHub/DER_disturbance_analysis/test_data/2018-08-25 raw inputs/2018-08-25_sa_qld_naomi.feather"),
       shinyFilesButton("choose_ts", "Choose File", 
                       "Select timeseries data file ...", multiple=FALSE),
       textInput("circuit_details", "Circuit details file", 
-                value="data/example/circuit_details.csv"),
+                value="C:/Users/user/Documents/GitHub/DER_disturbance_analysis/test_data/2018-08-25 raw inputs/circuit_details.csv"),
       shinyFilesButton("choose_c", "Choose File", 
                        "Select circuit details data file ...", multiple=FALSE),
       textInput("site_details", "Site details file", 
-                value="data/example/site_details.csv"),
+                value="C:/Users/user/Documents/GitHub/DER_disturbance_analysis/test_data/2018-08-25 raw inputs/site_details.feather"),
       shinyFilesButton("choose_site", "Choose File", 
                        "Select site details data file ...", multiple=FALSE),
       br(),
@@ -45,6 +45,7 @@ ui <- fluidPage(
       uiOutput("duration"),
       materialSwitch("Std_Agg_Indiv", label=strong("AS47777 Aggregated:"), 
                      status="primary"),
+      uiOutput("StdVersion"),
       uiOutput("update_plots")
       ),
     #Output
@@ -64,6 +65,7 @@ server <- function(input,output,session){
   site_details_file <- reactive({input$site_details})
   region <- reactive({input$region})
   duration <- reactive({input$duration})
+  standards <- reactive({input$StdVersion})
   start_time <- reactive({
     date_as_str <- as.character(input$date[1])
     time_as_str <- substr(input$time_start, 12,19)
@@ -128,7 +130,7 @@ server <- function(input,output,session){
         removeNotification(id)
         id <- showNotification("Formatting site details and 
                                 creating feather cache file", duration=1000)
-        site_details <- site_details <- process_raw_site_details(site_details)
+        site_details <- process_raw_site_details(site_details)
         file_no_type = str_sub(site_details_file(), end=-4)
         file_type_feather = paste(file_no_type, "feather", sep="")
         write_feather(site_details, file_type_feather)
@@ -173,6 +175,14 @@ server <- function(input,output,session){
                      inline = TRUE)
         })
       show("Std_Agg_Indiv")
+      output$StdVersion <- renderUI({
+        checkboxGroupButtons(inputId="StdVersion", 
+                             label=strong("AS47777 Version:"),
+                             choices=list("AS4777.3:2005", "Transition", 
+                                          "AS4777.2:2015"),
+                             justified=TRUE, status="primary", individual=TRUE,
+                             checkIcon=list(yes=icon("ok", lib="glyphicon"), 
+                                            no=icon("remove", lib="glyphicon")))})
       output$update_plots <- renderUI({
         actionButton("update_plots", "Update plots")
         })
@@ -192,7 +202,7 @@ server <- function(input,output,session){
     # Filter data based on user selections
     #combined_data_f <- filter(v$combined_data, d==duration())
     combined_data_f <- vector_filter(v$combined_data, duration=duration(), 
-                                state=region())
+                                state=region(), standards=standards())
     combined_data_f <- filter(combined_data_f, 
                               ts>=start_time() & ts<= end_time())
     # Check that the filter does not result in an empty dataframe.
