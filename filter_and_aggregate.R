@@ -15,11 +15,10 @@ vector_groupby <- function(data, agg_on_standard){
     data <- group_by(data, ts, s_state, series)
   } else {
     data <- data %>% mutate(series=Standard_Version)
-    data <- group_by(data, ts, s_state, Standard_Version, series)  
-    }
+    data <- group_by(data, ts, s_state, Standard_Version, series)
+  }
   data <- summarise(data , Power_kW=sum(power_kW))
-  data <- setnames(data, c("ts", "Power_kW"), 
-                   c("Time", "Power_kW"))
+  data <- setnames(data, c("ts", "Power_kW"), c("Time", "Power_kW"))
   data <- as.data.frame(data)
   return(data)
 }

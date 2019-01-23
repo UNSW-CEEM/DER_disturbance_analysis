@@ -18,42 +18,23 @@ source("data_manipulation_functions.R")
 source("filter_and_aggregate.R")
 source("upscale_function.R")
 
-upscale <- function(performace_data, install_capacity){
-  performace_data <- group_by(performace_data, ts, s_state, Standard_Version, 
-                              Grouping)  
-  performace_data <- summarise(performace_data , power_kW=sum(power_kW),
-                               sample_capacity=sum(first_ac))
-  performace_data <- as.data.frame(performace_data)
-  performace_data <- performace_data %>%
-    mutate(date=as.Date(ts))
-  install_capacity <- filter(install_capacity, date < max(performace_data$date))
-  install_capacity <- group_by(install_capacity, Standard_Version, Grouping,  s_state)
-  install_capacity <- summarise(install_capacity, standard_capacity=max(standard_capacity))
-  install_capacity <- as.data.frame(install_capacity)
-  performance_and_install <- inner_join(performace_data, install_capacity,
-                     by=c("Grouping", "Standard_Version", "s_state"))
-  performance_and_install <- performance_and_install %>%
-    mutate(power_kW=(power_kW/sample_capacity)*standard_capacity)
-  return(performance_and_install)
-}
-
 ui <- fluidPage(
-  #Title of Page
+  # Allows for the use of notifications.
   useShinyjs(),
   titlePanel("PV System Disturbance Analysis"),
-  #Input Bar
+  # Input Bar
   sidebarLayout(
     sidebarPanel(
       textInput("time_series", "Time series file", 
-                value="C:/Users/user/Documents/GitHub/DER_disturbance_analysis/test_data/2018-08-25 raw inputs/2018-08-25_sa_qld_naomi.feather"),
+                value="C:/Users/user/Documents/GitHub/DER_disturbance_analysis/test_data/2018-08-25 pre-cleaned inputs/2018-08-25_sa_qld_naomi.feather"),
       shinyFilesButton("choose_ts", "Choose File", 
                       "Select timeseries data file ...", multiple=FALSE),
       textInput("circuit_details", "Circuit details file", 
-                value="C:/Users/user/Documents/GitHub/DER_disturbance_analysis/test_data/2018-08-25 raw inputs/circuit_details.csv"),
+                value="C:/Users/user/Documents/GitHub/DER_disturbance_analysis/test_data/2018-08-25 pre-cleaned inputs/circuit_details_TB_V4.csv"),
       shinyFilesButton("choose_c", "Choose File", 
                        "Select circuit details data file ...", multiple=FALSE),
       textInput("site_details", "Site details file", 
-                value="C:/Users/user/Documents/GitHub/DER_disturbance_analysis/test_data/2018-08-25 raw inputs/site_details.feather"),
+                value="C:/Users/user/Documents/GitHub/DER_disturbance_analysis/test_data/2018-08-25 pre-cleaned inputs/site_details_multiples_summarised_NS_v2_changed_ac_back.csv"),
       shinyFilesButton("choose_site", "Choose File", 
                        "Select site details data file ...", multiple=FALSE),
       br(),
@@ -80,6 +61,7 @@ ui <- fluidPage(
   useShinyalert()
 )
 server <- function(input,output,session){
+  # Hide these inputs by default, they are shown once data is loaded.
   hide("Std_Agg_Indiv")
   hide("raw_upscale")
   # Get input from GUI
@@ -105,7 +87,6 @@ server <- function(input,output,session){
     end_date_time
   })
   agg_on_standard <- reactive({input$Std_Agg_Indiv})
-
   # Store the main data table in a reactive value so it is accessable outside 
   # the observe event that creates it.
   v <- reactiveValues(combined_data = data.frame(),
@@ -119,11 +100,11 @@ server <- function(input,output,session){
     # an error or warning during the data table combing process. The "tryCatch"
     # function catches these, aborts the loading process and reports the error 
     # to the users. Importantly this prevent the app from crashing.
-    t0 <- as.numeric(Sys.time())
-    print(tracingState())
     result = tryCatch({
-      # Load data from CSVs.
+      # Load data from storage.
       if (str_sub(time_series_file(), start=-7)=="feather"){
+        # If a feather file is used it is assumed the data is pre-processed.
+        # Hence the data is not passed to the raw data processor.
         id <- showNotification("Loading timeseries data from feather", duration=1000)
         time_series_data <- read_feather(time_series_file())
         removeNotification(id)
@@ -134,17 +115,24 @@ server <- function(input,output,session){
         removeNotification(id)
         id <- showNotification("Formatting timeseries data and 
                                 creating feather cache file", duration=1000)
+        # Data from CSV is assumed to need processing.
         time_series_data <- process_raw_time_series_data(time_series_data)
+        # Automatically create a cache of the processed data as a feather file.
+        # Allows for much faster data loading for subsequent anaylsis.
         file_no_type = str_sub(time_series_file(), end=-4)
         file_type_feather = paste(file_no_type, "feather", sep="")
         write_feather(time_series_data, file_type_feather)
         removeNotification(id)
       }
+      # The circuit details file requires no processing and is small so always 
+      # load from CSV.
       id <- showNotification("Loading circuit details from csv", duration=1000)
       circuit_details <- read.csv(file=circuit_details_file(), header=TRUE, 
                                   stringsAsFactors = FALSE)
       removeNotification(id)
       if (str_sub(site_details_file(), start=-7)=="feather"){
+        # If a feather file is used it is assumed the data is pre-processed.
+        # Hence the data is not passed to the raw data processor.
         id <- showNotification("Loading site details from csv", duration=1000)
         site_details <- read_feather(site_details_file())
         removeNotification(id)
@@ -155,21 +143,28 @@ server <- function(input,output,session){
         removeNotification(id)
         id <- showNotification("Formatting site details and 
                                 creating feather cache file", duration=1000)
+        # Data from CSV is assumed to need processing.
         site_details <- process_raw_site_details(site_details)
+        # Automatically create a cache of the processed data as a feather file.
+        # Allows for much faster data loading for subsequent anaylsis.
         file_no_type = str_sub(site_details_file(), end=-4)
         file_type_feather = paste(file_no_type, "feather", sep="")
         write_feather(site_details, file_type_feather)
         removeNotification(id)
       }
+      
+      # Load in the install data from CSV.
+      intall_data_file <- "cumulative_capacity_and_number_20190121.csv"
+      install_data <- read.csv(file=intall_data_file, header=TRUE, 
+                               stringsAsFactors = FALSE)
+      v$install_data <- process_install_data(install_data)
 
       # Perform data, processing and combine data table into a single data frame
-      t1 <- as.numeric(Sys.time())
       id <- showNotification("Combining data tables", duration=1000)
       v$combined_data <- combine_data_tables(time_series_data, circuit_details, 
                                              site_details)
       removeNotification(id)
-
-      print(as.numeric(Sys.time()) - t1, digits=15)
+      
       # Filtering option widgets are rendered after the data is loaded, this is 
       # because they are only usable once there is data to filter. Additionally
       # The data loaded can then be used to create the appropraite options for 
@@ -221,13 +216,6 @@ server <- function(input,output,session){
     }, finally = {
       removeNotification(id)
     })
-    print(as.numeric(Sys.time()) - t0, digits=15)
-    
-    intall_data_file <- "cumulative_capacity_and_number.csv"
-    install_data <- read.csv(file=intall_data_file, header=TRUE, 
-                             stringsAsFactors = FALSE)
-    v$install_data <- process_install_data(install_data)
-    
   })
 
   # Create plots when update plots button is clicked.
@@ -240,7 +228,6 @@ server <- function(input,output,session){
     combined_data_f <- filter(combined_data_f, 
                               ts>=start_time() & ts<= end_time())
     if(raw_upscale()){
-      x<-1
       combined_data_f <- upscale(combined_data_f, v$install_data)
     }
     
@@ -276,6 +263,7 @@ server <- function(input,output,session){
     }
   })
   
+  # Time series file selection pop up.
   observe({
     volumes <- c(dr="C:\\")
     shinyFileChoose(input, "choose_ts", roots=volumes, session=session)
@@ -285,6 +273,7 @@ server <- function(input,output,session){
     }
   })
   
+  # Circuit details file selection pop up.
   observe({
     volumes <- c(dr="C:\\")
     shinyFileChoose(input, "choose_c", roots=volumes, session=session)
@@ -294,6 +283,7 @@ server <- function(input,output,session){
     }
   })
   
+  # Site details file selection pop up.
   observe({
     volumes <- c(dr="C:\\")
     shinyFileChoose(input, "choose_site", roots=volumes, session=session)
