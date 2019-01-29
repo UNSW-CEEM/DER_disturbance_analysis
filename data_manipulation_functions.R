@@ -50,7 +50,6 @@ process_raw_site_details <- function(site_details){
               pv_installation_year_month=first(pv_installation_year_month),
               sum_ac=sum(ac), first_ac=first(ac))
   processed_site_details <- as.data.frame(processed_site_details)
-  processed_site_details <- filter(processed_site_details, sum_ac<=100)
   return(processed_site_details)}
 
 perform_power_calculations <- function(master_data_table){

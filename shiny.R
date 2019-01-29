@@ -14,49 +14,73 @@ library(shinyFiles)
 library(shinyjs)
 library(stringr)
 library(fasttime)
+library(DT)
 source("data_manipulation_functions.R")
 source("filter_and_aggregate.R")
 source("upscale_function.R")
+source("data_cleaning_functions.R")
 
 ui <- fluidPage(
   # Allows for the use of notifications.
   useShinyjs(),
   titlePanel("PV System Disturbance Analysis"),
   # Input Bar
-  sidebarLayout(
-    sidebarPanel(
-      textInput("time_series", "Time series file", 
-                value="C:/Users/user/Documents/GitHub/DER_disturbance_analysis/test_data/2018-08-25 pre-cleaned inputs/2018-08-25_sa_qld_naomi.feather"),
-      shinyFilesButton("choose_ts", "Choose File", 
-                      "Select timeseries data file ...", multiple=FALSE),
-      textInput("circuit_details", "Circuit details file", 
-                value="C:/Users/user/Documents/GitHub/DER_disturbance_analysis/test_data/2018-08-25 pre-cleaned inputs/circuit_details_TB_V4.csv"),
-      shinyFilesButton("choose_c", "Choose File", 
-                       "Select circuit details data file ...", multiple=FALSE),
-      textInput("site_details", "Site details file", 
-                value="C:/Users/user/Documents/GitHub/DER_disturbance_analysis/test_data/2018-08-25 pre-cleaned inputs/site_details_multiples_summarised_NS_v2_changed_ac_back.csv"),
-      shinyFilesButton("choose_site", "Choose File", 
-                       "Select site details data file ...", multiple=FALSE),
-      br(),
-      actionButton("load_data", "Load data"),
-      uiOutput("dateWidget"),
-      uiOutput("time_start"),
-      uiOutput("time_end"),
-      uiOutput("region"),
-      uiOutput("duration"),
-      materialSwitch("Std_Agg_Indiv", label=strong("AS47777 Aggregated:"), 
-                     status="primary"),
-      uiOutput("StdVersion"),
-      materialSwitch(inputId="raw_upscale", label=strong("Upscaled Data"), 
-                     status="primary", right=FALSE),
-      uiOutput("update_plots")
-      ),
-    #Output
-    mainPanel(
-      plotlyOutput(outputId = "PlotlyTest"),
-      uiOutput("save_agg_power")
+  tabsetPanel(
+    tabPanel("Main",fluid=TRUE,
+      sidebarLayout(
+        sidebarPanel(
+          textInput("time_series", "Time series file", 
+                    value="C:/Users/user/Documents/GitHub/DER_disturbance_analysis/test_data/2018-08-25 raw inputs/2018-08-25_sa_qld_naomi.feather"
+          ),
+          shinyFilesButton("choose_ts", "Choose File", 
+                      "Select timeseries data file ...", multiple=FALSE
+          ),
+          textInput("circuit_details", "Circuit details file", 
+                    value="C:/Users/user/Documents/GitHub/DER_disturbance_analysis/test_data/2018-08-25 pre-cleaned inputs/circuit_details_TB_V4_filtered.csv"
+          ),
+          shinyFilesButton("choose_c", "Choose File", 
+                           "Select circuit details data file ...", multiple=FALSE
+          ),
+          textInput("site_details", "Site details file", 
+                    value="C:/Users/user/Documents/GitHub/DER_disturbance_analysis/test_data/2018-08-25 raw inputs/site_details.csv"
+          ),
+          shinyFilesButton("choose_site", "Choose File", 
+                           "Select site details data file ...", multiple=FALSE
+          ),
+          br(),
+          actionButton("load_data", "Load data"),
+          uiOutput("dateWidget"),
+          uiOutput("time_start"),
+          uiOutput("time_end"),
+          uiOutput("region"),
+          uiOutput("duration"),
+          materialSwitch("Std_Agg_Indiv", label=strong("AS47777 Aggregated:"), 
+                         status="primary"),
+          uiOutput("StdVersion"),
+          materialSwitch(inputId="raw_upscale", label=strong("Upscaled Data"), 
+                         status="primary", right=FALSE),
+          uiOutput("update_plots")
+        ),
+        #Output
+        mainPanel(
+          plotlyOutput(outputId="PlotlyTest"),
+          uiOutput("save_agg_power")
+        )
+      )
+    ),
+    tabPanel("Data Cleaning", fluid=TRUE, 
+      sidebarLayout(
+        sidebarPanel(
+          actionButton("run_clean", "Run Clean"),
+          actionButton("update_site_view", "Update Site View"),
+          actionButton("save_cleaned_data", "Save cleaned data")
+        ), 
+        mainPanel(
+          plotlyOutput("site_plot"),
+          DTOutput('site_details_editor')
+        )
+      )
     )
-    
   ),
   useShinyalert()
 )
@@ -64,6 +88,7 @@ server <- function(input,output,session){
   # Hide these inputs by default, they are shown once data is loaded.
   hide("Std_Agg_Indiv")
   hide("raw_upscale")
+  proxy_site_details_editor = dataTableProxy('site_details_editor')
   # Get input from GUI
   time_series_file <- reactive({input$time_series})
   circuit_details_file <- reactive({input$circuit_details})
@@ -90,8 +115,14 @@ server <- function(input,output,session){
   # Store the main data table in a reactive value so it is accessable outside 
   # the observe event that creates it.
   v <- reactiveValues(combined_data = data.frame(),
+                      combined_data_no_ac_filter = data.frame(),
                       agg_power = data.frame(),
-                      install_data = data.frame())
+                      install_data = data.frame(),
+                      site_details = data.frame(),
+                      circuit_details = data.frame(),
+                      site_details_raw = data.frame(),
+                      site_details_cleaned = data.frame()
+                      )
   
   # This is the event that runs when the "Load data" button on the GUI is
   # Clicked. 
@@ -106,7 +137,7 @@ server <- function(input,output,session){
         # If a feather file is used it is assumed the data is pre-processed.
         # Hence the data is not passed to the raw data processor.
         id <- showNotification("Loading timeseries data from feather", duration=1000)
-        time_series_data <- read_feather(time_series_file())
+        v$time_series_data <- read_feather(time_series_file())
         removeNotification(id)
       }else{
         id <- showNotification("Loading timeseries data from csv", duration=1000)
@@ -116,7 +147,7 @@ server <- function(input,output,session){
         id <- showNotification("Formatting timeseries data and 
                                 creating feather cache file", duration=1000)
         # Data from CSV is assumed to need processing.
-        time_series_data <- process_raw_time_series_data(time_series_data)
+        v$time_series_data <- process_raw_time_series_data(time_series_data)
         # Automatically create a cache of the processed data as a feather file.
         # Allows for much faster data loading for subsequent anaylsis.
         file_no_type = str_sub(time_series_file(), end=-4)
@@ -127,29 +158,29 @@ server <- function(input,output,session){
       # The circuit details file requires no processing and is small so always 
       # load from CSV.
       id <- showNotification("Loading circuit details from csv", duration=1000)
-      circuit_details <- read.csv(file=circuit_details_file(), header=TRUE, 
+      v$circuit_details <- read.csv(file=circuit_details_file(), header=TRUE, 
                                   stringsAsFactors = FALSE)
       removeNotification(id)
       if (str_sub(site_details_file(), start=-7)=="feather"){
         # If a feather file is used it is assumed the data is pre-processed.
         # Hence the data is not passed to the raw data processor.
         id <- showNotification("Loading site details from csv", duration=1000)
-        site_details <- read_feather(site_details_file())
+        v$site_details <- read_feather(site_details_file())
         removeNotification(id)
       }else{
         id <- showNotification("Loading site details from csv", duration=1000)
-        site_details <- read.csv(file=site_details_file(), header=TRUE, 
+        v$site_details_raw <- read.csv(file=site_details_file(), header=TRUE, 
                                  stringsAsFactors = FALSE)
         removeNotification(id)
         id <- showNotification("Formatting site details and 
                                 creating feather cache file", duration=1000)
         # Data from CSV is assumed to need processing.
-        site_details <- process_raw_site_details(site_details)
+        v$site_details <- process_raw_site_details(v$site_details_raw)
         # Automatically create a cache of the processed data as a feather file.
         # Allows for much faster data loading for subsequent anaylsis.
         file_no_type = str_sub(site_details_file(), end=-4)
         file_type_feather = paste(file_no_type, "feather", sep="")
-        write_feather(site_details, file_type_feather)
+        write_feather(v$site_details, file_type_feather)
         removeNotification(id)
       }
       
@@ -161,8 +192,10 @@ server <- function(input,output,session){
 
       # Perform data, processing and combine data table into a single data frame
       id <- showNotification("Combining data tables", duration=1000)
-      v$combined_data <- combine_data_tables(time_series_data, circuit_details, 
-                                             site_details)
+      v$combined_data_no_ac_filter <- combine_data_tables(v$time_series_data, 
+                                                          v$circuit_details, 
+                                                          v$site_details)
+      v$combined_data <- filter(v$combined_data_no_ac_filter, sum_ac<=100)
       removeNotification(id)
       
       # Filtering option widgets are rendered after the data is loaded, this is 
@@ -293,6 +326,49 @@ server <- function(input,output,session){
     }
   })
 
+  # Peform data cleaning steps
+  observeEvent(input$run_clean, {
+    dummy_catch <- 1
+    site_details_raw <- v$site_details_raw %>% mutate(site_id=as.numeric(site_id))
+    site_details_cleaned <- check_ac_capacity_using_peak_power(
+      v$combined_data_no_ac_filter, site_details_raw)
+    v$site_details_cleaned <- site_details_cleaned[
+      order(site_details_cleaned$site_id, -site_details_cleaned$high_pf_flag),]
+    output$site_details_editor <- renderDT(
+      v$site_details_cleaned, selection = 'single', rownames = FALSE, editable = TRUE
+    )
+    
+  })
+  
+  # Plot the data for the site selected in the table
+  observeEvent(input$update_site_view, {
+    site_id_to_plot <- v$site_details_cleaned$site_id[input$site_details_editor_rows_selected]
+    data_to_view <- filter(v$combined_data_no_ac_filter, site_id==site_id_to_plot)
+    output$site_plot <- renderPlotly({
+      plot_ly(data_to_view, x=~ts, y=~power_kW, type="scatter")})
+  })
+  
+  # Save table data to csv.
+  observeEvent(input$save_cleaned_data, {
+    file_no_type = str_sub(site_details_file(), end=-5)
+    new_file_name = paste(file_no_type, "_cleaned.csv", sep="")
+    v$site_details_cleaned <- v$site_details_cleaned %>% mutate(
+      site_id=as.character(site_id)
+    )
+    write.csv(v$site_details_cleaned, new_file_name)
+  })
+  
+  observeEvent(input$site_details_editor_cell_edit, {
+    info = input$site_details_editor_cell_edit
+    str(info)
+    i = info$row
+    j = info$col + 1
+    value = info$value
+    v$site_details_cleaned[i, j] <<- DT::coerceValue(value, v$site_details_cleaned[i, j])
+    replaceData(proxy_site_details_editor, v$site_details_cleaned, 
+                resetPaging=FALSE, rownames=FALSE)  # important
+  })
+  
 }
 
 shinyApp(ui = ui, server = server)
