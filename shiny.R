@@ -120,7 +120,8 @@ server <- function(input,output,session){
                       site_details_raw = data.frame(),
                       site_details_cleaned = data.frame(),
                       proxy_site_details_editor = 1,
-                      proxy_circuit_details_editor = 1
+                      proxy_circuit_details_editor = 1,
+                      combined_data_after_clean = data.frame()
                       )
   
   # This is the event that runs when the "Load data" button on the GUI is
@@ -417,8 +418,6 @@ server <- function(input,output,session){
     replaceData(v$proxy_circuit_details_editor, v$circuit_details_for_editing, 
                 resetPaging=FALSE, rownames=FALSE)  # important
   })
-  
-  
 }
 
 shinyApp(ui = ui, server = server)
