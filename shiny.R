@@ -69,16 +69,12 @@ ui <- fluidPage(
       )
     ),
     tabPanel("Data Cleaning", fluid=TRUE, 
-      sidebarLayout(
-        sidebarPanel(
-          actionButton("run_clean", "Run Clean"),
-          actionButton("update_site_view", "Update Site View"),
-          actionButton("save_cleaned_data", "Save cleaned data")
-        ), 
-        mainPanel(
-          plotlyOutput("site_plot"),
-          DTOutput('site_details_editor')
-        )
+      mainPanel(
+        plotlyOutput("site_plot"),
+        DTOutput('site_details_editor'),
+        DTOutput('circuit_details_editor'),
+        actionButton("save_cleaned_data", "Save cleaned data")
+
       )
     )
   ),
@@ -88,7 +84,7 @@ server <- function(input,output,session){
   # Hide these inputs by default, they are shown once data is loaded.
   hide("Std_Agg_Indiv")
   hide("raw_upscale")
-  proxy_site_details_editor = dataTableProxy('site_details_editor')
+  options(DT.options = list(pageLength = 3))
   # Get input from GUI
   time_series_file <- reactive({input$time_series})
   circuit_details_file <- reactive({input$circuit_details})
@@ -120,8 +116,11 @@ server <- function(input,output,session){
                       install_data = data.frame(),
                       site_details = data.frame(),
                       circuit_details = data.frame(),
+                      circuit_details_for_editing = data.frame(),
                       site_details_raw = data.frame(),
-                      site_details_cleaned = data.frame()
+                      site_details_cleaned = data.frame(),
+                      proxy_site_details_editor = 1,
+                      proxy_circuit_details_editor = 1
                       )
   
   # This is the event that runs when the "Load data" button on the GUI is
@@ -160,6 +159,7 @@ server <- function(input,output,session){
       id <- showNotification("Loading circuit details from csv", duration=1000)
       v$circuit_details <- read.csv(file=circuit_details_file(), header=TRUE, 
                                   stringsAsFactors = FALSE)
+      v$circuit_details_for_editing <- v$circuit_details
       removeNotification(id)
       if (str_sub(site_details_file(), start=-7)=="feather"){
         # If a feather file is used it is assumed the data is pre-processed.
@@ -197,6 +197,24 @@ server <- function(input,output,session){
                                                           v$site_details)
       v$combined_data <- filter(v$combined_data_no_ac_filter, sum_ac<=100)
       removeNotification(id)
+      
+
+      site_details_raw <- v$site_details_raw %>% mutate(site_id=as.numeric(site_id))
+      site_details_cleaned <- check_ac_capacity_using_peak_power(
+        v$combined_data_no_ac_filter, site_details_raw)
+      site_details_cleaned <- ac_dc_ratio(site_details_cleaned)
+      v$site_details_cleaned <- site_details_cleaned[
+        order(site_details_cleaned$site_id, -site_details_cleaned$high_pf_flag),]
+      output$site_details_editor <- renderDT(
+        isolate(v$site_details_cleaned), selection = 'single', rownames = FALSE, editable = TRUE
+      )
+      v$proxy_site_details_editor <- dataTableProxy('site_details_editor')
+      output$circuit_details_editor <- renderDT(
+        isolate(v$circuit_details_for_editing), selection = 'single', rownames = FALSE, editable = TRUE
+      )
+      v$proxy_circuit_details_editor <- dataTableProxy('circuit_details_editor')
+      
+      
       
       # Filtering option widgets are rendered after the data is loaded, this is 
       # because they are only usable once there is data to filter. Additionally
@@ -335,17 +353,37 @@ server <- function(input,output,session){
     v$site_details_cleaned <- site_details_cleaned[
       order(site_details_cleaned$site_id, -site_details_cleaned$high_pf_flag),]
     output$site_details_editor <- renderDT(
-      v$site_details_cleaned, selection = 'single', rownames = FALSE, editable = TRUE
+      isolate(v$site_details_cleaned), selection = 'single', rownames = FALSE, editable = TRUE
     )
+    v$proxy_site_details_editor <- dataTableProxy('site_details_editor')
+    output$circuit_details_editor <- renderDT(
+      isolate(v$circuit_details_for_editing), selection = 'single', rownames = FALSE, editable = TRUE
+    )
+    v$proxy_circuit_details_editor <- dataTableProxy('circuit_details_editor')
     
   })
   
-  # Plot the data for the site selected in the table
-  observeEvent(input$update_site_view, {
-    site_id_to_plot <- v$site_details_cleaned$site_id[input$site_details_editor_rows_selected]
-    data_to_view <- filter(v$combined_data_no_ac_filter, site_id==site_id_to_plot)
-    output$site_plot <- renderPlotly({
-      plot_ly(data_to_view, x=~ts, y=~power_kW, type="scatter")})
+  
+  observeEvent(input$circuit_details_editor_rows_selected, {
+    v$proxy_site_details_editor %>% selectRows(NULL)
+    if (length(input$circuit_details_editor_rows_selected==1)) {
+      c_id_to_plot <- v$circuit_details_for_editing$c_id[input$circuit_details_editor_rows_selected]
+      data_to_view <- filter(v$combined_data_no_ac_filter, c_id==c_id_to_plot)
+      output$site_plot <- renderPlotly({
+        plot_ly(data_to_view, x=~ts, y=~power_kW, type="scatter")})
+    }
+    
+  })
+  
+  # Plot the data for the site or circuit selected in the table
+  observeEvent(input$site_details_editor_rows_selected, {
+    v$proxy_circuit_details_editor %>% selectRows(NULL)
+    if (length(input$site_details_editor_rows_selected==1)) {
+      site_id_to_plot <- v$site_details_cleaned$site_id[input$site_details_editor_rows_selected]
+      data_to_view <- filter(v$combined_data_no_ac_filter, site_id==site_id_to_plot)
+      output$site_plot <- renderPlotly({
+        plot_ly(data_to_view, x=~ts, y=~power_kW, type="scatter")})
+    }
   })
   
   # Save table data to csv.
@@ -365,9 +403,21 @@ server <- function(input,output,session){
     j = info$col + 1
     value = info$value
     v$site_details_cleaned[i, j] <<- DT::coerceValue(value, v$site_details_cleaned[i, j])
-    replaceData(proxy_site_details_editor, v$site_details_cleaned, 
+    replaceData(v$proxy_site_details_editor, v$site_details_cleaned, 
                 resetPaging=FALSE, rownames=FALSE)  # important
   })
+  
+  observeEvent(input$circuit_details_editor_cell_edit, {
+    info = input$circuit_details_editor_cell_edit
+    str(info)
+    i = info$row
+    j = info$col + 1
+    value = info$value
+    v$circuit_details_for_editing[i, j] <<- DT::coerceValue(value, v$circuit_details_for_editing[i, j])
+    replaceData(v$proxy_circuit_details_editor, v$circuit_details_for_editing, 
+                resetPaging=FALSE, rownames=FALSE)  # important
+  })
+  
   
 }
 

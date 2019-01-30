@@ -12,3 +12,12 @@ check_ac_capacity_using_peak_power <-
                                        on=c("site_id"))
     return(processed_site_details)
   }
+
+
+ac_dc_ratio <- 
+  function(processed_site_details){
+    processed_site_details <- processed_site_details %>% mutate(
+      ac_dc_ratio = ac/(dc/1000)
+    )
+    return(processed_site_details)
+  }
