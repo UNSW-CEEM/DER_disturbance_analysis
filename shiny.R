@@ -121,7 +121,8 @@ server <- function(input,output,session){
                       site_details_cleaned = data.frame(),
                       proxy_site_details_editor = 1,
                       proxy_circuit_details_editor = 1,
-                      combined_data_after_clean = data.frame()
+                      combined_data_after_clean = data.frame(),
+                      time_series_data = data.frame()
                       )
   
   # This is the event that runs when the "Load data" button on the GUI is
@@ -197,6 +198,7 @@ server <- function(input,output,session){
                                                           v$circuit_details, 
                                                           v$site_details)
       v$combined_data <- filter(v$combined_data_no_ac_filter, sum_ac<=100)
+      v$combined_data <- v$combined_data %>% mutate(clean="raw")
       removeNotification(id)
       
 
@@ -395,6 +397,16 @@ server <- function(input,output,session){
       site_id=as.character(site_id)
     )
     write.csv(v$site_details_cleaned, new_file_name)
+    site_details_cleaned_processed <- process_raw_site_details(
+      v$site_details_cleaned)
+    V$combined_data_after_clean <- combine_data_tables(
+      v$time_series_data, v$circuit_details_for_editing, 
+      site_details_cleaned_processed)
+    v$combined_data_after_clean <- filter(v$combined_data_after_clean, 
+                                          sum_ac<=100)
+    v$combined_data <- filter(combined_data, clean=="raw")
+    v$combined_data_after_clean <- v$combined_data_after_clean %>% mutate(clean="cleaned")
+    v$combined_data <- rbind(v$combined_data, v$combined_data_after_cleaning)
   })
   
   observeEvent(input$site_details_editor_cell_edit, {
