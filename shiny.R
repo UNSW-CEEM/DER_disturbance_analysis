@@ -132,7 +132,7 @@ server <- function(input,output,session){
     # an error or warning during the data table combing process. The "tryCatch"
     # function catches these, aborts the loading process and reports the error 
     # to the users. Importantly this prevent the app from crashing.
-    result = tryCatch({
+  #  result = tryCatch({
       # Load data from storage.
       if (str_sub(time_series_file(), start=-7)=="feather"){
         # If a feather file is used it is assumed the data is pre-processed.
@@ -194,20 +194,21 @@ server <- function(input,output,session){
 
       # Perform data, processing and combine data table into a single data frame
       id <- showNotification("Combining data tables", duration=1000)
+      v$time_series_data <- v$time_series_data %>% distinct(c_id, ts, .keep_all=TRUE)
       v$combined_data_no_ac_filter <- combine_data_tables(v$time_series_data, 
                                                           v$circuit_details, 
                                                           v$site_details)
       v$combined_data <- filter(v$combined_data_no_ac_filter, sum_ac<=100)
       v$combined_data <- v$combined_data %>% mutate(clean="raw")
       removeNotification(id)
-      
 
       site_details_raw <- v$site_details_raw %>% mutate(site_id=as.numeric(site_id))
-      site_details_cleaned <- check_ac_capacity_using_peak_power(
+      print("past here")
+      site_details_cleaned <- site_details_data_cleaning(
         v$combined_data_no_ac_filter, site_details_raw)
-      site_details_cleaned <- ac_dc_ratio(site_details_cleaned)
+      print("but not here")
       v$site_details_cleaned <- site_details_cleaned[
-        order(site_details_cleaned$site_id, -site_details_cleaned$high_pf_flag),]
+        order(site_details_cleaned$site_id),]
       output$site_details_editor <- renderDT(
         isolate(v$site_details_cleaned), selection = 'single', rownames = FALSE, editable = TRUE
       )
@@ -216,8 +217,6 @@ server <- function(input,output,session){
         isolate(v$circuit_details_for_editing), selection = 'single', rownames = FALSE, editable = TRUE
       )
       v$proxy_circuit_details_editor <- dataTableProxy('circuit_details_editor')
-      
-      
       
       # Filtering option widgets are rendered after the data is loaded, this is 
       # because they are only usable once there is data to filter. Additionally
@@ -263,13 +262,13 @@ server <- function(input,output,session){
       output$update_plots <- renderUI({
         actionButton("update_plots", "Update plots")
         })
-    }, warning = function(war) {
-      shinyalert("Opps", paste("",war))
-    }, error = function(err) {
-      shinyalert("Opps", paste("",err))
-    }, finally = {
+   # }, warning = function(war) {
+  #    shinyalert("Opps", paste("",war))
+   # }, error = function(err) {
+    #  shinyalert("Opps", paste("",err))
+    #}, finally = {
       removeNotification(id)
-    })
+    #})
   })
 
   # Create plots when update plots button is clicked.
