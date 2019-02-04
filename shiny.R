@@ -15,6 +15,9 @@ library(shinyjs)
 library(stringr)
 library(fasttime)
 library(DT)
+library(suncalc)
+library(ggmap)
+library(measurements)
 source("data_manipulation_functions.R")
 source("filter_and_aggregate.R")
 source("upscale_function.R")
@@ -36,7 +39,7 @@ ui <- fluidPage(
                       "Select timeseries data file ...", multiple=FALSE
           ),
           textInput("circuit_details", "Circuit details file", 
-                    value="C:/Users/user/Documents/GitHub/DER_disturbance_analysis/test_data/2018-08-25 pre-cleaned inputs/circuit_details_TB_V4_filtered.csv"
+                    value="C:/Users/user/Documents/GitHub/DER_disturbance_analysis/test_data/2018-08-25 raw inputs/circuit_details.csv"
           ),
           shinyFilesButton("choose_c", "Choose File", 
                            "Select circuit details data file ...", multiple=FALSE
@@ -148,12 +151,13 @@ server <- function(input,output,session){
         id <- showNotification("Formatting timeseries data and 
                                 creating feather cache file", duration=1000)
         # Data from CSV is assumed to need processing.
+        v$time_series_data <- v$time_series_data %>% distinct(c_id, ts, .keep_all=TRUE)
         v$time_series_data <- process_raw_time_series_data(time_series_data)
         # Automatically create a cache of the processed data as a feather file.
         # Allows for much faster data loading for subsequent anaylsis.
         file_no_type = str_sub(time_series_file(), end=-4)
         file_type_feather = paste(file_no_type, "feather", sep="")
-        write_feather(time_series_data, file_type_feather)
+        write_feather(v$time_series_data, file_type_feather)
         removeNotification(id)
       }
       # The circuit details file requires no processing and is small so always 
@@ -161,7 +165,6 @@ server <- function(input,output,session){
       id <- showNotification("Loading circuit details from csv", duration=1000)
       v$circuit_details <- read.csv(file=circuit_details_file(), header=TRUE, 
                                   stringsAsFactors = FALSE)
-      v$circuit_details_for_editing <- v$circuit_details
       removeNotification(id)
       if (str_sub(site_details_file(), start=-7)=="feather"){
         # If a feather file is used it is assumed the data is pre-processed.
@@ -191,22 +194,27 @@ server <- function(input,output,session){
       install_data <- read.csv(file=intall_data_file, header=TRUE, 
                                stringsAsFactors = FALSE)
       v$install_data <- process_install_data(install_data)
-
+      postcode_data_file <- "australian_postcodes.csv"
+      postcode_data <- read.csv(file=postcode_data_file, header=TRUE, 
+                               stringsAsFactors = FALSE)
       # Perform data, processing and combine data table into a single data frame
       id <- showNotification("Combining data tables", duration=1000)
-      v$time_series_data <- v$time_series_data %>% distinct(c_id, ts, .keep_all=TRUE)
       v$combined_data_no_ac_filter <- combine_data_tables(v$time_series_data, 
                                                           v$circuit_details, 
                                                           v$site_details)
       v$combined_data <- filter(v$combined_data_no_ac_filter, sum_ac<=100)
       v$combined_data <- v$combined_data %>% mutate(clean="raw")
       removeNotification(id)
-
-      site_details_raw <- v$site_details_raw %>% mutate(site_id=as.numeric(site_id))
       print("past here")
+      t0 = Sys.time()
+      v$circuit_details_for_editing <- 
+        clean_connection_types(v$combined_data_no_ac_filter, v$circuit_details, postcode_data)
+      print("but not here")
+      print(Sys.time()-t0)
+      site_details_raw <- v$site_details_raw %>% mutate(site_id=as.numeric(site_id))
       site_details_cleaned <- site_details_data_cleaning(
         v$combined_data_no_ac_filter, site_details_raw)
-      print("but not here")
+
       v$site_details_cleaned <- site_details_cleaned[
         order(site_details_cleaned$site_id),]
       output$site_details_editor <- renderDT(
@@ -395,17 +403,19 @@ server <- function(input,output,session){
     v$site_details_cleaned <- v$site_details_cleaned %>% mutate(
       site_id=as.character(site_id)
     )
+    v$site_details_cleaned <- setnames(v$site_details_cleaned, 
+                                       c("sum_ac", "sum_dc"), c("ac", "dc"))
     write.csv(v$site_details_cleaned, new_file_name)
-    site_details_cleaned_processed <- process_raw_site_details(
-      v$site_details_cleaned)
-    V$combined_data_after_clean <- combine_data_tables(
-      v$time_series_data, v$circuit_details_for_editing, 
-      site_details_cleaned_processed)
-    v$combined_data_after_clean <- filter(v$combined_data_after_clean, 
-                                          sum_ac<=100)
-    v$combined_data <- filter(combined_data, clean=="raw")
-    v$combined_data_after_clean <- v$combined_data_after_clean %>% mutate(clean="cleaned")
-    v$combined_data <- rbind(v$combined_data, v$combined_data_after_cleaning)
+    #site_details_cleaned_processed <- process_raw_site_details(
+    #  v$site_details_cleaned)
+    #V$combined_data_after_clean <- combine_data_tables(
+    #  v$time_series_data, v$circuit_details_for_editing, 
+    #  site_details_cleaned_processed)
+    #v$combined_data_after_clean <- filter(v$combined_data_after_clean, 
+    #                                      sum_ac<=100)
+    #v$combined_data <- filter(combined_data, clean=="raw")
+    #v$combined_data_after_clean <- v$combined_data_after_clean %>% mutate(clean="cleaned")
+    #v$combined_data <- rbind(v$combined_data, v$combined_data_after_cleaning)
   })
   
   observeEvent(input$site_details_editor_cell_edit, {

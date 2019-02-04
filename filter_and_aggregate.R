@@ -11,10 +11,10 @@ vector_filter <- function(data, duration, state, standards){
 
 vector_groupby <- function(data, agg_on_standard){
   if (agg_on_standard==TRUE){
-    data <- data %>% mutate(series=paste(s_state, clean))
+    data <- data %>% mutate(series=paste(s_state))
     data <- group_by(data, ts, s_state, series)
   } else {
-    data <- data %>% mutate(series=paste(Standard_Version, clean))
+    data <- data %>% mutate(series=paste(Standard_Version))
     data <- group_by(data, ts, s_state, Standard_Version, series)
   }
   data <- summarise(data , Power_kW=sum(power_kW))

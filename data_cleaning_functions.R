@@ -15,13 +15,12 @@ check_ac_capacity_using_peak_power <-
 
 calc_max_kw_per_site <- function(performance_data){
   performance_data <- group_by(performance_data, ts, site_id)  
-  performance_data <- summarise(performance_data , power_kW=sum(power_kW), n_circuits=length(unique(c_id)))
+  performance_data <- summarise(performance_data , power_kW=sum(power_kW))
   performance_data <- as.data.frame(performance_data)
   performance_data <- group_by(performance_data, site_id)  
-  site_max_power <- summarise(performance_data , max_power_kW=max(power_kW),
-                              n_circuits=max(n_circuits))
+  site_max_power <- summarise(performance_data , max_power_kW=max(power_kW))
   site_max_power <- as.data.frame(site_max_power)
-  site_max_power <- site_max_power[,c("site_id", "max_power_kW", "n_circuits")]
+  site_max_power <- site_max_power[,c("site_id", "max_power_kW")]
   return(site_max_power)
 }
 
@@ -33,7 +32,6 @@ group_site_details_to_one_row_per_site <- function(site_details){
               sum_ac=sum(ac), sum_dc=first(dc),
               sum_ac_old=sum(ac_old), sum_dc_old=first(dc_old),
               ac_dc_ratio=mean(ac_dc_ratio),
-              n_site_ids=length(ac),
               manufacturer=paste(manufacturer, collapse=' '),
               model=paste(model, collapse=' '), s_postcode=first(s_postcode))
   processed_site_details <- as.data.frame(processed_site_details)
@@ -74,4 +72,69 @@ site_details_data_cleaning <- function(performance_data, site_details){
   site_details <- mutate(site_details, change_ac=ifelse(sum_ac!=sum_ac_old,1,0))
 
   return(site_details)
+}
+
+get_post_code_lat_long <- function(postcode, postcode_data){
+  postcode_data <- filter(postcode_data, ï..postcode==postcode)
+  lat_and_long <- c(postcode_data$long[1], postcode_data$lat[1])
+  return(lat_and_long)
+}
+
+calc_sunset_time <- function(date, lat, long){
+  sunset <- getSunlightTimes(date, lat, 
+                             lon=long, keep=c('sunset'))$sunset[1]
+  return(sunset)
+}
+
+calc_sunrise_time <- function(date, lat, long){
+  sunrise <- getSunlightTimes(date, lat=lat, 
+                             lon=long, keep=c('sunrise'))$sunrise[1]
+  return(sunrise)
+}
+
+clean_connection_types <- function(combined_data, circuit_details, postcode_data){
+  calc_sunrise_time_v <- Vectorize(calc_sunrise_time)
+  calc_sunset_time_v <- Vectorize(calc_sunset_time)
+  t0 = Sys.time()
+  postcode_data <- filter(postcode_data, !is.na(lat) & !is.na(long))
+  print('1')
+  postcode_data$lat <-   gsub(':', ' ', postcode_data$lat)
+  print('2')
+  postcode_data$long <-   gsub(':', ' ', postcode_data$long)
+  print('3')
+  postcode_data$lat <- measurements::conv_unit(postcode_data$lat, from = 'deg_min_sec', to = 'dec_deg')
+  postcode_data <- mutate(postcode_data, lat=as.numeric(lat))
+  print('4')
+  postcode_data$lon <- measurements::conv_unit(postcode_data$long, from = 'deg_min_sec', to = 'dec_deg')
+  postcode_data <- mutate(postcode_data, lon=as.numeric(lon) * -1)
+  postcode_data$date <- as.Date(combined_data$ts[1])
+  postcode_data <- mutate(postcode_data, sunrise=getSunlightTimes(data=postcode_data, tz="Australia/Brisbane", keep=c('sunrise'))$sunrise)
+  postcode_data <- mutate(postcode_data, sunset=getSunlightTimes(data=postcode_data, tz="Australia/Brisbane", keep=c('sunset'))$sunset)
+  print('5')
+  print(Sys.time()-t0)
+  combined_data <- left_join(combined_data, select(postcode_data, postcode, sunrise, sunset), by=c("s_postcode" = "postcode"))
+  combined_data <- filter(combined_data,!is.na(ts))
+  t0 = Sys.time()
+  combined_data <- mutate(combined_data, daylight=ifelse(ts>sunrise & ts<sunset,1,0))
+  print(Sys.time()-t0)
+  combined_data <- group_by(combined_data, c_id)
+  combined_data <- summarise(
+    combined_data, energy_in_day_light_hours= sum(abs(power_kW[daylight==1])),
+    energy_in_non_day_light_hours= sum(abs(power_kW[daylight!=1])),
+    con_type=first(con_type), sunrise=first(sunrise), sunset=first(sunset))
+  combined_data <- as.data.frame(combined_data)
+  combined_data <- mutate(combined_data, old_con_type=con_type)
+  combined_data <- mutate(
+    combined_data, frac_in_day_light_hours=
+      energy_in_day_light_hours/
+      (energy_in_day_light_hours+energy_in_non_day_light_hours))
+  combined_data <- mutate(
+    combined_data, con_type=
+      ifelse(frac_in_day_light_hours<0.95 & 
+             con_type %in% c("pv_site_net", "pv_site", "pv_inverter_net"), 
+             "load", con_type))
+  combined_data <- mutate(combined_data, con_type_changed=ifelse(con_type!=old_con_type,1,0))
+  circuit_details <- select(circuit_details, site_id, c_id, polarity, sa_ww_id)
+  combined_data <- left_join(combined_data, circuit_details, on="c_id")
+  return(combined_data)
 }
