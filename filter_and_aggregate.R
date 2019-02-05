@@ -1,7 +1,8 @@
 
-vector_filter <- function(data, duration, state, standards){
+vector_filter <- function(data, duration, state, standards, clean){
   column_value_pairs <- list(list('d', duration), list('s_state', state),
-                             list('Standard_Version', standards))
+                             list('Standard_Version', standards),
+                             list('clean', clean))
   for (column_value_pair in column_value_pairs) {
     data <- eval(parse(text = paste("filter(data,", column_value_pair[[1]], 
                                     "%in% column_value_pair[[2]] )"))) 
@@ -11,10 +12,10 @@ vector_filter <- function(data, duration, state, standards){
 
 vector_groupby <- function(data, agg_on_standard){
   if (agg_on_standard==TRUE){
-    data <- data %>% mutate(series=paste(s_state))
+    data <- data %>% mutate(series=paste(s_state, clean))
     data <- group_by(data, ts, s_state, series)
   } else {
-    data <- data %>% mutate(series=paste(Standard_Version))
+    data <- data %>% mutate(series=paste(Standard_Version, clean))
     data <- group_by(data, ts, s_state, Standard_Version, series)
   }
   data <- summarise(data , Power_kW=sum(power_kW))

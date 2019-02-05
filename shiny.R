@@ -52,6 +52,7 @@ ui <- fluidPage(
           ),
           br(),
           actionButton("load_data", "Load data"),
+          uiOutput("cleaned"),
           uiOutput("dateWidget"),
           uiOutput("time_start"),
           uiOutput("time_end"),
@@ -95,6 +96,7 @@ server <- function(input,output,session){
   region <- reactive({input$region})
   duration <- reactive({input$duration})
   standards <- reactive({input$StdVersion})
+  clean <- reactive({input$cleaned})
   raw_upscale <- reactive({input$raw_upscale})
   start_time <- reactive({
     date_as_str <- as.character(input$date[1])
@@ -135,7 +137,7 @@ server <- function(input,output,session){
     # an error or warning during the data table combing process. The "tryCatch"
     # function catches these, aborts the loading process and reports the error 
     # to the users. Importantly this prevent the app from crashing.
-  #  result = tryCatch({
+    result = tryCatch({
       # Load data from storage.
       if (str_sub(time_series_file(), start=-7)=="feather"){
         # If a feather file is used it is assumed the data is pre-processed.
@@ -188,7 +190,7 @@ server <- function(input,output,session){
         write_feather(v$site_details, file_type_feather)
         removeNotification(id)
       }
-      
+      id <- showNotification("Load CER capacity data", duration=1000)
       # Load in the install data from CSV.
       intall_data_file <- "cumulative_capacity_and_number_20190121.csv"
       install_data <- read.csv(file=intall_data_file, header=TRUE, 
@@ -197,6 +199,7 @@ server <- function(input,output,session){
       postcode_data_file <- "PostcodesLatLong.csv"
       postcode_data <- read.csv(file=postcode_data_file, header=TRUE, 
                                stringsAsFactors = FALSE)
+      removeNotification(id)
       # Perform data, processing and combine data table into a single data frame
       id <- showNotification("Combining data tables", duration=1000)
       v$combined_data_no_ac_filter <- combine_data_tables(v$time_series_data, 
@@ -205,30 +208,56 @@ server <- function(input,output,session){
       v$combined_data <- filter(v$combined_data_no_ac_filter, sum_ac<=100)
       v$combined_data <- v$combined_data %>% mutate(clean="raw")
       removeNotification(id)
+      id <- showNotification("Cleaning data", duration=1000)
+      # Clean site details data
       site_details_raw <- v$site_details_raw %>% mutate(site_id=as.numeric(site_id))
       site_details_cleaned <- site_details_data_cleaning(
         v$combined_data_no_ac_filter, site_details_raw)
-      print("past here")
-      t0 = Sys.time()
-      v$circuit_details_for_editing <- 
-        clean_connection_types(v$combined_data_no_ac_filter, v$circuit_details, postcode_data)
-      print("but not here")
-      print(Sys.time()-t0)
       v$site_details_cleaned <- site_details_cleaned[
         order(site_details_cleaned$site_id),]
+      # Clean circuit details file
+      v$circuit_details_for_editing <- 
+        clean_connection_types(v$combined_data_no_ac_filter, v$circuit_details, postcode_data)
+      # Display data cleaning output in data cleaning tab
       output$site_details_editor <- renderDT(
-        isolate(v$site_details_cleaned), selection = 'single', rownames = FALSE, editable = TRUE
-      )
+        isolate(v$site_details_cleaned), selection='single', rownames=FALSE, 
+        editable=TRUE)
       v$proxy_site_details_editor <- dataTableProxy('site_details_editor')
       output$circuit_details_editor <- renderDT(
-        isolate(v$circuit_details_for_editing), selection = 'single', rownames = FALSE, editable = TRUE
-      )
+        isolate(v$circuit_details_for_editing), selection='single', 
+        rownames=FALSE, editable=TRUE)
       v$proxy_circuit_details_editor <- dataTableProxy('circuit_details_editor')
       
+      # Add cleaned data to display data for main tab
+      site_details_cleaned_old_names <- setnames(v$site_details_cleaned, 
+                                         c("sum_ac", "sum_dc"), c("ac", "dc"))
+      site_details_cleaned_processed <- process_raw_site_details(
+        site_details_cleaned_old_names)
+      v$combined_data_after_clean <- combine_data_tables(
+        v$time_series_data, v$circuit_details_for_editing, 
+        site_details_cleaned_processed)
+      v$combined_data_after_clean <- filter(v$combined_data_after_clean, 
+                                            sum_ac<=100)
+      v$combined_data <- filter(v$combined_data, clean=="raw")
+      v$combined_data_after_clean <- v$combined_data_after_clean %>% mutate(clean="cleaned")
+      v$combined_data_after_clean <- select(v$combined_data_after_clean,
+        c_id, ts, v, p, e, f, d, site_id, con_type, polarity, sa_ww_id, s_state,
+        pv_installation_year_month, sum_ac, first_ac, s_postcode, Standard_Version,
+        Grouping, e_polarity, power_kW, clean)
+      v$combined_data <- rbind(v$combined_data, v$combined_data_after_clean)
+      removeNotification(id)
       # Filtering option widgets are rendered after the data is loaded, this is 
       # because they are only usable once there is data to filter. Additionally
       # The data loaded can then be used to create the appropraite options for 
       # filtering.
+      output$cleaned <- renderUI({
+        checkboxGroupButtons(inputId="cleaned", 
+                             label=strong("Data processing:"),
+                             choices=list("cleaned", "raw"),
+                             justified=TRUE, status="primary", individual=TRUE,
+                             checkIcon=list(yes=icon("ok", lib="glyphicon"), 
+                                            no=icon("remove", lib="glyphicon")))
+      })
       output$dateWidget <- renderUI({
         dateRangeInput("date", label=strong('Date range (yyyy-mm-dd):'),
                        start=floor_date(min(v$combined_data$ts), "day"),
@@ -269,13 +298,13 @@ server <- function(input,output,session){
       output$update_plots <- renderUI({
         actionButton("update_plots", "Update plots")
         })
-   # }, warning = function(war) {
-  #    shinyalert("Opps", paste("",war))
-   # }, error = function(err) {
-    #  shinyalert("Opps", paste("",err))
-    #}, finally = {
+    }, warning = function(war) {
+      shinyalert("Opps", paste("",war))
+    }, error = function(err) {
+      shinyalert("Opps", paste("",err))
+    }, finally = {
       removeNotification(id)
-    #})
+    })
   })
 
   # Create plots when update plots button is clicked.
@@ -284,7 +313,8 @@ server <- function(input,output,session){
     # Filter data based on user selections
     #combined_data_f <- filter(v$combined_data, d==duration())
     combined_data_f <- vector_filter(v$combined_data, duration=duration(), 
-                                state=region(), standards=standards())
+                                state=region(), standards=standards(),
+                                clean=clean())
     combined_data_f <- filter(combined_data_f, 
                               ts>=start_time() & ts<= end_time())
     if(raw_upscale()){
@@ -397,27 +427,29 @@ server <- function(input,output,session){
   
   # Save table data to csv.
   observeEvent(input$save_cleaned_data, {
+    # Save cleaned data to csv
     file_no_type = str_sub(site_details_file(), end=-5)
     new_file_name = paste(file_no_type, "_cleaned.csv", sep="")
     v$site_details_cleaned <- v$site_details_cleaned %>% mutate(
       site_id=as.character(site_id)
     )
-    v$site_details_cleaned <- setnames(v$site_details_cleaned, 
+    site_details_cleaned_old_names <- setnames(v$site_details_cleaned, 
                                        c("sum_ac", "sum_dc"), c("ac", "dc"))
-    write.csv(v$site_details_cleaned, new_file_name)
+    write.csv(site_details_cleaned_old_names, new_file_name)
     file_no_type = str_sub(circuit_details_file(), end=-5)
     new_file_name = paste(file_no_type, "_cleaned.csv", sep="")
     write.csv(v$circuit_details_for_editing, new_file_name)
-    #site_details_cleaned_processed <- process_raw_site_details(
-    #  v$site_details_cleaned)
-    #V$combined_data_after_clean <- combine_data_tables(
-    #  v$time_series_data, v$circuit_details_for_editing, 
-    #  site_details_cleaned_processed)
-    #v$combined_data_after_clean <- filter(v$combined_data_after_clean, 
-    #                                      sum_ac<=100)
-    #v$combined_data <- filter(combined_data, clean=="raw")
-    #v$combined_data_after_clean <- v$combined_data_after_clean %>% mutate(clean="cleaned")
-    #v$combined_data <- rbind(v$combined_data, v$combined_data_after_cleaning)
+    # Add cleaned data to dispay dat set
+    site_details_cleaned_processed <- process_raw_site_details(
+      site_details_cleaned_old_names)
+    v$combined_data_after_clean <- combine_data_tables(
+      v$time_series_data, v$circuit_details_for_editing, 
+      site_details_cleaned_processed)
+    v$combined_data_after_clean <- filter(v$combined_data_after_clean, 
+                                          sum_ac<=100)
+    v$combined_data <- filter(v$combined_data, clean=="raw")
+    v$combined_data_after_clean <- v$combined_data_after_clean %>% mutate(clean="cleaned")
+    v$combined_data <- rbind(v$combined_data, v$combined_data_after_clean)
   })
   
   observeEvent(input$site_details_editor_cell_edit, {
