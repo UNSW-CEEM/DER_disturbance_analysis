@@ -194,7 +194,7 @@ server <- function(input,output,session){
       install_data <- read.csv(file=intall_data_file, header=TRUE, 
                                stringsAsFactors = FALSE)
       v$install_data <- process_install_data(install_data)
-      postcode_data_file <- "australian_postcodes.csv"
+      postcode_data_file <- "PostcodesLatLong.csv"
       postcode_data <- read.csv(file=postcode_data_file, header=TRUE, 
                                stringsAsFactors = FALSE)
       # Perform data, processing and combine data table into a single data frame
@@ -205,16 +205,15 @@ server <- function(input,output,session){
       v$combined_data <- filter(v$combined_data_no_ac_filter, sum_ac<=100)
       v$combined_data <- v$combined_data %>% mutate(clean="raw")
       removeNotification(id)
+      site_details_raw <- v$site_details_raw %>% mutate(site_id=as.numeric(site_id))
+      site_details_cleaned <- site_details_data_cleaning(
+        v$combined_data_no_ac_filter, site_details_raw)
       print("past here")
       t0 = Sys.time()
       v$circuit_details_for_editing <- 
         clean_connection_types(v$combined_data_no_ac_filter, v$circuit_details, postcode_data)
       print("but not here")
       print(Sys.time()-t0)
-      site_details_raw <- v$site_details_raw %>% mutate(site_id=as.numeric(site_id))
-      site_details_cleaned <- site_details_data_cleaning(
-        v$combined_data_no_ac_filter, site_details_raw)
-
       v$site_details_cleaned <- site_details_cleaned[
         order(site_details_cleaned$site_id),]
       output$site_details_editor <- renderDT(
@@ -406,6 +405,9 @@ server <- function(input,output,session){
     v$site_details_cleaned <- setnames(v$site_details_cleaned, 
                                        c("sum_ac", "sum_dc"), c("ac", "dc"))
     write.csv(v$site_details_cleaned, new_file_name)
+    file_no_type = str_sub(circuit_details_file(), end=-5)
+    new_file_name = paste(file_no_type, "_cleaned.csv", sep="")
+    write.csv(v$circuit_details_for_editing, new_file_name)
     #site_details_cleaned_processed <- process_raw_site_details(
     #  v$site_details_cleaned)
     #V$combined_data_after_clean <- combine_data_tables(

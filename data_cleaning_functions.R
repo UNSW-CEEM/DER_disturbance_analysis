@@ -98,42 +98,59 @@ clean_connection_types <- function(combined_data, circuit_details, postcode_data
   t0 = Sys.time()
   postcode_data <- filter(postcode_data, !is.na(lat) & !is.na(long))
   print('1')
-  postcode_data$lat <-   gsub(':', ' ', postcode_data$lat)
+  #postcode_data$lat <-   gsub(':', ' ', postcode_data$lat)
   print('2')
-  postcode_data$long <-   gsub(':', ' ', postcode_data$long)
+  #postcode_data$long <-   gsub(':', ' ', postcode_data$long)
   print('3')
-  postcode_data$lat <- measurements::conv_unit(postcode_data$lat, from = 'deg_min_sec', to = 'dec_deg')
+  #postcode_data$lat <- measurements::conv_unit(postcode_data$lat, from = 'deg_min_sec', to = 'dec_deg')
   postcode_data <- mutate(postcode_data, lat=as.numeric(lat))
   print('4')
-  postcode_data$lon <- measurements::conv_unit(postcode_data$long, from = 'deg_min_sec', to = 'dec_deg')
-  postcode_data <- mutate(postcode_data, lon=as.numeric(lon) * -1)
+  #postcode_data$lon <- measurements::conv_unit(postcode_data$long, from = 'deg_min_sec', to = 'dec_deg')
+  postcode_data <- mutate(postcode_data, lon=as.numeric(long))
   postcode_data$date <- as.Date(combined_data$ts[1])
   postcode_data <- mutate(postcode_data, sunrise=getSunlightTimes(data=postcode_data, tz="Australia/Brisbane", keep=c('sunrise'))$sunrise)
   postcode_data <- mutate(postcode_data, sunset=getSunlightTimes(data=postcode_data, tz="Australia/Brisbane", keep=c('sunset'))$sunset)
+  postcode_data <- mutate(postcode_data, sunrise=sunrise-60*60)
+  postcode_data <- mutate(postcode_data, sunset=sunset+60*60)
+  postcode_data <- mutate(postcode_data, dis_sunrise=as.character(sunrise))
+  postcode_data <- mutate(postcode_data, dis_sunset=as.character(sunset))
   print('5')
   print(Sys.time()-t0)
-  combined_data <- left_join(combined_data, select(postcode_data, postcode, sunrise, sunset), by=c("s_postcode" = "postcode"))
+  combined_data <- left_join(combined_data, select(postcode_data, postcode, sunrise, sunset, dis_sunrise, dis_sunset), by=c("s_postcode" = "postcode"))
   combined_data <- filter(combined_data,!is.na(ts))
   t0 = Sys.time()
   combined_data <- mutate(combined_data, daylight=ifelse(ts>sunrise & ts<sunset,1,0))
   print(Sys.time()-t0)
   combined_data <- group_by(combined_data, c_id)
   combined_data <- summarise(
-    combined_data, energy_in_day_light_hours= sum(abs(power_kW[daylight==1])),
-    energy_in_non_day_light_hours= sum(abs(power_kW[daylight!=1])),
-    con_type=first(con_type), sunrise=first(sunrise), sunset=first(sunset))
+    combined_data, energy_in_day_light_hours= sum(abs(e[daylight==1]))/1000/(60*60),
+    energy_in_non_day_light_hours= sum(abs(e[daylight!=1]))/1000/(60*60),
+    con_type=first(con_type), sunrise=first(dis_sunrise), 
+    sunset=first(dis_sunset), first_ac=first(first_ac),
+    min_power=min(power_kW), max_power=max(power_kW), polarity=first(polarity))
   combined_data <- as.data.frame(combined_data)
   combined_data <- mutate(combined_data, old_con_type=con_type)
+  combined_data <- mutate(combined_data, old_polarity=polarity)
   combined_data <- mutate(
     combined_data, frac_in_day_light_hours=
       energy_in_day_light_hours/
       (energy_in_day_light_hours+energy_in_non_day_light_hours))
   combined_data <- mutate(
     combined_data, con_type=
-      ifelse(frac_in_day_light_hours<0.95 & 
-             con_type %in% c("pv_site_net", "pv_site", "pv_inverter_net"), 
+      ifelse(frac_in_day_light_hours<0.75 & 
+             con_type %in% c("pv_site_net", "pv_site", "pv_inverter_net") &
+               (energy_in_day_light_hours+energy_in_non_day_light_hours) > first_ac * 24 * 0.01, 
              "load", con_type))
+  combined_data <- mutate(combined_data, con_type=ifelse(max_power > first_ac * .1 & 
+                                                min_power * -1 > first_ac * 0.1, "mixed", con_type))
+  combined_data <- mutate(combined_data,
+    polarity=ifelse(abs(min_power) > abs(max_power) & 
+                    con_type %in% c("pv_site_net", "pv_site", "pv_inverter_net") &
+                      (energy_in_day_light_hours+energy_in_non_day_light_hours) > first_ac * 24 * 0.01 &
+                      min_power < 0.0, 
+                    polarity * -1, polarity))
   combined_data <- mutate(combined_data, con_type_changed=ifelse(con_type!=old_con_type,1,0))
+  combined_data <- mutate(combined_data, polarity_changed=ifelse(polarity!=old_polarity,1,0))
   circuit_details <- select(circuit_details, site_id, c_id, polarity, sa_ww_id)
   combined_data <- left_join(combined_data, circuit_details, on="c_id")
   return(combined_data)
