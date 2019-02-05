@@ -74,84 +74,91 @@ site_details_data_cleaning <- function(performance_data, site_details){
   return(site_details)
 }
 
-get_post_code_lat_long <- function(postcode, postcode_data){
-  postcode_data <- filter(postcode_data, ï..postcode==postcode)
-  lat_and_long <- c(postcode_data$long[1], postcode_data$lat[1])
-  return(lat_and_long)
-}
-
-calc_sunset_time <- function(date, lat, long){
-  sunset <- getSunlightTimes(date, lat, 
-                             lon=long, keep=c('sunset'))$sunset[1]
-  return(sunset)
-}
-
-calc_sunrise_time <- function(date, lat, long){
-  sunrise <- getSunlightTimes(date, lat=lat, 
-                             lon=long, keep=c('sunrise'))$sunrise[1]
-  return(sunrise)
-}
-
 clean_connection_types <- function(combined_data, circuit_details, postcode_data){
-  calc_sunrise_time_v <- Vectorize(calc_sunrise_time)
-  calc_sunset_time_v <- Vectorize(calc_sunset_time)
-  t0 = Sys.time()
+  # Don't peform sunrise sunset based check if we do not have the postcode 
+  # lat and longditude.
   postcode_data <- filter(postcode_data, !is.na(lat) & !is.na(long))
-  print('1')
-  #postcode_data$lat <-   gsub(':', ' ', postcode_data$lat)
-  print('2')
-  #postcode_data$long <-   gsub(':', ' ', postcode_data$long)
-  print('3')
-  #postcode_data$lat <- measurements::conv_unit(postcode_data$lat, from = 'deg_min_sec', to = 'dec_deg')
+  # Make sure lat and longditude format is numeric, also need longditude labeled
+  # lon.
   postcode_data <- mutate(postcode_data, lat=as.numeric(lat))
-  print('4')
-  #postcode_data$lon <- measurements::conv_unit(postcode_data$long, from = 'deg_min_sec', to = 'dec_deg')
   postcode_data <- mutate(postcode_data, lon=as.numeric(long))
+  # Need date of even to calaculate sunris and sunset times.
   postcode_data$date <- as.Date(combined_data$ts[1])
-  postcode_data <- mutate(postcode_data, sunrise=getSunlightTimes(data=postcode_data, tz="Australia/Brisbane", keep=c('sunrise'))$sunrise)
-  postcode_data <- mutate(postcode_data, sunset=getSunlightTimes(data=postcode_data, tz="Australia/Brisbane", keep=c('sunset'))$sunset)
+  # Find sunrise and sunset times on a postcode basis.
+  postcode_data <- mutate(
+    postcode_data, 
+    sunrise=getSunlightTimes(data=postcode_data, tz="Australia/Brisbane", 
+                             keep=c('sunrise'))$sunrise)
+  postcode_data <- mutate(
+    postcode_data, 
+    sunset=getSunlightTimes(data=postcode_data, tz="Australia/Brisbane",
+                            keep=c('sunset'))$sunset)
+  # Create 1 hour buffer either side of sunrise and sunset to allow for large 
+  # postcodes, as lat and lon is the postcode centre.
   postcode_data <- mutate(postcode_data, sunrise=sunrise-60*60)
   postcode_data <- mutate(postcode_data, sunset=sunset+60*60)
+  # Format sunrise and sunset as character so it is displayed in brisbane time
+  # in gui.
   postcode_data <- mutate(postcode_data, dis_sunrise=as.character(sunrise))
   postcode_data <- mutate(postcode_data, dis_sunset=as.character(sunset))
-  print('5')
-  print(Sys.time()-t0)
-  combined_data <- left_join(combined_data, select(postcode_data, postcode, sunrise, sunset, dis_sunrise, dis_sunset), by=c("s_postcode" = "postcode"))
-  combined_data <- filter(combined_data,!is.na(ts))
-  t0 = Sys.time()
-  combined_data <- mutate(combined_data, daylight=ifelse(ts>sunrise & ts<sunset,1,0))
-  print(Sys.time()-t0)
+  # Merge sunrise and sunset times onto the timeseries data frame.
+  combined_data <- left_join(combined_data, 
+                             select(postcode_data, postcode, 
+                                    sunrise, sunset, dis_sunrise, 
+                                    dis_sunset), 
+                             by=c("s_postcode" = "postcode"))
+  # Determine if a data point is during daylight hours or not.
+  combined_data <- mutate(combined_data, 
+                          daylight=ifelse(ts>sunrise & ts<sunset,1,0))
+  # Group data by c_id, calculating values needed to perform data cleaning
   combined_data <- group_by(combined_data, c_id)
   combined_data <- summarise(
-    combined_data, energy_in_day_light_hours= sum(abs(e[daylight==1]))/1000/(60*60),
+    combined_data, 
+    energy_in_day_light_hours=sum(abs(e[daylight==1]))/1000/(60*60),
     energy_in_non_day_light_hours= sum(abs(e[daylight!=1]))/1000/(60*60),
     con_type=first(con_type), sunrise=first(dis_sunrise), 
     sunset=first(dis_sunset), first_ac=first(first_ac),
     min_power=min(power_kW), max_power=max(power_kW), polarity=first(polarity))
   combined_data <- as.data.frame(combined_data)
+  # Record details before changes
   combined_data <- mutate(combined_data, old_con_type=con_type)
   combined_data <- mutate(combined_data, old_polarity=polarity)
+  # Calculate the fraction of gen/load that occured during daylight hours, just
+  # use absolute value of power as polarity has not been checked yet.
   combined_data <- mutate(
-    combined_data, frac_in_day_light_hours=
-      energy_in_day_light_hours/
+    combined_data, 
+    frac_in_day_light_hours=energy_in_day_light_hours/
       (energy_in_day_light_hours+energy_in_non_day_light_hours))
+  # Check for pv connection type, if the type is pv but more than 25% of the 
+  # gen/load was outside daylight hours then change to type 'load'. Only change
+  # if system has operated at above an avergae of 1% capacity
   combined_data <- mutate(
-    combined_data, con_type=
-      ifelse(frac_in_day_light_hours<0.75 & 
-             con_type %in% c("pv_site_net", "pv_site", "pv_inverter_net") &
-               (energy_in_day_light_hours+energy_in_non_day_light_hours) > first_ac * 24 * 0.01, 
-             "load", con_type))
-  combined_data <- mutate(combined_data, con_type=ifelse(max_power > first_ac * .1 & 
-                                                min_power * -1 > first_ac * 0.1, "mixed", con_type))
+    combined_data, 
+    con_type=ifelse(frac_in_day_light_hours<0.75 & 
+      con_type %in% c("pv_site_net", "pv_site", "pv_inverter_net") &
+      (energy_in_day_light_hours+energy_in_non_day_light_hours) > first_ac * 24 * 0.01, 
+      "load", con_type))
+  # Check for power flowing in both negative and positive direction, if this 
+  # occurs with values large than 10 % of the inverter capacity then change 
+  # connection type to 'mixed'
+  combined_data <- mutate(combined_data, 
+                          con_type=ifelse(max_power > first_ac * .1 & 
+                          min_power * -1 > first_ac * 0.1, "mixed", con_type))
+  # Check for peak power occuring as a negative value i.e. reversed polarity,
+  # if this occurs for pv systems that have operated at above an avergae of 1%
+  # capacity then swap polarity.
   combined_data <- mutate(combined_data,
     polarity=ifelse(abs(min_power) > abs(max_power) & 
                     con_type %in% c("pv_site_net", "pv_site", "pv_inverter_net") &
-                      (energy_in_day_light_hours+energy_in_non_day_light_hours) > first_ac * 24 * 0.01 &
-                      min_power < 0.0, 
+                    (energy_in_day_light_hours+energy_in_non_day_light_hours) > first_ac * 24 * 0.01 &
+                    min_power < 0.0, 
                     polarity * -1, polarity))
+  # Flag systems with changed connection type or polarity.
   combined_data <- mutate(combined_data, con_type_changed=ifelse(con_type!=old_con_type,1,0))
   combined_data <- mutate(combined_data, polarity_changed=ifelse(polarity!=old_polarity,1,0))
-  circuit_details <- select(circuit_details, site_id, c_id, polarity, sa_ww_id)
+  # Select the values from the orginal circuit details that would not be changed 
+  # by cleaning, then merge back in with details updated or created by cleaning
+  circuit_details <- select(circuit_details, site_id, c_id, sa_ww_id)
   combined_data <- left_join(combined_data, circuit_details, on="c_id")
   return(combined_data)
 }
