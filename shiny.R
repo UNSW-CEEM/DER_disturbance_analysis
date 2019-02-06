@@ -33,19 +33,19 @@ ui <- fluidPage(
       sidebarLayout(
         sidebarPanel(
           textInput("time_series", "Time series file", 
-                    value="C:/Users/user/Documents/GitHub/DER_disturbance_analysis/test_data/2018-08-25 raw inputs/2018-08-25_sa_qld_naomi.feather"
+                    value="C:/Users/user/Documents/GitHub/DER_disturbance_analysis/test_data/2018-08-25 aemo data/2018-08-25_sa_qld_fault_aemo.csv"
           ),
           shinyFilesButton("choose_ts", "Choose File", 
                       "Select timeseries data file ...", multiple=FALSE
           ),
           textInput("circuit_details", "Circuit details file", 
-                    value="C:/Users/user/Documents/GitHub/DER_disturbance_analysis/test_data/2018-08-25 raw inputs/circuit_details.csv"
+                    value="C:/Users/user/Documents/GitHub/DER_disturbance_analysis/test_data/2018-08-25 aemo data/circuit_details.csv"
           ),
           shinyFilesButton("choose_c", "Choose File", 
                            "Select circuit details data file ...", multiple=FALSE
           ),
           textInput("site_details", "Site details file", 
-                    value="C:/Users/user/Documents/GitHub/DER_disturbance_analysis/test_data/2018-08-25 raw inputs/site_details.csv"
+                    value="C:/Users/user/Documents/GitHub/DER_disturbance_analysis/test_data/2018-08-25 aemo data/site_details.csv"
           ),
           shinyFilesButton("choose_site", "Choose File", 
                            "Select site details data file ...", multiple=FALSE
@@ -147,14 +147,14 @@ server <- function(input,output,session){
         removeNotification(id)
       }else{
         id <- showNotification("Loading timeseries data from csv", duration=1000)
-        time_series_data <- read.csv(file=time_series_file(), header=TRUE, 
+        v$time_series_data <- read.csv(file=time_series_file(), header=TRUE, 
                                      stringsAsFactors = FALSE)
         removeNotification(id)
         id <- showNotification("Formatting timeseries data and 
                                 creating feather cache file", duration=1000)
         # Data from CSV is assumed to need processing.
         v$time_series_data <- v$time_series_data %>% distinct(c_id, ts, .keep_all=TRUE)
-        v$time_series_data <- process_raw_time_series_data(time_series_data)
+        v$time_series_data <- process_raw_time_series_data(v$time_series_data)
         # Automatically create a cache of the processed data as a feather file.
         # Allows for much faster data loading for subsequent anaylsis.
         file_no_type = str_sub(time_series_file(), end=-4)
@@ -167,6 +167,8 @@ server <- function(input,output,session){
       id <- showNotification("Loading circuit details from csv", duration=1000)
       v$circuit_details <- read.csv(file=circuit_details_file(), header=TRUE, 
                                   stringsAsFactors = FALSE)
+      v$circuit_details <- select(v$circuit_details, c_id, site_id, con_type, 
+                                  polarity)
       removeNotification(id)
       if (str_sub(site_details_file(), start=-7)=="feather"){
         # If a feather file is used it is assumed the data is pre-processed.
@@ -207,6 +209,11 @@ server <- function(input,output,session){
                                                           v$site_details)
       v$combined_data <- filter(v$combined_data_no_ac_filter, sum_ac<=100)
       v$combined_data <- v$combined_data %>% mutate(clean="raw")
+      v$combined_data <- 
+        select(v$combined_data, c_id, ts, v, p, e, f, d, site_id, 
+               con_type, polarity, s_state, pv_installation_year_month, sum_ac, 
+               first_ac, s_postcode, Standard_Version, Grouping, e_polarity, 
+               power_kW, clean)
       removeNotification(id)
       id <- showNotification("Cleaning data", duration=1000)
       # Clean site details data
@@ -241,7 +248,7 @@ server <- function(input,output,session){
       v$combined_data <- filter(v$combined_data, clean=="raw")
       v$combined_data_after_clean <- v$combined_data_after_clean %>% mutate(clean="cleaned")
       v$combined_data_after_clean <- select(v$combined_data_after_clean,
-        c_id, ts, v, p, e, f, d, site_id, con_type, polarity, sa_ww_id, s_state,
+        c_id, ts, v, p, e, f, d, site_id, con_type, polarity, s_state,
         pv_installation_year_month, sum_ac, first_ac, s_postcode, Standard_Version,
         Grouping, e_polarity, power_kW, clean)
       v$combined_data <- rbind(v$combined_data, v$combined_data_after_clean)

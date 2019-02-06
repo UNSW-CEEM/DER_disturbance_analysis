@@ -139,7 +139,7 @@ clean_connection_types <- function(combined_data, circuit_details, postcode_data
   combined_data <- mutate(combined_data, polarity_changed=ifelse(polarity!=old_polarity,1,0))
   # Select the values from the orginal circuit details that would not be changed 
   # by cleaning, then merge back in with details updated or created by cleaning
-  circuit_details <- select(circuit_details, site_id, c_id, sa_ww_id)
+  circuit_details <- select(circuit_details, site_id, c_id)
   combined_data <- combined_data[ , -which(names(combined_data) %in% c("first_ac"))]
   combined_data <- left_join(combined_data, circuit_details, on="c_id")
   return(combined_data)
