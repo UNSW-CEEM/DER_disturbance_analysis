@@ -222,20 +222,13 @@ server <- function(input,output,session){
       removeNotification(id)
       id <- showNotification("Cleaning data", duration=1000)
       # Clean site details data
-      t1 <- Sys.time()
-      t0 <- Sys.time()
       site_details_cleaned <- site_details_data_cleaning(
         v$combined_data_no_ac_filter, v$site_details_raw)
-      print("clean cap")
-      print(Sys.time()-t0)
       v$site_details_cleaned <- site_details_cleaned[
         order(site_details_cleaned$site_id),]
       # Clean circuit details file
-      t0 <- Sys.time()
       v$circuit_details_for_editing <- 
         clean_connection_types(v$combined_data_no_ac_filter, v$circuit_details, postcode_data)
-      print("clean cons")
-      print(Sys.time()-t0)
       # Display data cleaning output in data cleaning tab
       output$site_details_editor <- renderDT(
         isolate(v$site_details_cleaned), selection='single', rownames=FALSE, 
@@ -247,10 +240,8 @@ server <- function(input,output,session){
       v$proxy_circuit_details_editor <- dataTableProxy('circuit_details_editor')
       
       # Add cleaned data to display data for main tab
-      site_details_cleaned_old_names <- setnames(v$site_details_cleaned, 
-                                         c("sum_ac", "sum_dc"), c("ac", "dc"))
       site_details_cleaned_processed <- process_raw_site_details(
-        site_details_cleaned_old_names)
+        v$site_details_cleaned)
       v$combined_data_after_clean <- combine_data_tables(
         v$time_series_data, v$circuit_details_for_editing, 
         site_details_cleaned_processed)
@@ -263,8 +254,6 @@ server <- function(input,output,session){
         pv_installation_year_month, sum_ac, first_ac, s_postcode, Standard_Version,
         Grouping, e_polarity, power_kW, clean)
       v$combined_data <- rbind(v$combined_data, v$combined_data_after_clean)
-      print("cleaning")
-      print(Sys.time()-t1)
       removeNotification(id)
       # Filtering option widgets are rendered after the data is loaded, this is 
       # because they are only usable once there is data to filter. Additionally
@@ -455,15 +444,13 @@ server <- function(input,output,session){
     new_file_name = paste(file_no_type, "_cleaned.csv", sep="")
     v$site_details_cleaned <- v$site_details_cleaned %>% mutate(
       site_id=as.character(site_id))
-    site_details_cleaned_old_names <- setnames(v$site_details_cleaned, 
-                                       c("sum_ac", "sum_dc"), c("ac", "dc"))
-    write.csv(site_details_cleaned_old_names, new_file_name)
+    write.csv(v$site_details_cleaned, new_file_name)
     file_no_type = str_sub(circuit_details_file(), end=-5)
     new_file_name = paste(file_no_type, "_cleaned.csv", sep="")
     write.csv(v$circuit_details_for_editing, new_file_name)
     # Add cleaned data to dispay dat set
     site_details_cleaned_processed <- process_raw_site_details(
-      site_details_cleaned_old_names)
+      v$site_details_cleaned)
     v$combined_data_after_clean <- combine_data_tables(
       v$time_series_data, v$circuit_details_for_editing, 
       site_details_cleaned_processed)
@@ -471,6 +458,10 @@ server <- function(input,output,session){
                                           sum_ac<=100)
     v$combined_data <- filter(v$combined_data, clean=="raw")
     v$combined_data_after_clean <- v$combined_data_after_clean %>% mutate(clean="cleaned")
+    v$combined_data_after_clean <- select(v$combined_data_after_clean,
+                                          c_id, ts, v, p, e, f, d, site_id, con_type, polarity, s_state,
+                                          pv_installation_year_month, sum_ac, first_ac, s_postcode, Standard_Version,
+                                          Grouping, e_polarity, power_kW, clean)
     v$combined_data <- rbind(v$combined_data, v$combined_data_after_clean)
   })
   
