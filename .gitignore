@@ -34,3 +34,12 @@ vignettes/*.pdf
 
 # Shiny token, see https://shiny.rstudio.com/articles/shinyapps.html
 rsconnect/
+
+# Test data
+test_data/*
+*.feather
+*.pdf
+cumulative_capacity_and_number.csv
+cumulative_capacity_and_number_20190121.csv
+SA_agg.csv
+australian_postcodes.csv
