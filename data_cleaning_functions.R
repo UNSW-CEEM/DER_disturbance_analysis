@@ -1,11 +1,34 @@
 calc_max_kw_per_site <- function(performance_data){
-  performance_data <- group_by(performance_data, ts, site_id)  
+  t0 <- Sys.time()
+  #performance_data <- plyr::idata.frame(performance_data)
+  #performance_data <- plyr::ddply(performance_data, plyr::.(ts, site_id), power_kW=sum(power_kW))
+  performance_data <- group_by(performance_data, ts, site_id)
+  print("g1")
+  print(Sys.time()-t0)
+  t0 <- Sys.time()
   performance_data <- summarise(performance_data , power_kW=sum(power_kW))
+  print("sum site")
+  print(Sys.time()-t0)
+  t0 <- Sys.time()
   performance_data <- as.data.frame(performance_data)
+  print("df1")
+  print(Sys.time()-t0)
+  t0 <- Sys.time()
   performance_data <- group_by(performance_data, site_id)  
+  print("g2")
+  print(Sys.time()-t0)
+  t0 <- Sys.time()
   site_max_power <- summarise(performance_data , max_power_kW=max(power_kW))
+  print("find max line")
+  print(Sys.time()-t0)
+  t0 <- Sys.time()
   site_max_power <- as.data.frame(site_max_power)
+  print("df2")
+  print(Sys.time()-t0)
+  t0 <- Sys.time()
   site_max_power <- site_max_power[,c("site_id", "max_power_kW")]
+  print("select")
+  print(Sys.time()-t0)
   return(site_max_power)
 }
 
@@ -32,8 +55,14 @@ site_details_data_cleaning <- function(performance_data, site_details){
   # Check if ac value is in watts, if so devide by 1000.
   site_details <- mutate(site_details, sum_ac=ifelse(ac_dc_ratio > 0.1 & ac > 150, ac/1000, ac))
   # Find peak power per site for more checks
+  t0 <- Sys.time()
   site_details <- group_site_details_to_one_row_per_site(site_details)
+  print("group")
+  print(Sys.time()-t0)
+  t0 <- Sys.time()
   max_site_power <- calc_max_kw_per_site(performance_data)
+  print("find max")
+  print(Sys.time()-t0)
   site_details <- left_join(site_details, max_site_power, on=c("site_id"))
   # If dc capacity value doesn't make sense given peak power value then scale
   # dc capacity up, based on nearest interger scaling value that makes dc

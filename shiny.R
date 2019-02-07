@@ -7,6 +7,7 @@ library(plotly)
 library(feather)
 library(lubridate)
 library(dplyr)
+#library(plyr)
 library(tidyr)
 library(data.table)
 library(shinycssloaders)
@@ -169,6 +170,8 @@ server <- function(input,output,session){
                                   stringsAsFactors = FALSE)
       v$circuit_details <- select(v$circuit_details, c_id, site_id, con_type, 
                                   polarity)
+      
+      v$circuit_details <- v$circuit_details %>% mutate(site_id = as.character(site_id))
       removeNotification(id)
       if (str_sub(site_details_file(), start=-7)=="feather"){
         # If a feather file is used it is assumed the data is pre-processed.
@@ -180,6 +183,8 @@ server <- function(input,output,session){
         id <- showNotification("Loading site details from csv", duration=1000)
         v$site_details_raw <- read.csv(file=site_details_file(), header=TRUE, 
                                  stringsAsFactors = FALSE)
+        
+        v$site_details_raw <- v$site_details_raw %>% mutate(site_id = as.character(site_id))
         removeNotification(id)
         id <- showNotification("Formatting site details and 
                                 creating feather cache file", duration=1000)
@@ -217,14 +222,20 @@ server <- function(input,output,session){
       removeNotification(id)
       id <- showNotification("Cleaning data", duration=1000)
       # Clean site details data
-      site_details_raw <- v$site_details_raw %>% mutate(site_id=as.numeric(site_id))
+      t1 <- Sys.time()
+      t0 <- Sys.time()
       site_details_cleaned <- site_details_data_cleaning(
-        v$combined_data_no_ac_filter, site_details_raw)
+        v$combined_data_no_ac_filter, v$site_details_raw)
+      print("clean cap")
+      print(Sys.time()-t0)
       v$site_details_cleaned <- site_details_cleaned[
         order(site_details_cleaned$site_id),]
       # Clean circuit details file
+      t0 <- Sys.time()
       v$circuit_details_for_editing <- 
         clean_connection_types(v$combined_data_no_ac_filter, v$circuit_details, postcode_data)
+      print("clean cons")
+      print(Sys.time()-t0)
       # Display data cleaning output in data cleaning tab
       output$site_details_editor <- renderDT(
         isolate(v$site_details_cleaned), selection='single', rownames=FALSE, 
@@ -252,6 +263,8 @@ server <- function(input,output,session){
         pv_installation_year_month, sum_ac, first_ac, s_postcode, Standard_Version,
         Grouping, e_polarity, power_kW, clean)
       v$combined_data <- rbind(v$combined_data, v$combined_data_after_clean)
+      print("cleaning")
+      print(Sys.time()-t1)
       removeNotification(id)
       # Filtering option widgets are rendered after the data is loaded, this is 
       # because they are only usable once there is data to filter. Additionally
@@ -318,15 +331,18 @@ server <- function(input,output,session){
   observeEvent(input$update_plots, {
     id <- showNotification("Updating plots", duration=1000)
     # Filter data based on user selections
-    #combined_data_f <- filter(v$combined_data, d==duration())
+    t0 <- Sys.time()
     combined_data_f <- vector_filter(v$combined_data, duration=duration(), 
                                 state=region(), standards=standards(),
                                 clean=clean())
+    print(Sys.time()-t0)
+    t0 <- Sys.time()
     combined_data_f <- filter(combined_data_f, 
                               ts>=start_time() & ts<= end_time())
     if(raw_upscale()){
       combined_data_f <- upscale(combined_data_f, v$install_data)
     }
+    print(Sys.time()-t0)
     
     # Check that the filter does not result in an empty dataframe.
     if(length(combined_data_f$ts) > 0){
@@ -438,8 +454,7 @@ server <- function(input,output,session){
     file_no_type = str_sub(site_details_file(), end=-5)
     new_file_name = paste(file_no_type, "_cleaned.csv", sep="")
     v$site_details_cleaned <- v$site_details_cleaned %>% mutate(
-      site_id=as.character(site_id)
-    )
+      site_id=as.character(site_id))
     site_details_cleaned_old_names <- setnames(v$site_details_cleaned, 
                                        c("sum_ac", "sum_dc"), c("ac", "dc"))
     write.csv(site_details_cleaned_old_names, new_file_name)

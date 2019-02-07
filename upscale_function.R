@@ -1,13 +1,16 @@
 upscale <- function(performace_data, install_capacity){
-  performace_data <- group_by(performace_data, ts, site_id)  
-  performace_data <- summarise(performace_data , power_kW=sum(power_kW),
-                               sample_capacity=first(sum_ac), 
-                               s_state=first(s_state), 
-                               Standard_Version=first(Standard_Version), 
-                               Grouping=first(Grouping))
-  performace_data <- as.data.frame(performace_data)
+  performace_data_p <- group_by(performace_data, ts, site_id, clean)
+  performace_data_a <- group_by(performace_data, site_id, clean)
+  performace_data_p <- summarise(performace_data_p , power_kW=sum(power_kW))
+  performace_data_a <- summarise(performace_data_a , sample_capacity=first(sum_ac), 
+                                 s_state=first(s_state), 
+                                 Standard_Version=first(Standard_Version), 
+                                 Grouping=first(Grouping))
+  performace_data_p <- as.data.frame(performace_data_p)
+  performace_data_a <- as.data.frame(performace_data_a)
+  performace_data <- left_join(performace_data_p, performace_data_a, on='site_id')
   performace_data <- group_by(performace_data, ts, s_state, Standard_Version, 
-                              Grouping)
+                              Grouping, clean)
   performace_data <- summarise(performace_data , power_kW=sum(power_kW),
                                sample_capacity=sum(sample_capacity))
   performace_data <- as.data.frame(performace_data)

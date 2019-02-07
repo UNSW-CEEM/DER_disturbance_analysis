@@ -1,12 +1,9 @@
 
-vector_filter <- function(data, duration, state, standards, clean){
-  column_value_pairs <- list(list('d', duration), list('s_state', state),
-                             list('Standard_Version', standards),
-                             list('clean', clean))
-  for (column_value_pair in column_value_pairs) {
-    data <- eval(parse(text = paste("filter(data,", column_value_pair[[1]], 
-                                    "%in% column_value_pair[[2]] )"))) 
-  }
+vector_filter <- function(data, duration, state, standards, cleaned){
+  data <- filter(data, s_state==state)
+  if (length(cleaned) < 2) {  data <- filter(data, clean %in% cleaned)}
+  if (length(standards) < 3) {  data <- filter(data, Standard_Version %in% standards)}
+  data <- filter(data, d==duration)
   return(data)
 }
 
