@@ -95,7 +95,9 @@ ui <- fluidPage(
         #Output
         mainPanel(
           plotlyOutput(outputId="PlotlyTest"),
-          uiOutput("save_agg_power")
+          uiOutput("save_agg_power"),
+          HTML("<br><br>"),
+          dataTableOutput("sample_count_table")
         )
       )
     ),
@@ -105,7 +107,6 @@ ui <- fluidPage(
         DTOutput('site_details_editor'),
         DTOutput('circuit_details_editor'),
         actionButton("save_cleaned_data", "Save cleaned data")
-
       )
     )
   ),
@@ -419,13 +420,23 @@ server <- function(input,output,session){
                                     grouping_agg=grouping_agg(),
                                     manufacturer_agg=manufacturer_agg(),
                                     model_agg=model_agg())
+       
+      sample_count_table <- vector_groupby_count(combined_data_f, 
+                                           agg_on_standard=agg_on_standard(),
+                                           pst_agg=pst_agg(), 
+                                           grouping_agg=grouping_agg(),
+                                           manufacturer_agg=manufacturer_agg(),
+                                           model_agg=model_agg())
+      
       output$PlotlyTest <- renderPlotly({
         plot_ly(v$agg_power, x=~Time, y=~Power_kW, color=~series, 
                 type="scatter")})
       output$save_agg_power <- renderUI({
         shinySaveButton("save", "Save data", "Save file as ...", 
-                        filetype=list(xlsx="csv"))
-        })
+                        filetype=list(xlsx="csv"))})
+      
+      output$sample_count_table <- renderDataTable({sample_count_table})
+      
       removeNotification(id)
     } else {
       # If there is no data left after filtering alert the user and create an
