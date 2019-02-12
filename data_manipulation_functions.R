@@ -30,6 +30,8 @@ process_raw_circuit_details <- function(circuit_details){
 }
 
 process_raw_site_details <- function(site_details){
+  site_details <- site_details %>%
+    mutate(s_postcode = as.character(s_postcode))
   # Older site details proided the day of installation not just the month. We 
   # change the name of the column to match the new format which is just by 
   # month but keep the original info regarding the date.
@@ -48,7 +50,9 @@ process_raw_site_details <- function(site_details){
   processed_site_details <- site_details %>%
     summarise(s_state=first(s_state), 
               pv_installation_year_month=first(pv_installation_year_month),
-              sum_ac=sum(ac), first_ac=first(ac), s_postcode=first(s_postcode))
+              sum_ac=sum(ac), first_ac=first(ac), s_postcode=first(s_postcode),
+              manufacturer=paste(manufacturer, collapse=' '), 
+              model=paste(model, collapse=' '))
   processed_site_details <- as.data.frame(processed_site_details)
   return(processed_site_details)}
 

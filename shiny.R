@@ -25,6 +25,9 @@ source("upscale_function.R")
 source("data_cleaning_functions.R")
 
 ui <- fluidPage(
+  tags$head(
+    tags$style(HTML("hr {border-top: 1px solid #000000;}"))
+  ),
   # Allows for the use of notifications.
   useShinyjs(),
   titlePanel("PV System Disturbance Analysis"),
@@ -33,37 +36,60 @@ ui <- fluidPage(
     tabPanel("Main",fluid=TRUE,
       sidebarLayout(
         sidebarPanel(
+          h4("File selection"),
           textInput("time_series", "Time series file", 
-                    value="C:/Users/user/Documents/GitHub/DER_disturbance_analysis/test_data/2018-08-25 aemo data/2018-08-25_sa_qld_fault_aemo.csv"
+                    value="C:/Users/user/Documents/GitHub/DER_disturbance_analysis/test_data/2018-08-25 aemo data/2018-08-25_sa_qld_fault_aemo.feather"
           ),
           shinyFilesButton("choose_ts", "Choose File", 
                       "Select timeseries data file ...", multiple=FALSE
           ),
+          HTML("<br><br>"),
           textInput("circuit_details", "Circuit details file", 
                     value="C:/Users/user/Documents/GitHub/DER_disturbance_analysis/test_data/2018-08-25 aemo data/circuit_details.csv"
           ),
+
           shinyFilesButton("choose_c", "Choose File", 
                            "Select circuit details data file ...", multiple=FALSE
           ),
+          HTML("<br><br>"),
           textInput("site_details", "Site details file", 
                     value="C:/Users/user/Documents/GitHub/DER_disturbance_analysis/test_data/2018-08-25 aemo data/site_details.csv"
           ),
           shinyFilesButton("choose_site", "Choose File", 
                            "Select site details data file ...", multiple=FALSE
           ),
-          br(),
+          HTML("<br><br>"),
           actionButton("load_data", "Load data"),
-          uiOutput("cleaned"),
+          tags$hr(),
+          h4("Time Filter"),
           uiOutput("dateWidget"),
           uiOutput("time_start"),
           uiOutput("time_end"),
+          tags$hr(),
+          h4("Catergory Filter"),
+          uiOutput("cleaned"),
           uiOutput("region"),
           uiOutput("duration"),
-          materialSwitch("Std_Agg_Indiv", label=strong("AS47777 Aggregated:"), 
-                         status="primary"),
           uiOutput("StdVersion"),
+          uiOutput("size_groupings"),
+          uiOutput("postcodes"),
+          uiOutput("manufacturers"),
+          uiOutput("models"),
+          tags$hr(),
+          h4("Aggregation Settings"),
+          materialSwitch("Std_Agg_Indiv", label=strong("AS4777 Aggregated:"), 
+                         status="primary"),
+          materialSwitch("grouping_agg", label=strong("Size Grouping Aggregated:"), 
+                         status="primary"),
+          materialSwitch("pst_agg", label=strong("Postcodes Aggreagted:"), 
+                         status="primary", value=TRUE),
+          materialSwitch("manufacturer_agg", label=strong("Manufacturer Aggreagted:"), 
+                         status="primary", value=TRUE),
+          materialSwitch("model_agg", label=strong("Models Aggreagted:"), 
+                         status="primary", value=TRUE),
           materialSwitch(inputId="raw_upscale", label=strong("Upscaled Data"), 
                          status="primary", right=FALSE),
+          tags$hr(),
           uiOutput("update_plots")
         ),
         #Output
@@ -89,6 +115,10 @@ server <- function(input,output,session){
   # Hide these inputs by default, they are shown once data is loaded.
   hide("Std_Agg_Indiv")
   hide("raw_upscale")
+  hide("pst_agg")
+  hide("grouping_agg")
+  hide("manufacturer_agg")
+  hide("model_agg")
   options(DT.options = list(pageLength = 3))
   # Get input from GUI
   time_series_file <- reactive({input$time_series})
@@ -97,8 +127,16 @@ server <- function(input,output,session){
   region <- reactive({input$region})
   duration <- reactive({input$duration})
   standards <- reactive({input$StdVersion})
+  postcodes <- reactive({input$postcodes})
+  manufacturers <- reactive({input$manufacturers})
+  models <- reactive({input$models})
+  size_groupings <- reactive({input$size_groupings})
   clean <- reactive({input$cleaned})
   raw_upscale <- reactive({input$raw_upscale})
+  pst_agg <- reactive({input$pst_agg})
+  grouping_agg <- reactive({input$grouping_agg})
+  manufacturer_agg <- reactive({input$manufacturer_agg})
+  model_agg <- reactive({input$model_agg})
   start_time <- reactive({
     date_as_str <- as.character(input$date[1])
     time_as_str <- substr(input$time_start, 12,19)
@@ -113,6 +151,7 @@ server <- function(input,output,session){
     end_date_time <- strftime(end_time_as_str)
     end_date_time
   })
+  
   agg_on_standard <- reactive({input$Std_Agg_Indiv})
   # Store the main data table in a reactive value so it is accessable outside 
   # the observe event that creates it.
@@ -206,6 +245,8 @@ server <- function(input,output,session){
       postcode_data_file <- "PostcodesLatLong.csv"
       postcode_data <- read.csv(file=postcode_data_file, header=TRUE, 
                                stringsAsFactors = FALSE)
+      postcode_data <- postcode_data %>%
+        mutate(postcode = as.character(postcode))
       removeNotification(id)
       # Perform data, processing and combine data table into a single data frame
       id <- showNotification("Combining data tables", duration=1000)
@@ -218,7 +259,7 @@ server <- function(input,output,session){
         select(v$combined_data, c_id, ts, v, p, e, f, d, site_id, 
                con_type, polarity, s_state, pv_installation_year_month, sum_ac, 
                first_ac, s_postcode, Standard_Version, Grouping, e_polarity, 
-               power_kW, clean)
+               power_kW, clean, manufacturer, model)
       removeNotification(id)
       id <- showNotification("Cleaning data", duration=1000)
       # Clean site details data
@@ -252,7 +293,7 @@ server <- function(input,output,session){
       v$combined_data_after_clean <- select(v$combined_data_after_clean,
         c_id, ts, v, p, e, f, d, site_id, con_type, polarity, s_state,
         pv_installation_year_month, sum_ac, first_ac, s_postcode, Standard_Version,
-        Grouping, e_polarity, power_kW, clean)
+        Grouping, e_polarity, power_kW, clean, manufacturer, model)
       v$combined_data <- rbind(v$combined_data, v$combined_data_after_clean)
       removeNotification(id)
       # Filtering option widgets are rendered after the data is loaded, this is 
@@ -263,6 +304,7 @@ server <- function(input,output,session){
         checkboxGroupButtons(inputId="cleaned", 
                              label=strong("Data processing:"),
                              choices=list("cleaned", "raw"),
+                             selected=list("cleaned"),
                              justified=TRUE, status="primary", individual=TRUE,
                              checkIcon=list(yes=icon("ok", lib="glyphicon"), 
                                             no=icon("remove", lib="glyphicon")))
@@ -291,19 +333,51 @@ server <- function(input,output,session){
         radioButtons("duration", 
                      label=strong("Sampled duration (seconds), select one"),
                      choices = list("5","30","60"), selected = "60", 
-                     inline = TRUE)
+                     inline = TRUE)})
+      output$postcodes <- renderUI({
+        selectizeInput("postcodes", 
+                      label=strong("Select postcodes"),
+                      choices = unique(v$combined_data$s_postcode), 
+                      multiple=TRUE)  
         })
+      output$manufacturers <- renderUI({
+        selectizeInput("manufacturers", 
+                       label=strong("Select manufacturers"),
+                       choices = unique(v$combined_data$manufacturer), 
+                       multiple=TRUE)  
+      })
+      output$models <- renderUI({
+        selectizeInput("models", 
+                       label=strong("Select models"),
+                       choices = unique(v$combined_data$model), 
+                       multiple=TRUE)  
+      })
       show("Std_Agg_Indiv")
+      output$size_groupings <- renderUI({
+        checkboxGroupButtons(inputId="size_groupings", 
+                             label=strong("Size Groupings"),
+                             choices=list("30-100kW", "<30 kW"),
+                             selected=list("30-100kW", "<30 kW"),
+                             justified=TRUE, status="primary", individual=TRUE,
+                             checkIcon=list(yes=icon("ok", lib="glyphicon"), 
+                                            no=icon("remove", lib="glyphicon")))
+      })
       output$StdVersion <- renderUI({
         checkboxGroupButtons(inputId="StdVersion", 
                              label=strong("AS47777 Version:"),
                              choices=list("AS4777.3:2005", "Transition", 
                                           "AS4777.2:2015"),
+                             selected=list("AS4777.3:2005", "Transition", 
+                                           "AS4777.2:2015"),
                              justified=TRUE, status="primary", individual=TRUE,
                              checkIcon=list(yes=icon("ok", lib="glyphicon"), 
                                             no=icon("remove", lib="glyphicon")))
         })
       show("raw_upscale")
+      show("pst_agg")
+      show("grouping_agg")
+      show("manufacturer_agg")
+      show("model_agg")
       output$update_plots <- renderUI({
         actionButton("update_plots", "Update plots")
         })
@@ -322,8 +396,11 @@ server <- function(input,output,session){
     # Filter data based on user selections
     t0 <- Sys.time()
     combined_data_f <- vector_filter(v$combined_data, duration=duration(), 
-                                state=region(), standards=standards(),
-                                clean=clean())
+                                     state=region(), standards=standards(),
+                                     clean=clean(), postcodes=postcodes(),
+                                     size_groupings=size_groupings(),
+                                     manufacturers=manufacturers(),
+                                     models=models())
     print(Sys.time()-t0)
     t0 <- Sys.time()
     combined_data_f <- filter(combined_data_f, 
@@ -337,7 +414,11 @@ server <- function(input,output,session){
     if(length(combined_data_f$ts) > 0){
       # For first plot just aggregate filtered data.
       v$agg_power <- vector_groupby(combined_data_f, 
-                                    agg_on_standard=agg_on_standard())
+                                    agg_on_standard=agg_on_standard(),
+                                    pst_agg=pst_agg(), 
+                                    grouping_agg=grouping_agg(),
+                                    manufacturer_agg=manufacturer_agg(),
+                                    model_agg=model_agg())
       output$PlotlyTest <- renderPlotly({
         plot_ly(v$agg_power, x=~Time, y=~Power_kW, color=~series, 
                 type="scatter")})
@@ -394,7 +475,30 @@ server <- function(input,output,session){
       updateTextInput(session, "site_details", value=as.character(fileinfo$datapath))
     }
   })
-
+  
+  # Inforce mutual exclusivity of Aggregation settings
+  observe({
+    if(manufacturer_agg() | model_agg() | pst_agg()){
+      updateMaterialSwitch(session=session, "raw_upscale", value = FALSE)
+    }
+  })
+  observe({
+    if(raw_upscale()){
+      updateMaterialSwitch(session=session, "manufacturer_agg", value = TRUE)
+    }
+  })
+  observe({
+    if(raw_upscale()){
+      updateMaterialSwitch(session=session, "model_agg", value = TRUE)
+    }
+  })
+  observe({
+    if(raw_upscale()){
+      updateMaterialSwitch(session=session, "pst_agg", value = TRUE)
+    }
+  })
+  
+  
   # Peform data cleaning steps
   observeEvent(input$run_clean, {
     dummy_catch <- 1
