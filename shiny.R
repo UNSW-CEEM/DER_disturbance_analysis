@@ -7,7 +7,6 @@ library(plotly)
 library(feather)
 library(lubridate)
 library(dplyr)
-#library(plyr)
 library(tidyr)
 library(data.table)
 library(shinycssloaders)
@@ -79,11 +78,13 @@ ui <- fluidPage(
           h4("Aggregation Settings"),
           materialSwitch("Std_Agg_Indiv", label=strong("AS4777 Aggregated:"), 
                          status="primary"),
-          materialSwitch("grouping_agg", label=strong("Size Grouping Aggregated:"), 
+          materialSwitch("grouping_agg", 
+                         label=strong("Size Grouping Aggregated:"), 
                          status="primary"),
           materialSwitch("pst_agg", label=strong("Postcodes Aggreagted:"), 
                          status="primary", value=TRUE),
-          materialSwitch("manufacturer_agg", label=strong("Manufacturer Aggreagted:"), 
+          materialSwitch("manufacturer_agg", 
+                         label=strong("Manufacturer Aggreagted:"), 
                          status="primary", value=TRUE),
           materialSwitch("model_agg", label=strong("Models Aggreagted:"), 
                          status="primary", value=TRUE),
@@ -223,7 +224,6 @@ server <- function(input,output,session){
         id <- showNotification("Loading site details from csv", duration=1000)
         v$site_details_raw <- read.csv(file=site_details_file(), header=TRUE, 
                                  stringsAsFactors = FALSE)
-        
         v$site_details_raw <- v$site_details_raw %>% mutate(site_id = as.character(site_id))
         removeNotification(id)
         id <- showNotification("Formatting site details and 

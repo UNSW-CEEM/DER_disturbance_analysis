@@ -3,23 +3,50 @@ process_raw_time_series_data <- function(time_series_data){
   # Sometimes data from solar analytics contains rows that are additional 
   # headers explicity remove these.
   time_series_data <- time_series_data[!time_series_data$c_id=="c_id",]
-  # Convert time stamp to date time object assuming UTC time is being used.
-  time_series_data <- time_series_data %>% 
-    mutate(ts = fastPOSIXct(ts))
-  # Change time zone to NEM standard time.
-  time_series_data <- time_series_data %>%
-    mutate(ts = with_tz(ts,"Australia/Brisbane"))
   # If a data record does not have a specified duration assume it is equal to 
   # 5 s.
-  time_series_data$d[is.na(time_series_data$d)] <- "5"
+  time_series_data$d[is.na(time_series_data$d)] <- "5.0"
+  time_series_data$d[time_series_data$d == ""] <- "5.0"
+  print(unique(time_series_data$d))
   # Convert data that comes as strings to numeric where applicable.
   time_series_data <- time_series_data %>%  
     mutate(d = as.numeric(d))
+  # Convert time stamp to date time object assuming UTC time is being used.
+  time_series_data <- time_series_data %>%  mutate(ts = fastPOSIXct(ts))
+  # Assert assumptions about data set
+  assert_raw_time_series_assumptions(time_series_data)
+  # Change time zone to NEM standard time.
+  time_series_data <- time_series_data %>%  
+    mutate(ts = with_tz(ts,"Australia/Brisbane"))
   time_series_data <- time_series_data %>%
     mutate(c_id = as.numeric(c_id))
   processed_time_series_data <- time_series_data %>%
     mutate(e = as.numeric(e))
   return(processed_time_series_data)
+}
+
+assert_raw_time_series_assumptions <- function(raw_time_series_data){
+  # Check in coming timeseries data for conformance to data processing 
+  # assumptions
+  # We assume that the only reason for a character value to appear in a numeric
+  # column is if we have header duplication.
+  c_ids <- as.numeric(raw_time_series_data$c_id)
+  assert_that(all(c_ids == floor(c_ids)), 
+              msg="Not all circuit IDs are integers")
+  # We assume that all values in the ts column were of the format 
+  # year month day hour minute second
+  assert_that(all(!is.na(raw_time_series_data$ts)), 
+              msg="Not all ts datetimes in correct format")
+  # We assume that all values in the "e" column can be safely converted to 
+  # numeric type
+  assert_that(all(!is.na(as.numeric(raw_time_series_data$e))), 
+              msg="Not all energy values could be interprested as numbers")
+  # We assume after interpreting NAs as 5 s data that all duration data should
+  # equal 60, 30 or 5
+  assert_that(all(raw_time_series_data$d==5 |
+                  raw_time_series_data$d==30 |
+                  raw_time_series_data$d==60), 
+              msg="Not all duration values are 5, 30 or 60")
 }
 
 process_raw_circuit_details <- function(circuit_details){
@@ -30,6 +57,7 @@ process_raw_circuit_details <- function(circuit_details){
 }
 
 process_raw_site_details <- function(site_details){
+  assert_raw_site_details_assumptions(site_details)
   site_details <- site_details %>%
     mutate(s_postcode = as.character(s_postcode))
   # Older site details proided the day of installation not just the month. We 
@@ -40,7 +68,7 @@ process_raw_site_details <- function(site_details){
                      c("pv_installation_year_month"))
   }
   # The data can contain duplicate site ids, these need to be sumarised so there
-  # is one row per site id. DC power is summed so sites with more than 100kW 
+  # is one row per site id. AC power is summed so sites with more than 100kW 
   # can be filtered out of the data set. The first ac value is taken as a sample
   # of the site, it is not summed, as latter when the data is joined to the 
   # circuit data (which may have mutiple rows be site_id) this would create
@@ -55,6 +83,32 @@ process_raw_site_details <- function(site_details){
               model=paste(model, collapse=' '))
   processed_site_details <- as.data.frame(processed_site_details)
   return(processed_site_details)}
+
+assert_raw_site_details_assumptions <- function(site_details){
+  # Check in coming site data for conformance to data processing 
+  # assumptions
+  # We assume that only possible s_state values are NSW, QLD, VIC, TAS, SA, WA,
+  # NT, ACT
+  s_state <- site_details$s_state
+  assert_that(all(s_state == "NSW" | s_state == "QLD" | s_state == "VIC" |
+                  s_state == "TAS" | s_state == "SA" | s_state == "WA" |
+                  s_state == "ACT"), 
+              msg="State values outside expected set NSW, ACT, SA etc")
+  # We assume that for each site id there is only one distinct s_state value
+  # and s_postcode value
+  site_details_grouped <- site_details %>% group_by(site_id)
+  site_details_grouped <- site_details_grouped %>%
+    summarise(s_state=unique(s_state), s_postcode=unique(s_postcode))
+  site_details_grouped <- as.data.frame(site_details_grouped)
+  assert_that(all(lapply(site_details_grouped$s_state, length)==1),
+              msg="Some stites have mutiple distinct s_state values")
+  assert_that(all(lapply(site_details_grouped$s_postcode, length)==1),
+              msg="Some stites have mutiple distinct s_postcode values")
+  # We assume ac and dc values can be converted to numeric without be turned
+  # into NAs
+  assert_that(all(!is.na(as.numeric(site_details$ac))))
+  assert_that(all(!is.na(as.numeric(site_details$dc))))
+}
 
 perform_power_calculations <- function(master_data_table){
   # Calculate the average power output over the sample time base on the 
@@ -133,6 +187,18 @@ site_catergorisation <- function(combined_data){
                     ifelse(pv_installation_year_month>="2016-11-01", 
                            "AS4777.2:2015", "Transition")))
   return(combined_data)
+}
+
+assert_site_install_date_assumptions <- function(site_details){
+  # Check in coming  data for conformance to data processing assumptions
+  # We assume that the pv installation year month will be either of the form
+  # YYYY-MM or YYYY-MM-DD
+  assert_that(all(length(pv_installation_year_month) %in% c(7, 10)), 
+              msg="pv_installation_year_month has an unexpected format, should
+              be YYYY-MM or YYYY-MM-DD")
+  assert_that(all(length(pv_installation_year_month) %in% c(7, 10)), 
+              msg="pv_installation_year_month has an unexpected format, should
+              be YYYY-MM or YYYY-MM-DD")
 }
 
 combine_data_tables <- function(time_series_data, circuit_details, 
