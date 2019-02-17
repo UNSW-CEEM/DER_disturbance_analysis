@@ -57,6 +57,7 @@ process_raw_circuit_details <- function(circuit_details){
 }
 
 process_raw_site_details <- function(site_details){
+  site_details <- filter(site_details, !is.na(ac) & ac != "")
   assert_raw_site_details_assumptions(site_details)
   site_details <- site_details %>%
     mutate(s_postcode = as.character(s_postcode))
@@ -107,7 +108,7 @@ assert_raw_site_details_assumptions <- function(site_details){
   # We assume ac and dc values can be converted to numeric without be turned
   # into NAs
   assert_that(all(!is.na(as.numeric(site_details$ac))))
-  assert_that(all(!is.na(as.numeric(site_details$dc))))
+  #assert_that(all(!is.na(as.numeric(site_details$dc))))
 }
 
 perform_power_calculations <- function(master_data_table){
