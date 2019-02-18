@@ -23,7 +23,8 @@ vector_groupby <- function(data, agg_on_standard, pst_agg, grouping_agg,
   series_cols <- grouping_cols
   grouping_cols <- c("ts", series_cols)
   data <- group_by(data, .dots=grouping_cols)
-  data <- summarise(data , Power_kW=sum(power_kW))
+  data <- summarise(data , Power_kW=sum(power_kW), 
+                    Event_Normalised_Power_kW=mean(na.omit(normalised_power_kW)))
   data$series <- do.call(paste, c(data[series_cols], sep = "-" ))
   data <- setnames(data, c("ts", "Power_kW"), c("Time", "Power_kW"))
   data <- as.data.frame(data)
