@@ -7,7 +7,6 @@ process_raw_time_series_data <- function(time_series_data){
   # 5 s.
   time_series_data$d[is.na(time_series_data$d)] <- "5.0"
   time_series_data$d[time_series_data$d == ""] <- "5.0"
-  print(unique(time_series_data$d))
   # Convert data that comes as strings to numeric where applicable.
   time_series_data <- time_series_data %>%  
     mutate(d = as.numeric(d))

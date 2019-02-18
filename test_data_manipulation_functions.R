@@ -1,4 +1,4 @@
-context("Testing the DER even analysis underlying data manipulation functions")
+context("Testing the DER event analysis underlying data manipulation functions")
 ##RSHINY APP
 library (shiny)
 library(shinyTime)

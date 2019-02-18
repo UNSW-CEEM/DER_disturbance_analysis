@@ -99,7 +99,8 @@ ui <- fluidPage(
           plotlyOutput(outputId="PlotlyTest"),
           uiOutput("save_agg_power"),
           HTML("<br><br>"),
-          dataTableOutput("sample_count_table")
+          dataTableOutput("sample_count_table"),
+          uiOutput("save_sample_count")
         )
       )
     ),
@@ -114,6 +115,7 @@ ui <- fluidPage(
   ),
   useShinyalert()
 )
+
 server <- function(input,output,session){
   # Hide these inputs by default, they are shown once data is loaded.
   hide("Std_Agg_Indiv")
@@ -170,7 +172,8 @@ server <- function(input,output,session){
                       proxy_site_details_editor = 1,
                       proxy_circuit_details_editor = 1,
                       combined_data_after_clean = data.frame(),
-                      time_series_data = data.frame()
+                      time_series_data = data.frame(),
+                      sample_count_table = data.frame()
                       )
   
   # This is the event that runs when the "Load data" button on the GUI is
@@ -407,6 +410,14 @@ server <- function(input,output,session){
     t0 <- Sys.time()
     combined_data_f <- filter(combined_data_f, 
                               ts>=start_time() & ts<= end_time())
+    
+    v$sample_count_table <- vector_groupby_count(combined_data_f, 
+                                                 agg_on_standard=agg_on_standard(),
+                                                 pst_agg=pst_agg(), 
+                                                 grouping_agg=grouping_agg(),
+                                                 manufacturer_agg=manufacturer_agg(),
+                                                 model_agg=model_agg())
+    
     if(raw_upscale()){
       combined_data_f <- upscale(combined_data_f, v$install_data)
     }
@@ -421,22 +432,17 @@ server <- function(input,output,session){
                                     grouping_agg=grouping_agg(),
                                     manufacturer_agg=manufacturer_agg(),
                                     model_agg=model_agg())
-       
-      sample_count_table <- vector_groupby_count(combined_data_f, 
-                                           agg_on_standard=agg_on_standard(),
-                                           pst_agg=pst_agg(), 
-                                           grouping_agg=grouping_agg(),
-                                           manufacturer_agg=manufacturer_agg(),
-                                           model_agg=model_agg())
       
       output$PlotlyTest <- renderPlotly({
         plot_ly(v$agg_power, x=~Time, y=~Power_kW, color=~series, 
                 type="scatter")})
       output$save_agg_power <- renderUI({
-        shinySaveButton("save", "Save data", "Save file as ...", 
+        shinySaveButton("save_agg_power", "Save data", "Save file as ...", 
                         filetype=list(xlsx="csv"))})
-      
-      output$sample_count_table <- renderDataTable({sample_count_table})
+      output$sample_count_table <- renderDataTable({v$sample_count_table})
+      output$save_sample_count <- renderUI({
+        shinySaveButton("save_sample_count", "Save data", "Save file as ...", 
+                        filetype=list(xlsx="csv"))})
       
       removeNotification(id)
     } else {
@@ -451,10 +457,20 @@ server <- function(input,output,session){
   # Save data from aggregate pv power plot
   observe({
     volumes <- c(dr="C:\\")
-    shinyFileSave(input, "save", roots=volumes, session=session)
-    fileinfo <- parseSavePath(volumes, input$save)
+    shinyFileSave(input, "save_agg_power", roots=volumes, session=session)
+    fileinfo <- parseSavePath(volumes, input$save_agg_power)
     if (nrow(fileinfo) > 0) {
       write.csv(v$agg_power, as.character(fileinfo$datapath), row.names=FALSE)
+    }
+  })
+  
+  # Save data from sample count table
+  observe({
+    volumes <- c(dr="C:\\")
+    shinyFileSave(input, "save_sample_count", roots=volumes, session=session)
+    fileinfo <- parseSavePath(volumes, input$save_sample_count)
+    if (nrow(fileinfo) > 0) {
+      write.csv(v$sample_count_table, as.character(fileinfo$datapath), row.names=FALSE)
     }
   })
   
