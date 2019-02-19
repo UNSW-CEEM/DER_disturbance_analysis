@@ -43,3 +43,7 @@ cumulative_capacity_and_number.csv
 cumulative_capacity_and_number_20190121.csv
 SA_agg.csv
 australian_postcodes.csv
+2018-08-25 raw inputs/2018-08-25_sa_qld_naomi.csv
+2018-08-25 raw inputs/circuit_details.csv
+2018-08-25 raw inputs/site_details.csv
+2018-08-25 raw inputs/site_details_cleaned.csv

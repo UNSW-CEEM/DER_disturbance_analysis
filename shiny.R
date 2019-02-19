@@ -286,6 +286,9 @@ server <- function(input,output,session){
                power_kW, clean, manufacturer, model)
       removeNotification(id)
       id <- showNotification("Cleaning data", duration=1000)
+      combined_data_no_ac_filter <- 
+        select(combined_data_no_ac_filter, c_id, ts, e, site_id, con_type,
+               polarity, first_ac, s_postcode, power_kW)
       # Clean site details data
       site_details_cleaned <- site_details_data_cleaning(
         combined_data_no_ac_filter, v$site_details_raw)
