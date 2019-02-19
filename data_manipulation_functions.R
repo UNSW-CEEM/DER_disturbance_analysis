@@ -19,8 +19,12 @@ process_raw_time_series_data <- function(time_series_data){
     mutate(ts = with_tz(ts,"Australia/Brisbane"))
   time_series_data <- time_series_data %>%
     mutate(c_id = as.numeric(c_id))
-  processed_time_series_data <- time_series_data %>%
+  time_series_data <- time_series_data %>%
     mutate(e = as.numeric(e))
+  time_series_data <- time_series_data %>%
+    mutate(v = as.numeric(v))
+  processed_time_series_data <- time_series_data %>%
+    mutate(f = as.numeric(f))
   return(processed_time_series_data)
 }
 

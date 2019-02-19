@@ -103,10 +103,13 @@ ui <- fluidPage(
         mainPanel(
           plotlyOutput(outputId="PlotlyTest"),
           uiOutput("save_agg_power"),
-          HTML("<br><br>"),
+          uiOutput("save_underlying"),
           dataTableOutput("sample_count_table"),
+          HTML("<br><br>"),
           uiOutput("save_sample_count"),
-          plotlyOutput(outputId="NormPower")
+          plotlyOutput(outputId="NormPower"),
+          plotlyOutput(outputId="Frequency"),
+          plotlyOutput(outputId="Voltage")
         )
       )
     ),
@@ -169,8 +172,8 @@ server <- function(input,output,session){
     event_date_time <- strftime(date_time_as_str)
     event_date_time
   })
-  
   agg_on_standard <- reactive({input$Std_Agg_Indiv})
+  
   # Store the main data table in a reactive value so it is accessable outside 
   # the observe event that creates it.
   v <- reactiveValues(combined_data = data.frame(),
@@ -186,7 +189,8 @@ server <- function(input,output,session){
                       proxy_circuit_details_editor = 1,
                       combined_data_after_clean = data.frame(),
                       time_series_data = data.frame(),
-                      sample_count_table = data.frame()
+                      sample_count_table = data.frame(),
+                      combined_data_f = data.frame()
                       )
   
   # This is the event that runs when the "Load data" button on the GUI is
@@ -202,23 +206,23 @@ server <- function(input,output,session){
         # If a feather file is used it is assumed the data is pre-processed.
         # Hence the data is not passed to the raw data processor.
         id <- showNotification("Loading timeseries data from feather", duration=1000)
-        time_series_data <- read_feather(time_series_file())
+        v$time_series_data <- read_feather(time_series_file())
         removeNotification(id)
       }else{
         id <- showNotification("Loading timeseries data from csv", duration=1000)
-        time_series_data <- read.csv(file=time_series_file(), header=TRUE, 
+        v$time_series_data <- read.csv(file=time_series_file(), header=TRUE, 
                                      stringsAsFactors = FALSE)
         removeNotification(id)
         id <- showNotification("Formatting timeseries data and 
                                 creating feather cache file", duration=1000)
         # Data from CSV is assumed to need processing.
-        time_series_data <- time_series_data %>% distinct(c_id, ts, .keep_all=TRUE)
-        time_series_data <- process_raw_time_series_data(time_series_data)
+        v$time_series_data <- v$time_series_data %>% distinct(c_id, ts, .keep_all=TRUE)
+        v$time_series_data <- process_raw_time_series_data(v$time_series_data)
         # Automatically create a cache of the processed data as a feather file.
         # Allows for much faster data loading for subsequent anaylsis.
         file_no_type = str_sub(time_series_file(), end=-4)
         file_type_feather = paste(file_no_type, "feather", sep="")
-        write_feather(time_series_data, file_type_feather)
+        write_feather(v$time_series_data, file_type_feather)
         removeNotification(id)
       }
       # The circuit details file requires no processing and is small so always 
@@ -268,7 +272,7 @@ server <- function(input,output,session){
       removeNotification(id)
       # Perform data, processing and combine data table into a single data frame
       id <- showNotification("Combining data tables", duration=1000)
-      combined_data_no_ac_filter <- combine_data_tables(time_series_data, 
+      combined_data_no_ac_filter <- combine_data_tables(v$time_series_data, 
                                                           v$circuit_details, 
                                                           v$site_details)
       v$combined_data <- filter(combined_data_no_ac_filter, sum_ac<=100)
@@ -304,9 +308,8 @@ server <- function(input,output,session){
       site_details_cleaned_processed <- process_raw_site_details(
         v$site_details_cleaned)
       combined_data_after_clean <- combine_data_tables(
-         time_series_data, v$circuit_details_for_editing, 
+        v$time_series_data, v$circuit_details_for_editing, 
         site_details_cleaned_processed)
-      remove(time_series_data)
       combined_data_after_clean <- filter(combined_data_after_clean, 
                                             sum_ac<=100)
       v$combined_data <- filter(v$combined_data, clean=="raw")
@@ -424,56 +427,74 @@ server <- function(input,output,session){
   observeEvent(input$update_plots, {
     id <- showNotification("Updating plots", duration=1000)
     # Filter data based on user selections
-    t0 <- Sys.time()
     combined_data_f <- vector_filter(v$combined_data, duration=duration(), 
                                      state=region(), standards=standards(),
                                      clean=clean(), postcodes=postcodes(),
                                      size_groupings=size_groupings(),
                                      manufacturers=manufacturers(),
                                      models=models())
-    print(Sys.time()-t0)
-    t0 <- Sys.time()
     # Calculate normalised power curves
     et <- event_time()
     combined_data_f <- event_normalised_power(combined_data_f, et)
+    # Filter data by user selected time window
     combined_data_f <- filter(combined_data_f, 
                               ts>=start_time() & ts<= end_time())
-    
+    v$combined_data_f <- combined_data_f
+    # Count samples in each data series to be displayed
     v$sample_count_table <- vector_groupby_count(combined_data_f, 
                                                  agg_on_standard=agg_on_standard(),
                                                  pst_agg=pst_agg(), 
                                                  grouping_agg=grouping_agg(),
                                                  manufacturer_agg=manufacturer_agg(),
                                                  model_agg=model_agg())
-    
+    # Create copy of filtered data to use in upscaling
+    combined_data_f2 <- combined_data_f
     if(raw_upscale()){
-      combined_data_f <- upscale(combined_data_f, v$install_data)
+      combined_data_f2 <- upscale(combined_data_f2, v$install_data)
     }
-    print(Sys.time()-t0)
     
     # Check that the filter does not result in an empty dataframe.
     if(length(combined_data_f$ts) > 0){
       # For first plot just aggregate filtered data.
-      v$agg_power <- vector_groupby(combined_data_f, 
+      agg_norm_power <- vector_groupby_norm_power(combined_data_f, 
                                     agg_on_standard=agg_on_standard(),
                                     pst_agg=pst_agg(), 
                                     grouping_agg=grouping_agg(),
                                     manufacturer_agg=manufacturer_agg(),
                                     model_agg=model_agg())
-      
+      v$agg_power <- vector_groupby_power(combined_data_f2, 
+                                    agg_on_standard=agg_on_standard(),
+                                    pst_agg=pst_agg(), 
+                                    grouping_agg=grouping_agg(),
+                                    manufacturer_agg=manufacturer_agg(),
+                                    model_agg=model_agg())
+      v$agg_power <- left_join(v$agg_power, 
+                               agg_norm_power[, c("Event_Normalised_Power_kW", "Frequency", "Voltage", "series", "Time")], 
+                               by=c("Time", "series"))
       output$PlotlyTest <- renderPlotly({
         plot_ly(v$agg_power, x=~Time, y=~Power_kW, color=~series, 
                 type="scatter")})
       output$save_agg_power <- renderUI({
-        shinySaveButton("save_agg_power", "Save data", "Save file as ...", 
+        shinySaveButton("save_agg_power", "Save Aggregated Results", "Save file as ...", 
                         filetype=list(xlsx="csv"))})
+      output$save_underlying <- renderUI({
+        shinySaveButton("save_underlying", "Save Underlying Data", "Save file as ...", 
+                        filetype=list(xlsx="csv"))})
+      
       output$sample_count_table <- renderDataTable({v$sample_count_table})
       output$save_sample_count <- renderUI({
         shinySaveButton("save_sample_count", "Save data", "Save file as ...", 
                         filetype=list(xlsx="csv"))})
       output$NormPower <- renderPlotly({
-        plot_ly(v$agg_power, x=~Time, y=~Event_Normalised_Power_kW, 
+        plot_ly(agg_norm_power, x=~Time, y=~Event_Normalised_Power_kW, 
                 color=~series, type="scatter")})
+      output$Frequency <- renderPlotly({
+        plot_ly(agg_norm_power, x=~Time, y=~Frequency, 
+                color=~series, type="scatter")})
+      output$Voltage <- renderPlotly({
+        plot_ly(agg_norm_power, x=~Time, y=~Voltage, 
+                color=~series, type="scatter")})
+
       
       removeNotification(id)
     } else {
@@ -492,6 +513,16 @@ server <- function(input,output,session){
     fileinfo <- parseSavePath(volumes, input$save_agg_power)
     if (nrow(fileinfo) > 0) {
       write.csv(v$agg_power, as.character(fileinfo$datapath), row.names=FALSE)
+    }
+  })
+  
+  # Save data from aggregate pv power plot
+  observe({
+    volumes <- c(dr="C:\\")
+    shinyFileSave(input, "save_underlying", roots=volumes, session=session)
+    fileinfo <- parseSavePath(volumes, input$save_underlying)
+    if (nrow(fileinfo) > 0) {
+      write.csv(v$combined_data_f, as.character(fileinfo$datapath), row.names=FALSE)
     }
   })
   
@@ -556,27 +587,6 @@ server <- function(input,output,session){
       updateMaterialSwitch(session=session, "pst_agg", value = TRUE)
     }
   })
-  
-  
-  # Peform data cleaning steps
-  observeEvent(input$run_clean, {
-    dummy_catch <- 1
-    site_details_raw <- v$site_details_raw %>% mutate(site_id=as.numeric(site_id))
-    site_details_cleaned <- check_ac_capacity_using_peak_power(
-      v$combined_data_no_ac_filter, site_details_raw)
-    v$site_details_cleaned <- site_details_cleaned[
-      order(site_details_cleaned$site_id, -site_details_cleaned$high_pf_flag),]
-    output$site_details_editor <- renderDT(
-      isolate(v$site_details_cleaned), selection = 'single', rownames = FALSE, editable = TRUE
-    )
-    v$proxy_site_details_editor <- dataTableProxy('site_details_editor')
-    output$circuit_details_editor <- renderDT(
-      isolate(v$circuit_details_for_editing), selection = 'single', rownames = FALSE, editable = TRUE
-    )
-    v$proxy_circuit_details_editor <- dataTableProxy('circuit_details_editor')
-    
-  })
-  
   
   observeEvent(input$circuit_details_editor_rows_selected, {
     v$proxy_site_details_editor %>% selectRows(NULL)
