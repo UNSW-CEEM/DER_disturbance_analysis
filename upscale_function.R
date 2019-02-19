@@ -45,7 +45,7 @@ assert_upscale_assumptions <- function(performance_data){
   assert_that(all(performance_data$sum_ac>0.01), msg= "Not all ac 
               data is greater than zero")
   # We assume no data duplication
-  performance_data_temp <- performance_data[, c("ts", "c_id")]
-  assert_that(all(!duplicated(performance_data)), 
+  performance_data_temp <- performance_data[, c("ts", "c_id", "clean")]
+  assert_that(all(!duplicated(performance_data_temp)), 
               msg="There are duplicate entries")
 }
