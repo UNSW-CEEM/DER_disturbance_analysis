@@ -103,7 +103,9 @@ ui <- fluidPage(
         mainPanel(
           plotlyOutput(outputId="PlotlyTest"),
           uiOutput("save_agg_power"),
+          HTML("<br>"),
           uiOutput("save_underlying"),
+          HTML("<br><br>"),
           dataTableOutput("sample_count_table"),
           HTML("<br><br>"),
           uiOutput("save_sample_count"),
