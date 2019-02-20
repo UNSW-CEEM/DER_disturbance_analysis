@@ -64,6 +64,8 @@ ui <- fluidPage(
                        label=strong("Sampled duration (seconds), select one"),
                        choices = list("5","30","60"), selected = "60", 
                        inline = TRUE),
+          materialSwitch(inputId="perform_clean", label=strong("Perform Clean"), 
+                         status="primary", right=FALSE),
           actionButton("load_data", "Load data"),
           tags$hr(),
           h4("Time Filter"),
@@ -156,6 +158,7 @@ server <- function(input,output,session){
   pst_agg <- reactive({input$pst_agg})
   grouping_agg <- reactive({input$grouping_agg})
   manufacturer_agg <- reactive({input$manufacturer_agg})
+  perform_clean <- reactive({input$perform_clean})
   model_agg <- reactive({input$model_agg})
   start_time <- reactive({
     date_as_str <- as.character(input$date[1])
@@ -290,50 +293,54 @@ server <- function(input,output,session){
                s_state, s_postcode, Standard_Version, Grouping, polarity, first_ac,
                power_kW, clean, manufacturer, model, sum_ac)
       removeNotification(id)
-      id <- showNotification("Cleaning data", duration=1000)
-      #combined_data_no_ac_filter <- 
-      #  select(combined_data_no_ac_filter, c_id, ts, e, site_id, con_type,
-      #         polarity, first_ac, s_postcode, power_kW)
-      # Clean site details data
-      print("clean 1")
-      site_details_cleaned <- site_details_data_cleaning(
-        v$combined_data, v$site_details_raw)
-      v$site_details_cleaned <- site_details_cleaned[
-        order(site_details_cleaned$site_id),]
-      # Clean circuit details file
-      print("clean 2")
-      v$circuit_details_for_editing <- 
-        clean_connection_types(v$combined_data, v$circuit_details, postcode_data)
-      #v$combined_data_no_ac_filter <- select(combined_data_no_ac_filter, ts, site_id, c_id, power_kW)
-      #remove(combined_data_no_ac_filter)
-      # Display data cleaning output in data cleaning tab
-      output$site_details_editor <- renderDT(
-        isolate(v$site_details_cleaned), selection='single', rownames=FALSE, 
-        editable=TRUE)
-      v$proxy_site_details_editor <- dataTableProxy('site_details_editor')
-      output$circuit_details_editor <- renderDT(
-        isolate(v$circuit_details_for_editing), selection='single', 
-        rownames=FALSE, editable=TRUE)
-      v$proxy_circuit_details_editor <- dataTableProxy('circuit_details_editor')
-      
-      # Add cleaned data to display data for main tab
-      print("clean 3")
-      site_details_cleaned_processed <- process_raw_site_details(v$site_details_cleaned)
-      combined_data_after_clean <- combine_data_tables(
-        time_series_data, 
-        v$circuit_details_for_editing, 
-        site_details_cleaned_processed)
-      remove(time_series_data)
-      combined_data_after_clean <- filter(combined_data_after_clean, sum_ac<=100)
-      v$combined_data <- filter(v$combined_data, clean=="raw")
-      combined_data_after_clean <- combined_data_after_clean %>% mutate(clean="cleaned")
-      combined_data_after_clean <- select(combined_data_after_clean, 
-                                          c_id, ts, v, f, d, site_id, e, con_type,
-                                          s_state, s_postcode, Standard_Version, Grouping, polarity, first_ac,
-                                          power_kW, clean, manufacturer, model, sum_ac)
-      v$combined_data <- rbind(v$combined_data, combined_data_after_clean)
-      remove(combined_data_after_clean)
-      removeNotification(id)
+      if (perform_clean()){
+        id <- showNotification("Cleaning data", duration=1000)
+        #combined_data_no_ac_filter <- 
+        #  select(combined_data_no_ac_filter, c_id, ts, e, site_id, con_type,
+        #         polarity, first_ac, s_postcode, power_kW)
+        # Clean site details data
+        print("clean 1")
+        site_details_cleaned <- site_details_data_cleaning(
+          v$combined_data, v$site_details_raw)
+        v$site_details_cleaned <- site_details_cleaned[
+          order(site_details_cleaned$site_id),]
+        # Clean circuit details file
+        print("clean 2")
+        v$circuit_details_for_editing <- 
+          clean_connection_types(v$combined_data, v$circuit_details, postcode_data)
+        #v$combined_data_no_ac_filter <- select(combined_data_no_ac_filter, ts, site_id, c_id, power_kW)
+        #remove(combined_data_no_ac_filter)
+        # Display data cleaning output in data cleaning tab
+        output$site_details_editor <- renderDT(
+          isolate(v$site_details_cleaned), selection='single', rownames=FALSE, 
+          editable=TRUE)
+        v$proxy_site_details_editor <- dataTableProxy('site_details_editor')
+        output$circuit_details_editor <- renderDT(
+          isolate(v$circuit_details_for_editing), selection='single', 
+          rownames=FALSE, editable=TRUE)
+        v$proxy_circuit_details_editor <- dataTableProxy('circuit_details_editor')
+        
+        # Add cleaned data to display data for main tab
+        print("clean 3")
+        site_details_cleaned_processed <- process_raw_site_details(v$site_details_cleaned)
+        combined_data_after_clean <- combine_data_tables(
+          time_series_data, 
+          v$circuit_details_for_editing, 
+          site_details_cleaned_processed)
+        remove(time_series_data)
+        combined_data_after_clean <- filter(combined_data_after_clean, sum_ac<=100)
+        v$combined_data <- filter(v$combined_data, clean=="raw")
+        combined_data_after_clean <- combined_data_after_clean %>% mutate(clean="cleaned")
+        combined_data_after_clean <- select(combined_data_after_clean, 
+                                            c_id, ts, v, f, d, site_id, e, con_type,
+                                            s_state, s_postcode, Standard_Version, Grouping, polarity, first_ac,
+                                            power_kW, clean, manufacturer, model, sum_ac)
+        v$combined_data <- rbind(v$combined_data, combined_data_after_clean)
+        remove(combined_data_after_clean)
+        removeNotification(id)
+      } else {
+        hide("save_cleaned_data")
+      }
       # Filtering option widgets are rendered after the data is loaded, this is 
       # because they are only usable once there is data to filter. Additionally
       # The data loaded can then be used to create the appropraite options for 
@@ -342,7 +349,7 @@ server <- function(input,output,session){
         checkboxGroupButtons(inputId="cleaned", 
                              label=strong("Data processing:"),
                              choices=list("cleaned", "raw"),
-                             selected=list("cleaned"),
+                             selected=list("raw"),
                              justified=TRUE, status="primary", individual=TRUE,
                              checkIcon=list(yes=icon("ok", lib="glyphicon"), 
                                             no=icon("remove", lib="glyphicon")))
@@ -357,11 +364,11 @@ server <- function(input,output,session){
         })
       output$time_start <- renderUI({
         timeInput("time_start", label=strong('Enter start time'),
-                  value = as.ITime(min(v$combined_data$ts)))
+                  value=as.POSIXct("07:00:00",format="%H:%M:%S"))
         })
       output$time_end <- renderUI({
         timeInput("time_end", label=strong('Enter end time'), 
-                  value=as.ITime(max(v$combined_data$ts)))
+                  value=as.POSIXct("17:00:00",format="%H:%M:%S"))
         })
       output$region <- renderUI({
         selectInput(inputId="region", label=strong("Region"), 
@@ -466,9 +473,9 @@ server <- function(input,output,session){
     combined_data_f <- filter(combined_data_f, 
                               ts>=start_time() & ts<= end_time())
     # Copy data for saving
-    v$combined_data_f <- select(combined_data_f, ts, v, f, site_id,
+    v$combined_data_f <- select(combined_data_f, ts, site_id, c_id, power_kW, v, f,
                                 s_state, s_postcode, Standard_Version, Grouping, 
-                                first_ac, power_kW, clean, manufacturer, model)
+                                sum_ac, clean, manufacturer, model)
 
     # Count samples in each data series to be displayed
     v$sample_count_table <- vector_groupby_count(combined_data_f, 
