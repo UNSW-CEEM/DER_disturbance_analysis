@@ -60,6 +60,10 @@ ui <- fluidPage(
                            "Select site details data file ...", multiple=FALSE
           ),
           HTML("<br><br>"),
+          radioButtons("duration", 
+                       label=strong("Sampled duration (seconds), select one"),
+                       choices = list("5","30","60"), selected = "60", 
+                       inline = TRUE),
           actionButton("load_data", "Load data"),
           tags$hr(),
           h4("Time Filter"),
@@ -70,7 +74,7 @@ ui <- fluidPage(
           h4("Catergory Filter"),
           uiOutput("cleaned"),
           uiOutput("region"),
-          uiOutput("duration"),
+          #uiOutput("duration"),
           uiOutput("StdVersion"),
           uiOutput("size_groupings"),
           uiOutput("postcodes"),
@@ -209,6 +213,7 @@ server <- function(input,output,session){
         # Hence the data is not passed to the raw data processor.
         id <- showNotification("Loading timeseries data from feather", duration=1000)
         time_series_data <- read_feather(time_series_file())
+        time_series_data <- filter(time_series_data, d==duration())
         removeNotification(id)
       }else{
         id <- showNotification("Loading timeseries data from csv", duration=1000)
@@ -225,6 +230,7 @@ server <- function(input,output,session){
         file_no_type = str_sub(time_series_file(), end=-4)
         file_type_feather = paste(file_no_type, "feather", sep="")
         write_feather(time_series_data, file_type_feather)
+        time_series_data <- filter(time_series_data, d==duration())
         removeNotification(id)
       }
       # The circuit details file requires no processing and is small so always 
@@ -313,10 +319,8 @@ server <- function(input,output,session){
       # Add cleaned data to display data for main tab
       print("clean 3")
       site_details_cleaned_processed <- process_raw_site_details(v$site_details_cleaned)
-      site_types <- c("pv_site_net", "pv_site", "pv_inverter_net")
-      processed_circuit_details <- filter(v$circuit_details_for_editing, con_type %in% site_types)
       combined_data_after_clean <- combine_data_tables(
-        filter(time_series_data, c_id %in% processed_circuit_details$c_id), 
+        time_series_data, 
         v$circuit_details_for_editing, 
         site_details_cleaned_processed)
       remove(time_series_data)
@@ -363,11 +367,11 @@ server <- function(input,output,session){
         selectInput(inputId="region", label=strong("Region"), 
                     choices=unique(v$combined_data$s_state))
         })
-      output$duration <- renderUI({
-        radioButtons("duration", 
-                     label=strong("Sampled duration (seconds), select one"),
-                     choices = list("5","30","60"), selected = "60", 
-                     inline = TRUE)})
+      #output$duration <- renderUI({
+      #  radioButtons("duration", 
+      #               label=strong("Sampled duration (seconds), select one"),
+      #               choices = list("5","30","60"), selected = "60", 
+      #               inline = TRUE)})
       output$postcodes <- renderUI({
         selectizeInput("postcodes", 
                       label=strong("Select postcodes"),
@@ -453,7 +457,7 @@ server <- function(input,output,session){
     if (length(postcodes()) > 0) {combined_data_f <- filter(combined_data_f, s_postcode %in% postcodes())}
     if (length(manufacturers()) > 0) {combined_data_f <- filter(combined_data_f, manufacturer %in% manufacturers())}
     if (length(models()) > 0) {combined_data_f <- filter(combined_data_f, model %in% models())}
-    combined_data_f <- filter(combined_data_f, d==duration())
+    #combined_data_f <- filter(combined_data_f, d==duration())
     
     # Calculate normalised power curves
     et <- event_time()
@@ -461,7 +465,11 @@ server <- function(input,output,session){
     # Filter data by user selected time window
     combined_data_f <- filter(combined_data_f, 
                               ts>=start_time() & ts<= end_time())
-    v$combined_data_f <- combined_data_f
+    # Copy data for saving
+    v$combined_data_f <- select(combined_data_f, ts, v, f, site_id,
+                                s_state, s_postcode, Standard_Version, Grouping, 
+                                first_ac, power_kW, clean, manufacturer, model)
+
     # Count samples in each data series to be displayed
     v$sample_count_table <- vector_groupby_count(combined_data_f, 
                                                  agg_on_standard=agg_on_standard(),
@@ -544,7 +552,9 @@ server <- function(input,output,session){
     shinyFileSave(input, "save_underlying", roots=volumes, session=session)
     fileinfo <- parseSavePath(volumes, input$save_underlying)
     if (nrow(fileinfo) > 0) {
+      id <- showNotification("Saving Underlying Data at Site Level", duration=1000)
       write.csv(v$combined_data_f, as.character(fileinfo$datapath), row.names=FALSE)
+      removeNotification(id)
     }
   })
   
@@ -614,7 +624,7 @@ server <- function(input,output,session){
     v$proxy_site_details_editor %>% selectRows(NULL)
     if (length(input$circuit_details_editor_rows_selected==1)) {
       c_id_to_plot <- v$circuit_details_for_editing$c_id[input$circuit_details_editor_rows_selected]
-      data_to_view <- filter(v$combined_data, c_id==c_id_to_plot)
+      data_to_view <- filter(filter(v$combined_data, clean=="raw"), c_id==c_id_to_plot)
       output$site_plot <- renderPlotly({
         plot_ly(data_to_view, x=~ts, y=~power_kW, type="scatter")})
     }
@@ -626,7 +636,7 @@ server <- function(input,output,session){
     v$proxy_circuit_details_editor %>% selectRows(NULL)
     if (length(input$site_details_editor_rows_selected==1)) {
       site_id_to_plot <- v$site_details_cleaned$site_id[input$site_details_editor_rows_selected]
-      data_to_view <- filter(v$combined_data, site_id==site_id_to_plot)
+      data_to_view <- filter(filter(v$combined_data, clean=="raw"), site_id==site_id_to_plot)
       output$site_plot <- renderPlotly({
         plot_ly(data_to_view, x=~ts, y=~power_kW, type="scatter")})
     }
@@ -635,6 +645,7 @@ server <- function(input,output,session){
   # Save table data to csv.
   observeEvent(input$save_cleaned_data, {
     # Save cleaned data to csv
+    id <- showNotification("Saving cleaned files", duration=1000)
     file_no_type = str_sub(site_details_file(), end=-5)
     new_file_name = paste(file_no_type, "_cleaned.csv", sep="")
     v$site_details_cleaned <- v$site_details_cleaned %>% mutate(
@@ -646,18 +657,21 @@ server <- function(input,output,session){
     # Add cleaned data to dispay dat set
     site_details_cleaned_processed <- process_raw_site_details(
       v$site_details_cleaned)
+    time_series_data <- read_feather(time_series_file())
+    time_series_data <- filter(time_series_data, d==duration())
     combined_data_after_clean <- combine_data_tables(
-      v$time_series_data, v$circuit_details_for_editing, 
+      time_series_data, v$circuit_details_for_editing, 
       site_details_cleaned_processed)
     combined_data_after_clean <- filter(combined_data_after_clean, 
                                           sum_ac<=100)
     v$combined_data <- filter(v$combined_data, clean=="raw")
     combined_data_after_clean <- combined_data_after_clean %>% mutate(clean="cleaned")
-    combined_data_after_clean <- select(combined_data_after_clean,
-                                          c_id, ts, v, p, e, f, d, site_id, con_type, polarity, s_state,
-                                          pv_installation_year_month, sum_ac, first_ac, s_postcode, Standard_Version,
-                                          Grouping, e_polarity, power_kW, clean)
+    combined_data_after_clean <- select(combined_data_after_clean, 
+                                        c_id, ts, v, f, d, site_id, e, con_type,
+                                        s_state, s_postcode, Standard_Version, Grouping, polarity, first_ac,
+                                        power_kW, clean, manufacturer, model, sum_ac)
     v$combined_data <- rbind(v$combined_data, combined_data_after_clean)
+    removeNotification(id)
   })
   
   observeEvent(input$site_details_editor_cell_edit, {
