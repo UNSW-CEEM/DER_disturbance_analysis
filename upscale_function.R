@@ -1,20 +1,9 @@
 upscale <- function(performance_data, install_capacity){
-  assert_upscale_assumptions(performance_data)
-  performace_data_p <- group_by(performance_data, ts, site_id, clean)
-  performace_data_a <- group_by(performance_data, site_id, clean)
-  performace_data_p <- summarise(performace_data_p , power_kW=sum(power_kW))
-  performace_data_a <- summarise(performace_data_a , sample_capacity=first(sum_ac), 
-                                 s_state=first(s_state), 
-                                 Standard_Version=first(Standard_Version), 
-                                 Grouping=first(Grouping))
-  performace_data_p <- as.data.frame(performace_data_p)
-  performace_data_a <- as.data.frame(performace_data_a)
-  performance_data <- left_join(performace_data_p, performace_data_a, on='site_id')
-  performance_data <- performance_data %>% 
-    mutate(performance_factor=(power_kW/sample_capacity))
+  performance_data <- performance_data %>% distinct(site_id, ts, clean, .keep_all=TRUE)
   performance_data <- group_by(performance_data, ts, s_state, Standard_Version, 
                               Grouping, clean)
-  performance_data <- summarise(performance_data , performance_factor=mean(performance_factor))
+  performance_data <- summarise(performance_data , 
+                                performance_factor=mean(site_performance_factor))
   performance_data <- as.data.frame(performance_data)
   performance_data <- performance_data %>%
     mutate(date=as.Date(ts))
@@ -30,6 +19,19 @@ upscale <- function(performance_data, install_capacity){
     c("ts", "s_state", "Standard_Version", "Grouping", "clean", 
       "performance_factor", "standard_capacity", "power_kW")]
   return(performance_and_install)
+}
+
+calc_site_performance_factors <- function(performance_data){
+  assert_upscale_assumptions(performance_data)
+  performace_data_p <- group_by(performance_data, ts, site_id, clean)
+  performace_data_p <- summarise(performace_data_p , 
+                                 site_performance_factor=sum(power_kW))
+  performace_data_p <- as.data.frame(performace_data_p)
+  performance_data <- left_join(performance_data, performace_data_p, 
+                                on=c('site_id', 'ts', 'clean'))
+  performance_data <- performance_data %>% 
+    mutate(site_performance_factor=(site_performance_factor/sum_ac))
+  return(performance_data)
 }
 
 assert_upscale_assumptions <- function(performance_data){

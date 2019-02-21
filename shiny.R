@@ -39,14 +39,14 @@ ui <- fluidPage(
         sidebarPanel(
           h4("File selection"),
           textInput("time_series", "Time series file", 
-                    value="C:/Users/N.gorman/Documents/GitHub/DER_disturbance_analysis/2018-08-25 raw inputs/2018-08-25_sa_qld_naomi.feather"
+                    value="C:/Users/user/Documents/GitHub/DER_disturbance_analysis/test_data/2018-08-25 aemo data/2018-08-25_sa_qld_fault_aemo.feather"
           ),
           shinyFilesButton("choose_ts", "Choose File", 
                       "Select timeseries data file ...", multiple=FALSE
           ),
           HTML("<br><br>"),
           textInput("circuit_details", "Circuit details file", 
-                    value="C:/Users/N.gorman/Documents/GitHub/DER_disturbance_analysis/2018-08-25 raw inputs/circuit_details.csv"
+                    value="C:/Users/user/Documents/GitHub/DER_disturbance_analysis/test_data/2018-08-25 aemo data/circuit_details.csv"
           ),
 
           shinyFilesButton("choose_c", "Choose File", 
@@ -54,7 +54,7 @@ ui <- fluidPage(
           ),
           HTML("<br><br>"),
           textInput("site_details", "Site details file", 
-                    value="C:/Users/N.gorman/Documents/GitHub/DER_disturbance_analysis/2018-08-25 raw inputs/site_details.csv"
+                    value="C:/Users/user/Documents/GitHub/DER_disturbance_analysis/test_data/2018-08-25 aemo data/site_details.csv"
           ),
           shinyFilesButton("choose_site", "Choose File", 
                            "Select site details data file ...", multiple=FALSE
@@ -82,20 +82,24 @@ ui <- fluidPage(
           uiOutput("postcodes"),
           uiOutput("manufacturers"),
           uiOutput("models"),
+          uiOutput("sites"),
+          uiOutput("circuits"),
           tags$hr(),
-          h4("Aggregation Settings"),
-          materialSwitch("Std_Agg_Indiv", label=strong("AS4777 Aggregated:"), 
-                         status="primary"),
+          h4("Grouping Catergories"),
+          materialSwitch("Std_Agg_Indiv", label=strong("AS4777:"), 
+                         status="primary", value=TRUE),
           materialSwitch("grouping_agg", 
-                         label=strong("Size Grouping Aggregated:"), 
-                         status="primary"),
-          materialSwitch("pst_agg", label=strong("Postcodes Aggreagted:"), 
+                         label=strong("Size Grouping:"), 
                          status="primary", value=TRUE),
+          materialSwitch("pst_agg", label=strong("Postcodes:"), 
+                         status="primary", value=FALSE),
           materialSwitch("manufacturer_agg", 
-                         label=strong("Manufacturer Aggreagted:"), 
-                         status="primary", value=TRUE),
-          materialSwitch("model_agg", label=strong("Models Aggreagted:"), 
-                         status="primary", value=TRUE),
+                         label=strong("Manufacturer:"), 
+                         status="primary", value=FALSE),
+          materialSwitch("model_agg", label=strong("Models:"), 
+                         status="primary", value=FALSE),
+          tags$hr(),
+          h4("Additional Processing"),
           materialSwitch(inputId="raw_upscale", label=strong("Upscaled Data"), 
                          status="primary", right=FALSE),
           tags$hr(),
@@ -152,6 +156,8 @@ server <- function(input,output,session){
   postcodes <- reactive({input$postcodes})
   manufacturers <- reactive({input$manufacturers})
   models <- reactive({input$models})
+  sites <- reactive({input$sites})
+  circuits <- reactive({input$circuits})
   size_groupings <- reactive({input$size_groupings})
   clean <- reactive({input$cleaned})
   raw_upscale <- reactive({input$raw_upscale})
@@ -199,7 +205,8 @@ server <- function(input,output,session){
                       combined_data_after_clean = data.frame(),
                       time_series_data = data.frame(),
                       sample_count_table = data.frame(),
-                      combined_data_f = data.frame()
+                      combined_data_f = data.frame(),
+                      performance_factors = data.frame()
                       )
   
   # This is the event that runs when the "Load data" button on the GUI is
@@ -339,8 +346,16 @@ server <- function(input,output,session){
         remove(combined_data_after_clean)
         removeNotification(id)
       } else {
+        # Don't let the user crash the tool by trying to save data that doesn't 
+        # exist
         hide("save_cleaned_data")
       }
+      
+      id <- showNotification("Calcultaing site performance factors", duration=1000)
+      v$combined_data <- calc_site_performance_factors(v$combined_data)
+      removeNotification(id)
+      
+      
       # Filtering option widgets are rendered after the data is loaded, this is 
       # because they are only usable once there is data to filter. Additionally
       # The data loaded can then be used to create the appropraite options for 
@@ -374,11 +389,6 @@ server <- function(input,output,session){
         selectInput(inputId="region", label=strong("Region"), 
                     choices=unique(v$combined_data$s_state))
         })
-      #output$duration <- renderUI({
-      #  radioButtons("duration", 
-      #               label=strong("Sampled duration (seconds), select one"),
-      #               choices = list("5","30","60"), selected = "60", 
-      #               inline = TRUE)})
       output$postcodes <- renderUI({
         selectizeInput("postcodes", 
                       label=strong("Select postcodes"),
@@ -395,6 +405,18 @@ server <- function(input,output,session){
         selectizeInput("models", 
                        label=strong("Select models"),
                        choices = unique(v$combined_data$model), 
+                       multiple=TRUE)  
+      })
+      output$sites <- renderUI({
+        selectizeInput("sites", 
+                       label=strong("Select Sites"),
+                       choices = unique(v$site_details$site_id), 
+                       multiple=TRUE)  
+      })
+      output$circuits <- renderUI({
+        selectizeInput("circuits",
+                       label=strong("Select Circuits"),
+                       choices = unique(v$circuit_details$c_id), 
                        multiple=TRUE)  
       })
       show("Std_Agg_Indiv")
@@ -464,11 +486,10 @@ server <- function(input,output,session){
     if (length(postcodes()) > 0) {combined_data_f <- filter(combined_data_f, s_postcode %in% postcodes())}
     if (length(manufacturers()) > 0) {combined_data_f <- filter(combined_data_f, manufacturer %in% manufacturers())}
     if (length(models()) > 0) {combined_data_f <- filter(combined_data_f, model %in% models())}
-    #combined_data_f <- filter(combined_data_f, d==duration())
+    if (length(sites()) > 0) {combined_data_f <- filter(combined_data_f, site_id %in% sites())}
+    if (length(circuits()) > 0) {combined_data_f <- filter(combined_data_f, c_id %in% circuits())}
+
     
-    # Calculate normalised power curves
-    et <- event_time()
-    combined_data_f <- event_normalised_power(combined_data_f, et)
     # Filter data by user selected time window
     combined_data_f <- filter(combined_data_f, 
                               ts>=start_time() & ts<= end_time())
@@ -499,6 +520,9 @@ server <- function(input,output,session){
                                     grouping_agg=grouping_agg(),
                                     manufacturer_agg=manufacturer_agg(),
                                     model_agg=model_agg())
+      # Calculate normalised power curves
+      et <- event_time()
+      agg_norm_power <- event_normalised_power(agg_norm_power, et)
       v$agg_power <- vector_groupby_power(combined_data_f2, 
                                     agg_on_standard=agg_on_standard(),
                                     pst_agg=pst_agg(), 
@@ -613,17 +637,17 @@ server <- function(input,output,session){
   })
   observe({
     if(raw_upscale()){
-      updateMaterialSwitch(session=session, "manufacturer_agg", value = TRUE)
+      updateMaterialSwitch(session=session, "manufacturer_agg", value = FALSE)
     }
   })
   observe({
     if(raw_upscale()){
-      updateMaterialSwitch(session=session, "model_agg", value = TRUE)
+      updateMaterialSwitch(session=session, "model_agg", value = FALSE)
     }
   })
   observe({
     if(raw_upscale()){
-      updateMaterialSwitch(session=session, "pst_agg", value = TRUE)
+      updateMaterialSwitch(session=session, "pst_agg", value = FALSE)
     }
   })
   

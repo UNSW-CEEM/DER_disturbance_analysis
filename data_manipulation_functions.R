@@ -54,7 +54,7 @@ assert_raw_time_series_assumptions <- function(raw_time_series_data){
 
 process_raw_circuit_details <- function(circuit_details){
   # Filter circuit id by connection type, just including solar data.
-  site_types <- c("pv_site_net", "pv_site", "pv_inverter_net")
+  site_types <- c("pv_site_net", "pv_site", "pv_inverter_net", "pv_inverter")
   processed_circuit_details <- filter(circuit_details, con_type %in% site_types)
   return(processed_circuit_details)
 }
