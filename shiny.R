@@ -39,14 +39,14 @@ ui <- fluidPage(
         sidebarPanel(
           h4("File selection"),
           textInput("time_series", "Time series file", 
-                    value="C:/Users/N.gorman/Documents/GitHub/DER_disturbance_analysis/2018-08-25 raw inputs/2018-08-25_sa_qld_naomi.feather"
+                    value="C:/Users/user/Documents/GitHub/DER_disturbance_analysis/test_data/2018-08-25 aemo data/2018-08-25_sa_qld_fault_aemo.feather"
           ),
           shinyFilesButton("choose_ts", "Choose File", 
                       "Select timeseries data file ...", multiple=FALSE
           ),
           HTML("<br><br>"),
           textInput("circuit_details", "Circuit details file", 
-                    value="C:/Users/N.gorman/Documents/GitHub/DER_disturbance_analysis/2018-08-25 raw inputs/circuit_details.csv"
+                    value="C:/Users/user/Documents/GitHub/DER_disturbance_analysis/test_data/2018-08-25 aemo data/circuit_details.csv"
           ),
 
           shinyFilesButton("choose_c", "Choose File", 
@@ -54,7 +54,7 @@ ui <- fluidPage(
           ),
           HTML("<br><br>"),
           textInput("site_details", "Site details file", 
-                    value="C:/Users/N.gorman/Documents/GitHub/DER_disturbance_analysis/2018-08-25 raw inputs/site_details.csv"
+                    value="C:/Users/user/Documents/GitHub/DER_disturbance_analysis/test_data/2018-08-25 aemo data/site_details.csv"
           ),
           shinyFilesButton("choose_site", "Choose File", 
                            "Select site details data file ...", multiple=FALSE
