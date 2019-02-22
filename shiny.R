@@ -116,12 +116,13 @@ ui <- fluidPage(
           HTML("<br>"),
           uiOutput("save_underlying"),
           HTML("<br><br>"),
-          dataTableOutput("sample_count_table"),
-          HTML("<br><br>"),
-          uiOutput("save_sample_count"),
           plotlyOutput(outputId="NormPower"),
           plotlyOutput(outputId="Frequency"),
-          plotlyOutput(outputId="Voltage")
+          plotlyOutput(outputId="Voltage"),
+          dataTableOutput("sample_count_table"),
+          HTML("<br><br>"),
+          uiOutput("save_sample_count")
+
         )
       )
     ),
@@ -351,11 +352,6 @@ server <- function(input,output,session){
         hide("save_cleaned_data")
       }
       
-      id <- showNotification("Calcultaing site performance factors", duration=1000)
-      v$combined_data <- calc_site_performance_factors(v$combined_data)
-      removeNotification(id)
-      
-      
       # Filtering option widgets are rendered after the data is loaded, this is 
       # because they are only usable once there is data to filter. Additionally
       # The data loaded can then be used to create the appropraite options for 
@@ -493,11 +489,15 @@ server <- function(input,output,session){
     # Filter data by user selected time window
     combined_data_f <- filter(combined_data_f, 
                               ts>=start_time() & ts<= end_time())
-    # Copy data for saving
-    v$combined_data_f <- select(combined_data_f, ts, site_id, c_id, power_kW, v, f,
-                                s_state, s_postcode, Standard_Version, Grouping, 
-                                sum_ac, clean, manufacturer, model)
+  
 
+    if (agg_on_standard()==FALSE & pst_agg()==FALSE & grouping_agg()==FALSE & 
+        manufacturer_agg()==FALSE & model_agg()==FALSE){
+      no_grouping=TRUE
+    } else {
+      no_grouping=FALSE
+    }
+    
     # Count samples in each data series to be displayed
     v$sample_count_table <- vector_groupby_count(combined_data_f, 
                                                  agg_on_standard=agg_on_standard(),
@@ -505,66 +505,100 @@ server <- function(input,output,session){
                                                  grouping_agg=grouping_agg(),
                                                  manufacturer_agg=manufacturer_agg(),
                                                  model_agg=model_agg())
-    # Create copy of filtered data to use in upscaling
-    combined_data_f2 <- combined_data_f
-    if(raw_upscale()){
-      combined_data_f2 <- upscale(combined_data_f2, v$install_data)
+    
+    if ((sum(v$sample_count_table$sample_count)<100 & no_grouping) | 
+        (length(v$sample_count_table$sample_count)<100 & !no_grouping)){
+      
+      id2 <- showNotification("Calculating site performance factors", duration=1000)
+      combined_data_f <- calc_site_performance_factors(combined_data_f)
+      removeNotification(id2)
+      
+      # Copy data for saving
+      v$combined_data_f <- select(combined_data_f, ts, site_id, c_id, power_kW, v, f,
+                                  s_state, s_postcode, Standard_Version, Grouping, 
+                                  sum_ac, clean, manufacturer, model)
+      
+      
+      # Create copy of filtered data to use in upscaling
+      combined_data_f2 <- combined_data_f
+      if(raw_upscale()){
+        combined_data_f2 <- upscale(combined_data_f2, v$install_data)
+      }
+    
+      # Check that the filter does not result in an empty dataframe.
+      if(length(combined_data_f$ts) > 0){
+        # For first plot just aggregate filtered data.
+        agg_norm_power <- vector_groupby_norm_power(combined_data_f, 
+                                      agg_on_standard=agg_on_standard(),
+                                      pst_agg=pst_agg(), 
+                                      grouping_agg=grouping_agg(),
+                                      manufacturer_agg=manufacturer_agg(),
+                                      model_agg=model_agg())
+        # Calculate normalised power curves
+        v$agg_power <- vector_groupby_power(combined_data_f2, 
+                                      agg_on_standard=agg_on_standard(),
+                                      pst_agg=pst_agg(), 
+                                      grouping_agg=grouping_agg(),
+                                      manufacturer_agg=manufacturer_agg(),
+                                      model_agg=model_agg())
+        
+        if (agg_on_standard()==FALSE & pst_agg()==FALSE & grouping_agg()==FALSE & 
+            manufacturer_agg()==FALSE & model_agg()==FALSE){
+          et <- event_time()
+          agg_norm_power <- event_normalised_power(agg_norm_power, et, 
+                                                   keep_site_id=TRUE)
+          v$agg_power <- left_join(
+            v$agg_power, agg_norm_power[, c("Event_Normalised_Power_kW", "site_id", "Time")], 
+            by=c("Time", "site_id"))
+        } else {
+          et <- event_time()
+          agg_norm_power <- event_normalised_power(agg_norm_power, et, 
+                                                   keep_site_id=FALSE)
+          v$agg_power <- left_join(
+            v$agg_power, agg_norm_power[, c("Event_Normalised_Power_kW", "series", "Time")], 
+            by=c("Time", "series"))
+        }
+        
+  
+          output$PlotlyTest <- renderPlotly({
+            plot_ly(v$agg_power, x=~Time, y=~Power_kW, color=~series, 
+                    type="scatter")})
+          output$save_agg_power <- renderUI({
+            shinySaveButton("save_agg_power", "Save Aggregated Results", "Save file as ...", 
+                            filetype=list(xlsx="csv"))})
+          output$save_underlying <- renderUI({
+            shinySaveButton("save_underlying", "Save Underlying Data", "Save file as ...", 
+                            filetype=list(xlsx="csv"))})
+          
+          output$sample_count_table <- renderDataTable({v$sample_count_table})
+          output$save_sample_count <- renderUI({
+            shinySaveButton("save_sample_count", "Save data", "Save file as ...", 
+                            filetype=list(xlsx="csv"))})
+          output$NormPower <- renderPlotly({
+            plot_ly(agg_norm_power, x=~Time, y=~Event_Normalised_Power_kW, 
+                    color=~series, type="scatter")})
+          output$Frequency <- renderPlotly({
+            plot_ly(v$agg_power, x=~Time, y=~Frequency, 
+                    color=~series, type="scatter")})
+          output$Voltage <- renderPlotly({
+            plot_ly(v$agg_power, x=~Time, y=~Voltage, 
+                    color=~series, type="scatter")})
+  
+        removeNotification(id)
+      } else {
+        # If there is no data left after filtering alert the user and create an
+        # empty plot.
+        shinyalert("Opps", "There is no data to plot")
+        output$PlotlyTest <- renderPlotly({})
+        removeNotification(id)
+      }
+    
+    } else {
+      shinyalert("Wow", "You are tring to plot more than 100 series, maybe try
+                     narrowing down those filters and agg settings")
+      removeNotification(id)
     }
     
-    # Check that the filter does not result in an empty dataframe.
-    if(length(combined_data_f$ts) > 0){
-      # For first plot just aggregate filtered data.
-      agg_norm_power <- vector_groupby_norm_power(combined_data_f, 
-                                    agg_on_standard=agg_on_standard(),
-                                    pst_agg=pst_agg(), 
-                                    grouping_agg=grouping_agg(),
-                                    manufacturer_agg=manufacturer_agg(),
-                                    model_agg=model_agg())
-      # Calculate normalised power curves
-      et <- event_time()
-      agg_norm_power <- event_normalised_power(agg_norm_power, et)
-      v$agg_power <- vector_groupby_power(combined_data_f2, 
-                                    agg_on_standard=agg_on_standard(),
-                                    pst_agg=pst_agg(), 
-                                    grouping_agg=grouping_agg(),
-                                    manufacturer_agg=manufacturer_agg(),
-                                    model_agg=model_agg())
-      v$agg_power <- left_join(v$agg_power, 
-                               agg_norm_power[, c("Event_Normalised_Power_kW", "Frequency", "Voltage", "series", "Time")], 
-                               by=c("Time", "series"))
-      output$PlotlyTest <- renderPlotly({
-        plot_ly(v$agg_power, x=~Time, y=~Power_kW, color=~series, 
-                type="scatter")})
-      output$save_agg_power <- renderUI({
-        shinySaveButton("save_agg_power", "Save Aggregated Results", "Save file as ...", 
-                        filetype=list(xlsx="csv"))})
-      output$save_underlying <- renderUI({
-        shinySaveButton("save_underlying", "Save Underlying Data", "Save file as ...", 
-                        filetype=list(xlsx="csv"))})
-      
-      output$sample_count_table <- renderDataTable({v$sample_count_table})
-      output$save_sample_count <- renderUI({
-        shinySaveButton("save_sample_count", "Save data", "Save file as ...", 
-                        filetype=list(xlsx="csv"))})
-      output$NormPower <- renderPlotly({
-        plot_ly(agg_norm_power, x=~Time, y=~Event_Normalised_Power_kW, 
-                color=~series, type="scatter")})
-      output$Frequency <- renderPlotly({
-        plot_ly(agg_norm_power, x=~Time, y=~Frequency, 
-                color=~series, type="scatter")})
-      output$Voltage <- renderPlotly({
-        plot_ly(agg_norm_power, x=~Time, y=~Voltage, 
-                color=~series, type="scatter")})
-
-      
-      removeNotification(id)
-    } else {
-      # If there is no data left after filtering alert the user and create an
-      # empty plot.
-      shinyalert("Opps", "There is no data to plot")
-      output$PlotlyTest <- renderPlotly({})
-      removeNotification(id)
-    }
   })
   
   # Save data from aggregate pv power plot

@@ -24,7 +24,8 @@ vector_groupby_power <- function(data, agg_on_standard, pst_agg, grouping_agg,
   series_cols <- grouping_cols
   grouping_cols <- c("ts", series_cols)
   data <- group_by(data, .dots=grouping_cols)
-  data <- summarise(data , Power_kW=sum(power_kW))
+  data <- summarise(data , Power_kW=sum(power_kW), Frequency=mean(f), 
+                    Voltage=mean(v))
   data$series <- do.call(paste, c(data[series_cols], sep = "-" ))
   data <- setnames(data, c("ts", "Power_kW"), c("Time", "Power_kW"))
   data <- as.data.frame(data)
@@ -33,19 +34,21 @@ vector_groupby_power <- function(data, agg_on_standard, pst_agg, grouping_agg,
 
 vector_groupby_norm_power <- function(data, agg_on_standard, pst_agg, grouping_agg, 
                            manufacturer_agg, model_agg){
-  data <- data %>% distinct(site_id, ts, clean, .keep_all=TRUE)
   grouping_cols <- c("clean")
   if (agg_on_standard==TRUE){grouping_cols <- c(grouping_cols, "Standard_Version")}
   if (pst_agg==TRUE){grouping_cols <- c(grouping_cols, "s_postcode")}
   if (grouping_agg==TRUE){grouping_cols <- c(grouping_cols, "Grouping")}
   if (manufacturer_agg==TRUE){grouping_cols <- c(grouping_cols, "manufacturer")}
   if (model_agg==TRUE){grouping_cols <- c(grouping_cols, "model")}
-  if (length(grouping_cols)==1){grouping_cols <- c(grouping_cols, "site_id", "c_id")}
+  if (length(grouping_cols)==1){grouping_cols <- c(grouping_cols, "site_id")}
   series_cols <- grouping_cols
   grouping_cols <- c("ts", series_cols)
   data <- group_by(data, .dots=grouping_cols)
-  data <- summarise(data , site_performance_factor=mean(na.omit(site_performance_factor)),
-                    Frequency=mean(na.omit(f)),Voltage=mean(na.omit(v)))
+  if ("site_id" %in% grouping_cols){
+    data <- summarise(data , site_performance_factor=first(site_performance_factor))
+  } else {
+    data <- summarise(data , site_performance_factor=mean(site_performance_factor))
+  }
   data$series <- do.call(paste, c(data[series_cols], sep = "-" ))
   data <- setnames(data, c("ts"), c("Time"))
   data <- as.data.frame(data)
@@ -63,7 +66,7 @@ vector_groupby_count <- function(data, agg_on_standard, pst_agg, grouping_agg,
   if (length(grouping_cols)==1){grouping_cols <- c(grouping_cols, "site_id")}
   series_cols <- grouping_cols
   data <- group_by(data, .dots=grouping_cols)
-  data <- summarise(data , sample_count=length(unique(site_id)))
+  data <- summarise(data , sample_count=length(unique(c_id)))
   data <- as.data.frame(data)
   return(data)
 }
