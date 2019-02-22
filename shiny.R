@@ -39,14 +39,14 @@ ui <- fluidPage(
         sidebarPanel(
           h4("File selection"),
           textInput("time_series", "Time series file", 
-                    value="C:/Users/user/Documents/GitHub/DER_disturbance_analysis/test_data/2018-08-25 aemo data/2018-08-25_sa_qld_fault_aemo.feather"
+                    value="C:/Users/N.gorman/Documents/GitHub/DER_disturbance_analysis/2018-08-25 raw inputs/2018-08-25_sa_qld_naomi.feather"
           ),
           shinyFilesButton("choose_ts", "Choose File", 
                       "Select timeseries data file ...", multiple=FALSE
           ),
           HTML("<br><br>"),
           textInput("circuit_details", "Circuit details file", 
-                    value="C:/Users/user/Documents/GitHub/DER_disturbance_analysis/test_data/2018-08-25 aemo data/circuit_details.csv"
+                    value="C:/Users/N.gorman/Documents/GitHub/DER_disturbance_analysis/2018-08-25 raw inputs/circuit_details.csv"
           ),
 
           shinyFilesButton("choose_c", "Choose File", 
@@ -54,7 +54,7 @@ ui <- fluidPage(
           ),
           HTML("<br><br>"),
           textInput("site_details", "Site details file", 
-                    value="C:/Users/user/Documents/GitHub/DER_disturbance_analysis/test_data/2018-08-25 aemo data/site_details.csv"
+                    value="C:/Users/N.gorman/Documents/GitHub/DER_disturbance_analysis/2018-08-25 raw inputs/site_details.csv"
           ),
           shinyFilesButton("choose_site", "Choose File", 
                            "Select site details data file ...", multiple=FALSE
@@ -97,6 +97,8 @@ ui <- fluidPage(
                          label=strong("Manufacturer:"), 
                          status="primary", value=FALSE),
           materialSwitch("model_agg", label=strong("Models:"), 
+                         status="primary", value=FALSE),
+          materialSwitch("circuit_agg", label=strong("Circuits:"), 
                          status="primary", value=FALSE),
           tags$hr(),
           h4("Additional Processing"),
@@ -146,6 +148,7 @@ server <- function(input,output,session){
   hide("grouping_agg")
   hide("manufacturer_agg")
   hide("model_agg")
+  hide("circuit_agg")
   options(DT.options = list(pageLength = 3))
   # Get input from GUI
   time_series_file <- reactive({input$time_series})
@@ -167,6 +170,7 @@ server <- function(input,output,session){
   manufacturer_agg <- reactive({input$manufacturer_agg})
   perform_clean <- reactive({input$perform_clean})
   model_agg <- reactive({input$model_agg})
+  circuit_agg <- reactive({input$circuit_agg})
   start_time <- reactive({
     date_as_str <- as.character(input$date[1])
     time_as_str <- substr(input$time_start, 12,19)
@@ -265,6 +269,13 @@ server <- function(input,output,session){
         v$site_details_raw <- read.csv(file=site_details_file(), header=TRUE, 
                                  stringsAsFactors = FALSE)
         v$site_details_raw <- v$site_details_raw %>% mutate(site_id = as.character(site_id))
+        # Older site details proided the day of installation not just the month. We 
+        # change the name of the column to match the new format which is just by 
+        # month but keep the original info regarding the date.
+        if("pv_install_date" %in% colnames(v$site_details_raw)){
+          v$site_details_raw <- setnames(v$site_details_raw, c("pv_install_date"),
+                           c("pv_installation_year_month"))
+        }
         removeNotification(id)
         id <- showNotification("Formatting site details and 
                                 creating feather cache file", duration=1000)
@@ -441,6 +452,7 @@ server <- function(input,output,session){
       show("grouping_agg")
       show("manufacturer_agg")
       show("model_agg")
+      show("circuit_agg")
       output$event_date <- renderUI({
         dateInput("event_date", label=strong('Event date (yyyy-mm-dd):'),
                   value=floor_date(min(v$combined_data$ts), "day"),
@@ -492,7 +504,7 @@ server <- function(input,output,session){
   
 
     if (agg_on_standard()==FALSE & pst_agg()==FALSE & grouping_agg()==FALSE & 
-        manufacturer_agg()==FALSE & model_agg()==FALSE){
+        manufacturer_agg()==FALSE & model_agg()==FALSE & circuit_agg()==TRUE){
       no_grouping=TRUE
     } else {
       no_grouping=FALSE
@@ -504,10 +516,12 @@ server <- function(input,output,session){
                                                  pst_agg=pst_agg(), 
                                                  grouping_agg=grouping_agg(),
                                                  manufacturer_agg=manufacturer_agg(),
-                                                 model_agg=model_agg())
+                                                 model_agg=model_agg(),
+                                                 circuit_agg())
     
-    if ((sum(v$sample_count_table$sample_count)<100 & no_grouping) | 
-        (length(v$sample_count_table$sample_count)<100 & !no_grouping)){
+    if ((sum(v$sample_count_table$sample_count)<1000 & no_grouping) | 
+        (length(v$sample_count_table$sample_count)<1000 & !no_grouping)){
+      print(sum(v$sample_count_table$sample_count))
       
       id2 <- showNotification("Calculating site performance factors", duration=1000)
       combined_data_f <- calc_site_performance_factors(combined_data_f)
@@ -527,28 +541,38 @@ server <- function(input,output,session){
     
       # Check that the filter does not result in an empty dataframe.
       if(length(combined_data_f$ts) > 0){
-        # For first plot just aggregate filtered data.
+
         agg_norm_power <- vector_groupby_norm_power(combined_data_f, 
                                       agg_on_standard=agg_on_standard(),
                                       pst_agg=pst_agg(), 
                                       grouping_agg=grouping_agg(),
                                       manufacturer_agg=manufacturer_agg(),
-                                      model_agg=model_agg())
-        # Calculate normalised power curves
+                                      model_agg=model_agg(),
+                                      circuit_agg())
+        agg_f_and_v <- vector_groupby_f_and_v(combined_data_f, 
+                                            agg_on_standard=agg_on_standard(),
+                                            pst_agg=pst_agg(), 
+                                            grouping_agg=grouping_agg(),
+                                            manufacturer_agg=manufacturer_agg(),
+                                            model_agg=model_agg(),
+                                            circuit_agg())
         v$agg_power <- vector_groupby_power(combined_data_f2, 
                                       agg_on_standard=agg_on_standard(),
                                       pst_agg=pst_agg(), 
                                       grouping_agg=grouping_agg(),
                                       manufacturer_agg=manufacturer_agg(),
-                                      model_agg=model_agg())
+                                      model_agg=model_agg(),
+                                      circuit_agg())
         
-        if (agg_on_standard()==FALSE & pst_agg()==FALSE & grouping_agg()==FALSE & 
-            manufacturer_agg()==FALSE & model_agg()==FALSE){
+        if (no_grouping){
           et <- event_time()
           agg_norm_power <- event_normalised_power(agg_norm_power, et, 
                                                    keep_site_id=TRUE)
           v$agg_power <- left_join(
             v$agg_power, agg_norm_power[, c("Event_Normalised_Power_kW", "site_id", "Time")], 
+            by=c("Time", "site_id"))
+          v$agg_power <- left_join(
+            v$agg_power, agg_f_and_v[, c("Time", "site_id", "Voltage", "Frequency")], 
             by=c("Time", "site_id"))
         } else {
           et <- event_time()
@@ -557,12 +581,13 @@ server <- function(input,output,session){
           v$agg_power <- left_join(
             v$agg_power, agg_norm_power[, c("Event_Normalised_Power_kW", "series", "Time")], 
             by=c("Time", "series"))
+          v$agg_power <- left_join(
+            v$agg_power, agg_f_and_v[, c("Time", "series", "Voltage", "Frequency")], 
+            by=c("Time", "series"))
         }
-        
-  
           output$PlotlyTest <- renderPlotly({
             plot_ly(v$agg_power, x=~Time, y=~Power_kW, color=~series, 
-                    type="scatter")})
+                    type="scattergl")})
           output$save_agg_power <- renderUI({
             shinySaveButton("save_agg_power", "Save Aggregated Results", "Save file as ...", 
                             filetype=list(xlsx="csv"))})
@@ -576,13 +601,13 @@ server <- function(input,output,session){
                             filetype=list(xlsx="csv"))})
           output$NormPower <- renderPlotly({
             plot_ly(agg_norm_power, x=~Time, y=~Event_Normalised_Power_kW, 
-                    color=~series, type="scatter")})
+                    color=~series, type="scattergl")})
           output$Frequency <- renderPlotly({
             plot_ly(v$agg_power, x=~Time, y=~Frequency, 
-                    color=~series, type="scatter")})
+                    color=~series, type="scattergl")})
           output$Voltage <- renderPlotly({
             plot_ly(v$agg_power, x=~Time, y=~Voltage, 
-                    color=~series, type="scatter")})
+                    color=~series, type="scattergl")})
   
         removeNotification(id)
       } else {
@@ -594,7 +619,7 @@ server <- function(input,output,session){
       }
     
     } else {
-      shinyalert("Wow", "You are tring to plot more than 100 series, maybe try
+      shinyalert("Wow", "You are tring to plot more than 1000 series, maybe try
                      narrowing down those filters and agg settings")
       removeNotification(id)
     }
@@ -665,7 +690,7 @@ server <- function(input,output,session){
   
   # Inforce mutual exclusivity of Aggregation settings
   observe({
-    if(manufacturer_agg() | model_agg() | pst_agg()){
+    if(manufacturer_agg() | model_agg() | pst_agg() | circuit_agg()){
       updateMaterialSwitch(session=session, "raw_upscale", value = FALSE)
     }
   })
@@ -682,6 +707,11 @@ server <- function(input,output,session){
   observe({
     if(raw_upscale()){
       updateMaterialSwitch(session=session, "pst_agg", value = FALSE)
+    }
+  })
+  observe({
+    if(raw_upscale()){
+      updateMaterialSwitch(session=session, "circuit_agg", value = FALSE)
     }
   })
   

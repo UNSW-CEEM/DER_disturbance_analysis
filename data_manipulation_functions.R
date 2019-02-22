@@ -64,13 +64,6 @@ process_raw_site_details <- function(site_details){
   assert_raw_site_details_assumptions(site_details)
   site_details <- site_details %>%
     mutate(s_postcode = as.character(s_postcode))
-  # Older site details proided the day of installation not just the month. We 
-  # change the name of the column to match the new format which is just by 
-  # month but keep the original info regarding the date.
-  if("pv_install_date" %in% colnames(site_details)){
-    data <- setnames(site_details, c("pv_install_date"),
-                     c("pv_installation_year_month"))
-  }
   # The data can contain duplicate site ids, these need to be sumarised so there
   # is one row per site id. AC power is summed so sites with more than 100kW 
   # can be filtered out of the data set. The first ac value is taken as a sample
