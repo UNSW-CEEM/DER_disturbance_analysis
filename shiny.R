@@ -658,7 +658,7 @@ server <- function(input,output,session){
       }
     
     } else {
-      shinyalert("Wow", "You are tring to plot more than 1000 series, maybe try
+      shinyalert("Wow", "You are trying to plot more than 1000 series, maybe try
                      narrowing down those filters and agg settings")
       removeNotification(id)
     }
