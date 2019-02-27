@@ -24,6 +24,7 @@ source("filter_and_aggregate.R")
 source("upscale_function.R")
 source("data_cleaning_functions.R")
 source("normalised_power_function.R")
+source("response_categorisation_function.R")
 
 ui <- fluidPage(
   tags$head(
@@ -73,24 +74,28 @@ ui <- fluidPage(
           uiOutput("time_start"),
           uiOutput("time_end"),
           tags$hr(),
-          h4("Catergory Filter"),
+          h4("Category Filter"),
           uiOutput("cleaned"),
           uiOutput("region"),
           #uiOutput("duration"),
           uiOutput("StdVersion"),
           uiOutput("size_groupings"),
+          uiOutput("responses"),
           uiOutput("postcodes"),
           uiOutput("manufacturers"),
           uiOutput("models"),
           uiOutput("sites"),
           uiOutput("circuits"),
           tags$hr(),
-          h4("Grouping Catergories"),
+          h4("Grouping Categories"),
           materialSwitch("Std_Agg_Indiv", label=strong("AS4777:"), 
                          status="primary", value=TRUE),
           materialSwitch("grouping_agg", 
                          label=strong("Size Grouping:"), 
                          status="primary", value=TRUE),
+          materialSwitch("response_agg", 
+                         label=strong("Response Grouping:"), 
+                         status="primary", value=FALSE),
           materialSwitch("pst_agg", label=strong("Postcodes:"), 
                          status="primary", value=FALSE),
           materialSwitch("manufacturer_agg", 
@@ -146,6 +151,7 @@ server <- function(input,output,session){
   hide("raw_upscale")
   hide("pst_agg")
   hide("grouping_agg")
+  hide("response_agg")
   hide("manufacturer_agg")
   hide("model_agg")
   hide("circuit_agg")
@@ -157,6 +163,7 @@ server <- function(input,output,session){
   region <- reactive({input$region})
   duration <- reactive({input$duration})
   standards <- reactive({input$StdVersion})
+  responses <- reactive({input$responses})
   postcodes <- reactive({input$postcodes})
   manufacturers <- reactive({input$manufacturers})
   models <- reactive({input$models})
@@ -167,6 +174,7 @@ server <- function(input,output,session){
   raw_upscale <- reactive({input$raw_upscale})
   pst_agg <- reactive({input$pst_agg})
   grouping_agg <- reactive({input$grouping_agg})
+  response_agg <- reactive({input$response_agg})
   manufacturer_agg <- reactive({input$manufacturer_agg})
   perform_clean <- reactive({input$perform_clean})
   model_agg <- reactive({input$model_agg})
@@ -175,21 +183,24 @@ server <- function(input,output,session){
     date_as_str <- as.character(input$date[1])
     time_as_str <- substr(input$time_start, 12,19)
     start_time_as_str <- paste(date_as_str, time_as_str)
-    start_date_time <- strftime(start_time_as_str)
+    start_date_time <- strptime(start_time_as_str, format="%Y-%m-%d %H:%M:%S",
+                                tz="Australia/Brisbane")
     start_date_time
   })
   end_time <- reactive({
     date_as_str <- as.character(input$date[2])
     time_as_str <- substr(input$time_end, 12,19)
     end_time_as_str <- paste(date_as_str, time_as_str)
-    end_date_time <- strftime(end_time_as_str)
+    end_date_time <- strptime(end_time_as_str, format="%Y-%m-%d %H:%M:%S",
+                              tz="Australia/Brisbane")
     end_date_time
   })
   event_time <- reactive({
     date_as_str <- as.character(input$event_date)
     time_as_str <- substr(input$event_time, 12, 19)
     date_time_as_str <- paste(date_as_str, time_as_str)
-    event_date_time <- strftime(date_time_as_str)
+    event_date_time <- strptime(date_time_as_str, format="%Y-%m-%d %H:%M:%S",
+                                tz="Australia/Brisbane")
     event_date_time
   })
   agg_on_standard <- reactive({input$Std_Agg_Indiv})
@@ -447,11 +458,25 @@ server <- function(input,output,session){
                              checkIcon=list(yes=icon("ok", lib="glyphicon"), 
                                             no=icon("remove", lib="glyphicon")))
         })
+      output$responses <- renderUI({
+        checkboxGroupButtons(inputId="responses", 
+                             label=strong("Select Responses:"),
+                             choices=list("Off at t0", "Not enough data",
+                                          "undefined", "Ride Through", "Curtail",
+                                          "Drop to Zero", "Disconnect"),
+                             selected=list("Off at t0", "Not enough data",
+                                           "undefined", "Ride Through", "Curtail",
+                                           "Drop to Zero", "Disconnect"),
+                             justified=TRUE, status="primary", individual=TRUE,
+                             checkIcon=list(yes=icon("ok", lib="glyphicon"), 
+                                            no=icon("remove", lib="glyphicon")))
+      })
       show("raw_upscale")
       show("pst_agg")
       show("grouping_agg")
+      show("grouping_agg")
       show("manufacturer_agg")
-      show("model_agg")
+      show("response_agg")
       show("circuit_agg")
       output$event_date <- renderUI({
         dateInput("event_date", label=strong('Event date (yyyy-mm-dd):'),
@@ -496,8 +521,12 @@ server <- function(input,output,session){
     if (length(models()) > 0) {combined_data_f <- filter(combined_data_f, model %in% models())}
     if (length(sites()) > 0) {combined_data_f <- filter(combined_data_f, site_id %in% sites())}
     if (length(circuits()) > 0) {combined_data_f <- filter(combined_data_f, c_id %in% circuits())}
-
+    combined_data_f <- categorise_response(combined_data_f, event_time())
+    if (length(responses()) < 6) {
+      combined_data_f <- filter(combined_data_f, response_category %in% responses())
+    }
     
+  
     # Filter data by user selected time window
     combined_data_f <- filter(combined_data_f, 
                               ts>=start_time() & ts<= end_time())
@@ -517,7 +546,8 @@ server <- function(input,output,session){
                                                  grouping_agg=grouping_agg(),
                                                  manufacturer_agg=manufacturer_agg(),
                                                  model_agg=model_agg(),
-                                                 circuit_agg())
+                                                 circuit_agg(),
+                                                 response_agg())
     
     if ((sum(v$sample_count_table$sample_count)<1000 & no_grouping) | 
         (length(v$sample_count_table$sample_count)<1000 & !no_grouping)){
@@ -548,21 +578,24 @@ server <- function(input,output,session){
                                       grouping_agg=grouping_agg(),
                                       manufacturer_agg=manufacturer_agg(),
                                       model_agg=model_agg(),
-                                      circuit_agg())
+                                      circuit_agg(),
+                                      response_agg())
         agg_f_and_v <- vector_groupby_f_and_v(combined_data_f, 
                                             agg_on_standard=agg_on_standard(),
                                             pst_agg=pst_agg(), 
                                             grouping_agg=grouping_agg(),
                                             manufacturer_agg=manufacturer_agg(),
                                             model_agg=model_agg(),
-                                            circuit_agg())
+                                            circuit_agg(),
+                                            response_agg())
         v$agg_power <- vector_groupby_power(combined_data_f2, 
                                       agg_on_standard=agg_on_standard(),
                                       pst_agg=pst_agg(), 
                                       grouping_agg=grouping_agg(),
                                       manufacturer_agg=manufacturer_agg(),
                                       model_agg=model_agg(),
-                                      circuit_agg())
+                                      circuit_agg(),
+                                      response_agg())
         
         if (no_grouping){
           et <- event_time()
@@ -690,7 +723,8 @@ server <- function(input,output,session){
   
   # Inforce mutual exclusivity of Aggregation settings
   observe({
-    if(manufacturer_agg() | model_agg() | pst_agg() | circuit_agg()){
+    if(manufacturer_agg() | model_agg() | pst_agg() | circuit_agg()
+       | circuit_agg() | response_agg()){
       updateMaterialSwitch(session=session, "raw_upscale", value = FALSE)
     }
   })
@@ -712,6 +746,11 @@ server <- function(input,output,session){
   observe({
     if(raw_upscale()){
       updateMaterialSwitch(session=session, "circuit_agg", value = FALSE)
+    }
+  })
+  observe({
+    if(raw_upscale()){
+      updateMaterialSwitch(session=session, "response_agg", value = FALSE)
     }
   })
   
