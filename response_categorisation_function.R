@@ -1,6 +1,6 @@
-categorise_response <- function(combined_data, event_time){
+categorise_response <- function(combined_data, event_time, window_length){
   event_window_data <- filter(combined_data, 
-                              ts >= event_time & ts <= event_time + 60 * 5)
+                              ts >= event_time & ts <= event_time + 60 * window_length)
   event_window_data <- event_window_data[order(event_window_data$ts),]
   event_window_data <- group_by(event_window_data, c_id, clean)
   event_window_data <- summarise(event_window_data,
@@ -16,7 +16,7 @@ categorise_response <- function(combined_data, event_time){
   event_window_data <- mutate(
     event_window_data, 
     response_category=ifelse(
-      num_data_points < (60/d)*5 & response_category=='undefined', 
+      num_data_points < (60/d)*window_length & response_category=='undefined', 
       'Not enough data', response_category))
   
   event_window_data <- mutate(

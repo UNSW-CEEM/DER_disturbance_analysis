@@ -113,6 +113,7 @@ ui <- fluidPage(
           h4("Event time"),
           uiOutput("event_date"),
           uiOutput("event_time"),
+          uiOutput("window_length"),
           tags$hr(),
           uiOutput("update_plots")
         ),
@@ -204,6 +205,7 @@ server <- function(input,output,session){
     event_date_time
   })
   agg_on_standard <- reactive({input$Std_Agg_Indiv})
+  window_length <- reactive({input$window_length})
   
   # Store the main data table in a reactive value so it is accessable outside 
   # the observe event that creates it.
@@ -487,6 +489,10 @@ server <- function(input,output,session){
         timeInput("event_time", label=strong('Event time'),
                   value = as.ITime(min(v$combined_data$ts)))
       })
+      output$window_length <- renderUI({
+        numericInput("window_length", label=strong('Set Window Length (min)'), 
+                     value=5, min = 1, max = 100, step = 1)
+      })
       output$update_plots <- renderUI({
         actionButton("update_plots", "Update plots")
         })
@@ -521,7 +527,7 @@ server <- function(input,output,session){
     if (length(models()) > 0) {combined_data_f <- filter(combined_data_f, model %in% models())}
     if (length(sites()) > 0) {combined_data_f <- filter(combined_data_f, site_id %in% sites())}
     if (length(circuits()) > 0) {combined_data_f <- filter(combined_data_f, c_id %in% circuits())}
-    combined_data_f <- categorise_response(combined_data_f, event_time())
+    combined_data_f <- categorise_response(combined_data_f, event_time(), window_length())
     if (length(responses()) < 6) {
       combined_data_f <- filter(combined_data_f, response_category %in% responses())
     }
