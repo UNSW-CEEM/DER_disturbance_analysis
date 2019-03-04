@@ -97,3 +97,25 @@ vector_groupby_count <- function(data, agg_on_standard, pst_agg, grouping_agg,
   data <- as.data.frame(data)
   return(data)
 }
+
+
+vector_groupby_count_response <- function(data, agg_on_standard, pst_agg, grouping_agg, 
+                                 manufacturer_agg, model_agg, circuit_agg, 
+                                 response_agg){
+  grouping_cols <- c("clean", "response_category")
+  add_cols <- c()
+  if (agg_on_standard==TRUE){add_cols <- c(add_cols, "Standard_Version")}
+  if (pst_agg==TRUE){add_cols <- c(add_cols, "s_postcode")}
+  if (grouping_agg==TRUE){add_cols <- c(add_cols, "Grouping")}
+  if (manufacturer_agg==TRUE){add_cols <- c(add_cols, "manufacturer")}
+  if (model_agg==TRUE){add_cols <- c(add_cols, "model")}
+  if (circuit_agg==TRUE){add_cols <- c(add_cols, "site_id")}
+  grouping_cols <- c(grouping_cols, add_cols)
+  data <- group_by(data, .dots=grouping_cols)
+  data <- summarise(data , sample_count=length(unique(c_id)))
+  data$series_x <- do.call(paste, c(data[c("clean", "response_category")], sep = "-" ))
+  data$series_y <- do.call(paste, c(data[add_cols], sep = "-" ))
+  data <- as.data.frame(data)
+  data <- mutate(data, sample_count=sample_count/sum(data$sample_count))
+  return(data)
+}

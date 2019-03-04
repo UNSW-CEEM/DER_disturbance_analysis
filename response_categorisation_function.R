@@ -50,14 +50,15 @@ categorise_response <- function(combined_data, event_time, window_length){
 
 num_consecutive_zeros <- function(event_power_vector){
   num_con_zeros <- 0
-  if (length(event_power_vector) > 1){
+  pt0 <- event_power_vector[1]
+  if (length(event_power_vector) > 1 & pt0 > 0.1){
     for (i in 2:length(event_power_vector)){
       if (num_con_zeros == 0){
-        if(event_power_vector[i] < 0.1){
+        if((event_power_vector[i]/pt0) < 0.05){
           num_con_zeros <- num_con_zeros + 1
         }
       } else {
-        if(event_power_vector[i] < 0.1 & event_power_vector[i - 1] < 0.1){
+        if(((event_power_vector[i]/pt0) < 0.05) & ((event_power_vector[i - 1]/pt0) < 0.05)){
           num_con_zeros <- num_con_zeros + 1
         }
       }

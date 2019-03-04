@@ -125,6 +125,7 @@ ui <- fluidPage(
           uiOutput("save_underlying"),
           HTML("<br><br>"),
           plotlyOutput(outputId="NormPower"),
+          plotlyOutput(outputId="ResponseCount"),
           plotlyOutput(outputId="Frequency"),
           plotlyOutput(outputId="Voltage"),
           dataTableOutput("sample_count_table"),
@@ -602,6 +603,14 @@ server <- function(input,output,session){
                                       model_agg=model_agg(),
                                       circuit_agg(),
                                       response_agg())
+        bar_chart_data <- vector_groupby_count_response(combined_data_f, 
+                                            agg_on_standard=agg_on_standard(),
+                                            pst_agg=pst_agg(), 
+                                            grouping_agg=grouping_agg(),
+                                            manufacturer_agg=manufacturer_agg(),
+                                            model_agg=model_agg(),
+                                            circuit_agg(),
+                                            response_agg())
         
         if (no_grouping){
           et <- event_time()
@@ -641,6 +650,10 @@ server <- function(input,output,session){
           output$NormPower <- renderPlotly({
             plot_ly(agg_norm_power, x=~Time, y=~Event_Normalised_Power_kW, 
                     color=~series, type="scattergl")})
+          output$ResponseCount <- renderPlotly({
+            plot_ly(bar_chart_data, x=~series_x, y=~sample_count, 
+                    color=~series_y, type="bar") %>%
+              layout(yaxis = list(title = 'Fraction of Filtered dataset'), barmode = 'stack')})
           output$Frequency <- renderPlotly({
             plot_ly(v$agg_power, x=~Time, y=~Frequency, 
                     color=~series, type="scattergl")})
