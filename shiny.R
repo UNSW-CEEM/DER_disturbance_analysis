@@ -19,12 +19,14 @@ library(suncalc)
 library(ggmap)
 library(measurements)
 library(assertthat)
+library(geosphere)
 source("data_manipulation_functions.R")
 source("filter_and_aggregate.R")
 source("upscale_function.R")
 source("data_cleaning_functions.R")
 source("normalised_power_function.R")
 source("response_categorisation_function.R")
+source("distance_from_event.R")
 
 ui <- fluidPage(
   tags$head(
@@ -128,6 +130,7 @@ ui <- fluidPage(
           plotlyOutput(outputId="ResponseCount"),
           plotlyOutput(outputId="Frequency"),
           plotlyOutput(outputId="Voltage"),
+          plotlyOutput(outputId="distance_response"),
           dataTableOutput("sample_count_table"),
           HTML("<br><br>"),
           uiOutput("save_sample_count")
@@ -249,7 +252,8 @@ server <- function(input,output,session){
                       time_series_data = data.frame(),
                       sample_count_table = data.frame(),
                       combined_data_f = data.frame(),
-                      performance_factors = data.frame()
+                      performance_factors = data.frame(),
+                      postcode_data = data.frame()
                       )
   
   # This is the event that runs when the "Load data" button on the GUI is
@@ -335,7 +339,7 @@ server <- function(input,output,session){
       postcode_data_file <- "PostcodesLatLong.csv"
       postcode_data <- read.csv(file=postcode_data_file, header=TRUE, 
                                stringsAsFactors = FALSE)
-      postcode_data <- postcode_data %>%
+      v$postcode_data <- postcode_data %>%
         mutate(postcode = as.character(postcode))
       removeNotification(id)
       # Perform data, processing and combine data table into a single data frame
@@ -364,7 +368,7 @@ server <- function(input,output,session){
         # Clean circuit details file
         print("clean 2")
         v$circuit_details_for_editing <- 
-          clean_connection_types(v$combined_data, v$circuit_details, postcode_data)
+          clean_connection_types(v$combined_data, v$circuit_details, v$postcode_data)
         #v$combined_data_no_ac_filter <- select(combined_data_no_ac_filter, ts, site_id, c_id, power_kW)
         #remove(combined_data_no_ac_filter)
         # Display data cleaning output in data cleaning tab
@@ -561,6 +565,9 @@ server <- function(input,output,session){
     # Filter data by user selected time window
     combined_data_f <- filter(combined_data_f, 
                               ts>=start_time() & ts<= end_time())
+    
+    combined_data_f <- get_distance_from_event(
+      combined_data_f, v$postcode_data,-28.83813248585374467, 151.09683190655721319)
   
 
     if (agg_on_standard()==FALSE & pst_agg()==FALSE & grouping_agg()==FALSE & 
@@ -635,6 +642,14 @@ server <- function(input,output,session){
                                             model_agg=model_agg(),
                                             circuit_agg(),
                                             response_agg())
+        distance_response <- vector_groupby_cumulative_distance(combined_data_f, 
+                                                      agg_on_standard=agg_on_standard(),
+                                                      pst_agg=pst_agg(), 
+                                                      grouping_agg=grouping_agg(),
+                                                      manufacturer_agg=manufacturer_agg(),
+                                                      model_agg=model_agg(),
+                                                      circuit_agg(),
+                                                      response_agg())
         
         if (no_grouping){
           et <- event_time()
@@ -683,6 +698,9 @@ server <- function(input,output,session){
                     color=~series, type="scattergl")})
           output$Voltage <- renderPlotly({
             plot_ly(v$agg_power, x=~Time, y=~Voltage, 
+                    color=~series, type="scattergl")})
+          output$distance_response <- renderPlotly({
+            plot_ly(distance_response, x=~distance, y=~percentage, 
                     color=~series, type="scattergl")})
   
         removeNotification(id)

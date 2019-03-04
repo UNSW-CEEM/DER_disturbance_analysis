@@ -98,7 +98,6 @@ vector_groupby_count <- function(data, agg_on_standard, pst_agg, grouping_agg,
   return(data)
 }
 
-
 vector_groupby_count_response <- function(data, agg_on_standard, pst_agg, grouping_agg, 
                                  manufacturer_agg, model_agg, circuit_agg, 
                                  response_agg){
@@ -114,8 +113,45 @@ vector_groupby_count_response <- function(data, agg_on_standard, pst_agg, groupi
   data <- group_by(data, .dots=grouping_cols)
   data <- summarise(data , sample_count=length(unique(c_id)))
   data$series_x <- do.call(paste, c(data[c("clean", "response_category")], sep = "-" ))
-  data$series_y <- do.call(paste, c(data[add_cols], sep = "-" ))
+  if (length(add_cols) >= 1){
+    data$series_y <- do.call(paste, c(data[add_cols], sep = "-" ))
+  } else {
+    data <- mutate(data, series_y="All")
+    }
   data <- as.data.frame(data)
   data <- mutate(data, sample_count=sample_count/sum(data$sample_count))
   return(data)
 }
+
+vector_groupby_cumulative_distance <- function(data, agg_on_standard, pst_agg, grouping_agg, 
+                                 manufacturer_agg, model_agg, circuit_agg, 
+                                 response_agg){
+  grouping_cols <- c("clean")
+  if (agg_on_standard==TRUE){grouping_cols <- c(grouping_cols, "Standard_Version")}
+  if (grouping_agg==TRUE){grouping_cols <- c(grouping_cols, "Grouping")}
+  if (manufacturer_agg==TRUE){grouping_cols <- c(grouping_cols, "manufacturer")}
+  if (model_agg==TRUE){grouping_cols <- c(grouping_cols, "model")}
+  if (response_agg==TRUE){grouping_cols <- c(grouping_cols, "response_category")}
+  if (circuit_agg==TRUE){grouping_cols <- c(grouping_cols, "site_id", "c_id")}
+  series_cols <- grouping_cols
+  grouping_cols <- series_cols
+  data <- mutate(data, num_disconnects=ifelse(response_category %in% c("Disconnect", "Drop to Zero"),1,0))
+  data <- mutate(data, system_count=1)
+  data <- data[order(data$distance),]
+  data <- group_by(data, .dots=c(grouping_cols, "s_postcode"))
+  data <- summarise(data ,  distance=first(distance), 
+                    num_disconnects=sum(num_disconnects),
+                    system_count=sum(system_count))
+  data <- as.data.frame(data)
+  data <- data[order(data$distance),]
+  data <- group_by(data, .dots=grouping_cols)
+  data <- mutate(data,num_disconnects=cumsum(num_disconnects))
+  data <- mutate(data, system_count=cumsum(system_count))
+  data <- as.data.frame(data)
+  data$series <- do.call(paste, c(data[series_cols], sep = "-" ))
+  data <- mutate(data, percentage=num_disconnects/system_count)
+  return(data)
+}
+
+
+

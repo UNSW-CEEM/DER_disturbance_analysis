@@ -72,7 +72,7 @@ clean_connection_types <- function(combined_data, circuit_details, postcode_data
   # lon.
   postcode_data <- mutate(postcode_data, lat=as.numeric(lat))
   postcode_data <- mutate(postcode_data, lon=as.numeric(long))
-  # Need date of even to calaculate sunris and sunset times.
+  # Need date of event to calaculate sunrise and sunset times.
   postcode_data$date <- as.Date(combined_data$ts[1])
   # Find sunrise and sunset times on a postcode basis.
   postcode_data <- mutate(

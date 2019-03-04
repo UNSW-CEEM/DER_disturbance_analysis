@@ -76,7 +76,7 @@ process_raw_site_details <- function(site_details){
     summarise(s_state=first(s_state), 
               pv_installation_year_month=first(pv_installation_year_month),
               sum_ac=sum(ac), first_ac=first(ac), s_postcode=first(s_postcode),
-              manufacturer=paste(manufacturer, collapse=' '), 
+              manufacturer=paste(manufacturer, collapse=' '),
               model=paste(model, collapse=' '))
   processed_site_details <- as.data.frame(processed_site_details)
   return(processed_site_details)}
