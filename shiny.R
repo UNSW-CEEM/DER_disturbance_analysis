@@ -112,10 +112,12 @@ ui <- fluidPage(
           materialSwitch(inputId="raw_upscale", label=strong("Upscaled Data"), 
                          status="primary", right=FALSE),
           tags$hr(),
-          h4("Event time"),
+          h4("Event information"),
           uiOutput("event_date"),
           uiOutput("event_time"),
           uiOutput("window_length"),
+          uiOutput("event_latitude"),
+          uiOutput("event_longitude"),
           tags$hr(),
           uiOutput("update_plots")
         ),
@@ -234,6 +236,8 @@ server <- function(input,output,session){
   })
   agg_on_standard <- reactive({input$Std_Agg_Indiv})
   window_length <- reactive({input$window_length})
+  event_latitude <- reactive({input$event_latitude})
+  event_longitude <- reactive({input$event_longitude})
   
   # Store the main data table in a reactive value so it is accessable outside 
   # the observe event that creates it.
@@ -522,6 +526,14 @@ server <- function(input,output,session){
         numericInput("window_length", label=strong('Set Window Length (min)'), 
                      value=5, min = 1, max = 100, step = 1)
       })
+      output$event_latitude <- renderUI({
+        numericInput("event_latitude", label=strong('Set event latitude'), 
+                     value=-28.838132)
+      })
+      output$event_longitude <- renderUI({
+        numericInput("event_longitude", label=strong('Set event longitude'), 
+                     value=151.096832)
+      })
       output$update_plots <- renderUI({
         actionButton("update_plots", "Update plots")
         })
@@ -567,7 +579,7 @@ server <- function(input,output,session){
                               ts>=start_time() & ts<= end_time())
     
     combined_data_f <- get_distance_from_event(
-      combined_data_f, v$postcode_data,-28.83813248585374467, 151.09683190655721319)
+      combined_data_f, v$postcode_data, event_latitude(), event_longitude())
   
 
     if (agg_on_standard()==FALSE & pst_agg()==FALSE & grouping_agg()==FALSE & 
