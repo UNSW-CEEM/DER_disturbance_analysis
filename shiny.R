@@ -79,10 +79,10 @@ ui <- fluidPage(
           h4("Category Filter"),
           uiOutput("cleaned"),
           uiOutput("region"),
-          #uiOutput("duration"),
           uiOutput("StdVersion"),
           uiOutput("size_groupings"),
           uiOutput("responses"),
+          uiOutput("zones"),
           uiOutput("postcodes"),
           uiOutput("manufacturers"),
           uiOutput("models"),
@@ -107,6 +107,8 @@ ui <- fluidPage(
                          status="primary", value=FALSE),
           materialSwitch("circuit_agg", label=strong("Circuits:"), 
                          status="primary", value=FALSE),
+          materialSwitch("zone_agg", label=strong("Zones:"), 
+                         status="primary", value=FALSE),
           tags$hr(),
           h4("Additional Processing"),
           materialSwitch(inputId="raw_upscale", label=strong("Upscaled Data"), 
@@ -118,6 +120,9 @@ ui <- fluidPage(
           uiOutput("window_length"),
           uiOutput("event_latitude"),
           uiOutput("event_longitude"),
+          uiOutput("zone_one_radius"),
+          uiOutput("zone_two_radius"),
+          uiOutput("zone_three_radius"),
           tags$hr(),
           uiOutput("update_plots")
         ),
@@ -129,10 +134,15 @@ ui <- fluidPage(
           uiOutput("save_underlying"),
           HTML("<br><br>"),
           plotlyOutput(outputId="NormPower"),
-          plotlyOutput(outputId="ResponseCount"),
           plotlyOutput(outputId="Frequency"),
           plotlyOutput(outputId="Voltage"),
           plotlyOutput(outputId="distance_response"),
+          uiOutput(outputId="save_distance_response"),
+          plotlyOutput(outputId="ResponseCount"),
+          uiOutput("save_response_count"),
+          plotlyOutput(outputId="ZoneCount"),
+          uiOutput("save_zone_count"),
+          HTML("<br><br>"),
           dataTableOutput("sample_count_table"),
           HTML("<br><br>"),
           uiOutput("save_sample_count")
@@ -186,6 +196,7 @@ server <- function(input,output,session){
   hide("manufacturer_agg")
   hide("model_agg")
   hide("circuit_agg")
+  hide("zone_agg")
   options(DT.options = list(pageLength = 3))
   # Get input from GUI
   time_series_file <- reactive({input$time_series})
@@ -200,6 +211,7 @@ server <- function(input,output,session){
   models <- reactive({input$models})
   sites <- reactive({input$sites})
   circuits <- reactive({input$circuits})
+  zones <- reactive({input$zones})
   size_groupings <- reactive({input$size_groupings})
   clean <- reactive({input$cleaned})
   raw_upscale <- reactive({input$raw_upscale})
@@ -210,6 +222,7 @@ server <- function(input,output,session){
   perform_clean <- reactive({input$perform_clean})
   model_agg <- reactive({input$model_agg})
   circuit_agg <- reactive({input$circuit_agg})
+  zone_agg <- reactive({input$zone_agg})
   start_time <- reactive({
     date_as_str <- as.character(input$date[1])
     time_as_str <- substr(input$time_start, 12,19)
@@ -238,6 +251,9 @@ server <- function(input,output,session){
   window_length <- reactive({input$window_length})
   event_latitude <- reactive({input$event_latitude})
   event_longitude <- reactive({input$event_longitude})
+  zone_one_radius <- reactive({input$zone_one_radius})
+  zone_two_radius <- reactive({input$zone_two_radius})
+  zone_three_radius <- reactive({input$zone_three_radius})
   
   # Store the main data table in a reactive value so it is accessable outside 
   # the observe event that creates it.
@@ -257,7 +273,10 @@ server <- function(input,output,session){
                       sample_count_table = data.frame(),
                       combined_data_f = data.frame(),
                       performance_factors = data.frame(),
-                      postcode_data = data.frame()
+                      postcode_data = data.frame(),
+                      response_count = data.frame(),
+                      zone_count = data.frame(),
+                      distance_response = data.frame()
                       )
   
   # This is the event that runs when the "Load data" button on the GUI is
@@ -506,6 +525,15 @@ server <- function(input,output,session){
                              checkIcon=list(yes=icon("ok", lib="glyphicon"), 
                                             no=icon("remove", lib="glyphicon")))
       })
+      output$zones <- renderUI({
+        checkboxGroupButtons(inputId="zones", 
+                             label=strong("Zones"),
+                             choices=list("Zone One", "Zone Two", "Zone Three"),
+                             selected=list("Zone One", "Zone Two", "Zone Three"),
+                             justified=TRUE, status="primary", individual=TRUE,
+                             checkIcon=list(yes=icon("ok", lib="glyphicon"), 
+                                            no=icon("remove", lib="glyphicon")))
+      })        
       show("raw_upscale")
       show("pst_agg")
       show("grouping_agg")
@@ -513,6 +541,7 @@ server <- function(input,output,session){
       show("manufacturer_agg")
       show("response_agg")
       show("circuit_agg")
+      show("zone_agg")
       output$event_date <- renderUI({
         dateInput("event_date", label=strong('Event date (yyyy-mm-dd):'),
                   value=floor_date(min(v$combined_data$ts), "day"),
@@ -520,7 +549,7 @@ server <- function(input,output,session){
       })
       output$event_time <- renderUI({
         timeInput("event_time", label=strong('Event time'),
-                  value = as.ITime(min(v$combined_data$ts)))
+                  value = as.POSIXct("13:11:55",format="%H:%M:%S"))
       })
       output$window_length <- renderUI({
         numericInput("window_length", label=strong('Set Window Length (min)'), 
@@ -533,6 +562,18 @@ server <- function(input,output,session){
       output$event_longitude <- renderUI({
         numericInput("event_longitude", label=strong('Set event longitude'), 
                      value=151.096832)
+      })
+      output$zone_one_radius <- renderUI({
+        numericInput("zone_one_radius", label=strong('Set zone one outer radius'), 
+                     value=200)
+      })
+      output$zone_two_radius <- renderUI({
+        numericInput("zone_two_radius", label=strong('Set zone two outer radius'), 
+                     value=600)
+      })
+      output$zone_three_radius <- renderUI({
+        numericInput("zone_three_radius", label=strong('Set zone three outer radius'), 
+                     value=1000)
       })
       output$update_plots <- renderUI({
         actionButton("update_plots", "Update plots")
@@ -549,14 +590,6 @@ server <- function(input,output,session){
   # Create plots when update plots button is clicked.
   observeEvent(input$update_plots, {
     id <- showNotification("Updating plots", duration=1000)
-    # Filter data based on user selections
-  #  combined_data_f <- vector_filter(filter(v$combined_data, sum_ac<=100), 
-  #                                   duration=duration(), 
-  #                                   state=region(), standards=standards(),
-  #                                   clean=clean(), postcodes=postcodes(),
-  #                                   size_groupings=size_groupings(),
-  #                                   manufacturers=manufacturers(),
-  #                                   models=models())
     
     combined_data_f <- filter(v$combined_data, sum_ac<=100)
     combined_data_f <- filter(combined_data_f, s_state==region())
@@ -569,21 +602,17 @@ server <- function(input,output,session){
     if (length(sites()) > 0) {combined_data_f <- filter(combined_data_f, site_id %in% sites())}
     if (length(circuits()) > 0) {combined_data_f <- filter(combined_data_f, c_id %in% circuits())}
     combined_data_f <- categorise_response(combined_data_f, event_time(), window_length())
-    if (length(responses()) < 6) {
-      combined_data_f <- filter(combined_data_f, response_category %in% responses())
-    }
-    
-  
+    if (length(responses()) < 6) {combined_data_f <- filter(combined_data_f, response_category %in% responses())}
     # Filter data by user selected time window
-    combined_data_f <- filter(combined_data_f, 
-                              ts>=start_time() & ts<= end_time())
-    
+    combined_data_f <- filter(combined_data_f, ts>=start_time() & ts<= end_time())
     combined_data_f <- get_distance_from_event(
       combined_data_f, v$postcode_data, event_latitude(), event_longitude())
+    combined_data_f <- get_zones(combined_data_f, zone_one_radius(), zone_two_radius(), zone_three_radius())
+    if (length(zones()) < 3) { combined_data_f <- filter(combined_data_f, zone %in% zones())}
   
 
     if (agg_on_standard()==FALSE & pst_agg()==FALSE & grouping_agg()==FALSE & 
-        manufacturer_agg()==FALSE & model_agg()==FALSE & circuit_agg()==TRUE){
+        manufacturer_agg()==FALSE & model_agg()==FALSE & zone_agg()==FALSE & circuit_agg()==TRUE){
       no_grouping=TRUE
     } else {
       no_grouping=FALSE
@@ -597,7 +626,8 @@ server <- function(input,output,session){
                                                  manufacturer_agg=manufacturer_agg(),
                                                  model_agg=model_agg(),
                                                  circuit_agg(),
-                                                 response_agg())
+                                                 response_agg(),
+                                                 zone_agg())
     
     if ((sum(v$sample_count_table$sample_count)<1000 & no_grouping) | 
         (length(v$sample_count_table$sample_count)<1000 & !no_grouping)){
@@ -629,7 +659,8 @@ server <- function(input,output,session){
                                       manufacturer_agg=manufacturer_agg(),
                                       model_agg=model_agg(),
                                       circuit_agg(),
-                                      response_agg())
+                                      response_agg(),
+                                      zone_agg())
         agg_f_and_v <- vector_groupby_f_and_v(combined_data_f, 
                                             agg_on_standard=agg_on_standard(),
                                             pst_agg=pst_agg(), 
@@ -637,7 +668,8 @@ server <- function(input,output,session){
                                             manufacturer_agg=manufacturer_agg(),
                                             model_agg=model_agg(),
                                             circuit_agg(),
-                                            response_agg())
+                                            response_agg(),
+                                            zone_agg())
         v$agg_power <- vector_groupby_power(combined_data_f2, 
                                       agg_on_standard=agg_on_standard(),
                                       pst_agg=pst_agg(), 
@@ -645,16 +677,27 @@ server <- function(input,output,session){
                                       manufacturer_agg=manufacturer_agg(),
                                       model_agg=model_agg(),
                                       circuit_agg(),
-                                      response_agg())
-        bar_chart_data <- vector_groupby_count_response(combined_data_f, 
+                                      response_agg(),
+                                      zone_agg())
+        v$response_count <- vector_groupby_count_response(combined_data_f, 
                                             agg_on_standard=agg_on_standard(),
                                             pst_agg=pst_agg(), 
                                             grouping_agg=grouping_agg(),
                                             manufacturer_agg=manufacturer_agg(),
                                             model_agg=model_agg(),
                                             circuit_agg(),
-                                            response_agg())
-        distance_response <- vector_groupby_cumulative_distance(combined_data_f, 
+                                            response_agg(),
+                                            zone_agg())
+        v$zone_count <- vector_groupby_count_zones(combined_data_f, 
+                                                        agg_on_standard=agg_on_standard(),
+                                                        pst_agg=pst_agg(), 
+                                                        grouping_agg=grouping_agg(),
+                                                        manufacturer_agg=manufacturer_agg(),
+                                                        model_agg=model_agg(),
+                                                        circuit_agg(),
+                                                        response_agg(),
+                                                        zone_agg())
+        v$distance_response <- vector_groupby_cumulative_distance(combined_data_f, 
                                                       agg_on_standard=agg_on_standard(),
                                                       pst_agg=pst_agg(), 
                                                       grouping_agg=grouping_agg(),
@@ -702,9 +745,19 @@ server <- function(input,output,session){
             plot_ly(agg_norm_power, x=~Time, y=~Event_Normalised_Power_kW, 
                     color=~series, type="scattergl")})
           output$ResponseCount <- renderPlotly({
-            plot_ly(bar_chart_data, x=~series_x, y=~sample_count, 
+            plot_ly(v$response_count, x=~series_x, y=~sample_count, 
                     color=~series_y, type="bar") %>%
               layout(yaxis = list(title = 'Fraction of Filtered dataset'), barmode = 'stack')})
+          output$save_response_count <- renderUI({
+            shinySaveButton("save_response_count", "Save data", "Save file as ...", 
+                            filetype=list(xlsx="csv"))})
+          output$ZoneCount <- renderPlotly({
+            plot_ly(v$zone_count, x=~series_x, y=~sample_count, 
+                    color=~series_y, type="bar") %>%
+              layout(yaxis = list(title = 'Fraction of Filtered dataset'), barmode = 'stack')})
+          output$save_zone_count <- renderUI({
+            shinySaveButton("save_zone_count", "Save data", "Save file as ...", 
+                            filetype=list(xlsx="csv"))})
           output$Frequency <- renderPlotly({
             plot_ly(v$agg_power, x=~Time, y=~Frequency, 
                     color=~series, type="scattergl")})
@@ -712,8 +765,11 @@ server <- function(input,output,session){
             plot_ly(v$agg_power, x=~Time, y=~Voltage, 
                     color=~series, type="scattergl")})
           output$distance_response <- renderPlotly({
-            plot_ly(distance_response, x=~distance, y=~percentage, 
+            plot_ly(v$distance_response, x=~distance, y=~percentage, 
                     color=~series, type="scattergl")})
+          output$save_distance_response <- renderUI({
+            shinySaveButton("save_distance_response", "Save data", "Save file as ...", 
+                            filetype=list(xlsx="csv"))})
   
         removeNotification(id)
       } else {
@@ -764,6 +820,33 @@ server <- function(input,output,session){
     }
   })
   
+  observe({
+    volumes <- c(dr="C:\\")
+    shinyFileSave(input, "save_response_count", roots=volumes, session=session)
+    fileinfo <- parseSavePath(volumes, input$save_response_count)
+    if (nrow(fileinfo) > 0) {
+      write.csv(v$response_count, as.character(fileinfo$datapath), row.names=FALSE)
+    }
+  })
+  
+  observe({
+    volumes <- c(dr="C:\\")
+    shinyFileSave(input, "save_zone_count", roots=volumes, session=session)
+    fileinfo <- parseSavePath(volumes, input$save_zone_count)
+    if (nrow(fileinfo) > 0) {
+      write.csv(v$zone_count, as.character(fileinfo$datapath), row.names=FALSE)
+    }
+  })
+  
+  observe({
+    volumes <- c(dr="C:\\")
+    shinyFileSave(input, "save_distance_response", roots=volumes, session=session)
+    fileinfo <- parseSavePath(volumes, input$save_distance_response)
+    if (nrow(fileinfo) > 0) {
+      write.csv(v$distance_response, as.character(fileinfo$datapath), row.names=FALSE)
+    }
+  })
+  
   # Time series file selection pop up.
   observe({
     volumes <- c(dr="C:\\")
@@ -797,33 +880,18 @@ server <- function(input,output,session){
   # Inforce mutual exclusivity of Aggregation settings
   observe({
     if(manufacturer_agg() | model_agg() | pst_agg() | circuit_agg()
-       | circuit_agg() | response_agg()){
+       | circuit_agg() | response_agg() | zone_agg()){
       updateMaterialSwitch(session=session, "raw_upscale", value = FALSE)
     }
   })
+  
   observe({
     if(raw_upscale()){
       updateMaterialSwitch(session=session, "manufacturer_agg", value = FALSE)
-    }
-  })
-  observe({
-    if(raw_upscale()){
       updateMaterialSwitch(session=session, "model_agg", value = FALSE)
-    }
-  })
-  observe({
-    if(raw_upscale()){
       updateMaterialSwitch(session=session, "pst_agg", value = FALSE)
-    }
-  })
-  observe({
-    if(raw_upscale()){
       updateMaterialSwitch(session=session, "circuit_agg", value = FALSE)
-    }
-  })
-  observe({
-    if(raw_upscale()){
-      updateMaterialSwitch(session=session, "response_agg", value = FALSE)
+      updateMaterialSwitch(session=session, "zone_agg", value = FALSE)
     }
   })
   
