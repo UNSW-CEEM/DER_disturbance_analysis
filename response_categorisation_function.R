@@ -11,37 +11,37 @@ categorise_response <- function(combined_data, event_time, window_length){
                                  num_data_points=length(power_kW)-1)
   event_window_data <- mutate(
     event_window_data, 
-    response_category=ifelse(event_power < 0.1, 'Off at t0', 'undefined'))
+    response_category=ifelse(event_power < 0.1, '5 Off at t0', 'undefined'))
   
   event_window_data <- mutate(
     event_window_data, 
     response_category=ifelse(
       num_data_points < (60/d)*window_length & response_category=='undefined', 
-      'Not enough data', response_category))
+      '6 Not enough data', response_category))
   
   event_window_data <- mutate(
     event_window_data, 
     response_category=ifelse(
       response_category=='undefined' & min_norm_power >= 0.96, 
-      'Ride Through', response_category))
+      '1 Ride Through', response_category))
   
   event_window_data <- mutate(
     event_window_data, 
     response_category=ifelse(
       response_category=='undefined' & min_norm_power < 0.96 & 
-      num_con_zeros == 0, 'Curtail', response_category))
+      num_con_zeros == 0, '2 Curtail', response_category))
   
   event_window_data <- mutate(
     event_window_data, 
     response_category=ifelse(
       response_category=='undefined' & num_con_zeros == 1, 
-      'Drop to Zero', response_category))
+      '3 Drop to Zero', response_category))
   
   event_window_data <- mutate(
     event_window_data, 
     response_category=ifelse(
       response_category=='undefined' & num_con_zeros > 1, 
-      'Disconnect', response_category))
+      '4 Disconnect', response_category))
   
   event_window_data <- select(event_window_data, c_id, clean, response_category)
   combined_data <- left_join(combined_data, event_window_data, on=c("c_id", "clean"))

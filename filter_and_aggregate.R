@@ -117,7 +117,7 @@ vector_groupby_count_response <- function(data, agg_on_standard, pst_agg, groupi
   grouping_cols <- c(grouping_cols, add_cols)
   data <- group_by(data, .dots=grouping_cols)
   data <- summarise(data , sample_count=length(unique(c_id)))
-  data$series_x <- do.call(paste, c(data[c("clean", "response_category")], sep = "-" ))
+  data$series_x <- do.call(paste, c(data[c("response_category", "clean")], sep = "-" ))
   if (length(add_cols) >= 1){
     data$series_y <- do.call(paste, c(data[add_cols], sep = "-" ))
   } else {
@@ -165,7 +165,7 @@ vector_groupby_cumulative_distance <- function(data, agg_on_standard, pst_agg, g
   if (circuit_agg==TRUE){grouping_cols <- c(grouping_cols, "site_id", "c_id")}
   series_cols <- grouping_cols
   grouping_cols <- series_cols
-  data <- mutate(data, num_disconnects=ifelse(response_category %in% c("Disconnect", "Drop to Zero"),1,0))
+  data <- mutate(data, num_disconnects=ifelse(response_category %in% c("4 Disconnect", "3 Drop to Zero"),1,0))
   data <- mutate(data, system_count=1)
   data <- data[order(data$distance),]
   data <- group_by(data, .dots=c(grouping_cols, "s_postcode"))
@@ -183,5 +183,28 @@ vector_groupby_cumulative_distance <- function(data, agg_on_standard, pst_agg, g
   return(data)
 }
 
-
+vector_groupby_system <- function(data, agg_on_standard, pst_agg, grouping_agg, 
+                                 manufacturer_agg, model_agg, circuit_agg, 
+                                 response_agg, zone_agg){
+  grouping_cols <- c("clean")
+  if (agg_on_standard==TRUE){grouping_cols <- c(grouping_cols, "Standard_Version")}
+  if (pst_agg==TRUE){grouping_cols <- c(grouping_cols, "s_postcode")}
+  if (grouping_agg==TRUE){grouping_cols <- c(grouping_cols, "Grouping")}
+  if (manufacturer_agg==TRUE){grouping_cols <- c(grouping_cols, "manufacturer")}
+  if (model_agg==TRUE){grouping_cols <- c(grouping_cols, "model")}
+  if (response_agg==TRUE){grouping_cols <- c(grouping_cols, "response_category")}
+  if (zone_agg==TRUE){grouping_cols <- c(grouping_cols, "zone")}
+  series_cols <- grouping_cols
+  data <- group_by(data, .dots=c("site_id"))
+  data <- summarise(data , Standard_Version=first(Standard_Version), 
+                    clean=first(clean),
+                    s_postcode=first(s_postcode), Grouping=first(Grouping),
+                    manufacturer=first(manufacturer), model=first(model),
+                    response_category=first(response_category),
+                    zone=first(zone), sum_ac=first(sum_ac), lat=first(lat),
+                    lon=first(lon))
+  data <- as.data.frame(data)
+  data$series <- do.call(paste, c(data[series_cols], sep = "-" ))
+  return(data)
+}
 

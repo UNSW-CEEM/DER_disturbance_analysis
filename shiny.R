@@ -136,12 +136,13 @@ ui <- fluidPage(
           plotlyOutput(outputId="NormPower"),
           plotlyOutput(outputId="Frequency"),
           plotlyOutput(outputId="Voltage"),
-          plotlyOutput(outputId="distance_response"),
-          uiOutput(outputId="save_distance_response"),
           plotlyOutput(outputId="ResponseCount"),
           uiOutput("save_response_count"),
+          plotlyOutput(outputId="distance_response"),
+          uiOutput(outputId="save_distance_response"),
           plotlyOutput(outputId="ZoneCount"),
           uiOutput("save_zone_count"),
+          plotlyOutput(outputId="map"),
           HTML("<br><br>"),
           dataTableOutput("sample_count_table"),
           HTML("<br><br>"),
@@ -515,12 +516,12 @@ server <- function(input,output,session){
       output$responses <- renderUI({
         checkboxGroupButtons(inputId="responses", 
                              label=strong("Select Responses:"),
-                             choices=list("Off at t0", "Not enough data",
-                                          "undefined", "Ride Through", "Curtail",
-                                          "Drop to Zero", "Disconnect"),
-                             selected=list("Off at t0", "Not enough data",
-                                           "undefined", "Ride Through", "Curtail",
-                                           "Drop to Zero", "Disconnect"),
+                             choices=list("1 Ride Through", "2 Curtail", "3 Drop to Zero", 
+                                          "4 Disconnect","5 Off at t0", 
+                                          "6 Not enough data","NA"),
+                             selected=list("1 Ride Through", "2 Curtail", "3 Drop to Zero", 
+                                           "4 Disconnect","5 Off at t0", 
+                                           "6 Not enough data","NA"),
                              justified=TRUE, status="primary", individual=TRUE,
                              checkIcon=list(yes=icon("ok", lib="glyphicon"), 
                                             no=icon("remove", lib="glyphicon")))
@@ -528,8 +529,8 @@ server <- function(input,output,session){
       output$zones <- renderUI({
         checkboxGroupButtons(inputId="zones", 
                              label=strong("Zones"),
-                             choices=list("Zone One", "Zone Two", "Zone Three"),
-                             selected=list("Zone One", "Zone Two", "Zone Three"),
+                             choices=list("1 Zone", "2 Zone", "3 Zone"),
+                             selected=list("1 Zone", "2 Zone", "3 Zone"),
                              justified=TRUE, status="primary", individual=TRUE,
                              checkIcon=list(yes=icon("ok", lib="glyphicon"), 
                                             no=icon("remove", lib="glyphicon")))
@@ -705,6 +706,15 @@ server <- function(input,output,session){
                                                       model_agg=model_agg(),
                                                       circuit_agg(),
                                                       response_agg())
+        geo_data <- vector_groupby_system(combined_data_f, 
+                                          agg_on_standard=agg_on_standard(),
+                                          pst_agg=pst_agg(), 
+                                          grouping_agg=grouping_agg(),
+                                          manufacturer_agg=manufacturer_agg(),
+                                          model_agg=model_agg(),
+                                          circuit_agg(),
+                                          response_agg(),
+                                          zone_agg())
         
         if (no_grouping){
           et <- event_time()
@@ -727,6 +737,8 @@ server <- function(input,output,session){
             v$agg_power, agg_f_and_v[, c("Time", "series", "Voltage", "Frequency")], 
             by=c("Time", "series"))
         }
+        
+        
           output$PlotlyTest <- renderPlotly({
             plot_ly(v$agg_power, x=~Time, y=~Power_kW, color=~series, 
                     type="scattergl")})
@@ -770,6 +782,24 @@ server <- function(input,output,session){
           output$save_distance_response <- renderUI({
             shinySaveButton("save_distance_response", "Save data", "Save file as ...", 
                             filetype=list(xlsx="csv"))})
+          g <- list(
+            scope = 'world',
+            showframe = F,
+            showland = T,
+            landcolor = toRGB("grey90"),
+            resolution = 50,
+            showcoastlines = T,
+            countrycolor = toRGB("white"),
+            coastlinecolor = toRGB("white"),
+            projection = list(type = 'Mercator'),
+            lonaxis = list(range = c(100, 150)),
+            lataxis = list(range = c(-5, -40))
+            #list(domain = list(x = c(0, 1), y = c(0, 1)))
+          )
+          output$map <- renderPlotly({
+          plot_geo(geo_data, lat =~lat, lon =~lon, color =~series) %>%
+            layout(geo = g)
+          })
   
         removeNotification(id)
       } else {
