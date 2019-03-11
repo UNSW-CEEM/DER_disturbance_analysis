@@ -20,6 +20,11 @@ library(ggmap)
 library(measurements)
 library(assertthat)
 library(geosphere)
+#library(maptools)
+#library(leaflet)
+#library(htmltools)
+#library(htmlwidgets)
+#library(sf)
 source("data_manipulation_functions.R")
 source("filter_and_aggregate.R")
 source("upscale_function.R")
@@ -360,7 +365,7 @@ server <- function(input,output,session){
       install_data <- read.csv(file=intall_data_file, header=TRUE, 
                                stringsAsFactors = FALSE)
       v$install_data <- process_install_data(install_data)
-      postcode_data_file <- "PostcodesLatLong.csv"
+      postcode_data_file <- "PostcodesLatLongQGIS.csv"
       postcode_data <- read.csv(file=postcode_data_file, header=TRUE, 
                                stringsAsFactors = FALSE)
       v$postcode_data <- postcode_data %>%
@@ -492,7 +497,7 @@ server <- function(input,output,session){
                        choices = unique(v$circuit_details$c_id), 
                        multiple=TRUE)  
       })
-      show("Std_Agg_Indiv")
+      shinyjs::show("Std_Agg_Indiv")
       output$size_groupings <- renderUI({
         checkboxGroupButtons(inputId="size_groupings", 
                              label=strong("Size Groupings"),
@@ -535,14 +540,14 @@ server <- function(input,output,session){
                              checkIcon=list(yes=icon("ok", lib="glyphicon"), 
                                             no=icon("remove", lib="glyphicon")))
       })        
-      show("raw_upscale")
-      show("pst_agg")
-      show("grouping_agg")
-      show("grouping_agg")
-      show("manufacturer_agg")
-      show("response_agg")
-      show("circuit_agg")
-      show("zone_agg")
+      shinyjs::show("raw_upscale")
+      shinyjs::show("pst_agg")
+      shinyjs::show("grouping_agg")
+      shinyjs::show("grouping_agg")
+      shinyjs::show("manufacturer_agg")
+      shinyjs::show("response_agg")
+      shinyjs::show("circuit_agg")
+      shinyjs::show("zone_agg")
       output$event_date <- renderUI({
         dateInput("event_date", label=strong('Event date (yyyy-mm-dd):'),
                   value=floor_date(min(v$combined_data$ts), "day"),
@@ -782,24 +787,12 @@ server <- function(input,output,session){
           output$save_distance_response <- renderUI({
             shinySaveButton("save_distance_response", "Save data", "Save file as ...", 
                             filetype=list(xlsx="csv"))})
-          g <- list(
-            scope = 'world',
-            showframe = F,
-            showland = T,
-            landcolor = toRGB("grey90"),
-            resolution = 50,
-            showcoastlines = T,
-            countrycolor = toRGB("white"),
-            coastlinecolor = toRGB("white"),
-            projection = list(type = 'Mercator'),
-            lonaxis = list(range = c(100, 150)),
-            lataxis = list(range = c(-5, -40))
-            #list(domain = list(x = c(0, 1), y = c(0, 1)))
-          )
-          output$map <- renderPlotly({
-          plot_geo(geo_data, lat =~lat, lon =~lon, color =~series) %>%
-            layout(geo = g)
-          })
+          
+          #IND_adm1 <- st_read("POA_2016_AUST.shp")
+          #IND_adm1 <- filter(IND_adm1, substr(POA_CODE16,1,1)=="2")
+          #st_crs(IND_adm1) <- "+proj=longlat +ellps=WGS84 +datum=WGS84"
+          #factpal <- colorFactor(topo.colors(36), IND_adm1$POA_CODE16)
+          output$map <- renderPlotly({plot_geo(geo_data, lat =~lat, lon =~lon, color =~series)})
   
         removeNotification(id)
       } else {
