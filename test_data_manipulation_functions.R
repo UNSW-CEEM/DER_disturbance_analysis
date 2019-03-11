@@ -22,16 +22,6 @@ library(measurements)
 library(assertthat)
 source("data_manipulation_functions.R")
 
-test_that("Test assertion of time series data assumptions, c_id is an int",{
-  # Test input data
-  c_id <- c("x", "101", "c_id")
-  ts <- c("2018-01-01 00:01:00", "2018-01-01 00:02:00", "ts")
-  e <- c("1015.0", "-1010.0", "e")
-  d <- c("60", "60", "d")
-  test_time_series_data <- data.frame(c_id, ts, e, d, stringsAsFactors = FALSE)
-  # Test output data
-  expect_error(process_raw_time_series_data(test_time_series_data))
-})
 
 test_that("Test assertion of time series data assumptions, c_id not empty",{
   # Test input data
@@ -45,8 +35,7 @@ test_that("Test assertion of time series data assumptions, c_id not empty",{
 })
 
 
-test_that("Test assertion of time series data assumptions, 
-          ts is formated correctlty 1",{
+test_that("Test assertion of time series data assumptions, ts is formated correctlty 1",{
   # Test input data
   c_id <- c("101", "101", "c_id")
   ts <- c("2018-21-01 00:01:00", "2018-01-01 00:02:00", "ts")
@@ -57,8 +46,7 @@ test_that("Test assertion of time series data assumptions,
   expect_error(process_raw_time_series_data(test_time_series_data))
 })
 
-test_that("Test assertion of time series data assumptions, e can be interpreted 
-          as numeric 1",{
+test_that("Test assertion of time series data assumptions, e can be interpreted as numeric 1",{
   # Test input data
   c_id <- c("101", "101", "c_id")
   ts <- c("2018-01-01 00:01:00", "2018-01-01 00:02:00", "ts")
@@ -69,8 +57,7 @@ test_that("Test assertion of time series data assumptions, e can be interpreted
   expect_error(process_raw_time_series_data(test_time_series_data))
 })
 
-test_that("Test assertion of time series data assumptions, e can be interpreted 
-          as numeric 2",{
+test_that("Test assertion of time series data assumptions, e can be interpreted as numeric 2",{
             # Test input data
             c_id <- c("101", "101", "c_id")
             ts <- c("2018-01-01 00:01:00", "2018-01-01 00:02:00", "ts")
@@ -81,8 +68,7 @@ test_that("Test assertion of time series data assumptions, e can be interpreted
             expect_error(process_raw_time_series_data(test_time_series_data))
             })
 
-test_that("Test assertion of time series data assumptions, d must be 5, 30 or 
-          60",{
+test_that("Test assertion of time series data assumptions, d must be 5, 30 or 60",{
             # Test input data
             c_id <- c("101", "101", "c_id")
             ts <- c("2018-01-01 00:01:00", "2018-01-01 00:02:00", "ts")
@@ -98,25 +84,28 @@ test_that("Test the preprocessing of the timeseries data",{
   c_id <- c("101", "101", "c_id")
   ts <- c("2018-01-01 00:01:00", "2018-01-01 00:02:00", "ts")
   e <- c("1015.0", "-1010.0", "e")
+  v <- c("240.1", "240.2", "e")
+  f <- c("50.1", "50.0", "e")
   d <- c("60", "60", "d")
-  test_time_series_data <- data.frame(c_id, ts, e, d, stringsAsFactors = FALSE)
+  test_time_series_data <- data.frame(c_id, ts, e, d, v, f, stringsAsFactors = FALSE)
   # Test output data
-  c_id <- c(101, 101)
+  c_id <- c("101", "101")
   ts <- c(as.POSIXct(strptime("2018-01-01 10:01:00", "%Y-%m-%d %H:%M:%S", 
                               tz="Australia/Brisbane")), 
           as.POSIXct(strptime("2018-01-01 10:02:00", "%Y-%m-%d %H:%M:%S", 
                               tz="Australia/Brisbane")))
   e <- c(1015.0, -1010.0)
+  v <- c(240.1, 240.2)
+  f <- c(50.1, 50.0)
   d <- c(60, 60)
-  expected_answer <- data.frame(c_id, ts, e, d, stringsAsFactors = FALSE)
+  expected_answer <- data.frame(c_id, ts, e, d, v, f, stringsAsFactors = FALSE)
   # Call processing function
   processed_time_series = process_raw_time_series_data(test_time_series_data)
   # Test the answer matches the expected answer
   expect_identical(processed_time_series, expected_answer)
 })
 
-test_that("Test assertion of site data assumptions, s_state must be NSW, ACT, 
-          SA etc",{
+test_that("Test assertion of site data assumptions, s_state must be NSW, ACT, SA etc",{
   # Test input data
   site_id <- c(101, 101, 300)
   s_state <- c("NSW", "sA", "SA")
@@ -132,72 +121,67 @@ test_that("Test assertion of site data assumptions, s_state must be NSW, ACT,
   expect_error(process_raw_site_details(test_site_details))
 })
 
-test_that("Test assertion of site data assumptions, each site has only one 
-           distinct value for s_postcode",{
-            # Test input data
-            site_id <- c(101, 101, 300)
-            s_state <- c("NSW", "NSW", "SA")
-            s_postcode <- c(2031, 2032, 2031)
-            dc <- c(60, 60, 10)
-            ac <- c(59, 60, 8)
-            pv_installation_year_month <- c("2017-01", "2017-10", "2018-01")
-            manufacturer <- c("SMA", "SMA", "ABB")
-            model <- c("1", "2", "3")
-            test_site_details <- data.frame(site_id, s_state, s_postcode, dc, ac,
-                                            pv_installation_year_month, manufacturer,
-                                            model, stringsAsFactors = FALSE)
-            expect_error(process_raw_site_details(test_site_details))
-          })
+test_that("Test assertion of site data assumptions, each site has only one distinct value for s_postcode",{
+  # Test input data
+  site_id <- c(101, 101, 300)
+  s_state <- c("NSW", "NSW", "SA")
+  s_postcode <- c(2031, 2032, 2031)
+  dc <- c(60, 60, 10)
+  ac <- c(59, 60, 8)
+  pv_installation_year_month <- c("2017-01", "2017-10", "2018-01")
+  manufacturer <- c("SMA", "SMA", "ABB")
+  model <- c("1", "2", "3")
+  test_site_details <- data.frame(site_id, s_state, s_postcode, dc, ac,
+                                  pv_installation_year_month, manufacturer,
+                                  model, stringsAsFactors = FALSE)
+  expect_error(process_raw_site_details(test_site_details))
+})
 
-test_that("Test assertion of site data assumptions, each site only has one
-           distinct value for s_state",{
-            # Test input data
-            site_id <- c(101, 101, 300)
-            s_state <- c("NSW", "SA", "SA")
-            s_postcode <- c(2031, 2031, 2031)
-            dc <- c(60, 60, 10)
-            ac <- c(59, 60, 8)
-            pv_installation_year_month <- c("2017-01", "2017-10", "2018-01")
-            manufacturer <- c("SMA", "SMA", "ABB")
-            model <- c("1", "2", "3")
-            test_site_details <- data.frame(site_id, s_state, s_postcode, dc, ac,
-                                            pv_installation_year_month, manufacturer,
-                                            model, stringsAsFactors = FALSE)
-            expect_error(process_raw_site_details(test_site_details))
-          })
+test_that("Test assertion of site data assumptions, each site only has one distinct value for s_state",{
+  # Test input data
+  site_id <- c(101, 101, 300)
+  s_state <- c("NSW", "SA", "SA")
+  s_postcode <- c(2031, 2031, 2031)
+  dc <- c(60, 60, 10)
+  ac <- c(59, 60, 8)
+  pv_installation_year_month <- c("2017-01", "2017-10", "2018-01")
+  manufacturer <- c("SMA", "SMA", "ABB")
+  model <- c("1", "2", "3")
+  test_site_details <- data.frame(site_id, s_state, s_postcode, dc, ac,
+                                  pv_installation_year_month, manufacturer,
+                                  model, stringsAsFactors = FALSE)
+  expect_error(process_raw_site_details(test_site_details))
+})
 
-test_that("Test assertion of site data assumptions, dc can be converted to type
-           numeric without genertating NAs",{
-             # Test input data
-             site_id <- c(101, 101, 300)
-             s_state <- c("NSW", "SA", "SA")
-             s_postcode <- c(2031, 2031, 2031)
-             dc <- c(60, '', 10)
-             ac <- c(59, 60, 8)
-             pv_installation_year_month <- c("2017-01", "2017-10", "2018-01")
-             manufacturer <- c("SMA", "SMA", "ABB")
-             model <- c("1", "2", "3")
-             test_site_details <- data.frame(site_id, s_state, s_postcode, dc, ac,
-                                             pv_installation_year_month, manufacturer,
-                                             model, stringsAsFactors = FALSE)
-             expect_error(process_raw_site_details(test_site_details))
-           })
+test_that("Test assertion of site data assumptions, dc can be converted to type numeric without genertating NAs",{
+  # Test input data
+  site_id <- c(101, 101, 300)
+  s_state <- c("NSW", "SA", "SA")
+  s_postcode <- c(2031, 2031, 2031)
+  dc <- c(60, '', 10)
+  ac <- c(59, 60, 8)
+  pv_installation_year_month <- c("2017-01", "2017-10", "2018-01")
+  manufacturer <- c("SMA", "SMA", "ABB")
+  model <- c("1", "2", "3")
+  test_site_details <- data.frame(site_id, s_state, s_postcode, dc, ac,
+                                 pv_installation_year_month, manufacturer,
+                                 model, stringsAsFactors = FALSE)
+  expect_error(process_raw_site_details(test_site_details))
+})
 
-test_that("Test assertion of site data assumptions, dc can be converted to type
-           numeric without genertating NAs",{
-             # Test input data
-             site_id <- c(101, 101, 300)
-             s_state <- c("NSW", "SA", "SA")
-             s_postcode <- c(2031, 2031, 2031)
-             dc <- c(60, 60, 10)
-             ac <- c('x', 60, 8)
-             pv_installation_year_month <- c("2017-01", "2017-10", "2018-01")
-             manufacturer <- c("SMA", "SMA", "ABB")
-             model <- c("1", "2", "3")
-             test_site_details <- data.frame(site_id, s_state, s_postcode, dc, ac,
-                                             pv_installation_year_month, manufacturer,
-                                             model, stringsAsFactors = FALSE)
-             expect_error(process_raw_site_details(test_site_details))
+test_that("Test assertion of site data assumptions, ac can be converted to type numeric without genertating NAs",{
+  # Test input data
+  site_id <- c(101, 101, 300)
+  s_state <- c("NSW", "SA", "SA")
+  s_postcode <- c(2031, 2031, 2031)
+  dc <- c(60, 60, 10)
+  ac <- c('x', 60, 8)
+  pv_installation_year_month <- c("2017-01", "2017-10", "2018-01")
+  manufacturer <- c("SMA", "SMA", "ABB")
+  model <- c("1", "2", "3")
+  test_site_details <- data.frame(site_id, s_state, s_postcode, dc, ac, pv_installation_year_month, 
+                                  manufacturer, model, stringsAsFactors = FALSE)
+  expect_error(process_raw_site_details(test_site_details))
            })
 
 test_that("Test the preprocessing of the site_details data",{
@@ -252,17 +236,26 @@ test_that("Test the power calculations",{
   expect_equal(test_combined_data, expected_answer, tolerance=0.0001)
 }) 
 
+test_that("Test assertion in cicruit details processing function, should fail if polarity is not 1 or -1", {
+  e <- c(10.0, 9.0, 11.5)
+  polarity <- c(1, -1, 2)
+  d <- c(5, 5, 5)
+  con_type <-c("type 1", "type 1", "type 1")
+  c_id <- c(1, 1, 1)
+  test_energy_data <- data.frame(e, polarity, d, con_type, c_id, stringsAsFactors=FALSE)
+  expect_error(process_raw_circuit_details(test_energy_data))
+})
+
 test_that("Test the circuit details filtering function",{
   # Test input data
-  con_type <- c("ac_load_net", "load_air_conditioner", "ac_load", 
-                "load_hot_water", "pv_inverter", "pv_inverter_net",
+  con_type <- c("ac_load_net", "load_air_conditioner", "ac_load", "load_hot_water", "pv_inverter", "pv_inverter_net",
                 "pv_site", "pv_site_net")
-  id <- c(1001, 1002, 1003, 1000, 1000, 1001, 1002, 1003)
-  test_combined_data <- data.frame(con_type, id, stringsAsFactors = FALSE)
+  c_id <- c(1001, 1002, 1003, 1000, 1000, 1001, 1002, 1003)
+  test_combined_data <- data.frame(con_type, c_id, stringsAsFactors = FALSE)
   # Test output data
-  con_type <- c("pv_inverter_net", "pv_site", "pv_site_net")
-  id <- c(1001, 1002, 1003)
-  expected_answer <- data.frame(con_type, id, stringsAsFactors = FALSE)
+  con_type <- c("pv_inverter", "pv_inverter_net", "pv_site", "pv_site_net")
+  c_id <- c("1000", "1001", "1002", "1003")
+  expected_answer <- data.frame(con_type, c_id, stringsAsFactors = FALSE)
   # Call processing function
   test_combined_data = process_raw_circuit_details(test_combined_data)
   # Test the answer matches the expected answer
@@ -275,8 +268,7 @@ test_that("Test the standard catergorisation function",{
   s_state <- c("NSW", "NSW", "SA", "VIC", "QLD", "SA", "TAS")
   sum_dc <- c(60, 60, 10, 60, 60, 10, 11)
   first_ac <- c(60, 60, 10, 60, 60, 10, 11)
-  pv_installation_year_month <- c("", NA, "2015-01", "2015-10-09", "2015-11",
-                                  "2016-10-09", "2017-10")
+  pv_installation_year_month <- c("", NA, "2015-01", "2015-10-09", "2015-11", "2016-10-09", "2017-10")
   test_site_details <- data.frame(site_id, s_state, sum_dc, first_ac,
                                   pv_installation_year_month,
                                   stringsAsFactors = FALSE)
@@ -285,19 +277,30 @@ test_that("Test the standard catergorisation function",{
   s_state <- c("NSW", "NSW", "SA", "VIC", "QLD", "SA", "TAS")
   sum_dc <- c(60, 60, 10, 60, 60, 10, 11)
   first_ac <- c(60, 60, 10, 60, 60, 10, 11)
-  pv_installation_year_month <- c(ymd("2015-11-28"), ymd("2015-11-28"), 
-                                  ymd("2015-01-28"), ymd("2015-10-09"),
-                                  ymd("2015-11-28"), ymd("2016-10-09"), 
-                                  ymd("2017-10-28"))
-  Standard_Version <- c("Transition", "Transition", 
-                        "AS4777.3:2005", "Transition",
-                        "Transition", "Transition", 
+  pv_installation_year_month <- c(ymd("2015-11-28"), ymd("2015-11-28"), ymd("2015-01-28"), ymd("2015-10-09"),
+                                  ymd("2015-11-28"), ymd("2016-10-09"), ymd("2017-10-28"))
+  Standard_Version <- c("Transition", "Transition", "AS4777.3:2005", "Transition", "Transition", "Transition", 
                         "AS4777.2:2015")
-  expected_answer <- data.frame(site_id, s_state, sum_dc, first_ac,
-                                pv_installation_year_month, Standard_Version,
+  expected_answer <- data.frame(site_id, s_state, sum_dc, first_ac, pv_installation_year_month, Standard_Version,
                                 stringsAsFactors = FALSE)
   # Call processing function
   processed_site_details = site_catergorisation(test_site_details)
   # Test the answer matches the expected answer
   expect_identical(processed_site_details, expected_answer)
-}) 
+})
+
+test_that("Power calculations are correct, example with different durations and polarties", {
+  e <- c(10.0, -9.0, 11.5, -10.0, 9.0, 11.5)
+  polarity <- c(1, 1, 1, -1, -1, -1)
+  d <- c(5, 30, 60, 5, 30, 60)
+  test_energy_data <- data.frame(e, polarity, d, stringsAsFactors=FALSE)
+  e <- c(10.0, -9.0, 11.5, -10.0, 9.0, 11.5)
+  polarity <- c(1, 1, 1, -1, -1, -1)
+  d <- c(5, 30, 60, 5, 30, 60)
+  e_polarity <- c(10.0, -9.0, 11.5, 10.0, -9.0, -11.5)
+  power_kW <- c(0.002, -0.0003, 0.00019166666, 0.002, -0.0003, -0.00019166666)
+  expected_energy_data <- data.frame(e, polarity, d, e_polarity, power_kW, stringsAsFactors=FALSE)
+  expect_equal(perform_power_calculations(test_energy_data), expected_energy_data, tolerance=0.0001)
+  
+})
+
