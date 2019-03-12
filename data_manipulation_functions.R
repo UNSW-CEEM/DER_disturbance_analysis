@@ -92,60 +92,66 @@ assert_raw_site_details_assumptions <- function(site_details){
 }
 
 perform_power_calculations <- function(master_data_table){
-  assert_power_calc_assumptions(master_data_table)
   # Calculate the average power output over the sample time base on the 
-  # cumulative energy and duration length.
-  master_data_table <- master_data_table %>%
-    mutate(e_polarity=e*polarity)
-  master_data_table <- master_data_table %>%
-    mutate(power_kW = e_polarity/(d * 1000))
+  # cumulative energy and duration length.Assuming energy is joules and duration is in seconds.
+  master_data_table <- mutate(master_data_table, e_polarity=e*polarity)
+  master_data_table <- mutate(master_data_table, power_kW = e_polarity/(d * 1000))
   return(master_data_table)
 }
 
-
 process_install_data <- function(install_data){
+  assert_install_data_assumptions(install_data)
   # Rename time column and catergorise data based on inverter standards.
-  install_data <- install_data %>% mutate(pv_installation_year_month=index)
-  install_data <- site_catergorisation(install_data)
+  install_data <- mutate(install_data, pv_installation_year_month=index)
+  install_data <- site_categorisation(install_data)
   # Convert column names to same format as time solar analytics data.
-  install_data <- setnames(install_data, c("pv_installation_year_month", "State"),
-                           c("date", "s_state"))
-  # Reset the intial installed capacity to zero, this is need so the first 
-  # inverter standard has a correct reference point for calculating its current
-  # install capacity as the data is in cumulative format.
-  start_date <- min(install_data$date)
-  install_data <- install_data %>% 
-    mutate(Capacity = ifelse(date==start_date, 0, Capacity))
+  install_data <- setnames(install_data, c("pv_installation_year_month", "State"), c("date", "s_state"))
   # For each inverter standard group find the intall capacity when the standard
   # came into force.
-  installed_start_standard <- group_by(install_data, Standard_Version, Grouping, 
-                                      s_state)
-  installed_start_standard <- summarise(installed_start_standard, 
-       initial_cap=ifelse(min(Capacity) >= 0.0001,
-         install_data$Capacity[((install_data$date[abs(install_data$Capacity - min(Capacity)) <= 0.01 
-                             & install_data$Standard_Version == first(Standard_Version)
-                             & install_data$s_state == first(s_state)
-                             & install_data$Grouping == first(Grouping)])[1]-1) == install_data$date
-         & install_data$s_state == first(s_state)
-         & install_data$Grouping == first(Grouping)], 0))
+  installed_start_standard <- group_by(install_data, Standard_Version, Grouping, s_state)
+  installed_start_standard <- summarise(
+    installed_start_standard, 
+    initial_cap=ifelse(
+      Standard_Version!="AS4777.3:2005",
+      install_data$Capacity[(max(install_data$date[abs(install_data$Capacity < min(Capacity)) &
+                                                  install_data$s_state == first(s_state) & 
+                                                  install_data$Grouping == first(Grouping)])) == install_data$date & 
+                              install_data$s_state == first(s_state) & 
+                              install_data$Grouping == first(Grouping)], 0))
   installed_start_standard <- as.data.frame(installed_start_standard)
   # Join the intial capacity to the cumulative capacity table.
-  install_data <- inner_join(install_data, installed_start_standard, 
-                             by=c("Standard_Version", "Grouping", "s_state"))
+  install_data <- inner_join(install_data, installed_start_standard, by=c("Standard_Version", "Grouping", "s_state"))
   # Calaculate installed capacity by standard.
-  install_data <- install_data %>% 
-    mutate(standard_capacity=Capacity-initial_cap)
+  install_data <- mutate(install_data, standard_capacity=Capacity-initial_cap)
   return(install_data)
+}
+
+assert_install_data_assumptions <- function(install_data){
+  # Assert that the date column is convertable to a date object using the assumed format.
+  assert_that(all(!is.na(as.Date(install_data$index, format="%Y-%m-%d"))), 
+              msg="pv_installation_year_month has an unexpected format, should be YYYY-MM-DD")
+  # Assert groupings only one of two options 
+  assert_that(all(install_data$Grouping %in% c("30-100kW" ,"<30 kW")), msg="Grouping values in install data do not match
+              the expected values")
+  # Assert that all capacity values can be converted to numeric without creating nas. 
+  assert_that(all(!is.na(as.numeric(install_data$Capacity))), msg="Not all capacity values can convert to numeric in 
+              install data")
+  # Assert that State values are within expected set.
+  assert_that(all(install_data$State %in% c("NSW", "VIC", "SA", "TAS", "QLD", "NT", "ACT", "WA")), 
+              msg="State values in install data do not match the expected values")
+  # Assert that the first date in the install data is before the start of the transition peroid 
+  assert_that(min(ymd(install_data$index))<ymd("2015-10-01"), msg="Install data first entery does not predate start of
+              transition peroid")
+  
 }
 
 size_grouping <- function(site_details){
   # Catergorise site by sample ac capacity.
-  site_details <- site_details %>%
-    mutate(Grouping=ifelse(first_ac>=30, "30-100kW" ,"<30 kW"))
+  site_details <- mutate(site_details, Grouping=ifelse(first_ac>=30, "30-100kW" ,"<30 kW"))
   return(site_details)
 }
 
-site_catergorisation <- function(combined_data){
+site_categorisation <- function(combined_data){
   # Processes installed month. Setting missing month values to jan 2005, and
   # using assumed day of month as the 28th. Then catergorising into stanard 
   # version based on date.
@@ -187,7 +193,7 @@ assert_site_install_date_assumptions <- function(site_details){
 combine_data_tables <- function(time_series_data, circuit_details, 
                                 site_details) {
   circuit_details <- process_raw_circuit_details(circuit_details)
-  site_details <- site_catergorisation(site_details)
+  site_details <- site_categorisation(site_details)
   site_details <- size_grouping(site_details)
   time_series_data <- inner_join(time_series_data, circuit_details, by="c_id")
   time_series_data <- inner_join(time_series_data, site_details, by="site_id")

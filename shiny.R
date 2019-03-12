@@ -32,6 +32,7 @@ source("data_cleaning_functions.R")
 source("normalised_power_function.R")
 source("response_categorisation_function.R")
 source("distance_from_event.R")
+source("documentation.R")
 
 ui <- fluidPage(
   tags$head(
@@ -164,30 +165,7 @@ ui <- fluidPage(
         actionButton("save_cleaned_data", "Save cleaned data")
       )
     ),
-    tabPanel("Assumptions and Methodology", fluid=TRUE, 
-             mainPanel(
-               h4('Inverter Standard Definition'),
-               div('Solar Analytics pv and inverter circuits are assigned an inverter standard based on the install date
-                   provided in the corresponding site details record. If there are two records for any given site then
-                   the install date provided in the first record is used. Installation dates before 2015-10-01 are asigned to
-                   the AS4777.3:2005 standard, dates on or after 2015-10-01 and before 2016-11-01 are asigned to the Transition 
-                   standard and dates on or after the 2016-11-01 are asigned to the AS4777.2:2015 standard. Where only a 
-                   month and year are given for the installation date then an installation day of the 28th of the month is 
-                   assumed. Where no date is given or the date cannot be converted to a datetime object then a date of 
-                   2015-11-28 is assumed, placing the date in the Transition standard.'),
-               h4('Response Category Definition'),
-               div('Circuit can be assigned one of 7 response types, 4 of which represent actual response types and 3 which
-                   provided a reason a circuit could not be categorised. The actual response categories are "Ride Through"
-                   which is assigned to circuits that at most drop their output by 4 % during the event window specified by
-                   the user, "Curtail" which is asigned to circuits that drop their output by more than 4 % but no more
-                   than 95 %, "Drop to Zero" which is assigned to circuits that drop their output by more than 95 % for one
-                   interval during the event window, "Disconnect" whcih is asigned to circuits that drop their output by more
-                   than 95 % for a least 2 intervals. The remaining 3 categories are "Off at t0" which 
-                   is assigned to circuits that have an output of less than 0.1 kW at the start time of the event window, 
-                   "Not enough data" which is assigned to circuits that have missing data points during the event window and 
-                   "NA" which is assigned to circuits that have zero data points during the event window.')
-             )
-    )
+    tabPanel("Assumptions and Methodology", fluid=TRUE, documentation_panel())
   ),
   useShinyalert()
 )
@@ -329,6 +307,8 @@ server <- function(input,output,session){
       
       v$circuit_details <- v$circuit_details %>% mutate(site_id = as.character(site_id))
       removeNotification(id)
+      
+      # Load site details data.
       if (str_sub(site_details_file(), start=-7)=="feather"){
         # If a feather file is used it is assumed the data is pre-processed.
         # Hence the data is not passed to the raw data processor.
@@ -359,23 +339,22 @@ server <- function(input,output,session){
         write_feather(v$site_details, file_type_feather)
         removeNotification(id)
       }
-      id <- showNotification("Load CER capacity data", duration=1000)
+      
       # Load in the install data from CSV.
+      id <- showNotification("Load CER capacity data", duration=1000)
       intall_data_file <- "cumulative_capacity_and_number_20190121.csv"
-      install_data <- read.csv(file=intall_data_file, header=TRUE, 
-                               stringsAsFactors = FALSE)
+      install_data <- read.csv(file=intall_data_file, header=TRUE, stringsAsFactors = FALSE)
       v$install_data <- process_install_data(install_data)
+      
+      # Load postcode lat and long data
       postcode_data_file <- "PostcodesLatLongQGIS.csv"
-      postcode_data <- read.csv(file=postcode_data_file, header=TRUE, 
-                               stringsAsFactors = FALSE)
-      v$postcode_data <- postcode_data %>%
-        mutate(postcode = as.character(postcode))
+      postcode_data <- read.csv(file=postcode_data_file, header=TRUE, stringsAsFactors = FALSE)
+      v$postcode_data <- mutate(postcode_data, postcode = as.character(postcode))
       removeNotification(id)
+      
       # Perform data, processing and combine data table into a single data frame
       id <- showNotification("Combining data tables", duration=1000)
-      v$combined_data <- combine_data_tables(time_series_data, 
-                                                          v$circuit_details, 
-                                                          v$site_details)
+      v$combined_data <- combine_data_tables(time_series_data, v$circuit_details, v$site_details)
       #v$combined_data <- filter(combined_data_no_ac_filter, sum_ac<=100)
       v$combined_data <- v$combined_data %>% mutate(clean="raw")
       v$combined_data <- 
