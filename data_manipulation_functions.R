@@ -108,17 +108,19 @@ process_install_data <- function(install_data){
   install_data <- setnames(install_data, c("pv_installation_year_month", "State"), c("date", "s_state"))
   # For each inverter standard group find the intall capacity when the standard
   # came into force.
+  start_date =min(install_data$date)
   installed_start_standard <- group_by(install_data, Standard_Version, Grouping, s_state)
   installed_start_standard <- summarise(
     installed_start_standard, 
-    initial_cap=ifelse(
-      Standard_Version!="AS4777.3:2005",
-      install_data$Capacity[(max(install_data$date[abs(install_data$Capacity < min(Capacity)) &
-                                                  install_data$s_state == first(s_state) & 
-                                                  install_data$Grouping == first(Grouping)])) == install_data$date & 
+    initial_cap=
+      install_data$Capacity[max(c(install_data$date[(install_data$Capacity < min(Capacity)) &
+                                                  (install_data$s_state == first(s_state)) & 
+                                                  (install_data$Grouping == first(Grouping))],start_date)) == install_data$date & 
                               install_data$s_state == first(s_state) & 
-                              install_data$Grouping == first(Grouping)], 0))
+                              install_data$Grouping == first(Grouping)])
   installed_start_standard <- as.data.frame(installed_start_standard)
+  installed_start_standard <- mutate(installed_start_standard, 
+                                     initial_cap=ifelse(Standard_Version=="AS4777.3:2005",0,initial_cap))
   # Join the intial capacity to the cumulative capacity table.
   install_data <- inner_join(install_data, installed_start_standard, by=c("Standard_Version", "Grouping", "s_state"))
   # Calaculate installed capacity by standard.

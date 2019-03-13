@@ -288,6 +288,7 @@ server <- function(input,output,session){
                                 creating feather cache file", duration=1000)
         # Data from CSV is assumed to need processing.
         time_series_data <- time_series_data %>% distinct(c_id, ts, .keep_all=TRUE)
+        time_series_data <- mutate(time_series_data, c_id = as.character(c_id))
         time_series_data <- process_raw_time_series_data(time_series_data)
         # Automatically create a cache of the processed data as a feather file.
         # Allows for much faster data loading for subsequent anaylsis.
@@ -300,12 +301,10 @@ server <- function(input,output,session){
       # The circuit details file requires no processing and is small so always 
       # load from CSV.
       id <- showNotification("Loading circuit details from csv", duration=1000)
-      v$circuit_details <- read.csv(file=circuit_details_file(), header=TRUE, 
-                                  stringsAsFactors = FALSE)
-      v$circuit_details <- select(v$circuit_details, c_id, site_id, con_type, 
-                                  polarity)
-      
+      v$circuit_details <- read.csv(file=circuit_details_file(), header=TRUE, stringsAsFactors = FALSE)
+      v$circuit_details <- select(v$circuit_details, c_id, site_id, con_type, polarity)
       v$circuit_details <- v$circuit_details %>% mutate(site_id = as.character(site_id))
+      v$circuit_details <- v$circuit_details %>% mutate(c_id = as.character(c_id))
       removeNotification(id)
       
       # Load site details data.
@@ -355,12 +354,11 @@ server <- function(input,output,session){
       # Perform data, processing and combine data table into a single data frame
       id <- showNotification("Combining data tables", duration=1000)
       v$combined_data <- combine_data_tables(time_series_data, v$circuit_details, v$site_details)
-      #v$combined_data <- filter(combined_data_no_ac_filter, sum_ac<=100)
       v$combined_data <- v$combined_data %>% mutate(clean="raw")
-      v$combined_data <- 
-        select(v$combined_data, c_id, ts, v, f, d, site_id, e, con_type,
-               s_state, s_postcode, Standard_Version, Grouping, polarity, first_ac,
-               power_kW, clean, manufacturer, model, sum_ac)
+      v$combined_data <- select(v$combined_data, c_id, ts, v, f, d, site_id, e, con_type, s_state, s_postcode, 
+                                Standard_Version, Grouping, polarity, first_ac,power_kW, clean, manufacturer, model, 
+                                sum_ac)
+      
       removeNotification(id)
       if (perform_clean()){
         id <- showNotification("Cleaning data", duration=1000)
@@ -369,20 +367,14 @@ server <- function(input,output,session){
         #         polarity, first_ac, s_postcode, power_kW)
         # Clean site details data
         print("clean 1")
-        site_details_cleaned <- site_details_data_cleaning(
-          v$combined_data, v$site_details_raw)
-        v$site_details_cleaned <- site_details_cleaned[
-          order(site_details_cleaned$site_id),]
+        site_details_cleaned <- site_details_data_cleaning(v$combined_data, v$site_details_raw)
+        v$site_details_cleaned <- site_details_cleaned[order(site_details_cleaned$site_id),]
         # Clean circuit details file
         print("clean 2")
-        v$circuit_details_for_editing <- 
-          clean_connection_types(v$combined_data, v$circuit_details, v$postcode_data)
-        #v$combined_data_no_ac_filter <- select(combined_data_no_ac_filter, ts, site_id, c_id, power_kW)
-        #remove(combined_data_no_ac_filter)
+        v$circuit_details_for_editing <- clean_connection_types(v$combined_data, v$circuit_details, v$postcode_data)
         # Display data cleaning output in data cleaning tab
-        output$site_details_editor <- renderDT(
-          isolate(v$site_details_cleaned), selection='single', rownames=FALSE, 
-          editable=TRUE)
+        output$site_details_editor <- renderDT(isolate(v$site_details_cleaned), selection='single', rownames=FALSE, 
+                                               editable=TRUE)
         v$proxy_site_details_editor <- dataTableProxy('site_details_editor')
         output$circuit_details_editor <- renderDT(
           isolate(v$circuit_details_for_editing), selection='single', 
@@ -392,10 +384,8 @@ server <- function(input,output,session){
         # Add cleaned data to display data for main tab
         print("clean 3")
         site_details_cleaned_processed <- process_raw_site_details(v$site_details_cleaned)
-        combined_data_after_clean <- combine_data_tables(
-          time_series_data, 
-          v$circuit_details_for_editing, 
-          site_details_cleaned_processed)
+        combined_data_after_clean <- combine_data_tables(time_series_data, v$circuit_details_for_editing, 
+                                                         site_details_cleaned_processed)
         remove(time_series_data)
         combined_data_after_clean <- filter(combined_data_after_clean, sum_ac<=100)
         v$combined_data <- filter(v$combined_data, clean=="raw")
