@@ -566,6 +566,7 @@ server <- function(input,output,session){
   observeEvent(input$update_plots, {
     id <- showNotification("Updating plots", duration=1000)
     
+    # Perform filtering step
     combined_data_f <- filter(v$combined_data, sum_ac<=100)
     combined_data_f <- filter(combined_data_f, s_state==region())
     if (length(clean()) < 2) {combined_data_f <- filter(combined_data_f, clean %in% clean())}
@@ -580,8 +581,7 @@ server <- function(input,output,session){
     if (length(responses()) < 6) {combined_data_f <- filter(combined_data_f, response_category %in% responses())}
     # Filter data by user selected time window
     combined_data_f <- filter(combined_data_f, ts>=start_time() & ts<= end_time())
-    combined_data_f <- get_distance_from_event(
-      combined_data_f, v$postcode_data, event_latitude(), event_longitude())
+    combined_data_f <- get_distance_from_event(combined_data_f, v$postcode_data, event_latitude(), event_longitude())
     combined_data_f <- get_zones(combined_data_f, zone_one_radius(), zone_two_radius(), zone_three_radius())
     if (length(zones()) < 3) { combined_data_f <- filter(combined_data_f, zone %in% zones())}
   
@@ -594,30 +594,21 @@ server <- function(input,output,session){
     }
     
     # Count samples in each data series to be displayed
-    v$sample_count_table <- vector_groupby_count(combined_data_f, 
-                                                 agg_on_standard=agg_on_standard(),
-                                                 pst_agg=pst_agg(), 
-                                                 grouping_agg=grouping_agg(),
-                                                 manufacturer_agg=manufacturer_agg(),
-                                                 model_agg=model_agg(),
-                                                 circuit_agg(),
-                                                 response_agg(),
-                                                 zone_agg())
+    v$sample_count_table <- vector_groupby_count(combined_data_f, agg_on_standard=agg_on_standard(), pst_agg=pst_agg(), 
+                                                 grouping_agg=grouping_agg(), manufacturer_agg=manufacturer_agg(),
+                                                 model_agg=model_agg(), circuit_agg(), response_agg(), zone_agg())
     
     if ((sum(v$sample_count_table$sample_count)<1000 & no_grouping) | 
         (length(v$sample_count_table$sample_count)<1000 & !no_grouping)){
-      print(sum(v$sample_count_table$sample_count))
+      
       
       id2 <- showNotification("Calculating site performance factors", duration=1000)
       combined_data_f <- calc_site_performance_factors(combined_data_f)
       removeNotification(id2)
       
       # Copy data for saving
-      v$combined_data_f <- select(combined_data_f, ts, site_id, c_id, power_kW, v, f,
-                                  s_state, s_postcode, Standard_Version, Grouping, 
-                                  sum_ac, clean, manufacturer, model)
-      
-      
+      v$combined_data_f <- select(combined_data_f, ts, site_id, c_id, power_kW, v, f, s_state, s_postcode, 
+                                  Standard_Version, Grouping, sum_ac, clean, manufacturer, model)
       # Create copy of filtered data to use in upscaling
       combined_data_f2 <- combined_data_f
       if(raw_upscale()){
@@ -627,135 +618,91 @@ server <- function(input,output,session){
       # Check that the filter does not result in an empty dataframe.
       if(length(combined_data_f$ts) > 0){
 
-        agg_norm_power <- vector_groupby_norm_power(combined_data_f, 
-                                      agg_on_standard=agg_on_standard(),
-                                      pst_agg=pst_agg(), 
-                                      grouping_agg=grouping_agg(),
-                                      manufacturer_agg=manufacturer_agg(),
-                                      model_agg=model_agg(),
-                                      circuit_agg(),
-                                      response_agg(),
-                                      zone_agg())
-        agg_f_and_v <- vector_groupby_f_and_v(combined_data_f, 
-                                            agg_on_standard=agg_on_standard(),
-                                            pst_agg=pst_agg(), 
-                                            grouping_agg=grouping_agg(),
-                                            manufacturer_agg=manufacturer_agg(),
-                                            model_agg=model_agg(),
-                                            circuit_agg(),
-                                            response_agg(),
-                                            zone_agg())
-        v$agg_power <- vector_groupby_power(combined_data_f2, 
-                                      agg_on_standard=agg_on_standard(),
-                                      pst_agg=pst_agg(), 
-                                      grouping_agg=grouping_agg(),
-                                      manufacturer_agg=manufacturer_agg(),
-                                      model_agg=model_agg(),
-                                      circuit_agg(),
-                                      response_agg(),
-                                      zone_agg())
-        v$response_count <- vector_groupby_count_response(combined_data_f, 
-                                            agg_on_standard=agg_on_standard(),
-                                            pst_agg=pst_agg(), 
-                                            grouping_agg=grouping_agg(),
-                                            manufacturer_agg=manufacturer_agg(),
-                                            model_agg=model_agg(),
-                                            circuit_agg(),
-                                            response_agg(),
-                                            zone_agg())
-        v$zone_count <- vector_groupby_count_zones(combined_data_f, 
-                                                        agg_on_standard=agg_on_standard(),
-                                                        pst_agg=pst_agg(), 
-                                                        grouping_agg=grouping_agg(),
-                                                        manufacturer_agg=manufacturer_agg(),
-                                                        model_agg=model_agg(),
-                                                        circuit_agg(),
-                                                        response_agg(),
-                                                        zone_agg())
-        v$distance_response <- vector_groupby_cumulative_distance(combined_data_f, 
-                                                      agg_on_standard=agg_on_standard(),
-                                                      pst_agg=pst_agg(), 
-                                                      grouping_agg=grouping_agg(),
-                                                      manufacturer_agg=manufacturer_agg(),
-                                                      model_agg=model_agg(),
-                                                      circuit_agg(),
-                                                      response_agg())
-        geo_data <- vector_groupby_system(combined_data_f, 
-                                          agg_on_standard=agg_on_standard(),
-                                          pst_agg=pst_agg(), 
-                                          grouping_agg=grouping_agg(),
-                                          manufacturer_agg=manufacturer_agg(),
-                                          model_agg=model_agg(),
-                                          circuit_agg(),
-                                          response_agg(),
-                                          zone_agg())
+        agg_norm_power <- vector_groupby_norm_power(combined_data_f, agg_on_standard=agg_on_standard(),
+                                                    pst_agg=pst_agg(), grouping_agg=grouping_agg(),
+                                                    manufacturer_agg=manufacturer_agg(), model_agg=model_agg(),
+                                                    circuit_agg(), response_agg(), zone_agg())
+        agg_f_and_v <- vector_groupby_f_and_v(combined_data_f, agg_on_standard=agg_on_standard(), pst_agg=pst_agg(), 
+                                              grouping_agg=grouping_agg(),manufacturer_agg=manufacturer_agg(),
+                                              model_agg=model_agg(), circuit_agg(), response_agg(), zone_agg())
+        v$agg_power <- vector_groupby_power(combined_data_f2, agg_on_standard=agg_on_standard(), pst_agg=pst_agg(), 
+                                            grouping_agg=grouping_agg(), manufacturer_agg=manufacturer_agg(),
+                                            model_agg=model_agg(), circuit_agg(), response_agg(), zone_agg())
+        v$response_count <- vector_groupby_count_response(combined_data_f, agg_on_standard=agg_on_standard(),
+                                                          pst_agg=pst_agg(), grouping_agg=grouping_agg(),
+                                                          manufacturer_agg=manufacturer_agg(), model_agg=model_agg(),
+                                                          circuit_agg(), response_agg(), zone_agg())
+        v$zone_count <- vector_groupby_count_zones(combined_data_f, agg_on_standard=agg_on_standard(),
+                                                   pst_agg=pst_agg(), grouping_agg=grouping_agg(), 
+                                                   manufacturer_agg=manufacturer_agg(), model_agg=model_agg(),
+                                                   circuit_agg(), response_agg(), zone_agg())
+        v$distance_response <- vector_groupby_cumulative_distance(combined_data_f, agg_on_standard=agg_on_standard(),
+                                                                  pst_agg=pst_agg(), grouping_agg=grouping_agg(),
+                                                                  manufacturer_agg=manufacturer_agg(),
+                                                                  model_agg=model_agg(), circuit_agg(), response_agg())
+        geo_data <- vector_groupby_system(combined_data_f, agg_on_standard=agg_on_standard(), pst_agg=pst_agg(), 
+                                          grouping_agg=grouping_agg(), manufacturer_agg=manufacturer_agg(),
+                                          model_agg=model_agg(), circuit_agg(), response_agg(), zone_agg())
         
+        # Combine data sets that have the same grouping so they can be saved in a single file
         if (no_grouping){
           et <- event_time()
-          agg_norm_power <- event_normalised_power(agg_norm_power, et, 
-                                                   keep_site_id=TRUE)
-          v$agg_power <- left_join(
-            v$agg_power, agg_norm_power[, c("Event_Normalised_Power_kW", "site_id", "Time")], 
-            by=c("Time", "site_id"))
-          v$agg_power <- left_join(
-            v$agg_power, agg_f_and_v[, c("Time", "site_id", "Voltage", "Frequency")], 
-            by=c("Time", "site_id"))
+          agg_norm_power <- event_normalised_power(agg_norm_power, et, keep_site_id=TRUE)
+          v$agg_power <- left_join( v$agg_power, agg_norm_power[, c("Event_Normalised_Power_kW", "site_id", "Time")], 
+                                    by=c("Time", "site_id"))
+          v$agg_power <- left_join( v$agg_power, agg_f_and_v[, c("Time", "site_id", "Voltage", "Frequency")], 
+                                    by=c("Time", "site_id"))
         } else {
           et <- event_time()
-          agg_norm_power <- event_normalised_power(agg_norm_power, et, 
-                                                   keep_site_id=FALSE)
-          v$agg_power <- left_join(
-            v$agg_power, agg_norm_power[, c("Event_Normalised_Power_kW", "series", "Time")], 
-            by=c("Time", "series"))
-          v$agg_power <- left_join(
-            v$agg_power, agg_f_and_v[, c("Time", "series", "Voltage", "Frequency")], 
-            by=c("Time", "series"))
+          agg_norm_power <- event_normalised_power(agg_norm_power, et,  keep_site_id=FALSE)
+          v$agg_power <- left_join(v$agg_power, agg_norm_power[, c("Event_Normalised_Power_kW", "series", "Time")], 
+                                   by=c("Time", "series"))
+          v$agg_power <- left_join( v$agg_power, agg_f_and_v[, c("Time", "series", "Voltage", "Frequency")], 
+                                    by=c("Time", "series"))
         }
         
-        
+        # Create plots on main tab
           output$PlotlyTest <- renderPlotly({
-            plot_ly(v$agg_power, x=~Time, y=~Power_kW, color=~series, 
-                    type="scattergl")})
+            plot_ly(v$agg_power, x=~Time, y=~Power_kW, color=~series, type="scattergl")
+            })
           output$save_agg_power <- renderUI({
-            shinySaveButton("save_agg_power", "Save Aggregated Results", "Save file as ...", 
-                            filetype=list(xlsx="csv"))})
+            shinySaveButton("save_agg_power", "Save Aggregated Results", "Save file as ...", filetype=list(xlsx="csv"))
+            })
           output$save_underlying <- renderUI({
-            shinySaveButton("save_underlying", "Save Underlying Data", "Save file as ...", 
-                            filetype=list(xlsx="csv"))})
-          
+            shinySaveButton("save_underlying", "Save Underlying Data", "Save file as ...", filetype=list(xlsx="csv"))
+            })
           output$sample_count_table <- renderDataTable({v$sample_count_table})
-          output$save_sample_count <- renderUI({
-            shinySaveButton("save_sample_count", "Save data", "Save file as ...", 
-                            filetype=list(xlsx="csv"))})
+          output$save_sample_count <- renderUI({shinySaveButton("save_sample_count", "Save data", "Save file as ...", 
+                                                                filetype=list(xlsx="csv"))
+            })
           output$NormPower <- renderPlotly({
-            plot_ly(agg_norm_power, x=~Time, y=~Event_Normalised_Power_kW, 
-                    color=~series, type="scattergl")})
+            plot_ly(agg_norm_power, x=~Time, y=~Event_Normalised_Power_kW, color=~series, type="scattergl")
+            })
           output$ResponseCount <- renderPlotly({
-            plot_ly(v$response_count, x=~series_x, y=~sample_count, 
-                    color=~series_y, type="bar") %>%
-              layout(yaxis = list(title = 'Fraction of Filtered dataset'), barmode = 'stack')})
+            plot_ly(v$response_count, x=~series_x, y=~sample_count, color=~series_y, type="bar") %>% 
+              layout(yaxis = list(title = 'Fraction of Filtered dataset'), barmode = 'stack')
+            })
           output$save_response_count <- renderUI({
-            shinySaveButton("save_response_count", "Save data", "Save file as ...", 
-                            filetype=list(xlsx="csv"))})
+            shinySaveButton("save_response_count", "Save data", "Save file as ...", filetype=list(xlsx="csv"))
+            })
           output$ZoneCount <- renderPlotly({
-            plot_ly(v$zone_count, x=~series_x, y=~sample_count, 
-                    color=~series_y, type="bar") %>%
-              layout(yaxis = list(title = 'Fraction of Filtered dataset'), barmode = 'stack')})
+            plot_ly(v$zone_count, x=~series_x, y=~sample_count, color=~series_y, type="bar") %>%
+              layout(yaxis = list(title = 'Fraction of Filtered dataset'), barmode = 'stack')
+            })
           output$save_zone_count <- renderUI({
-            shinySaveButton("save_zone_count", "Save data", "Save file as ...", 
-                            filetype=list(xlsx="csv"))})
+            shinySaveButton("save_zone_count", "Save data", "Save file as ...", filetype=list(xlsx="csv"))
+            })
           output$Frequency <- renderPlotly({
-            plot_ly(v$agg_power, x=~Time, y=~Frequency, 
-                    color=~series, type="scattergl")})
-          output$Voltage <- renderPlotly({
-            plot_ly(v$agg_power, x=~Time, y=~Voltage, 
-                    color=~series, type="scattergl")})
+            plot_ly(v$agg_power, x=~Time, y=~Frequency, color=~series, type="scattergl")
+            })
+          output$Voltage <- renderPlotly({plot_ly(v$agg_power, x=~Time, y=~Voltage, color=~series, type="scattergl")
+            })
           output$distance_response <- renderPlotly({
-            plot_ly(v$distance_response, x=~distance, y=~percentage, 
-                    color=~series, type="scattergl")})
+            plot_ly(v$distance_response, x=~distance, y=~percentage, color=~series, type="scattergl")
+            })
           output$save_distance_response <- renderUI({
-            shinySaveButton("save_distance_response", "Save data", "Save file as ...", 
-                            filetype=list(xlsx="csv"))})
+            shinySaveButton("save_distance_response", "Save data", "Save file as ...", filetype=list(xlsx="csv"))
+            })
           
           #IND_adm1 <- st_read("POA_2016_AUST.shp")
           #IND_adm1 <- filter(IND_adm1, substr(POA_CODE16,1,1)=="2")
@@ -790,7 +737,7 @@ server <- function(input,output,session){
     }
   })
   
-  # Save data from aggregate pv power plot
+  # Save underlying data by circuit id and time stamp
   observe({
     volumes <- c(dr="C:\\")
     shinyFileSave(input, "save_underlying", roots=volumes, session=session)
@@ -807,36 +754,31 @@ server <- function(input,output,session){
     volumes <- c(dr="C:\\")
     shinyFileSave(input, "save_sample_count", roots=volumes, session=session)
     fileinfo <- parseSavePath(volumes, input$save_sample_count)
-    if (nrow(fileinfo) > 0) {
-      write.csv(v$sample_count_table, as.character(fileinfo$datapath), row.names=FALSE)
-    }
+    if (nrow(fileinfo) > 0) {write.csv(v$sample_count_table, as.character(fileinfo$datapath), row.names=FALSE)}
   })
   
+  # Save data on aggregated response categories
   observe({
     volumes <- c(dr="C:\\")
     shinyFileSave(input, "save_response_count", roots=volumes, session=session)
     fileinfo <- parseSavePath(volumes, input$save_response_count)
-    if (nrow(fileinfo) > 0) {
-      write.csv(v$response_count, as.character(fileinfo$datapath), row.names=FALSE)
-    }
+    if (nrow(fileinfo) > 0) {write.csv(v$response_count, as.character(fileinfo$datapath), row.names=FALSE)}
   })
   
+  # Save data on zones
   observe({
     volumes <- c(dr="C:\\")
     shinyFileSave(input, "save_zone_count", roots=volumes, session=session)
     fileinfo <- parseSavePath(volumes, input$save_zone_count)
-    if (nrow(fileinfo) > 0) {
-      write.csv(v$zone_count, as.character(fileinfo$datapath), row.names=FALSE)
-    }
+    if (nrow(fileinfo) > 0) {write.csv(v$zone_count, as.character(fileinfo$datapath), row.names=FALSE)}
   })
   
+  # Save data on response percentage by distance
   observe({
     volumes <- c(dr="C:\\")
     shinyFileSave(input, "save_distance_response", roots=volumes, session=session)
     fileinfo <- parseSavePath(volumes, input$save_distance_response)
-    if (nrow(fileinfo) > 0) {
-      write.csv(v$distance_response, as.character(fileinfo$datapath), row.names=FALSE)
-    }
+    if (nrow(fileinfo) > 0) {write.csv(v$distance_response, as.character(fileinfo$datapath), row.names=FALSE)}
   })
   
   # Time series file selection pop up.
@@ -844,9 +786,7 @@ server <- function(input,output,session){
     volumes <- c(dr="C:\\")
     shinyFileChoose(input, "choose_ts", roots=volumes, session=session)
     fileinfo <- parseFilePaths(volumes, input$choose_ts)
-    if (nrow(fileinfo) > 0) {
-      updateTextInput(session, "time_series", value=as.character(fileinfo$datapath))
-    }
+    if (nrow(fileinfo) > 0) {updateTextInput(session, "time_series", value=as.character(fileinfo$datapath))}
   })
   
   # Circuit details file selection pop up.
@@ -854,9 +794,7 @@ server <- function(input,output,session){
     volumes <- c(dr="C:\\")
     shinyFileChoose(input, "choose_c", roots=volumes, session=session)
     fileinfo <- parseFilePaths(volumes, input$choose_c)
-    if (nrow(fileinfo) > 0) {
-      updateTextInput(session, "circuit_details", value=as.character(fileinfo$datapath))
-    }
+    if (nrow(fileinfo) > 0) {updateTextInput(session, "circuit_details", value=as.character(fileinfo$datapath))}
   })
   
   # Site details file selection pop up.
@@ -864,9 +802,7 @@ server <- function(input,output,session){
     volumes <- c(dr="C:\\")
     shinyFileChoose(input, "choose_site", roots=volumes, session=session)
     fileinfo <- parseFilePaths(volumes, input$choose_site)
-    if (nrow(fileinfo) > 0) {
-      updateTextInput(session, "site_details", value=as.character(fileinfo$datapath))
-    }
+    if (nrow(fileinfo) > 0) {updateTextInput(session, "site_details", value=as.character(fileinfo$datapath))}
   })
   
   # Inforce mutual exclusivity of Aggregation settings
@@ -877,6 +813,7 @@ server <- function(input,output,session){
     }
   })
   
+  # Inforce mutual exclusivity of Aggregation settings
   observe({
     if(raw_upscale()){
       updateMaterialSwitch(session=session, "manufacturer_agg", value = FALSE)
@@ -887,60 +824,55 @@ server <- function(input,output,session){
     }
   })
   
+  # Plot the data for the circuit selected in the table
   observeEvent(input$circuit_details_editor_rows_selected, {
     v$proxy_site_details_editor %>% selectRows(NULL)
     if (length(input$circuit_details_editor_rows_selected==1)) {
       c_id_to_plot <- v$circuit_details_for_editing$c_id[input$circuit_details_editor_rows_selected]
       data_to_view <- filter(filter(v$combined_data, clean=="raw"), c_id==c_id_to_plot)
-      output$site_plot <- renderPlotly({
-        plot_ly(data_to_view, x=~ts, y=~power_kW, type="scatter")})
+      output$site_plot <- renderPlotly({plot_ly(data_to_view, x=~ts, y=~power_kW, type="scatter")})
     }
     
   })
   
-  # Plot the data for the site or circuit selected in the table
+  # Plot the data for the site selected in the table
   observeEvent(input$site_details_editor_rows_selected, {
     v$proxy_circuit_details_editor %>% selectRows(NULL)
     if (length(input$site_details_editor_rows_selected==1)) {
       site_id_to_plot <- v$site_details_cleaned$site_id[input$site_details_editor_rows_selected]
       data_to_view <- filter(filter(v$combined_data, clean=="raw"), site_id==site_id_to_plot)
-      output$site_plot <- renderPlotly({
-        plot_ly(data_to_view, x=~ts, y=~power_kW, type="scatter")})
+      output$site_plot <- renderPlotly({plot_ly(data_to_view, x=~ts, y=~power_kW, type="scatter")})
     }
   })
   
-  # Save table data to csv.
+  # Save data cleaning tables to csv, also override data currently used as "cleaned" in tool.
   observeEvent(input$save_cleaned_data, {
     # Save cleaned data to csv
     id <- showNotification("Saving cleaned files", duration=1000)
     file_no_type = str_sub(site_details_file(), end=-5)
     new_file_name = paste(file_no_type, "_cleaned.csv", sep="")
-    v$site_details_cleaned <- v$site_details_cleaned %>% mutate(
-      site_id=as.character(site_id))
+    v$site_details_cleaned <- v$site_details_cleaned %>% mutate(site_id=as.character(site_id))
     write.csv(v$site_details_cleaned, new_file_name)
     file_no_type = str_sub(circuit_details_file(), end=-5)
     new_file_name = paste(file_no_type, "_cleaned.csv", sep="")
     write.csv(v$circuit_details_for_editing, new_file_name)
     # Add cleaned data to dispay dat set
-    site_details_cleaned_processed <- process_raw_site_details(
-      v$site_details_cleaned)
+    site_details_cleaned_processed <- process_raw_site_details(v$site_details_cleaned)
     time_series_data <- read_feather(time_series_file())
     time_series_data <- filter(time_series_data, d==duration())
-    combined_data_after_clean <- combine_data_tables(
-      time_series_data, v$circuit_details_for_editing, 
-      site_details_cleaned_processed)
-    combined_data_after_clean <- filter(combined_data_after_clean, 
-                                          sum_ac<=100)
+    combined_data_after_clean <- combine_data_tables(time_series_data, v$circuit_details_for_editing, 
+                                                     site_details_cleaned_processed)
+    combined_data_after_clean <- filter(combined_data_after_clean, sum_ac<=100)
     v$combined_data <- filter(v$combined_data, clean=="raw")
     combined_data_after_clean <- combined_data_after_clean %>% mutate(clean="cleaned")
-    combined_data_after_clean <- select(combined_data_after_clean, 
-                                        c_id, ts, v, f, d, site_id, e, con_type,
-                                        s_state, s_postcode, Standard_Version, Grouping, polarity, first_ac,
-                                        power_kW, clean, manufacturer, model, sum_ac)
+    combined_data_after_clean <- select(combined_data_after_clean, c_id, ts, v, f, d, site_id, e, con_type, s_state, 
+                                        s_postcode, Standard_Version, Grouping, polarity, first_ac, power_kW, clean, 
+                                        manufacturer, model, sum_ac)
     v$combined_data <- rbind(v$combined_data, combined_data_after_clean)
     removeNotification(id)
   })
   
+  # Allow user to edit site details in data cleaning tab
   observeEvent(input$site_details_editor_cell_edit, {
     info = input$site_details_editor_cell_edit
     str(info)
@@ -948,10 +880,10 @@ server <- function(input,output,session){
     j = info$col + 1
     value = info$value
     v$site_details_cleaned[i, j] <<- DT::coerceValue(value, v$site_details_cleaned[i, j])
-    replaceData(v$proxy_site_details_editor, v$site_details_cleaned, 
-                resetPaging=FALSE, rownames=FALSE)  # important
+    replaceData(v$proxy_site_details_editor, v$site_details_cleaned, resetPaging=FALSE, rownames=FALSE)  # important
   })
   
+  # Allow user to edit circuit details in data cleaning tab
   observeEvent(input$circuit_details_editor_cell_edit, {
     info = input$circuit_details_editor_cell_edit
     str(info)
@@ -959,8 +891,7 @@ server <- function(input,output,session){
     j = info$col + 1
     value = info$value
     v$circuit_details_for_editing[i, j] <<- DT::coerceValue(value, v$circuit_details_for_editing[i, j])
-    replaceData(v$proxy_circuit_details_editor, v$circuit_details_for_editing, 
-                resetPaging=FALSE, rownames=FALSE)  # important
+    replaceData(v$proxy_circuit_details_editor, v$circuit_details_for_editing, resetPaging=FALSE, rownames=FALSE) # important
   })
 }
 
