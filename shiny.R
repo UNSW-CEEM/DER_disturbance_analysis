@@ -544,9 +544,11 @@ server <- function(input,output,session){
     }
     
     # Count samples in each data series to be displayed
-    v$sample_count_table <- vector_groupby_count(combined_data_f, agg_on_standard=agg_on_standard(), pst_agg=pst_agg(), 
-                                                 grouping_agg=grouping_agg(), manufacturer_agg=manufacturer_agg(),
-                                                 model_agg=model_agg(), circuit_agg(), response_agg(), zone_agg())
+    grouping_cols <- find_grouping_cols(agg_on_standard=agg_on_standard(),
+                                        pst_agg=pst_agg(), grouping_agg=grouping_agg(),
+                                        manufacturer_agg=manufacturer_agg(), model_agg=model_agg(),
+                                        circuit_agg(), response_agg(), zone_agg())
+    v$sample_count_table <- vector_groupby_count(combined_data_f, grouping_cols)
     
     if ((sum(v$sample_count_table$sample_count)<1000 & no_grouping) | 
         (length(v$sample_count_table$sample_count)<1000 & !no_grouping)){
@@ -567,32 +569,14 @@ server <- function(input,output,session){
     
       # Check that the filter does not result in an empty dataframe.
       if(length(combined_data_f$ts) > 0){
-
-        agg_norm_power <- vector_groupby_norm_power(combined_data_f, agg_on_standard=agg_on_standard(),
-                                                    pst_agg=pst_agg(), grouping_agg=grouping_agg(),
-                                                    manufacturer_agg=manufacturer_agg(), model_agg=model_agg(),
-                                                    circuit_agg(), response_agg(), zone_agg())
-        agg_f_and_v <- vector_groupby_f_and_v(combined_data_f, agg_on_standard=agg_on_standard(), pst_agg=pst_agg(), 
-                                              grouping_agg=grouping_agg(),manufacturer_agg=manufacturer_agg(),
-                                              model_agg=model_agg(), circuit_agg(), response_agg(), zone_agg())
-        v$agg_power <- vector_groupby_power(combined_data_f2, agg_on_standard=agg_on_standard(), pst_agg=pst_agg(), 
-                                            grouping_agg=grouping_agg(), manufacturer_agg=manufacturer_agg(),
-                                            model_agg=model_agg(), circuit_agg(), response_agg(), zone_agg())
-        v$response_count <- vector_groupby_count_response(combined_data_f, agg_on_standard=agg_on_standard(),
-                                                          pst_agg=pst_agg(), grouping_agg=grouping_agg(),
-                                                          manufacturer_agg=manufacturer_agg(), model_agg=model_agg(),
-                                                          circuit_agg(), response_agg(), zone_agg())
-        v$zone_count <- vector_groupby_count_zones(combined_data_f, agg_on_standard=agg_on_standard(),
-                                                   pst_agg=pst_agg(), grouping_agg=grouping_agg(), 
-                                                   manufacturer_agg=manufacturer_agg(), model_agg=model_agg(),
-                                                   circuit_agg(), response_agg(), zone_agg())
-        v$distance_response <- vector_groupby_cumulative_distance(combined_data_f, agg_on_standard=agg_on_standard(),
-                                                                  pst_agg=pst_agg(), grouping_agg=grouping_agg(),
-                                                                  manufacturer_agg=manufacturer_agg(),
-                                                                  model_agg=model_agg(), circuit_agg(), response_agg())
-        geo_data <- vector_groupby_system(combined_data_f, agg_on_standard=agg_on_standard(), pst_agg=pst_agg(), 
-                                          grouping_agg=grouping_agg(), manufacturer_agg=manufacturer_agg(),
-                                          model_agg=model_agg(), circuit_agg(), response_agg(), zone_agg())
+        
+        agg_norm_power <- vector_groupby_norm_power(combined_data_f, grouping_cols)
+        agg_f_and_v <- vector_groupby_f_and_v(combined_data_f, grouping_cols)
+        v$agg_power <- vector_groupby_power(combined_data_f2, grouping_cols)
+        v$response_count <- vector_groupby_count_response(combined_data_f, grouping_cols)
+        v$zone_count <- vector_groupby_count_zones(combined_data_f, grouping_cols)
+        v$distance_response <- vector_groupby_cumulative_distance(combined_data_f, grouping_cols)
+        geo_data <- vector_groupby_system(combined_data_f, grouping_cols)
         
         # Combine data sets that have the same grouping so they can be saved in a single file
         if (no_grouping){

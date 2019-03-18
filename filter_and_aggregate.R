@@ -1,20 +1,6 @@
 
-vector_filter <- function(data, duration, state, standards, cleaned, postcodes, 
-                          size_groupings, manufacturers, models){
-  data <- filter(data, s_state==state)
-  if (length(cleaned) < 2) {data <- filter(data, clean %in% cleaned)}
-  if (length(size_groupings) < 2) {data <- filter(data, Grouping %in% size_groupings)}
-  if (length(standards) < 3) {data <- filter(data, Standard_Version %in% standards)}
-  if (length(postcodes) > 0) {data <- filter(data, s_postcode %in% postcodes)}
-  if (length(manufacturers) > 0) {data <- filter(data, manufacturer %in% manufacturers)}
-  if (length(models) > 0) {data <- filter(data, model %in% models)}
-  data <- filter(data, d==duration)
-  return(data)
-}
-
-vector_groupby_power <- function(data, agg_on_standard, pst_agg, grouping_agg, 
-                           manufacturer_agg, model_agg, circuit_agg, 
-                           response_agg, zone_agg){
+find_grouping_cols <- function(agg_on_standard, pst_agg, grouping_agg, manufacturer_agg, model_agg, circuit_agg, 
+                               response_agg, zone_agg){
   grouping_cols <- c("clean")
   if (agg_on_standard==TRUE){grouping_cols <- c(grouping_cols, "Standard_Version")}
   if (pst_agg==TRUE){grouping_cols <- c(grouping_cols, "s_postcode")}
@@ -24,6 +10,10 @@ vector_groupby_power <- function(data, agg_on_standard, pst_agg, grouping_agg,
   if (response_agg==TRUE){grouping_cols <- c(grouping_cols, "response_category")}
   if (zone_agg==TRUE){grouping_cols <- c(grouping_cols, "zone")}
   if (circuit_agg==TRUE){grouping_cols <- c(grouping_cols, "site_id", "c_id")}
+  return(grouping_cols)
+}
+  
+vector_groupby_power <- function(data, grouping_cols){
   series_cols <- grouping_cols
   grouping_cols <- c("ts", series_cols)
   data <- group_by(data, .dots=grouping_cols)
@@ -34,19 +24,7 @@ vector_groupby_power <- function(data, agg_on_standard, pst_agg, grouping_agg,
   return(data)
 }
 
-
-vector_groupby_f_and_v <- function(data, agg_on_standard, pst_agg, grouping_agg, 
-                                 manufacturer_agg, model_agg, circuit_agg, 
-                                 response_agg, zone_agg){
-  grouping_cols <- c("clean")
-  if (agg_on_standard==TRUE){grouping_cols <- c(grouping_cols, "Standard_Version")}
-  if (pst_agg==TRUE){grouping_cols <- c(grouping_cols, "s_postcode")}
-  if (grouping_agg==TRUE){grouping_cols <- c(grouping_cols, "Grouping")}
-  if (manufacturer_agg==TRUE){grouping_cols <- c(grouping_cols, "manufacturer")}
-  if (model_agg==TRUE){grouping_cols <- c(grouping_cols, "model")}
-  if (response_agg==TRUE){grouping_cols <- c(grouping_cols, "response_category")}
-  if (zone_agg==TRUE){grouping_cols <- c(grouping_cols, "zone")}
-  if (circuit_agg==TRUE){grouping_cols <- c(grouping_cols, "site_id", "c_id")}
+vector_groupby_f_and_v <- function(data, grouping_cols){
   series_cols <- grouping_cols
   grouping_cols <- c("ts", series_cols)
   data <- group_by(data, .dots=grouping_cols)
@@ -57,18 +35,8 @@ vector_groupby_f_and_v <- function(data, agg_on_standard, pst_agg, grouping_agg,
   return(data)
 }
 
-vector_groupby_norm_power <- function(data, agg_on_standard, pst_agg, grouping_agg, 
-                           manufacturer_agg, model_agg, circuit_agg, 
-                           response_agg, zone_agg){
-  grouping_cols <- c("clean")
-  if (agg_on_standard==TRUE){grouping_cols <- c(grouping_cols, "Standard_Version")}
-  if (pst_agg==TRUE){grouping_cols <- c(grouping_cols, "s_postcode")}
-  if (grouping_agg==TRUE){grouping_cols <- c(grouping_cols, "Grouping")}
-  if (manufacturer_agg==TRUE){grouping_cols <- c(grouping_cols, "manufacturer")}
-  if (model_agg==TRUE){grouping_cols <- c(grouping_cols, "model")}
-  if (response_agg==TRUE){grouping_cols <- c(grouping_cols, "response_category")}
-  if (zone_agg==TRUE){grouping_cols <- c(grouping_cols, "zone")}
-  if (circuit_agg==TRUE){grouping_cols <- c(grouping_cols, "site_id")}
+vector_groupby_norm_power <- function(data, grouping_cols){
+  grouping_cols <- grouping_cols[grouping_cols != "c_id"]
   series_cols <- grouping_cols
   grouping_cols <- c("ts", series_cols)
   data <- group_by(data, .dots=grouping_cols)
@@ -83,18 +51,8 @@ vector_groupby_norm_power <- function(data, agg_on_standard, pst_agg, grouping_a
   return(data)
 }
 
-vector_groupby_count <- function(data, agg_on_standard, pst_agg, grouping_agg, 
-                           manufacturer_agg, model_agg, circuit_agg, 
-                           response_agg, zone_agg){
-  grouping_cols <- c("clean")
-  if (agg_on_standard==TRUE){grouping_cols <- c(grouping_cols, "Standard_Version")}
-  if (pst_agg==TRUE){grouping_cols <- c(grouping_cols, "s_postcode")}
-  if (grouping_agg==TRUE){grouping_cols <- c(grouping_cols, "Grouping")}
-  if (manufacturer_agg==TRUE){grouping_cols <- c(grouping_cols, "manufacturer")}
-  if (model_agg==TRUE){grouping_cols <- c(grouping_cols, "model")}
-  if (response_agg==TRUE){grouping_cols <- c(grouping_cols, "response_category")}
-  if (zone_agg==TRUE){grouping_cols <- c(grouping_cols, "zone")}
-  if (circuit_agg==TRUE){grouping_cols <- c(grouping_cols, "site_id")}
+vector_groupby_count <- function(data, grouping_cols){
+  grouping_cols <- grouping_cols[grouping_cols != "c_id"]
   series_cols <- grouping_cols
   data <- group_by(data, .dots=grouping_cols)
   data <- summarise(data , sample_count=length(unique(c_id)))
@@ -102,19 +60,10 @@ vector_groupby_count <- function(data, agg_on_standard, pst_agg, grouping_agg,
   return(data)
 }
 
-vector_groupby_count_response <- function(data, agg_on_standard, pst_agg, grouping_agg, 
-                                 manufacturer_agg, model_agg, circuit_agg, 
-                                 response_agg, zone_agg){
-  grouping_cols <- c("clean", "response_category")
-  add_cols <- c()
-  if (agg_on_standard==TRUE){add_cols <- c(add_cols, "Standard_Version")}
-  if (pst_agg==TRUE){add_cols <- c(add_cols, "s_postcode")}
-  if (grouping_agg==TRUE){add_cols <- c(add_cols, "Grouping")}
-  if (manufacturer_agg==TRUE){add_cols <- c(add_cols, "manufacturer")}
-  if (model_agg==TRUE){add_cols <- c(add_cols, "model")}
-  if (zone_agg==TRUE){add_cols <- c(add_cols, "zone")}
-  if (circuit_agg==TRUE){add_cols <- c(add_cols, "site_id")}
-  grouping_cols <- c(grouping_cols, add_cols)
+vector_groupby_count_response <- function(data, grouping_cols){
+  if (!"response_category" %in% grouping_cols) {grouping_cols <- c(grouping_cols, "response_category")}
+  grouping_cols <- grouping_cols[grouping_cols != "c_id"]
+  add_cols <- grouping_cols[!grouping_cols %in% c("clean", "response_category")]
   data <- group_by(data, .dots=grouping_cols)
   data <- summarise(data , sample_count=length(unique(c_id)))
   data$series_x <- do.call(paste, c(data[c("response_category", "clean")], sep = "-" ))
@@ -128,18 +77,10 @@ vector_groupby_count_response <- function(data, agg_on_standard, pst_agg, groupi
   return(data)
 }
 
-vector_groupby_count_zones <- function(data, agg_on_standard, pst_agg, grouping_agg, 
-                                          manufacturer_agg, model_agg, circuit_agg, 
-                                          response_agg, zone_agg){
-  grouping_cols <- c("clean", "zone")
-  add_cols <- c()
-  if (agg_on_standard==TRUE){add_cols <- c(add_cols, "Standard_Version")}
-  if (pst_agg==TRUE){add_cols <- c(add_cols, "s_postcode")}
-  if (grouping_agg==TRUE){add_cols <- c(add_cols, "Grouping")}
-  if (manufacturer_agg==TRUE){add_cols <- c(add_cols, "manufacturer")}
-  if (model_agg==TRUE){add_cols <- c(add_cols, "model")}
-  if (response_agg==TRUE){add_cols <- c(add_cols, "response_category")}
-  if (circuit_agg==TRUE){add_cols <- c(add_cols, "site_id")}
+vector_groupby_count_zones <- function(data, grouping_cols){
+  if (!"zone" %in% grouping_cols) {grouping_cols <- c(grouping_cols, "zone")}
+  grouping_cols <- grouping_cols[grouping_cols != "c_id"]
+  add_cols <- grouping_cols[!grouping_cols %in% c("clean", "zone")]
   grouping_cols <- c(grouping_cols, add_cols)
   data <- group_by(data, .dots=grouping_cols)
   data <- summarise(data , sample_count=length(unique(c_id)))
@@ -154,23 +95,15 @@ vector_groupby_count_zones <- function(data, agg_on_standard, pst_agg, grouping_
   return(data)
 }
 
-vector_groupby_cumulative_distance <- function(data, agg_on_standard, pst_agg, grouping_agg, 
-                                 manufacturer_agg, model_agg, circuit_agg, 
-                                 response_agg){
-  grouping_cols <- c("clean")
-  if (agg_on_standard==TRUE){grouping_cols <- c(grouping_cols, "Standard_Version")}
-  if (grouping_agg==TRUE){grouping_cols <- c(grouping_cols, "Grouping")}
-  if (manufacturer_agg==TRUE){grouping_cols <- c(grouping_cols, "manufacturer")}
-  if (model_agg==TRUE){grouping_cols <- c(grouping_cols, "model")}
-  if (circuit_agg==TRUE){grouping_cols <- c(grouping_cols, "site_id", "c_id")}
+vector_groupby_cumulative_distance <- function(data, grouping_cols){
+  grouping_cols <- grouping_cols[!grouping_cols %in% c("zone", "s_postcode")]
   series_cols <- grouping_cols
   grouping_cols <- series_cols
   data <- mutate(data, num_disconnects=ifelse(response_category %in% c("4 Disconnect", "3 Drop to Zero"),1,0))
   data <- mutate(data, system_count=1)
   data <- data[order(data$distance),]
   data <- group_by(data, .dots=c(grouping_cols, "s_postcode"))
-  data <- summarise(data ,  distance=first(distance), 
-                    num_disconnects=sum(num_disconnects),
+  data <- summarise(data ,  distance=first(distance), num_disconnects=sum(num_disconnects), 
                     system_count=sum(system_count))
   data <- as.data.frame(data)
   data <- data[order(data$distance),]
@@ -183,17 +116,8 @@ vector_groupby_cumulative_distance <- function(data, agg_on_standard, pst_agg, g
   return(data)
 }
 
-vector_groupby_system <- function(data, agg_on_standard, pst_agg, grouping_agg, 
-                                 manufacturer_agg, model_agg, circuit_agg, 
-                                 response_agg, zone_agg){
-  grouping_cols <- c("clean")
-  if (agg_on_standard==TRUE){grouping_cols <- c(grouping_cols, "Standard_Version")}
-  if (pst_agg==TRUE){grouping_cols <- c(grouping_cols, "s_postcode")}
-  if (grouping_agg==TRUE){grouping_cols <- c(grouping_cols, "Grouping")}
-  if (manufacturer_agg==TRUE){grouping_cols <- c(grouping_cols, "manufacturer")}
-  if (model_agg==TRUE){grouping_cols <- c(grouping_cols, "model")}
-  if (response_agg==TRUE){grouping_cols <- c(grouping_cols, "response_category")}
-  if (zone_agg==TRUE){grouping_cols <- c(grouping_cols, "zone")}
+vector_groupby_system <- function(data, grouping_cols){
+  grouping_cols <- grouping_cols[!grouping_cols %in% c("site_id", "c_id")]
   series_cols <- grouping_cols
   data <- group_by(data, .dots=c("site_id"))
   data <- summarise(data , Standard_Version=first(Standard_Version), 
