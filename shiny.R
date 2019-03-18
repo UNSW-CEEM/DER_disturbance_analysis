@@ -20,11 +20,6 @@ library(ggmap)
 library(measurements)
 library(assertthat)
 library(geosphere)
-#library(maptools)
-#library(leaflet)
-#library(htmltools)
-#library(htmlwidgets)
-#library(sf)
 source("data_manipulation_functions.R")
 source("filter_and_aggregate.R")
 source("upscale_function.R")
@@ -65,16 +60,11 @@ ui <- fluidPage(
           textInput("site_details", "Site details file", 
                     value="C:/Users/user/Documents/GitHub/DER_disturbance_analysis/test_data/2018-08-25 aemo data/site_details.csv"
           ),
-          shinyFilesButton("choose_site", "Choose File", 
-                           "Select site details data file ...", multiple=FALSE
-          ),
+          shinyFilesButton("choose_site", "Choose File", "Select site details data file ...", multiple=FALSE),
           HTML("<br><br>"),
-          radioButtons("duration", 
-                       label=strong("Sampled duration (seconds), select one"),
-                       choices = list("5","30","60"), selected = "60", 
-                       inline = TRUE),
-          materialSwitch(inputId="perform_clean", label=strong("Perform Clean"), 
-                         status="primary", right=FALSE),
+          radioButtons("duration", label=strong("Sampled duration (seconds), select one"), choices = list("5","30","60"), 
+                       selected = "60", inline = TRUE),
+          materialSwitch(inputId="perform_clean", label=strong("Perform Clean"), status="primary", right=FALSE),
           actionButton("load_data", "Load data"),
           tags$hr(),
           h4("Time Filter"),
@@ -96,29 +86,17 @@ ui <- fluidPage(
           uiOutput("circuits"),
           tags$hr(),
           h4("Grouping Categories"),
-          materialSwitch("Std_Agg_Indiv", label=strong("AS4777:"), 
-                         status="primary", value=TRUE),
-          materialSwitch("grouping_agg", 
-                         label=strong("Size Grouping:"), 
-                         status="primary", value=TRUE),
-          materialSwitch("response_agg", 
-                         label=strong("Response Grouping:"), 
-                         status="primary", value=FALSE),
-          materialSwitch("pst_agg", label=strong("Postcodes:"), 
-                         status="primary", value=FALSE),
-          materialSwitch("manufacturer_agg", 
-                         label=strong("Manufacturer:"), 
-                         status="primary", value=FALSE),
-          materialSwitch("model_agg", label=strong("Models:"), 
-                         status="primary", value=FALSE),
-          materialSwitch("circuit_agg", label=strong("Circuits:"), 
-                         status="primary", value=FALSE),
-          materialSwitch("zone_agg", label=strong("Zones:"), 
-                         status="primary", value=FALSE),
+          materialSwitch("Std_Agg_Indiv", label=strong("AS4777:"), status="primary", value=TRUE),
+          materialSwitch("grouping_agg", label=strong("Size Grouping:"), status="primary", value=TRUE),
+          materialSwitch("response_agg", label=strong("Response Grouping:"), status="primary", value=FALSE),
+          materialSwitch("pst_agg", label=strong("Postcodes:"), status="primary", value=FALSE),
+          materialSwitch("manufacturer_agg", label=strong("Manufacturer:"),status="primary", value=FALSE),
+          materialSwitch("model_agg", label=strong("Models:"), status="primary", value=FALSE),
+          materialSwitch("circuit_agg", label=strong("Circuits:"), status="primary", value=FALSE),
+          materialSwitch("zone_agg", label=strong("Zones:"), status="primary", value=FALSE),
           tags$hr(),
           h4("Additional Processing"),
-          materialSwitch(inputId="raw_upscale", label=strong("Upscaled Data"), 
-                         status="primary", right=FALSE),
+          materialSwitch(inputId="raw_upscale", label=strong("Upscaled Data"), status="primary", right=FALSE),
           tags$hr(),
           h4("Event information"),
           uiOutput("event_date"),
@@ -211,24 +189,21 @@ server <- function(input,output,session){
     date_as_str <- as.character(input$date[1])
     time_as_str <- substr(input$time_start, 12,19)
     start_time_as_str <- paste(date_as_str, time_as_str)
-    start_date_time <- strptime(start_time_as_str, format="%Y-%m-%d %H:%M:%S",
-                                tz="Australia/Brisbane")
+    start_date_time <- strptime(start_time_as_str, format="%Y-%m-%d %H:%M:%S", tz="Australia/Brisbane")
     start_date_time
   })
   end_time <- reactive({
     date_as_str <- as.character(input$date[2])
     time_as_str <- substr(input$time_end, 12,19)
     end_time_as_str <- paste(date_as_str, time_as_str)
-    end_date_time <- strptime(end_time_as_str, format="%Y-%m-%d %H:%M:%S",
-                              tz="Australia/Brisbane")
+    end_date_time <- strptime(end_time_as_str, format="%Y-%m-%d %H:%M:%S", tz="Australia/Brisbane")
     end_date_time
   })
   event_time <- reactive({
     date_as_str <- as.character(input$event_date)
     time_as_str <- substr(input$event_time, 12, 19)
     date_time_as_str <- paste(date_as_str, time_as_str)
-    event_date_time <- strptime(date_time_as_str, format="%Y-%m-%d %H:%M:%S",
-                                tz="Australia/Brisbane")
+    event_date_time <- strptime(date_time_as_str, format="%Y-%m-%d %H:%M:%S", tz="Australia/Brisbane")
     event_date_time
   })
   agg_on_standard <- reactive({input$Std_Agg_Indiv})
@@ -390,8 +365,7 @@ server <- function(input,output,session){
         combined_data_after_clean <- filter(combined_data_after_clean, sum_ac<=100)
         v$combined_data <- filter(v$combined_data, clean=="raw")
         combined_data_after_clean <- combined_data_after_clean %>% mutate(clean="cleaned")
-        combined_data_after_clean <- select(combined_data_after_clean, 
-                                            c_id, ts, v, f, d, site_id, e, con_type,
+        combined_data_after_clean <- select(combined_data_after_clean, c_id, ts, v, f, d, site_id, e, con_type,
                                             s_state, s_postcode, Standard_Version, Grouping, polarity, first_ac,
                                             power_kW, clean, manufacturer, model, sum_ac)
         v$combined_data <- rbind(v$combined_data, combined_data_after_clean)
@@ -413,8 +387,7 @@ server <- function(input,output,session){
                              choices=list("cleaned", "raw"),
                              selected=list("raw"),
                              justified=TRUE, status="primary", individual=TRUE,
-                             checkIcon=list(yes=icon("ok", lib="glyphicon"), 
-                                            no=icon("remove", lib="glyphicon")))
+                             checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")))
       })
       output$dateWidget <- renderUI({
         dateRangeInput("date", label=strong('Date range (yyyy-mm-dd):'),
@@ -425,45 +398,30 @@ server <- function(input,output,session){
                        startview="year")
         })
       output$time_start <- renderUI({
-        timeInput("time_start", label=strong('Enter start time'),
-                  value=as.POSIXct("07:00:00",format="%H:%M:%S"))
+        timeInput("time_start", label=strong('Enter start time'), value=as.POSIXct("07:00:00",format="%H:%M:%S"))
         })
       output$time_end <- renderUI({
-        timeInput("time_end", label=strong('Enter end time'), 
-                  value=as.POSIXct("17:00:00",format="%H:%M:%S"))
+        timeInput("time_end", label=strong('Enter end time'), value=as.POSIXct("17:00:00",format="%H:%M:%S"))
         })
       output$region <- renderUI({
-        selectInput(inputId="region", label=strong("Region"), 
-                    choices=unique(v$combined_data$s_state))
+        selectInput(inputId="region", label=strong("Region"), choices=unique(v$combined_data$s_state))
         })
       output$postcodes <- renderUI({
-        selectizeInput("postcodes", 
-                      label=strong("Select postcodes"),
-                      choices = unique(v$combined_data$s_postcode), 
+        selectizeInput("postcodes", label=strong("Select postcodes"), choices = unique(v$combined_data$s_postcode), 
                       multiple=TRUE)  
         })
       output$manufacturers <- renderUI({
-        selectizeInput("manufacturers", 
-                       label=strong("Select manufacturers"),
-                       choices = unique(v$combined_data$manufacturer), 
-                       multiple=TRUE)  
+        selectizeInput("manufacturers", label=strong("Select manufacturers"), 
+                       choices = unique(v$combined_data$manufacturer), multiple=TRUE)  
       })
       output$models <- renderUI({
-        selectizeInput("models", 
-                       label=strong("Select models"),
-                       choices = unique(v$combined_data$model), 
-                       multiple=TRUE)  
+        selectizeInput("models", label=strong("Select models"), choices = unique(v$combined_data$model), multiple=TRUE)  
       })
       output$sites <- renderUI({
-        selectizeInput("sites", 
-                       label=strong("Select Sites"),
-                       choices = unique(v$site_details$site_id), 
-                       multiple=TRUE)  
+        selectizeInput("sites", label=strong("Select Sites"), choices = unique(v$site_details$site_id), multiple=TRUE)  
       })
       output$circuits <- renderUI({
-        selectizeInput("circuits",
-                       label=strong("Select Circuits"),
-                       choices = unique(v$circuit_details$c_id), 
+        selectizeInput("circuits", label=strong("Select Circuits"), choices = unique(v$circuit_details$c_id), 
                        multiple=TRUE)  
       })
       shinyjs::show("Std_Agg_Indiv")
@@ -518,41 +476,33 @@ server <- function(input,output,session){
       shinyjs::show("circuit_agg")
       shinyjs::show("zone_agg")
       output$event_date <- renderUI({
-        dateInput("event_date", label=strong('Event date (yyyy-mm-dd):'),
-                  value=floor_date(min(v$combined_data$ts), "day"),
-                  startview="year")
+        dateInput("event_date", label=strong('Event date (yyyy-mm-dd):'), 
+                  value=floor_date(min(v$combined_data$ts), "day"), startview="year")
       })
       output$event_time <- renderUI({
-        timeInput("event_time", label=strong('Event time'),
-                  value = as.POSIXct("13:11:55",format="%H:%M:%S"))
+        timeInput("event_time", label=strong('Event time'), value = as.POSIXct("13:11:55",format="%H:%M:%S"))
       })
       output$window_length <- renderUI({
-        numericInput("window_length", label=strong('Set Window Length (min)'), 
-                     value=5, min = 1, max = 100, step = 1)
+        numericInput("window_length", label=strong('Set Window Length (min)'), value=5, min = 1, max = 100, step = 1)
       })
       output$event_latitude <- renderUI({
-        numericInput("event_latitude", label=strong('Set event latitude'), 
-                     value=-28.838132)
+        numericInput("event_latitude", label=strong('Set event latitude'), value=-28.838132)
       })
       output$event_longitude <- renderUI({
-        numericInput("event_longitude", label=strong('Set event longitude'), 
-                     value=151.096832)
+        numericInput("event_longitude", label=strong('Set event longitude'), value=151.096832)
       })
       output$zone_one_radius <- renderUI({
-        numericInput("zone_one_radius", label=strong('Set zone one outer radius'), 
-                     value=200)
+        numericInput("zone_one_radius", label=strong('Set zone one outer radius'), value=200)
       })
       output$zone_two_radius <- renderUI({
-        numericInput("zone_two_radius", label=strong('Set zone two outer radius'), 
-                     value=600)
+        numericInput("zone_two_radius", label=strong('Set zone two outer radius'), value=600)
       })
       output$zone_three_radius <- renderUI({
-        numericInput("zone_three_radius", label=strong('Set zone three outer radius'), 
-                     value=1000)
+        numericInput("zone_three_radius", label=strong('Set zone three outer radius'), value=1000)
       })
       output$update_plots <- renderUI({
         actionButton("update_plots", "Update plots")
-        })
+      })
     }, warning = function(war) {
       shinyalert("Opps", paste("",war))
     }, error = function(err) {
@@ -704,16 +654,11 @@ server <- function(input,output,session){
             shinySaveButton("save_distance_response", "Save data", "Save file as ...", filetype=list(xlsx="csv"))
             })
           
-          #IND_adm1 <- st_read("POA_2016_AUST.shp")
-          #IND_adm1 <- filter(IND_adm1, substr(POA_CODE16,1,1)=="2")
-          #st_crs(IND_adm1) <- "+proj=longlat +ellps=WGS84 +datum=WGS84"
-          #factpal <- colorFactor(topo.colors(36), IND_adm1$POA_CODE16)
           output$map <- renderPlotly({plot_geo(geo_data, lat =~lat, lon =~lon, color =~series)})
   
         removeNotification(id)
       } else {
-        # If there is no data left after filtering alert the user and create an
-        # empty plot.
+        # If there is no data left after filtering alert the user and create an empty plot.
         shinyalert("Opps", "There is no data to plot")
         output$PlotlyTest <- renderPlotly({})
         removeNotification(id)
@@ -721,7 +666,7 @@ server <- function(input,output,session){
     
     } else {
       shinyalert("Wow", "You are trying to plot more than 1000 series, maybe try
-                     narrowing down those filters and agg settings")
+                 narrowing down those filters and agg settings")
       removeNotification(id)
     }
     
