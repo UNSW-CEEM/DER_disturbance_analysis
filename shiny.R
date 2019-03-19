@@ -538,7 +538,7 @@ server <- function(input,output,session){
       # Copy data for saving
       v$combined_data_f <- select(combined_data_f, ts, site_id, c_id, power_kW, v, f, s_state, s_postcode, 
                                   Standard_Version, Grouping, sum_ac, clean, manufacturer, model,
-                                  site_performance_factor)
+                                  site_performance_factor, response_category, zone, distance)
       # Create copy of filtered data to use in upscaling
       combined_data_f2 <- combined_data_f
       if(raw_upscale()){combined_data_f2 <- upscale(combined_data_f2, v$install_data)}

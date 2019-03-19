@@ -230,3 +230,140 @@ test_that("Test the group by for count with just clean" ,{
   rownames(expected_output) <- NULL
   expect_equal(out, expected_output, tolerance=0.001)
 })
+
+test_that("Test the group by for response count with just standard version" ,{
+  input <- "C:/Users/user/Documents/GitHub/DER_disturbance_analysis/auto_test_data/test_agg_data.csv"
+  input <- read.csv(file=input, header=TRUE, stringsAsFactors = FALSE)
+  group_cols <- c("clean", "Standard_Version")
+  out <- vector_groupby_count_response(input, group_cols)
+  expected_output <- "C:/Users/user/Documents/GitHub/DER_disturbance_analysis/auto_test_data/test_out_17.csv"
+  expected_output <- read.csv(file=expected_output, header=TRUE, stringsAsFactors = FALSE)
+  expected_output <- mutate(expected_output, response_category=ifelse(response_category=='NA',NA,response_category))
+  out <- out[order(out$series_x, out$series_y),]
+  rownames(out) <- NULL
+  expected_output <- expected_output[order(expected_output$series_x, expected_output$series_y),]
+  rownames(expected_output) <- NULL
+  expect_equal(out, expected_output, tolerance=0.001)
+})
+
+test_that("Test the group by for response count with standard version and manufacturer" ,{
+  input <- "C:/Users/user/Documents/GitHub/DER_disturbance_analysis/auto_test_data/test_agg_data.csv"
+  input <- read.csv(file=input, header=TRUE, stringsAsFactors = FALSE)
+  group_cols <- c("clean", "Standard_Version", "manufacturer")
+  out <- vector_groupby_count_response(input, group_cols)
+  expected_output <- "C:/Users/user/Documents/GitHub/DER_disturbance_analysis/auto_test_data/test_out_18.csv"
+  expected_output <- read.csv(file=expected_output, header=TRUE, stringsAsFactors = FALSE)
+  expected_output <- mutate(expected_output, response_category=ifelse(response_category=='NA',NA,response_category))
+  out <- out[order(out$series_x, out$series_y),]
+  rownames(out) <- NULL
+  expected_output <- expected_output[order(expected_output$series_x, expected_output$series_y),]
+  rownames(expected_output) <- NULL
+  expect_equal(out, expected_output, tolerance=0.001)
+})
+
+test_that("Test the group by for response count with site_id and c_id" ,{
+  input <- "C:/Users/user/Documents/GitHub/DER_disturbance_analysis/auto_test_data/test_agg_data.csv"
+  input <- read.csv(file=input, header=TRUE, stringsAsFactors = FALSE)
+  group_cols <- c("clean", "site_id", "c_id")
+  out <- vector_groupby_count_response(input, group_cols)
+  expected_output <- "C:/Users/user/Documents/GitHub/DER_disturbance_analysis/auto_test_data/test_out_19.csv"
+  expected_output <- read.csv(file=expected_output, header=TRUE, stringsAsFactors = FALSE)
+  expected_output <- mutate(expected_output, response_category=ifelse(response_category=='NA',NA,response_category))
+  out <- out[order(out$series_x, out$series_y),]
+  rownames(out) <- NULL
+  expected_output <- mutate(expected_output, series_y=as.character(series_y))
+  expected_output <- expected_output[order(expected_output$series_x, expected_output$series_y),]
+  rownames(expected_output) <- NULL
+  expect_equal(out, expected_output, tolerance=0.001)
+})
+
+test_that("Test the group by for response count with just clean" ,{
+  input <- "C:/Users/user/Documents/GitHub/DER_disturbance_analysis/auto_test_data/test_agg_data.csv"
+  input <- read.csv(file=input, header=TRUE, stringsAsFactors = FALSE)
+  group_cols <- c("clean")
+  out <- vector_groupby_count_response(input, group_cols)
+  expected_output <- "C:/Users/user/Documents/GitHub/DER_disturbance_analysis/auto_test_data/test_out_20.csv"
+  expected_output <- read.csv(file=expected_output, header=TRUE, stringsAsFactors = FALSE)
+  expected_output <- mutate(expected_output, response_category=ifelse(response_category=='NA',NA,response_category))
+  out <- out[order(out$series_x, out$series_y),]
+  rownames(out) <- NULL
+  expected_output <- expected_output[order(expected_output$series_x, expected_output$series_y),]
+  rownames(expected_output) <- NULL
+  expect_equal(out, expected_output, tolerance=0.001)
+})
+
+test_that("Test the group by for zone count with just standard version" ,{
+  input <- "C:/Users/user/Documents/GitHub/DER_disturbance_analysis/auto_test_data/test_agg_data.csv"
+  input <- read.csv(file=input, header=TRUE, stringsAsFactors = FALSE)
+  group_cols <- c("clean", "Standard_Version")
+  out <- vector_groupby_count_zones(input, group_cols)
+  expected_output <- "C:/Users/user/Documents/GitHub/DER_disturbance_analysis/auto_test_data/test_out_21.csv"
+  expected_output <- read.csv(file=expected_output, header=TRUE, stringsAsFactors = FALSE)
+  expected_output <- mutate(expected_output, zone=ifelse(zone=='NA',NA,zone))
+  out <- out[order(out$series_x, out$series_y),]
+  rownames(out) <- NULL
+  expected_output <- expected_output[order(expected_output$series_x, expected_output$series_y),]
+  rownames(expected_output) <- NULL
+  expect_equal(out, expected_output, tolerance=0.001)
+})
+
+test_that("Test the group by for zone count with standard version and manufacturer" ,{
+  input <- "C:/Users/user/Documents/GitHub/DER_disturbance_analysis/auto_test_data/test_agg_data.csv"
+  input <- read.csv(file=input, header=TRUE, stringsAsFactors = FALSE)
+  group_cols <- c("clean", "Standard_Version", "manufacturer")
+  out <- vector_groupby_count_zones(input, group_cols)
+  expected_output <- "C:/Users/user/Documents/GitHub/DER_disturbance_analysis/auto_test_data/test_out_22.csv"
+  expected_output <- read.csv(file=expected_output, header=TRUE, stringsAsFactors = FALSE)
+  expected_output <- mutate(expected_output, zone=ifelse(zone=='NA',NA,zone))
+  out <- out[order(out$series_x, out$series_y),]
+  rownames(out) <- NULL
+  expected_output <- expected_output[order(expected_output$series_x, expected_output$series_y),]
+  rownames(expected_output) <- NULL
+  expect_equal(out, expected_output, tolerance=0.001)
+})
+
+test_that("Test the group by for zone count with site_id and c_id" ,{
+  input <- "C:/Users/user/Documents/GitHub/DER_disturbance_analysis/auto_test_data/test_agg_data.csv"
+  input <- read.csv(file=input, header=TRUE, stringsAsFactors = FALSE)
+  group_cols <- c("clean", "site_id", "c_id")
+  out <- vector_groupby_count_zones(input, group_cols)
+  expected_output <- "C:/Users/user/Documents/GitHub/DER_disturbance_analysis/auto_test_data/test_out_23.csv"
+  expected_output <- read.csv(file=expected_output, header=TRUE, stringsAsFactors = FALSE)
+  expected_output <- mutate(expected_output, zone=ifelse(zone=='NA',NA,zone))
+  out <- out[order(out$series_x, out$series_y),]
+  rownames(out) <- NULL
+  expected_output <- mutate(expected_output, series_y=as.character(series_y))
+  expected_output <- expected_output[order(expected_output$series_x, expected_output$series_y),]
+  rownames(expected_output) <- NULL
+  expect_equal(out, expected_output, tolerance=0.001)
+})
+
+test_that("Test the group by for zone count with just clean" ,{
+  input <- "C:/Users/user/Documents/GitHub/DER_disturbance_analysis/auto_test_data/test_agg_data.csv"
+  input <- read.csv(file=input, header=TRUE, stringsAsFactors = FALSE)
+  group_cols <- c("clean")
+  out <- vector_groupby_count_zones(input, group_cols)
+  expected_output <- "C:/Users/user/Documents/GitHub/DER_disturbance_analysis/auto_test_data/test_out_24.csv"
+  expected_output <- read.csv(file=expected_output, header=TRUE, stringsAsFactors = FALSE)
+  expected_output <- mutate(expected_output, zone=ifelse(zone=='NA',NA,zone))
+  out <- out[order(out$series_x, out$series_y),]
+  rownames(out) <- NULL
+  expected_output <- expected_output[order(expected_output$series_x, expected_output$series_y),]
+  rownames(expected_output) <- NULL
+  expect_equal(out, expected_output, tolerance=0.001)
+})
+
+test_that("Test the group by for distance response with just standard version" ,{
+  input <- "C:/Users/user/Documents/GitHub/DER_disturbance_analysis/auto_test_data/test_agg_data.csv"
+  input <- read.csv(file=input, header=TRUE, stringsAsFactors = FALSE)
+  group_cols <- c("clean", "Standard_Version")
+  out <- vector_groupby_cumulative_distance(input, group_cols)
+  expected_output <- "C:/Users/user/Documents/GitHub/DER_disturbance_analysis/auto_test_data/test_out_25.csv"
+  expected_output <- read.csv(file=expected_output, header=TRUE, stringsAsFactors = FALSE)
+  out <- out[order(out$clean, out$Standard_Version, out$s_postcode),]
+  rownames(out) <- NULL
+  expected_output <- expected_output[order(expected_output$clean, expected_output$Standard_Version, 
+                                           expected_output$s_postcode),]
+  rownames(expected_output) <- NULL
+  expect_equal(out, expected_output, tolerance=0.001)
+})
