@@ -21,7 +21,7 @@ library(measurements)
 library(assertthat)
 library(geosphere)
 source("data_manipulation_functions.R")
-source("filter_and_aggregate.R")
+source("aggregate_functions.R")
 source("upscale_function.R")
 source("data_cleaning_functions.R")
 source("normalised_power_function.R")
@@ -302,8 +302,7 @@ server <- function(input,output,session){
                            c("pv_installation_year_month"))
         }
         removeNotification(id)
-        id <- showNotification("Formatting site details and 
-                                creating feather cache file", duration=1000)
+        id <- showNotification("Formatting site details and creating feather cache file", duration=1000)
         # Data from CSV is assumed to need processing.
         v$site_details <- process_raw_site_details(v$site_details_raw)
         # Automatically create a cache of the processed data as a feather file.
@@ -337,27 +336,20 @@ server <- function(input,output,session){
       removeNotification(id)
       if (perform_clean()){
         id <- showNotification("Cleaning data", duration=1000)
-        #combined_data_no_ac_filter <- 
-        #  select(combined_data_no_ac_filter, c_id, ts, e, site_id, con_type,
-        #         polarity, first_ac, s_postcode, power_kW)
         # Clean site details data
-        print("clean 1")
         site_details_cleaned <- site_details_data_cleaning(v$combined_data, v$site_details_raw)
         v$site_details_cleaned <- site_details_cleaned[order(site_details_cleaned$site_id),]
         # Clean circuit details file
-        print("clean 2")
         v$circuit_details_for_editing <- clean_connection_types(v$combined_data, v$circuit_details, v$postcode_data)
         # Display data cleaning output in data cleaning tab
         output$site_details_editor <- renderDT(isolate(v$site_details_cleaned), selection='single', rownames=FALSE, 
                                                editable=TRUE)
         v$proxy_site_details_editor <- dataTableProxy('site_details_editor')
-        output$circuit_details_editor <- renderDT(
-          isolate(v$circuit_details_for_editing), selection='single', 
-          rownames=FALSE, editable=TRUE)
+        output$circuit_details_editor <- renderDT(isolate(v$circuit_details_for_editing), selection='single', 
+                                                  rownames=FALSE, editable=TRUE)
         v$proxy_circuit_details_editor <- dataTableProxy('circuit_details_editor')
         
         # Add cleaned data to display data for main tab
-        print("clean 3")
         site_details_cleaned_processed <- process_raw_site_details(v$site_details_cleaned)
         combined_data_after_clean <- combine_data_tables(time_series_data, v$circuit_details_for_editing, 
                                                          site_details_cleaned_processed)
@@ -382,11 +374,8 @@ server <- function(input,output,session){
       # The data loaded can then be used to create the appropraite options for 
       # filtering.
       output$cleaned <- renderUI({
-        checkboxGroupButtons(inputId="cleaned", 
-                             label=strong("Data processing:"),
-                             choices=list("cleaned", "raw"),
-                             selected=list("raw"),
-                             justified=TRUE, status="primary", individual=TRUE,
+        checkboxGroupButtons(inputId="cleaned", label=strong("Data processing:"), choices=list("cleaned", "raw"),
+                             selected=list("raw"), justified=TRUE, status="primary", individual=TRUE,
                              checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")))
       })
       output$dateWidget <- renderUI({
@@ -426,46 +415,34 @@ server <- function(input,output,session){
       })
       shinyjs::show("Std_Agg_Indiv")
       output$size_groupings <- renderUI({
-        checkboxGroupButtons(inputId="size_groupings", 
-                             label=strong("Size Groupings"),
-                             choices=list("30-100kW", "<30 kW"),
-                             selected=list("30-100kW", "<30 kW"),
+        checkboxGroupButtons(inputId="size_groupings", label=strong("Size Groupings"),
+                             choices=list("30-100kW", "<30 kW"), selected=list("30-100kW", "<30 kW"),
                              justified=TRUE, status="primary", individual=TRUE,
-                             checkIcon=list(yes=icon("ok", lib="glyphicon"), 
-                                            no=icon("remove", lib="glyphicon")))
+                             checkIcon=list(yes=icon("ok", lib="glyphicon"),no=icon("remove", lib="glyphicon")))
       })
       output$StdVersion <- renderUI({
         checkboxGroupButtons(inputId="StdVersion", 
-                             label=strong("AS47777 Version:"),
-                             choices=list("AS4777.3:2005", "Transition", 
-                                          "AS4777.2:2015"),
-                             selected=list("AS4777.3:2005", "Transition", 
-                                           "AS4777.2:2015"),
+                             label=strong("AS47777 Version:"), choices=list("AS4777.3:2005", "Transition", 
+                                                                            "AS4777.2:2015"),
+                             selected=list("AS4777.3:2005", "Transition", "AS4777.2:2015"),
                              justified=TRUE, status="primary", individual=TRUE,
-                             checkIcon=list(yes=icon("ok", lib="glyphicon"), 
-                                            no=icon("remove", lib="glyphicon")))
+                             checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")))
         })
       output$responses <- renderUI({
         checkboxGroupButtons(inputId="responses", 
                              label=strong("Select Responses:"),
-                             choices=list("1 Ride Through", "2 Curtail", "3 Drop to Zero", 
-                                          "4 Disconnect","5 Off at t0", 
+                             choices=list("1 Ride Through", "2 Curtail", "3 Drop to Zero", "4 Disconnect","5 Off at t0", 
                                           "6 Not enough data","NA"),
-                             selected=list("1 Ride Through", "2 Curtail", "3 Drop to Zero", 
-                                           "4 Disconnect","5 Off at t0", 
-                                           "6 Not enough data","NA"),
+                             selected=list("1 Ride Through", "2 Curtail", "3 Drop to Zero", "4 Disconnect",
+                                           "5 Off at t0", "6 Not enough data","NA"),
                              justified=TRUE, status="primary", individual=TRUE,
-                             checkIcon=list(yes=icon("ok", lib="glyphicon"), 
-                                            no=icon("remove", lib="glyphicon")))
+                             checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")))
       })
       output$zones <- renderUI({
-        checkboxGroupButtons(inputId="zones", 
-                             label=strong("Zones"),
-                             choices=list("1 Zone", "2 Zone", "3 Zone"),
-                             selected=list("1 Zone", "2 Zone", "3 Zone"),
-                             justified=TRUE, status="primary", individual=TRUE,
-                             checkIcon=list(yes=icon("ok", lib="glyphicon"), 
-                                            no=icon("remove", lib="glyphicon")))
+        checkboxGroupButtons(inputId="zones", label=strong("Zones"), choices=list("1 Zone", "2 Zone", "3 Zone"),
+                             selected=list("1 Zone", "2 Zone", "3 Zone"), justified=TRUE, status="primary", 
+                             individual=TRUE,
+                             checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")))
       })        
       shinyjs::show("raw_upscale")
       shinyjs::show("pst_agg")
@@ -560,12 +537,11 @@ server <- function(input,output,session){
       
       # Copy data for saving
       v$combined_data_f <- select(combined_data_f, ts, site_id, c_id, power_kW, v, f, s_state, s_postcode, 
-                                  Standard_Version, Grouping, sum_ac, clean, manufacturer, model)
+                                  Standard_Version, Grouping, sum_ac, clean, manufacturer, model,
+                                  site_performance_factor)
       # Create copy of filtered data to use in upscaling
       combined_data_f2 <- combined_data_f
-      if(raw_upscale()){
-        combined_data_f2 <- upscale(combined_data_f2, v$install_data)
-      }
+      if(raw_upscale()){combined_data_f2 <- upscale(combined_data_f2, v$install_data)}
     
       # Check that the filter does not result in an empty dataframe.
       if(length(combined_data_f$ts) > 0){
@@ -736,8 +712,7 @@ server <- function(input,output,session){
   
   # Inforce mutual exclusivity of Aggregation settings
   observe({
-    if(manufacturer_agg() | model_agg() | pst_agg() | circuit_agg()
-       | circuit_agg() | response_agg() | zone_agg()){
+    if(manufacturer_agg() | model_agg() | pst_agg() | circuit_agg() | circuit_agg() | response_agg() | zone_agg()){
       updateMaterialSwitch(session=session, "raw_upscale", value = FALSE)
     }
   })

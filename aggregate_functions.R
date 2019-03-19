@@ -71,7 +71,7 @@ vector_groupby_count_response <- function(data, grouping_cols){
     data$series_y <- do.call(paste, c(data[add_cols], sep = "-" ))
   } else {
     data <- mutate(data, series_y="All")
-    }
+  }
   data <- as.data.frame(data)
   data <- mutate(data, sample_count=sample_count/sum(data$sample_count))
   return(data)
@@ -103,7 +103,7 @@ vector_groupby_cumulative_distance <- function(data, grouping_cols){
   data <- mutate(data, system_count=1)
   data <- data[order(data$distance),]
   data <- group_by(data, .dots=c(grouping_cols, "s_postcode"))
-  data <- summarise(data ,  distance=first(distance), num_disconnects=sum(num_disconnects), 
+  data <- summarise(data, distance=first(distance), num_disconnects=sum(num_disconnects), 
                     system_count=sum(system_count))
   data <- as.data.frame(data)
   data <- data[order(data$distance),]
@@ -120,13 +120,10 @@ vector_groupby_system <- function(data, grouping_cols){
   grouping_cols <- grouping_cols[!grouping_cols %in% c("site_id", "c_id")]
   series_cols <- grouping_cols
   data <- group_by(data, .dots=c("site_id"))
-  data <- summarise(data , Standard_Version=first(Standard_Version), 
-                    clean=first(clean),
-                    s_postcode=first(s_postcode), Grouping=first(Grouping),
-                    manufacturer=first(manufacturer), model=first(model),
-                    response_category=first(response_category),
-                    zone=first(zone), sum_ac=first(sum_ac), lat=first(lat),
-                    lon=first(lon))
+  data <- summarise(data , Standard_Version=first(Standard_Version), clean=first(clean),
+                    s_postcode=first(s_postcode), Grouping=first(Grouping), manufacturer=first(manufacturer), 
+                    model=first(model), response_category=first(response_category),
+                    zone=first(zone), sum_ac=first(sum_ac), lat=first(lat), lon=first(lon))
   data <- as.data.frame(data)
   data$series <- do.call(paste, c(data[series_cols], sep = "-" ))
   return(data)
