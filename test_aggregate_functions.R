@@ -360,10 +360,107 @@ test_that("Test the group by for distance response with just standard version" ,
   out <- vector_groupby_cumulative_distance(input, group_cols)
   expected_output <- "C:/Users/user/Documents/GitHub/DER_disturbance_analysis/auto_test_data/test_out_25.csv"
   expected_output <- read.csv(file=expected_output, header=TRUE, stringsAsFactors = FALSE)
-  out <- out[order(out$clean, out$Standard_Version, out$s_postcode),]
+  out <- out[order(out$series),]
   rownames(out) <- NULL
-  expected_output <- expected_output[order(expected_output$clean, expected_output$Standard_Version, 
-                                           expected_output$s_postcode),]
+  expected_output <- expected_output[order(expected_output$series),]
+  rownames(expected_output) <- NULL
+  expect_equal(out, expected_output, tolerance=0.001)
+})
+
+test_that("Test the group by for distance response with standard version and manufacturer" ,{
+  input <- "C:/Users/user/Documents/GitHub/DER_disturbance_analysis/auto_test_data/test_agg_data.csv"
+  input <- read.csv(file=input, header=TRUE, stringsAsFactors = FALSE)
+  group_cols <- c("clean", "Standard_Version", "manufacturer")
+  out <- vector_groupby_cumulative_distance(input, group_cols)
+  expected_output <- "C:/Users/user/Documents/GitHub/DER_disturbance_analysis/auto_test_data/test_out_26.csv"
+  expected_output <- read.csv(file=expected_output, header=TRUE, stringsAsFactors = FALSE)
+  out <- out[order(out$series),]
+  rownames(out) <- NULL
+  expected_output <- expected_output[order(expected_output$series),]
+  rownames(expected_output) <- NULL
+  expect_equal(out, expected_output, tolerance=0.001)
+})
+
+test_that("Test the group by for distance response with site_id and c_id" ,{
+  input <- "C:/Users/user/Documents/GitHub/DER_disturbance_analysis/auto_test_data/test_agg_data.csv"
+  input <- read.csv(file=input, header=TRUE, stringsAsFactors = FALSE)
+  group_cols <- c("clean", "site_id", "c_id")
+  out <- vector_groupby_cumulative_distance(input, group_cols)
+  expected_output <- "C:/Users/user/Documents/GitHub/DER_disturbance_analysis/auto_test_data/test_out_27.csv"
+  expected_output <- read.csv(file=expected_output, header=TRUE, stringsAsFactors = FALSE)
+  out <- out[order(out$series),]
+  rownames(out) <- NULL
+  expected_output <- expected_output[order(expected_output$series),]
+  rownames(expected_output) <- NULL
+  expect_equal(out, expected_output, tolerance=0.001)
+})
+
+test_that("Test the group by for distance response with just clean" ,{
+  input <- "C:/Users/user/Documents/GitHub/DER_disturbance_analysis/auto_test_data/test_agg_data.csv"
+  input <- read.csv(file=input, header=TRUE, stringsAsFactors = FALSE)
+  group_cols <- c("clean")
+  out <- vector_groupby_cumulative_distance(input, group_cols)
+  expected_output <- "C:/Users/user/Documents/GitHub/DER_disturbance_analysis/auto_test_data/test_out_28.csv"
+  expected_output <- read.csv(file=expected_output, header=TRUE, stringsAsFactors = FALSE)
+  out <- out[order(out$series),]
+  rownames(out) <- NULL
+  expected_output <- expected_output[order(expected_output$series),]
+  rownames(expected_output) <- NULL
+  expect_equal(out, expected_output, tolerance=0.001)
+})
+
+test_that("Test the group by for geo data with just standard version" ,{
+  input <- "C:/Users/user/Documents/GitHub/DER_disturbance_analysis/auto_test_data/test_agg_data.csv"
+  input <- read.csv(file=input, header=TRUE, stringsAsFactors = FALSE)
+  group_cols <- c("clean", "Standard_Version")
+  out <- vector_groupby_system(input, group_cols)
+  expected_output <- "C:/Users/user/Documents/GitHub/DER_disturbance_analysis/auto_test_data/test_out_29.csv"
+  expected_output <- read.csv(file=expected_output, header=TRUE, stringsAsFactors = FALSE)
+  out <- out[order(out$site_id),]
+  rownames(out) <- NULL
+  expected_output <- expected_output[order(expected_output$site_id),]
+  rownames(expected_output) <- NULL
+  expect_equal(out, expected_output, tolerance=0.001)
+})
+
+test_that("Test the group by for geo data with standard version and manufacturer" ,{
+  input <- "C:/Users/user/Documents/GitHub/DER_disturbance_analysis/auto_test_data/test_agg_data.csv"
+  input <- read.csv(file=input, header=TRUE, stringsAsFactors = FALSE)
+  group_cols <- c("clean", "Standard_Version", "manufacturer")
+  out <- vector_groupby_system(input, group_cols)
+  expected_output <- "C:/Users/user/Documents/GitHub/DER_disturbance_analysis/auto_test_data/test_out_30.csv"
+  expected_output <- read.csv(file=expected_output, header=TRUE, stringsAsFactors = FALSE)
+  out <- out[order(out$site_id),]
+  rownames(out) <- NULL
+  expected_output <- expected_output[order(expected_output$site_id),]
+  rownames(expected_output) <- NULL
+  expect_equal(out, expected_output, tolerance=0.001)
+})
+
+test_that("Test the group by for geo data with site_id and c_id" ,{
+  input <- "C:/Users/user/Documents/GitHub/DER_disturbance_analysis/auto_test_data/test_agg_data.csv"
+  input <- read.csv(file=input, header=TRUE, stringsAsFactors = FALSE)
+  group_cols <- c("clean", "site_id", "c_id")
+  out <- vector_groupby_system(input, group_cols)
+  expected_output <- "C:/Users/user/Documents/GitHub/DER_disturbance_analysis/auto_test_data/test_out_31.csv"
+  expected_output <- read.csv(file=expected_output, header=TRUE, stringsAsFactors = FALSE)
+  out <- out[order(out$site_id),]
+  rownames(out) <- NULL
+  expected_output <- expected_output[order(expected_output$site_id),]
+  rownames(expected_output) <- NULL
+  expect_equal(out, expected_output, tolerance=0.001)
+})
+
+test_that("Test the group by for geo data with just clean" ,{
+  input <- "C:/Users/user/Documents/GitHub/DER_disturbance_analysis/auto_test_data/test_agg_data.csv"
+  input <- read.csv(file=input, header=TRUE, stringsAsFactors = FALSE)
+  group_cols <- c("clean")
+  out <- vector_groupby_system(input, group_cols)
+  expected_output <- "C:/Users/user/Documents/GitHub/DER_disturbance_analysis/auto_test_data/test_out_32.csv"
+  expected_output <- read.csv(file=expected_output, header=TRUE, stringsAsFactors = FALSE)
+  out <- out[order(out$site_id),]
+  rownames(out) <- NULL
+  expected_output <- expected_output[order(expected_output$site_id),]
   rownames(expected_output) <- NULL
   expect_equal(out, expected_output, tolerance=0.001)
 })

@@ -1,10 +1,5 @@
 documentation_panel <- function(){
   panel <- mainPanel(
-    h3('Input data, assumptions and processing methodology'),
-    h4('Installed capacity data'),
-    div('This input data provides the actual installed capacity of PV systems up to 100kW for use in the upscaling 
-        calculation. The data is file is located in the same directory as the "shiny.R" file and is called 
-        "cumulative_capacity_and_number_20190121.csv"'),
     h3('Categorisation of sites and circuits'),
     h4('Inverter Standard Definition'),
     div('Solar Analytics pv and inverter circuits are assigned an inverter standard based on the install date

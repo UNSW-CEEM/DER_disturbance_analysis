@@ -332,7 +332,6 @@ server <- function(input,output,session){
       v$combined_data <- select(v$combined_data, c_id, ts, v, f, d, site_id, e, con_type, s_state, s_postcode, 
                                 Standard_Version, Grouping, polarity, first_ac,power_kW, clean, manufacturer, model, 
                                 sum_ac)
-      
       removeNotification(id)
       if (perform_clean()){
         id <- showNotification("Cleaning data", duration=1000)
@@ -364,8 +363,7 @@ server <- function(input,output,session){
         remove(combined_data_after_clean)
         removeNotification(id)
       } else {
-        # Don't let the user crash the tool by trying to save data that doesn't 
-        # exist
+        # Don't let the user crash the tool by trying to save data that doesn't exist
         hide("save_cleaned_data")
       }
       
@@ -512,7 +510,7 @@ server <- function(input,output,session){
     combined_data_f <- get_zones(combined_data_f, zone_one_radius(), zone_two_radius(), zone_three_radius())
     if (length(zones()) < 3) { combined_data_f <- filter(combined_data_f, zone %in% zones())}
   
-
+    # Decide if the settings mean no grouping is being performed.
     if (agg_on_standard()==FALSE & pst_agg()==FALSE & grouping_agg()==FALSE & 
         manufacturer_agg()==FALSE & model_agg()==FALSE & zone_agg()==FALSE & circuit_agg()==TRUE){
       no_grouping=TRUE
@@ -521,31 +519,28 @@ server <- function(input,output,session){
     }
     
     # Count samples in each data series to be displayed
-    grouping_cols <- find_grouping_cols(agg_on_standard=agg_on_standard(),
-                                        pst_agg=pst_agg(), grouping_agg=grouping_agg(),
-                                        manufacturer_agg=manufacturer_agg(), model_agg=model_agg(),
-                                        circuit_agg(), response_agg(), zone_agg())
+    grouping_cols <- find_grouping_cols(agg_on_standard=agg_on_standard(), pst_agg=pst_agg(), 
+                                        grouping_agg=grouping_agg(), manufacturer_agg=manufacturer_agg(), 
+                                        model_agg=model_agg(), circuit_agg(), response_agg(), zone_agg())
     v$sample_count_table <- vector_groupby_count(combined_data_f, grouping_cols)
     
+    # Procced to  aggregation and plotting only is there is less than 1000 data series to plot, else stop and notify the
+    # user.
     if ((sum(v$sample_count_table$sample_count)<1000 & no_grouping) | 
         (length(v$sample_count_table$sample_count)<1000 & !no_grouping)){
-      
-      
+      # Calaculate the site peformance factors.
       id2 <- showNotification("Calculating site performance factors", duration=1000)
       combined_data_f <- calc_site_performance_factors(combined_data_f)
       removeNotification(id2)
-      
       # Copy data for saving
       v$combined_data_f <- select(combined_data_f, ts, site_id, c_id, power_kW, v, f, s_state, s_postcode, 
                                   Standard_Version, Grouping, sum_ac, clean, manufacturer, model,
-                                  site_performance_factor, response_category, zone, distance)
+                                  site_performance_factor, response_category, zone, distance, lat, lon)
       # Create copy of filtered data to use in upscaling
       combined_data_f2 <- combined_data_f
       if(raw_upscale()){combined_data_f2 <- upscale(combined_data_f2, v$install_data)}
-    
       # Check that the filter does not result in an empty dataframe.
       if(length(combined_data_f$ts) > 0){
-        
         agg_norm_power <- vector_groupby_norm_power(combined_data_f, grouping_cols)
         agg_f_and_v <- vector_groupby_f_and_v(combined_data_f, grouping_cols)
         v$agg_power <- vector_groupby_power(combined_data_f2, grouping_cols)
@@ -553,28 +548,25 @@ server <- function(input,output,session){
         v$zone_count <- vector_groupby_count_zones(combined_data_f, grouping_cols)
         v$distance_response <- vector_groupby_cumulative_distance(combined_data_f, grouping_cols)
         geo_data <- vector_groupby_system(combined_data_f, grouping_cols)
-        
         # Combine data sets that have the same grouping so they can be saved in a single file
         if (no_grouping){
           et <- event_time()
           agg_norm_power <- event_normalised_power(agg_norm_power, et, keep_site_id=TRUE)
           v$agg_power <- left_join( v$agg_power, agg_norm_power[, c("Event_Normalised_Power_kW", "site_id", "Time")], 
                                     by=c("Time", "site_id"))
-          v$agg_power <- left_join( v$agg_power, agg_f_and_v[, c("Time", "site_id", "Voltage", "Frequency")], 
-                                    by=c("Time", "site_id"))
         } else {
           et <- event_time()
           agg_norm_power <- event_normalised_power(agg_norm_power, et,  keep_site_id=FALSE)
           v$agg_power <- left_join(v$agg_power, agg_norm_power[, c("Event_Normalised_Power_kW", "series", "Time")], 
                                    by=c("Time", "series"))
-          v$agg_power <- left_join( v$agg_power, agg_f_and_v[, c("Time", "series", "Voltage", "Frequency")], 
-                                    by=c("Time", "series"))
         }
-        
+        v$agg_power <- left_join( v$agg_power, agg_f_and_v[, c("Time", "series", "Voltage", "Frequency")], 
+                                  by=c("Time", "series"))
         # Create plots on main tab
+          
           output$PlotlyTest <- renderPlotly({
-            plot_ly(v$agg_power, x=~Time, y=~Power_kW, color=~series, type="scattergl")
-            })
+            plot_ly(v$agg_power, x=~Time, y=~Power_kW, color=~series, type="scattergl")  %>% 
+              layout(yaxis = list(title = "Aggregate Power (kW)"))})
           output$save_agg_power <- renderUI({
             shinySaveButton("save_agg_power", "Save Aggregated Results", "Save file as ...", filetype=list(xlsx="csv"))
             })
@@ -586,55 +578,60 @@ server <- function(input,output,session){
                                                                 filetype=list(xlsx="csv"))
             })
           output$NormPower <- renderPlotly({
-            plot_ly(agg_norm_power, x=~Time, y=~Event_Normalised_Power_kW, color=~series, type="scattergl")
+            plot_ly(agg_norm_power, x=~Time, y=~Event_Normalised_Power_kW, color=~series, type="scattergl") %>% 
+              layout(yaxis=list(title="Average site performance factor \n normalised to value of pre-event interval"))
             })
           output$ResponseCount <- renderPlotly({
             plot_ly(v$response_count, x=~series_x, y=~sample_count, color=~series_y, type="bar") %>% 
-              layout(yaxis = list(title = 'Fraction of Filtered dataset'), barmode = 'stack')
+              layout(yaxis = list(title = 'Fraction of circuits \n (denominator is count post filtering)'),
+                     xaxis = list(title = 'Response categories'),
+                     barmode = 'stack')
             })
           output$save_response_count <- renderUI({
             shinySaveButton("save_response_count", "Save data", "Save file as ...", filetype=list(xlsx="csv"))
             })
+          
           output$ZoneCount <- renderPlotly({
             plot_ly(v$zone_count, x=~series_x, y=~sample_count, color=~series_y, type="bar") %>%
-              layout(yaxis = list(title = 'Fraction of Filtered dataset'), barmode = 'stack')
+              layout(yaxis = list(title = 'Fraction of zone circuits \n (denominator is count post filtering)'),
+                     xaxis = list(title = 'Zone categories'), barmode = 'stack')
             })
           output$save_zone_count <- renderUI({
             shinySaveButton("save_zone_count", "Save data", "Save file as ...", filetype=list(xlsx="csv"))
             })
           output$Frequency <- renderPlotly({
-            plot_ly(v$agg_power, x=~Time, y=~Frequency, color=~series, type="scattergl")
+            plot_ly(v$agg_power, x=~Time, y=~Frequency, color=~series, type="scattergl") %>% 
+              layout(yaxis=list(title="Average frequency (Hz)"))
             })
-          output$Voltage <- renderPlotly({plot_ly(v$agg_power, x=~Time, y=~Voltage, color=~series, type="scattergl")
+          output$Voltage <- renderPlotly({plot_ly(v$agg_power, x=~Time, y=~Voltage, color=~series, type="scattergl") %>% 
+              layout(yaxis=list(title="Average volatge (V)"))
             })
           output$distance_response <- renderPlotly({
-            plot_ly(v$distance_response, x=~distance, y=~percentage, color=~series, type="scattergl")
+            plot_ly(v$distance_response, x=~distance, y=~percentage, color=~series, type="scattergl") %>% 
+              layout(yaxis=list(title="Cumlative circuits / Cumulative disconnects \n (Includes response categories 3 and 4)"),
+                     xaxis=list(title="Distance from event (km)"))
             })
           output$save_distance_response <- renderUI({
             shinySaveButton("save_distance_response", "Save data", "Save file as ...", filetype=list(xlsx="csv"))
             })
-          
           output$map <- renderPlotly({plot_geo(geo_data, lat =~lat, lon =~lon, color =~series)})
-  
-        removeNotification(id)
+          removeNotification(id)
       } else {
         # If there is no data left after filtering alert the user and create an empty plot.
         shinyalert("Opps", "There is no data to plot")
         output$PlotlyTest <- renderPlotly({})
         removeNotification(id)
       }
-    
     } else {
       shinyalert("Wow", "You are trying to plot more than 1000 series, maybe try
                  narrowing down those filters and agg settings")
       removeNotification(id)
     }
-    
   })
   
   # Save data from aggregate pv power plot
   observe({
-    volumes <- c(dr="C:\\")
+    volumes <- getVolumes()
     shinyFileSave(input, "save_agg_power", roots=volumes, session=session)
     fileinfo <- parseSavePath(volumes, input$save_agg_power)
     if (nrow(fileinfo) > 0) {
@@ -644,7 +641,7 @@ server <- function(input,output,session){
   
   # Save underlying data by circuit id and time stamp
   observe({
-    volumes <- c(dr="C:\\")
+    volumes <- getVolumes()
     shinyFileSave(input, "save_underlying", roots=volumes, session=session)
     fileinfo <- parseSavePath(volumes, input$save_underlying)
     if (nrow(fileinfo) > 0) {
@@ -656,7 +653,7 @@ server <- function(input,output,session){
   
   # Save data from sample count table
   observe({
-    volumes <- c(dr="C:\\")
+    volumes <- getVolumes()
     shinyFileSave(input, "save_sample_count", roots=volumes, session=session)
     fileinfo <- parseSavePath(volumes, input$save_sample_count)
     if (nrow(fileinfo) > 0) {write.csv(v$sample_count_table, as.character(fileinfo$datapath), row.names=FALSE)}
@@ -664,7 +661,7 @@ server <- function(input,output,session){
   
   # Save data on aggregated response categories
   observe({
-    volumes <- c(dr="C:\\")
+    volumes <- getVolumes()
     shinyFileSave(input, "save_response_count", roots=volumes, session=session)
     fileinfo <- parseSavePath(volumes, input$save_response_count)
     if (nrow(fileinfo) > 0) {write.csv(v$response_count, as.character(fileinfo$datapath), row.names=FALSE)}
@@ -680,7 +677,7 @@ server <- function(input,output,session){
   
   # Save data on response percentage by distance
   observe({
-    volumes <- c(dr="C:\\")
+    volumes <- getVolumes()
     shinyFileSave(input, "save_distance_response", roots=volumes, session=session)
     fileinfo <- parseSavePath(volumes, input$save_distance_response)
     if (nrow(fileinfo) > 0) {write.csv(v$distance_response, as.character(fileinfo$datapath), row.names=FALSE)}
@@ -688,7 +685,7 @@ server <- function(input,output,session){
   
   # Time series file selection pop up.
   observe({
-    volumes <- c(dr="C:\\")
+    volumes <- getVolumes()
     shinyFileChoose(input, "choose_ts", roots=volumes, session=session)
     fileinfo <- parseFilePaths(volumes, input$choose_ts)
     if (nrow(fileinfo) > 0) {updateTextInput(session, "time_series", value=as.character(fileinfo$datapath))}
@@ -696,7 +693,7 @@ server <- function(input,output,session){
   
   # Circuit details file selection pop up.
   observe({
-    volumes <- c(dr="C:\\")
+    volumes <- getVolumes()
     shinyFileChoose(input, "choose_c", roots=volumes, session=session)
     fileinfo <- parseFilePaths(volumes, input$choose_c)
     if (nrow(fileinfo) > 0) {updateTextInput(session, "circuit_details", value=as.character(fileinfo$datapath))}
@@ -704,7 +701,7 @@ server <- function(input,output,session){
   
   # Site details file selection pop up.
   observe({
-    volumes <- c(dr="C:\\")
+    volumes <- getVolumes()
     shinyFileChoose(input, "choose_site", roots=volumes, session=session)
     fileinfo <- parseFilePaths(volumes, input$choose_site)
     if (nrow(fileinfo) > 0) {updateTextInput(session, "site_details", value=as.character(fileinfo$datapath))}
@@ -745,7 +742,7 @@ server <- function(input,output,session){
     if (length(input$site_details_editor_rows_selected==1)) {
       site_id_to_plot <- v$site_details_cleaned$site_id[input$site_details_editor_rows_selected]
       data_to_view <- filter(filter(v$combined_data, clean=="raw"), site_id==site_id_to_plot)
-      output$site_plot <- renderPlotly({plot_ly(data_to_view, x=~ts, y=~power_kW, type="scatter")})
+      output$site_plot <- renderPlotly({plot_ly(data_to_view, x=~ts, y=~power_kW, color=~c_id, type="scatter")})
     }
   })
   

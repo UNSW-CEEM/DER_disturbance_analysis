@@ -78,6 +78,10 @@ vector_groupby_count_response <- function(data, grouping_cols){
 }
 
 vector_groupby_count_zones <- function(data, grouping_cols){
+  grouping_cols <- c("clean", "response_category")
+  category_size <- group_by(data, clean, zone)
+  category_size <- summarise(category_size , category_count=length(unique(c_id)))
+  category_size <- as.data.frame(category_size)
   if (!"zone" %in% grouping_cols) {grouping_cols <- c(grouping_cols, "zone")}
   grouping_cols <- grouping_cols[grouping_cols != "c_id"]
   add_cols <- grouping_cols[!grouping_cols %in% c("clean", "zone")]
@@ -91,14 +95,17 @@ vector_groupby_count_zones <- function(data, grouping_cols){
     data <- mutate(data, series_y="All")
   }
   data <- as.data.frame(data)
-  data <- mutate(data, sample_count=sample_count/sum(data$sample_count))
+  data <- left_join(data, category_size, by=c("clean", "zone"))
+  data <- mutate(data, sample_count=sample_count/category_count)
   return(data)
 }
 
 vector_groupby_cumulative_distance <- function(data, grouping_cols){
-  grouping_cols <- grouping_cols[!grouping_cols %in% c("zone", "s_postcode")]
+  grouping_cols <- grouping_cols[!grouping_cols %in% c("zone", "s_postcode", "site_id", "c_id")]
   series_cols <- grouping_cols
   grouping_cols <- series_cols
+  data <- data[!is.na(data$s_postcode),]
+  data <- distinct(data, clean, c_id, .keep_all=TRUE)
   data <- mutate(data, num_disconnects=ifelse(response_category %in% c("4 Disconnect", "3 Drop to Zero"),1,0))
   data <- mutate(data, system_count=1)
   data <- data[order(data$distance),]
@@ -119,8 +126,8 @@ vector_groupby_cumulative_distance <- function(data, grouping_cols){
 vector_groupby_system <- function(data, grouping_cols){
   grouping_cols <- grouping_cols[!grouping_cols %in% c("site_id", "c_id")]
   series_cols <- grouping_cols
-  data <- group_by(data, .dots=c("site_id"))
-  data <- summarise(data , Standard_Version=first(Standard_Version), clean=first(clean),
+  data <- group_by(data, .dots=c("clean", "site_id"))
+  data <- summarise(data , Standard_Version=first(Standard_Version),
                     s_postcode=first(s_postcode), Grouping=first(Grouping), manufacturer=first(manufacturer), 
                     model=first(model), response_category=first(response_category),
                     zone=first(zone), sum_ac=first(sum_ac), lat=first(lat), lon=first(lon))
