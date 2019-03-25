@@ -322,7 +322,7 @@ server <- function(input,output,session){
       # Load postcode lat and long data
       postcode_data_file <- "PostcodesLatLongQGIS.csv"
       postcode_data <- read.csv(file=postcode_data_file, header=TRUE, stringsAsFactors = FALSE)
-      v$postcode_data <- mutate(postcode_data, postcode = as.character(postcode))
+      v$postcode_data <- process_postcode_data(postcode_data)
       removeNotification(id)
       
       # Perform data, processing and combine data table into a single data frame
@@ -535,7 +535,8 @@ server <- function(input,output,session){
       # Copy data for saving
       v$combined_data_f <- select(combined_data_f, ts, site_id, c_id, power_kW, v, f, s_state, s_postcode, 
                                   Standard_Version, Grouping, sum_ac, clean, manufacturer, model,
-                                  site_performance_factor, response_category, zone, distance, lat, lon)
+                                  site_performance_factor, response_category, zone, distance, lat, lon, e, con_type,
+                                  first_ac, polarity)
       # Create copy of filtered data to use in upscaling
       combined_data_f2 <- combined_data_f
       if(raw_upscale()){combined_data_f2 <- upscale(combined_data_f2, v$install_data)}

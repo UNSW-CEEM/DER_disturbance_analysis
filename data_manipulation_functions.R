@@ -153,6 +153,12 @@ size_grouping <- function(site_details){
   return(site_details)
 }
 
+process_postcode_data <-function(postcode_data){
+  postcode_data <- mutate(postcode_data, postcode = as.character(postcode))
+  postcode_data <- filter(postcode_data, !is.na(lat) & !is.na(lon))
+  return(postcode_data)
+}
+
 site_categorisation <- function(combined_data){
   # Processes installed month. Setting missing month values to jan 2005, and
   # using assumed day of month as the 28th. Then catergorising into stanard 
