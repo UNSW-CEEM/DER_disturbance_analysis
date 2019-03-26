@@ -126,13 +126,21 @@ vector_groupby_cumulative_distance <- function(data, grouping_cols){
 vector_groupby_system <- function(data, grouping_cols){
   grouping_cols <- grouping_cols[!grouping_cols %in% c("site_id", "c_id")]
   series_cols <- grouping_cols
-  data <- group_by(data, .dots=c("clean", "site_id"))
-  data <- summarise(data , Standard_Version=first(Standard_Version),
-                    s_postcode=first(s_postcode), Grouping=first(Grouping), manufacturer=first(manufacturer), 
-                    model=first(model), response_category=first(response_category),
-                    zone=first(zone), sum_ac=first(sum_ac), lat=first(lat), lon=first(lon))
+  if ("cleaned" %in% data$clean){
+    data = filter(data, clean=="cleaned")
+  } else {
+    data = filter(data, clean=="raw")
+  }
+  data <- distinct(data, c_id, .keep_all=TRUE)
+  data <- mutate(data, num_disconnects=ifelse(response_category %in% c("4 Disconnect", "3 Drop to Zero"),1,0))
+  data <- mutate(data, system_count=1)
+  data <- group_by(data, .dots=c("s_postcode"))
+  data <- summarise(data , num_disconnects=sum(num_disconnects), 
+                    system_count=sum(system_count), lat=first(lat), lon=first(lon))
+  data <- mutate(data, percentage_disconnect=round(num_disconnects/system_count, digits=2))
   data <- as.data.frame(data)
-  data$series <- do.call(paste, c(data[series_cols], sep = "-" ))
+  data$series <- data$percentage_disconnect
+  data$info <- do.call(paste, c(data[c("s_postcode", "percentage_disconnect", "system_count")], sep = "-" ))
   return(data)
 }
 

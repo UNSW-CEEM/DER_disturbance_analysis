@@ -20,6 +20,7 @@ library(ggmap)
 library(measurements)
 library(assertthat)
 library(geosphere)
+library(swfscMisc)
 source("data_manipulation_functions.R")
 source("aggregate_functions.R")
 source("upscale_function.R")
@@ -615,7 +616,20 @@ server <- function(input,output,session){
           output$save_distance_response <- renderUI({
             shinySaveButton("save_distance_response", "Save data", "Save file as ...", filetype=list(xlsx="csv"))
             })
-          output$map <- renderPlotly({plot_geo(geo_data, lat =~lat, lon =~lon, color =~series)})
+          z1<- data.frame(circle.polygon(event_longitude(), event_latitude(), zone_one_radius(), sides = 20, units='km'))
+          z2 <- data.frame(circle.polygon(event_longitude(), event_latitude(), zone_two_radius(), sides = 20, units='km'))
+          z3 <- data.frame(circle.polygon(event_longitude(), event_latitude(), zone_three_radius(), sides = 20, units='km'))
+          output$map <- renderPlotly({plot_geo(geo_data, lat=~lat, lon=~lon, color=~percentage_disconnect) %>%
+              add_polygons(x=~z1$x, y=~z1$y, inherit=FALSE, fillcolor='transparent', 
+                           line=list(width=2,color="black"), hoverinfo = "none", showlegend=FALSE) %>%
+              add_polygons(x=~z2$x, y=~z2$y, inherit=FALSE, fillcolor='transparent', 
+                           line=list(width=2,color="black"), hoverinfo = "none", showlegend=FALSE) %>%
+              add_polygons(x=~z3$x, y=~z3$y, inherit=FALSE, fillcolor='transparent', 
+                           line=list(width=2,color="black"), hoverinfo = "none", showlegend=FALSE) %>%
+              add_markers(x=~geo_data$lon, y=~geo_data$lat, color=~percentage_disconnect, inherit=FALSE, 
+                          hovertext=~geo_data$info, legendgroup = list(title = "Percentage Disconnects"))
+            })
+                
           removeNotification(id)
       } else {
         # If there is no data left after filtering alert the user and create an empty plot.
