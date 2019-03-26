@@ -14,8 +14,8 @@ group_site_details_to_one_row_per_site <- function(site_details){
   processed_site_details <- site_details %>%
     summarise(s_state=first(s_state), 
               pv_installation_year_month=first(pv_installation_year_month),
-              sum_ac=sum(ac), sum_dc=first(dc),
-              sum_ac_old=sum(ac_old), sum_dc_old=first(dc_old),
+              sum_ac=sum(ac), sum_dc=sum(dc),
+              sum_ac_old=sum(ac_old), sum_dc_old=sum(dc_old),
               ac_dc_ratio=mean(ac_dc_ratio),
               manufacturer=paste(manufacturer, collapse=' '),
               model=paste(model, collapse=' '), s_postcode=first(s_postcode),
@@ -25,14 +25,14 @@ group_site_details_to_one_row_per_site <- function(site_details){
 }
 
 site_details_data_cleaning <- function(performance_data, site_details){
-  # Find peak power per site for more checks
-  site_details <- group_site_details_to_one_row_per_site(site_details)
-  max_site_power <- calc_max_kw_per_site(performance_data)
-  site_details <- left_join(site_details, max_site_power, on=c("site_id"))
   # Record old ac and dc values.
   site_details <- mutate(site_details, ac_old=ac)
   site_details <- mutate(site_details, dc_old=dc)
   site_details <- check_for_ac_value_in_watts(site_details)
+  # Find peak power per site for more checks
+  site_details <- group_site_details_to_one_row_per_site(site_details)
+  max_site_power <- calc_max_kw_per_site(performance_data)
+  site_details <- left_join(site_details, max_site_power, on=c("site_id"))
   site_details <- check_for_peak_power_greater_than_dc_capacity(site_details)
   # Record if dc value was scaled or not.
   site_details <- mutate(site_details, change_dc=ifelse(sum_dc!=sum_dc_old,1,0))
@@ -59,7 +59,7 @@ check_for_ac_value_in_watts <- function(site_details){
   # Calculate helper value
   site_details <- mutate(site_details, ac_dc_ratio=ac/dc)
   # Check if ac value is in watts, if so devide by 1000.
-  site_details <- mutate(site_details, sum_ac=ifelse(ac_dc_ratio > 0.1 & ac > 150, ac/1000, ac))
+  site_details <- mutate(site_details, ac=ifelse(ac_dc_ratio > 0.1 & ac > 150, ac/1000, ac))
   return(site_details)
 }
 

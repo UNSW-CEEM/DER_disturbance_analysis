@@ -182,7 +182,7 @@ test_that("Test assertion of site data assumptions, ac can be converted to type 
   test_site_details <- data.frame(site_id, s_state, s_postcode, dc, ac, pv_installation_year_month, 
                                   manufacturer, model, stringsAsFactors = FALSE)
   expect_error(process_raw_site_details(test_site_details))
-           })
+})
 
 test_that("Test the preprocessing of the site_details data",{
   # Test input data
