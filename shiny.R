@@ -623,7 +623,7 @@ server <- function(input,output,session){
             })
           output$distance_response <- renderPlotly({
             plot_ly(v$distance_response, x=~distance, y=~percentage, color=~series, type="scattergl") %>% 
-              layout(yaxis=list(title="Cumlative circuits / Cumulative disconnects \n (Includes response categories 3 and 4)"),
+              layout(yaxis=list(title="Cumlative  disconnects / Cumulative circuits \n (Includes response categories 3 and 4)"),
                      xaxis=list(title="Distance from event (km)"))
             })
           output$save_distance_response <- renderUI({
