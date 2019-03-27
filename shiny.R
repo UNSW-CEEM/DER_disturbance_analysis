@@ -257,12 +257,18 @@ server <- function(input,output,session){
         removeNotification(id)
       }else{
         id <- showNotification("Loading timeseries data from csv", duration=1000)
-        time_series_data <- read.csv(file=time_series_file(), header=TRUE, 
+        ts_data <- read.csv(file=time_series_file(), header=TRUE, 
                                      stringsAsFactors = FALSE)
         removeNotification(id)
         id <- showNotification("Formatting timeseries data and 
                                 creating feather cache file", duration=1000)
         # Data from CSV is assumed to need processing.
+        if ('utc_tstamp' %in% colnames(ts_data)) {ts_data <- setnames(ts_data, c("utc_tstamp"), c("ts"))}
+        if ('voltage' %in% colnames(ts_data)) {ts_data <- setnames(ts_data, c("voltage"), c("v"))}
+        if ('frequency' %in% colnames(ts_data)) {ts_data <- setnames(ts_data, c("frequency"), c("f"))}
+        if ('energy' %in% colnames(ts_data)) {ts_data <- setnames(ts_data, c("energy"), c("e"))}
+        if ('duration' %in% colnames(ts_data)) {ts_data <- setnames(ts_data, c("duration"), c("d"))}
+        time_series_data <- ts_data
         time_series_data <- time_series_data %>% distinct(c_id, ts, .keep_all=TRUE)
         time_series_data <- mutate(time_series_data, c_id = as.character(c_id))
         time_series_data <- process_raw_time_series_data(time_series_data)
@@ -292,8 +298,15 @@ server <- function(input,output,session){
         removeNotification(id)
       }else{
         id <- showNotification("Loading site details from csv", duration=1000)
-        v$site_details_raw <- read.csv(file=site_details_file(), header=TRUE, 
-                                 stringsAsFactors = FALSE)
+        sd_data <- read.csv(file=site_details_file(), header=TRUE, stringsAsFactors = FALSE)
+        if ('State' %in% colnames(sd_data)) {sd_data <- setnames(sd_data, c("State"), c("s_state"))}
+        if ('AC.Rating.kW.' %in% colnames(sd_data)) {sd_data <- setnames(sd_data, c("AC.Rating.kW."), c("ac"))}
+        if ('DC.Rating.kW.' %in% colnames(sd_data)) {sd_data <- setnames(sd_data, c("DC.Rating.kW."), c("dc"))}
+        if ('inverter_manufacturer' %in% colnames(sd_data)) {
+          sd_data <- setnames(sd_data, c("inverter_manufacturer"), c("manufacturer"))
+        }
+        if ('inverter_model' %in% colnames(sd_data)) {sd_data <- setnames(sd_data, c("inverter_model"), c("model"))}
+        v$site_details_raw <- sd_data
         v$site_details_raw <- v$site_details_raw %>% mutate(site_id = as.character(site_id))
         # Older site details proided the day of installation not just the month. We 
         # change the name of the column to match the new format which is just by 
@@ -616,15 +629,15 @@ server <- function(input,output,session){
           output$save_distance_response <- renderUI({
             shinySaveButton("save_distance_response", "Save data", "Save file as ...", filetype=list(xlsx="csv"))
             })
-          z1<- data.frame(circle.polygon(event_longitude(), event_latitude(), zone_one_radius(), sides = 20, units='km'))
-          z2 <- data.frame(circle.polygon(event_longitude(), event_latitude(), zone_two_radius(), sides = 20, units='km'))
-          z3 <- data.frame(circle.polygon(event_longitude(), event_latitude(), zone_three_radius(), sides = 20, units='km'))
+          z1<- data.frame(circle.polygon(event_longitude(), event_latitude(), zone_one_radius(), sides = 20, units='km', poly.type = "gc.earth"))
+          z2 <- data.frame(circle.polygon(event_longitude(), event_latitude(), zone_two_radius(), sides = 20, units='km', poly.type = "gc.earth"))
+          z3 <- data.frame(circle.polygon(event_longitude(), event_latitude(), zone_three_radius(), sides = 20, units='km', poly.type = "gc.earth"))
           output$map <- renderPlotly({plot_geo(geo_data, lat=~lat, lon=~lon, color=~percentage_disconnect) %>%
-              add_polygons(x=~z1$x, y=~z1$y, inherit=FALSE, fillcolor='transparent', 
+              add_polygons(x=~z1$lon, y=~z1$lat, inherit=FALSE, fillcolor='transparent', 
                            line=list(width=2,color="black"), hoverinfo = "none", showlegend=FALSE) %>%
-              add_polygons(x=~z2$x, y=~z2$y, inherit=FALSE, fillcolor='transparent', 
+              add_polygons(x=~z2$lon, y=~z2$lat, inherit=FALSE, fillcolor='transparent', 
                            line=list(width=2,color="black"), hoverinfo = "none", showlegend=FALSE) %>%
-              add_polygons(x=~z3$x, y=~z3$y, inherit=FALSE, fillcolor='transparent', 
+              add_polygons(x=~z3$lon, y=~z3$lat, inherit=FALSE, fillcolor='transparent', 
                            line=list(width=2,color="black"), hoverinfo = "none", showlegend=FALSE) %>%
               add_markers(x=~geo_data$lon, y=~geo_data$lat, color=~percentage_disconnect, inherit=FALSE, 
                           hovertext=~geo_data$info, legendgroup = list(title = "Percentage Disconnects"))

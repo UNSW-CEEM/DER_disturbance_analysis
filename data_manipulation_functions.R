@@ -5,12 +5,16 @@ process_raw_time_series_data <- function(time_series_data){
   time_series_data <- time_series_data[!time_series_data$c_id=="c_id",]
   # If a data record does not have a specified duration assume it is equal to 
   # 5 s.
-  time_series_data$d[is.na(time_series_data$d)] <- "5.0"
-  time_series_data$d[time_series_data$d == ""] <- "5.0"
+  #time_series_data$d[is.na(time_series_data$d)] <- "5.0"
+  #time_series_data$d[time_series_data$d == ""] <- "5.0"
   # Convert data that comes as strings to numeric where applicable.
-  time_series_data <- time_series_data %>%  mutate(d = as.numeric(d))
+  #time_series_data <- time_series_data %>%  mutate(d = as.numeric(d))
   # Convert time stamp to date time object assuming UTC time is being used.
   time_series_data <- time_series_data %>%  mutate(ts = fastPOSIXct(ts))
+  time_series_durations = group_by(time_series_data, c_id)
+  time_series_durations <- summarise(time_series_durations, d2=duration_mode(ts))
+  time_series_data <- left_join(time_series_data, time_series_durations, by="c_id")
+  time_series_data <- time_series_data %>%  mutate(d = d2)
   # Assert assumptions about data set
   assert_raw_time_series_assumptions(time_series_data)
   # Change time zone to NEM standard time.
@@ -34,8 +38,8 @@ assert_raw_time_series_assumptions <- function(raw_time_series_data){
   # We assume that all values in the "e" column can be safely converted to numeric type
   assert_that(all(!is.na(as.numeric(raw_time_series_data$e))), msg="Not all e values could be interprested as numbers")
   # We assume after interpreting NAs as 5 s data that all duration data should equal 60, 30 or 5
-  assert_that(all(raw_time_series_data$d==5 | raw_time_series_data$d==30 | raw_time_series_data$d==60), 
-              msg="Not all duration values are 5, 30 or 60")
+  #assert_that(all(raw_time_series_data$d==5 | raw_time_series_data$d==30 | raw_time_series_data$d==60), 
+  #              msg="Not all duration values are 5, 30 or 60")
 }
 
 process_raw_circuit_details <- function(circuit_details){
@@ -154,9 +158,19 @@ size_grouping <- function(site_details){
 }
 
 process_postcode_data <-function(postcode_data){
+  assert_postcode_data_assumptions(postcode_data)
   postcode_data <- mutate(postcode_data, postcode = as.character(postcode))
   postcode_data <- filter(postcode_data, !is.na(lat) & !is.na(lon))
   return(postcode_data)
+}
+
+assert_postcode_data_assumptions <- function(postcode_data){
+  # We assume that all values in the lat column can be safely converted to numeric type
+  assert_that(all(!is.na(as.numeric(postcode_data$lat))), msg="Not all lat values could be interprested as numbers")
+  # We assume that all values in the lon column can be safely converted to numeric type
+  assert_that(all(!is.na(as.numeric(postcode_data$lon))), msg="Not all lat values could be interprested as numbers")
+  # We assume that all values in the s_postcode column can be safely converted to numeric type
+  assert_that(all(!is.na(as.numeric(postcode_data$postcode))), msg="Not all s_postcode values could be interprested as numbers")
 }
 
 site_categorisation <- function(combined_data){
@@ -166,6 +180,9 @@ site_categorisation <- function(combined_data){
   combined_data <- combined_data %>%
     mutate(pv_installation_year_month=
              ifelse(pv_installation_year_month=="", "2015-11", 
+                    pv_installation_year_month)) %>%
+    mutate(pv_installation_year_month=
+             ifelse(pv_installation_year_month=="NaT", "2015-11", 
                     pv_installation_year_month)) %>% 
     mutate(pv_installation_year_month=
              ifelse(pv_installation_year_month=="0/01/1900", "2015-11", 
@@ -207,4 +224,17 @@ combine_data_tables <- function(time_series_data, circuit_details,
   time_series_data <- inner_join(time_series_data, site_details, by="site_id")
   time_series_data <- perform_power_calculations(time_series_data)
   return(time_series_data)
+}
+
+get_mode <- function(x) {
+  ux <- unique(x)
+  ux[which.max(tabulate(match(x, ux)))]
+}
+
+duration_mode <- function(time_vector){
+  ds <- c()
+  time_vector <- sort(time_vector)
+  ds <- as.numeric(diff(time_vector), units='secs')
+  mode_ds <- get_mode(ds)
+  return(mode_ds)
 }

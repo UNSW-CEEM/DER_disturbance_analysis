@@ -20,6 +20,7 @@ library(suncalc)
 library(ggmap)
 library(measurements)
 library(assertthat)
+library(geosphere)
 source("distance_from_event.R")
 
 test_that("Test the calculation of the distance between two sets of latitude and longditude" ,{

@@ -1,4 +1,3 @@
-context("Testing the DER event analysis aggregation functions")
 ##RSHINY APP
 library (shiny)
 library(shinyTime)
@@ -20,7 +19,11 @@ library(suncalc)
 library(ggmap)
 library(measurements)
 library(assertthat)
+library(testthat)
 source("aggregate_functions.R")
+
+context("Testing the DER event analysis aggregation functions")
+
 
 test_that("Test the group by for power with just standard version" ,{
   input <- "C:/Users/user/Documents/GitHub/DER_disturbance_analysis/auto_test_data/test_agg_data.csv"
@@ -299,53 +302,9 @@ test_that("Test the group by for zone count with just standard version" ,{
   out <- vector_groupby_count_zones(input, group_cols)
   expected_output <- "C:/Users/user/Documents/GitHub/DER_disturbance_analysis/auto_test_data/test_out_21.csv"
   expected_output <- read.csv(file=expected_output, header=TRUE, stringsAsFactors = FALSE)
-  expected_output <- mutate(expected_output, zone=ifelse(zone=='NA',NA,zone))
-  out <- out[order(out$series_x, out$series_y),]
-  rownames(out) <- NULL
-  expected_output <- expected_output[order(expected_output$series_x, expected_output$series_y),]
-  rownames(expected_output) <- NULL
-  expect_equal(out, expected_output, tolerance=0.001)
-})
-
-test_that("Test the group by for zone count with standard version and manufacturer" ,{
-  input <- "C:/Users/user/Documents/GitHub/DER_disturbance_analysis/auto_test_data/test_agg_data.csv"
-  input <- read.csv(file=input, header=TRUE, stringsAsFactors = FALSE)
-  group_cols <- c("clean", "Standard_Version", "manufacturer")
-  out <- vector_groupby_count_zones(input, group_cols)
-  expected_output <- "C:/Users/user/Documents/GitHub/DER_disturbance_analysis/auto_test_data/test_out_22.csv"
-  expected_output <- read.csv(file=expected_output, header=TRUE, stringsAsFactors = FALSE)
-  expected_output <- mutate(expected_output, zone=ifelse(zone=='NA',NA,zone))
-  out <- out[order(out$series_x, out$series_y),]
-  rownames(out) <- NULL
-  expected_output <- expected_output[order(expected_output$series_x, expected_output$series_y),]
-  rownames(expected_output) <- NULL
-  expect_equal(out, expected_output, tolerance=0.001)
-})
-
-test_that("Test the group by for zone count with site_id and c_id" ,{
-  input <- "C:/Users/user/Documents/GitHub/DER_disturbance_analysis/auto_test_data/test_agg_data.csv"
-  input <- read.csv(file=input, header=TRUE, stringsAsFactors = FALSE)
-  group_cols <- c("clean", "site_id", "c_id")
-  out <- vector_groupby_count_zones(input, group_cols)
-  expected_output <- "C:/Users/user/Documents/GitHub/DER_disturbance_analysis/auto_test_data/test_out_23.csv"
-  expected_output <- read.csv(file=expected_output, header=TRUE, stringsAsFactors = FALSE)
-  expected_output <- mutate(expected_output, zone=ifelse(zone=='NA',NA,zone))
-  out <- out[order(out$series_x, out$series_y),]
-  rownames(out) <- NULL
-  expected_output <- mutate(expected_output, series_y=as.character(series_y))
-  expected_output <- expected_output[order(expected_output$series_x, expected_output$series_y),]
-  rownames(expected_output) <- NULL
-  expect_equal(out, expected_output, tolerance=0.001)
-})
-
-test_that("Test the group by for zone count with just clean" ,{
-  input <- "C:/Users/user/Documents/GitHub/DER_disturbance_analysis/auto_test_data/test_agg_data.csv"
-  input <- read.csv(file=input, header=TRUE, stringsAsFactors = FALSE)
-  group_cols <- c("clean")
-  out <- vector_groupby_count_zones(input, group_cols)
-  expected_output <- "C:/Users/user/Documents/GitHub/DER_disturbance_analysis/auto_test_data/test_out_24.csv"
-  expected_output <- read.csv(file=expected_output, header=TRUE, stringsAsFactors = FALSE)
-  expected_output <- mutate(expected_output, zone=ifelse(zone=='NA',NA,zone))
+  expected_output <- mutate(expected_output, zone=ifelse(zone=='NA', NA, zone))
+  expected_output <- mutate(expected_output, response_category=ifelse(response_category=='NA', NA, response_category))
+  expected_output <- mutate(expected_output, series_y=ifelse(is.na(series_y), 'NA', series_y))
   out <- out[order(out$series_x, out$series_y),]
   rownames(out) <- NULL
   expected_output <- expected_output[order(expected_output$series_x, expected_output$series_y),]
@@ -416,51 +375,9 @@ test_that("Test the group by for geo data with just standard version" ,{
   out <- vector_groupby_system(input, group_cols)
   expected_output <- "C:/Users/user/Documents/GitHub/DER_disturbance_analysis/auto_test_data/test_out_29.csv"
   expected_output <- read.csv(file=expected_output, header=TRUE, stringsAsFactors = FALSE)
-  out <- out[order(out$site_id),]
+  out <- out[order(out$s_postcode),]
   rownames(out) <- NULL
-  expected_output <- expected_output[order(expected_output$site_id),]
-  rownames(expected_output) <- NULL
-  expect_equal(out, expected_output, tolerance=0.001)
-})
-
-test_that("Test the group by for geo data with standard version and manufacturer" ,{
-  input <- "C:/Users/user/Documents/GitHub/DER_disturbance_analysis/auto_test_data/test_agg_data.csv"
-  input <- read.csv(file=input, header=TRUE, stringsAsFactors = FALSE)
-  group_cols <- c("clean", "Standard_Version", "manufacturer")
-  out <- vector_groupby_system(input, group_cols)
-  expected_output <- "C:/Users/user/Documents/GitHub/DER_disturbance_analysis/auto_test_data/test_out_30.csv"
-  expected_output <- read.csv(file=expected_output, header=TRUE, stringsAsFactors = FALSE)
-  out <- out[order(out$site_id),]
-  rownames(out) <- NULL
-  expected_output <- expected_output[order(expected_output$site_id),]
-  rownames(expected_output) <- NULL
-  expect_equal(out, expected_output, tolerance=0.001)
-})
-
-test_that("Test the group by for geo data with site_id and c_id" ,{
-  input <- "C:/Users/user/Documents/GitHub/DER_disturbance_analysis/auto_test_data/test_agg_data.csv"
-  input <- read.csv(file=input, header=TRUE, stringsAsFactors = FALSE)
-  group_cols <- c("clean", "site_id", "c_id")
-  out <- vector_groupby_system(input, group_cols)
-  expected_output <- "C:/Users/user/Documents/GitHub/DER_disturbance_analysis/auto_test_data/test_out_31.csv"
-  expected_output <- read.csv(file=expected_output, header=TRUE, stringsAsFactors = FALSE)
-  out <- out[order(out$site_id),]
-  rownames(out) <- NULL
-  expected_output <- expected_output[order(expected_output$site_id),]
-  rownames(expected_output) <- NULL
-  expect_equal(out, expected_output, tolerance=0.001)
-})
-
-test_that("Test the group by for geo data with just clean" ,{
-  input <- "C:/Users/user/Documents/GitHub/DER_disturbance_analysis/auto_test_data/test_agg_data.csv"
-  input <- read.csv(file=input, header=TRUE, stringsAsFactors = FALSE)
-  group_cols <- c("clean")
-  out <- vector_groupby_system(input, group_cols)
-  expected_output <- "C:/Users/user/Documents/GitHub/DER_disturbance_analysis/auto_test_data/test_out_32.csv"
-  expected_output <- read.csv(file=expected_output, header=TRUE, stringsAsFactors = FALSE)
-  out <- out[order(out$site_id),]
-  rownames(out) <- NULL
-  expected_output <- expected_output[order(expected_output$site_id),]
+  expected_output <- expected_output[order(expected_output$s_postcode),]
   rownames(expected_output) <- NULL
   expect_equal(out, expected_output, tolerance=0.001)
 })

@@ -377,3 +377,42 @@ test_that("Install data processing works on simple case", {
   expect_identical(answer, expected_answer)
 })
 
+test_that("Test assertion of s_postcode data assumptions, postcode can be interpreted as numeric",{
+  # Test input data
+  postcode <- c("101", "101", "x")
+  lat <- c("1015.0", "1", "5")
+  lon <- c("60", "60", "1")
+  postcode_data <- data.frame(postcode, lat, lon, stringsAsFactors = FALSE)
+  # Test output data
+  expect_error(process_postcode_data(postcode_data))
+})
+
+test_that("Test assertion of s_postcode data assumptions, lat can be interpreted as numeric",{
+  # Test input data
+  postcode <- c("101", "101", "1")
+  lat <- c("1015.0", "1", "x")
+  lon <- c("60", "60", "1")
+  postcode_data <- data.frame(postcode, lat, lon, stringsAsFactors = FALSE)
+  # Test output data
+  expect_error(process_postcode_data(postcode_data))
+})
+
+test_that("Test assertion of s_postcode data assumptions, lon can be interpreted as numeric",{
+  # Test input data
+  postcode <- c("101", "101", "1")
+  lat <- c("1015.0", "1", "1")
+  lon <- c("60", "", "1")
+  postcode_data <- data.frame(postcode, lat, lon, stringsAsFactors = FALSE)
+  # Test output data
+  expect_error(process_postcode_data(postcode_data))
+})
+
+test_that("Test the calc of duration modes",{
+  # Test input data
+  ts <- c("2018-01-01 00:01:00", "2018-01-01 00:02:00", "2018-01-01 00:03:00")
+  ts <- as.POSIXct(strptime(ts, "%Y-%m-%d %H:%M:%S", tz="Australia/Brisbane"))
+  # Call processing function
+  out = duration_mode(ts)
+  # Test the answer matches the expected answer
+  expect_identical(out, 60)
+})
