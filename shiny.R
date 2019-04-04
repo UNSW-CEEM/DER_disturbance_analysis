@@ -21,6 +21,7 @@ library(measurements)
 library(assertthat)
 library(geosphere)
 library(swfscMisc)
+library(padr)
 source("data_manipulation_functions.R")
 source("aggregate_functions.R")
 source("upscale_function.R")
@@ -29,6 +30,7 @@ source("normalised_power_function.R")
 source("response_categorisation_function.R")
 source("distance_from_event.R")
 source("documentation.R")
+source("ideal_response_functions.R")
 
 ui <- fluidPage(
   tags$head(
@@ -54,8 +56,7 @@ ui <- fluidPage(
                     value="C:/Users/user/Documents/GitHub/DER_disturbance_analysis/test_data/2018-08-25 aemo data/circuit_details.csv"
           ),
 
-          shinyFilesButton("choose_c", "Choose File", 
-                           "Select circuit details data file ...", multiple=FALSE
+          shinyFilesButton("choose_c", "Choose File", "Select circuit details data file ...", multiple=FALSE
           ),
           HTML("<br><br>"),
           textInput("site_details", "Site details file", 
@@ -63,7 +64,15 @@ ui <- fluidPage(
           ),
           shinyFilesButton("choose_site", "Choose File", "Select site details data file ...", multiple=FALSE),
           HTML("<br><br>"),
-          radioButtons("duration", label=strong("Sampled duration (seconds), select one"), choices = list("5","30","60"), 
+          textInput("frequency_data", "Frequency data file", 
+                    value="C:/Users/user/Documents/GitHub/DER_disturbance_analysis/frequency_data_sa_2018_08_25.csv"
+          ),
+          shinyFilesButton("choose_frequency_data", "Choose File", "Select fequency data file ...", multiple=FALSE),
+          HTML("<br><br>"),
+          radioButtons("duration", label=strong("Sampled duration (seconds), select one. 
+                                                Note durations are calculated based on 
+                                                most frequently occuring time between  
+                                                measurements for each c_id."), choices = list("5","30","60"), 
                        selected = "60", inline = TRUE),
           materialSwitch(inputId="perform_clean", label=strong("Perform Clean"), status="primary", right=FALSE),
           actionButton("load_data", "Load data"),
@@ -80,11 +89,13 @@ ui <- fluidPage(
           uiOutput("size_groupings"),
           uiOutput("responses"),
           uiOutput("zones"),
+          uiOutput("compliance"),
           uiOutput("postcodes"),
           uiOutput("manufacturers"),
           uiOutput("models"),
           uiOutput("sites"),
           uiOutput("circuits"),
+          uiOutput("offsets"),
           tags$hr(),
           h4("Grouping Categories"),
           materialSwitch("Std_Agg_Indiv", label=strong("AS4777:"), status="primary", value=TRUE),
@@ -95,6 +106,7 @@ ui <- fluidPage(
           materialSwitch("model_agg", label=strong("Models:"), status="primary", value=FALSE),
           materialSwitch("circuit_agg", label=strong("Circuits:"), status="primary", value=FALSE),
           materialSwitch("zone_agg", label=strong("Zones:"), status="primary", value=FALSE),
+          materialSwitch("compliance_agg", label=strong("Compliance:"), status="primary", value=FALSE),
           tags$hr(),
           h4("Additional Processing"),
           materialSwitch(inputId="raw_upscale", label=strong("Upscaled Data"), status="primary", right=FALSE),
@@ -160,11 +172,13 @@ server <- function(input,output,session){
   hide("model_agg")
   hide("circuit_agg")
   hide("zone_agg")
+  hide("compliance_agg")
   options(DT.options = list(pageLength = 3))
   # Get input from GUI
   time_series_file <- reactive({input$time_series})
   circuit_details_file <- reactive({input$circuit_details})
   site_details_file <- reactive({input$site_details})
+  frequency_data_file <- reactive({input$frequency_data})
   region <- reactive({input$region})
   duration <- reactive({input$duration})
   standards <- reactive({input$StdVersion})
@@ -175,6 +189,8 @@ server <- function(input,output,session){
   sites <- reactive({input$sites})
   circuits <- reactive({input$circuits})
   zones <- reactive({input$zones})
+  compliance <- reactive({input$compliance})
+  offsets <- reactive({input$offsets})
   size_groupings <- reactive({input$size_groupings})
   clean <- reactive({input$cleaned})
   raw_upscale <- reactive({input$raw_upscale})
@@ -186,6 +202,7 @@ server <- function(input,output,session){
   model_agg <- reactive({input$model_agg})
   circuit_agg <- reactive({input$circuit_agg})
   zone_agg <- reactive({input$zone_agg})
+  compliance_agg <- reactive({input$compliance_agg})
   start_time <- reactive({
     date_as_str <- as.character(input$date[1])
     time_as_str <- substr(input$time_start, 12,19)
@@ -236,7 +253,9 @@ server <- function(input,output,session){
                       postcode_data = data.frame(),
                       response_count = data.frame(),
                       zone_count = data.frame(),
-                      distance_response = data.frame()
+                      distance_response = data.frame(),
+                      frequency_data = data.frame(),
+                      uniqe_offsets = c()
                       )
   
   # This is the event that runs when the "Load data" button on the GUI is
@@ -345,8 +364,15 @@ server <- function(input,output,session){
       v$combined_data <- v$combined_data %>% mutate(clean="raw")
       v$combined_data <- select(v$combined_data, c_id, ts, v, f, d, site_id, e, con_type, s_state, s_postcode, 
                                 Standard_Version, Grouping, polarity, first_ac,power_kW, clean, manufacturer, model, 
-                                sum_ac)
+                                sum_ac, time_offset)
       removeNotification(id)
+      
+      if(frequency_data_file()!=''){
+        v$frequency_data <- read.csv(file=frequency_data_file(), header=TRUE, stringsAsFactors = FALSE)
+        v$frequency_data <- mutate(v$frequency_data, 
+                                   ts=as.POSIXct(strptime(ts, "%Y-%m-%d %H:%M:%S", tz="Australia/Brisbane")))
+      }
+      
       if (perform_clean()){
         id <- showNotification("Cleaning data", duration=1000)
         # Clean site details data
@@ -372,7 +398,7 @@ server <- function(input,output,session){
         combined_data_after_clean <- combined_data_after_clean %>% mutate(clean="cleaned")
         combined_data_after_clean <- select(combined_data_after_clean, c_id, ts, v, f, d, site_id, e, con_type,
                                             s_state, s_postcode, Standard_Version, Grouping, polarity, first_ac,
-                                            power_kW, clean, manufacturer, model, sum_ac)
+                                            power_kW, clean, manufacturer, model, sum_ac, time_offset)
         v$combined_data <- rbind(v$combined_data, combined_data_after_clean)
         remove(combined_data_after_clean)
         removeNotification(id)
@@ -380,6 +406,11 @@ server <- function(input,output,session){
         # Don't let the user crash the tool by trying to save data that doesn't exist
         hide("save_cleaned_data")
       }
+      
+      # Get offset filter options and label
+      v$unique_offsets <- get_time_series_unique_offsets(v$combined_data)
+      sample_counts <- get_offset_sample_counts(v$combined_data, v$unique_offsets)
+      unique_offsets_filter_label <- make_offset_filter_label(sample_counts, v$unique_offsets)
       
       # Filtering option widgets are rendered after the data is loaded, this is 
       # because they are only usable once there is data to filter. Additionally
@@ -455,7 +486,20 @@ server <- function(input,output,session){
                              selected=list("1 Zone", "2 Zone", "3 Zone"), justified=TRUE, status="primary", 
                              individual=TRUE,
                              checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")))
-      })        
+      })
+      output$compliance <- renderUI({
+        checkboxGroupButtons(inputId="compliance", label=strong("Compliance"), 
+                             choices=list("Compliant", "Ambigous", "Above Ideal Response", "Non Complinant", "Undefined"),
+                             selected=list("Compliant", "Ambigous", "Above Ideal Response", "Non Complinant", "Undefined"), 
+                             justified=TRUE, status="primary", individual=TRUE,
+                             checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")))
+      })  
+      output$offsets <- renderUI({
+        checkboxGroupButtons(inputId="offsets", label=unique_offsets_filter_label, 
+                             choices=v$unique_offsets, selected=c(v$unique_offsets[which.max(sample_counts)]) ,
+                             justified=TRUE, status="primary", individual=TRUE,
+                             checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")))
+      }) 
       shinyjs::show("raw_upscale")
       shinyjs::show("pst_agg")
       shinyjs::show("grouping_agg")
@@ -464,6 +508,7 @@ server <- function(input,output,session){
       shinyjs::show("response_agg")
       shinyjs::show("circuit_agg")
       shinyjs::show("zone_agg")
+      shinyjs::show("compliance_agg")
       output$event_date <- renderUI({
         dateInput("event_date", label=strong('Event date (yyyy-mm-dd):'), 
                   value=floor_date(min(v$combined_data$ts), "day"), startview="year")
@@ -505,6 +550,12 @@ server <- function(input,output,session){
   observeEvent(input$update_plots, {
     id <- showNotification("Updating plots", duration=1000)
     
+    # Get ideal response.
+    temp_f_data <- select(v$frequency_data, ts, region()) 
+    temp_f_data <- setnames(temp_f_data, c(region()), c("f"))
+    temp_f_data <- mutate(temp_f_data, f=as.numeric(f))
+    ideal_response_to_plot <- ideal_response(temp_f_data)
+    
     # Perform filtering step
     combined_data_f <- filter(v$combined_data, sum_ac<=100)
     combined_data_f <- filter(combined_data_f, s_state==region())
@@ -523,34 +574,47 @@ server <- function(input,output,session){
     combined_data_f <- get_distance_from_event(combined_data_f, v$postcode_data, event_latitude(), event_longitude())
     combined_data_f <- get_zones(combined_data_f, zone_one_radius(), zone_two_radius(), zone_three_radius())
     if (length(zones()) < 3) { combined_data_f <- filter(combined_data_f, zone %in% zones())}
+    #if (length(offsets()) < length(v$uniqe_offsets)) { 
+    combined_data_f <- filter(combined_data_f, time_offset %in% offsets())
+      #}
   
     # Decide if the settings mean no grouping is being performed.
-    if (agg_on_standard()==FALSE & pst_agg()==FALSE & grouping_agg()==FALSE & 
-        manufacturer_agg()==FALSE & model_agg()==FALSE & zone_agg()==FALSE & circuit_agg()==TRUE){
+    if (agg_on_standard()==FALSE & pst_agg()==FALSE & grouping_agg()==FALSE & manufacturer_agg()==FALSE & 
+        model_agg()==FALSE & zone_agg()==FALSE & circuit_agg()==TRUE & compliance_agg()==TRUE){
       no_grouping=TRUE
     } else {
       no_grouping=FALSE
     }
     
+    # Calaculate the site peformance factors.
+    id2 <- showNotification("Calculating site performance factors", duration=1000)
+    combined_data_f <- calc_site_performance_factors(combined_data_f)
+    combined_data_f <- setnames(combined_data_f, c("ts"), c("Time"))
+    combined_data_f <- event_normalised_power(combined_data_f, event_time(), keep_site_id=TRUE)
+    combined_data_f <- setnames(combined_data_f, c("Event_Normalised_Power_kW"), c("Site_Event_Normalised_Power_kW"))
+    combined_data_f <- setnames(combined_data_f, c("Time"), c("ts"))
+    ideal_response_downsampled <- down_sample_1s(ideal_response_to_plot, duration(), min(combined_data_f$ts))
+    combined_data_f <- calc_error_metric_and_compliance(combined_data_f, ideal_response_downsampled)
+    if (length(compliance()) < 5) {combined_data_f <- filter(combined_data_f, compliance_status %in% compliance())}
+    removeNotification(id2)
+    
+    
     # Count samples in each data series to be displayed
     grouping_cols <- find_grouping_cols(agg_on_standard=agg_on_standard(), pst_agg=pst_agg(), 
                                         grouping_agg=grouping_agg(), manufacturer_agg=manufacturer_agg(), 
-                                        model_agg=model_agg(), circuit_agg(), response_agg(), zone_agg())
+                                        model_agg=model_agg(), circuit_agg(), response_agg(), zone_agg(),
+                                        compliance_agg())
     v$sample_count_table <- vector_groupby_count(combined_data_f, grouping_cols)
     
     # Procced to  aggregation and plotting only is there is less than 1000 data series to plot, else stop and notify the
     # user.
     if ((sum(v$sample_count_table$sample_count)<1000 & no_grouping) | 
         (length(v$sample_count_table$sample_count)<1000 & !no_grouping)){
-      # Calaculate the site peformance factors.
-      id2 <- showNotification("Calculating site performance factors", duration=1000)
-      combined_data_f <- calc_site_performance_factors(combined_data_f)
-      removeNotification(id2)
       # Copy data for saving
       v$combined_data_f <- select(combined_data_f, ts, site_id, c_id, power_kW, v, f, s_state, s_postcode, 
                                   Standard_Version, Grouping, sum_ac, clean, manufacturer, model,
                                   site_performance_factor, response_category, zone, distance, lat, lon, e, con_type,
-                                  first_ac, polarity)
+                                  first_ac, polarity, compliance_status)
       # Create copy of filtered data to use in upscaling
       combined_data_f2 <- combined_data_f
       if(raw_upscale()){combined_data_f2 <- upscale(combined_data_f2, v$install_data)}
@@ -594,6 +658,8 @@ server <- function(input,output,session){
             })
           output$NormPower <- renderPlotly({
             plot_ly(agg_norm_power, x=~Time, y=~Event_Normalised_Power_kW, color=~series, type="scattergl") %>% 
+              add_trace(x=~ideal_response_to_plot$ts, y=~ideal_response_to_plot$norm_power, name='Ideal Response', 
+                        mode='markers', inherit=FALSE) %>%
               layout(yaxis=list(title="Average site performance factor \n normalised to value of pre-event interval"))
             })
           output$ResponseCount <- renderPlotly({
@@ -615,7 +681,9 @@ server <- function(input,output,session){
             shinySaveButton("save_zone_count", "Save data", "Save file as ...", filetype=list(xlsx="csv"))
             })
           output$Frequency <- renderPlotly({
-            plot_ly(v$agg_power, x=~Time, y=~Frequency, color=~series, type="scattergl") %>% 
+            plot_ly(v$agg_power, x=~Time, y=~Frequency, color=~series, type="scattergl")%>% 
+              add_trace(x=~v$frequency_data$ts, y=~temp_f_data$f, name='High Speed Data', 
+                        mode='markers', inherit=FALSE) %>% 
               layout(yaxis=list(title="Average frequency (Hz)"))
             })
           output$Voltage <- renderPlotly({plot_ly(v$agg_power, x=~Time, y=~Voltage, color=~series, type="scattergl") %>% 
@@ -640,7 +708,8 @@ server <- function(input,output,session){
               add_polygons(x=~z3$lon, y=~z3$lat, inherit=FALSE, fillcolor='transparent', 
                            line=list(width=2,color="black"), hoverinfo = "none", showlegend=FALSE) %>%
               add_markers(x=~geo_data$lon, y=~geo_data$lat, color=~percentage_disconnect, inherit=FALSE, 
-                          hovertext=~geo_data$info, legendgroup = list(title = "Percentage Disconnects"))
+                          hovertext=~geo_data$info, legendgroup = list(title = "Percentage Disconnects")) %>%
+              layout(xaxis = list(title = 'Disconnects include categories 3 and 4'))
             })
                 
           removeNotification(id)
@@ -733,6 +802,14 @@ server <- function(input,output,session){
     shinyFileChoose(input, "choose_site", roots=volumes, session=session)
     fileinfo <- parseFilePaths(volumes, input$choose_site)
     if (nrow(fileinfo) > 0) {updateTextInput(session, "site_details", value=as.character(fileinfo$datapath))}
+  })
+  
+  # frequency file selection pop up.
+  observe({
+    volumes <- getVolumes()
+    shinyFileChoose(input, "choose_frequency_data", roots=volumes, session=session)
+    fileinfo <- parseFilePaths(volumes, input$choose_frequency_data)
+    if (nrow(fileinfo) > 0) {updateTextInput(session, "frequency_data", value=as.character(fileinfo$datapath))}
   })
   
   # Inforce mutual exclusivity of Aggregation settings

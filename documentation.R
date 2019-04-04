@@ -25,8 +25,6 @@ documentation_panel <- function(){
   div('Circuits can be assigned one of 5 zone categories, zones 1 to 3 are assigned to circuits between the outer radius 
       of zone and the outer radius of the lower zone. The "undefined" zone is assigned to circuits outside the outer
       radius of zone 3. The "NA" zone is assigned to circuits with no location data, i.e. no postcode. Note circuit 
-      locations are based on the centroid their site\'s postcode.'),
-  h3('Other Notes'),
-  h4('Failure tool to plot n'),)
+      locations are based on the centroid their site\'s postcode.'))
   return(panel)
   }

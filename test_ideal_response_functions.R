@@ -71,3 +71,19 @@ test_that("Test the calculation of the ideal inverter response to over frequency
   expect_equal(out, expected_output, tolerance=0.001)
 })
 
+test_that("Test the downsampling of the 1 s Ideal response" ,{
+  ts <- c("2018-01-01 13:11:50", "2018-01-01 13:11:51", "2018-01-01 13:11:55", "2018-01-01 13:12:51", 
+          "2018-01-01 13:12:52", "2018-01-01 13:12:53", "2018-01-01 13:12:54", "2018-01-01 13:12:55")
+  ts <- as.POSIXct(strptime(ts, "%Y-%m-%d %H:%M:%S", tz="Australia/Brisbane"))
+  f <- c(52.0, 52.0, 50.15, 50.08, 50.05, 50.05, 50.05, 50.05)
+  norm_power <- c(152.0, 152.0, 150.15, 150.08, 155.05, 157.05, 159.05, 151.05)
+  input_data <- data.frame(ts, f, norm_power, stringsAsFactors = FALSE)
+  out <- down_sample_1s(input_data, 60, as.POSIXct(strptime("2018-01-01 13:11:55", "%Y-%m-%d %H:%M:%S", tz="Australia/Brisbane")))
+  time_group <- c("2018-01-01 13:11:55", "2018-01-01 13:12:55")
+  time_group <- as.POSIXct(strptime(time_group, "%Y-%m-%d %H:%M:%S", tz="Australia/Brisbane"))
+  f <- c(50.15, 50.05)
+  norm_power <- c(151.3833, 154.456)
+  expected_output <- data.frame(time_group, f, norm_power, stringsAsFactors = FALSE)
+  expect_equal(out, expected_output, tolerance=0.001)
+})
+

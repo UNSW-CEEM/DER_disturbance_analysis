@@ -46,3 +46,59 @@ norm_p_over_frequency <- function(f){
   }
   return((norm_p))
 }
+
+down_sample_1s <- function(ideal_response_1_s, duration, offset){
+  ideal_response_1_s <- thicken(ideal_response_1_s, paste(duration,'s'), colname='time_group', rounding='up',
+                                start_val=offset - as.numeric(duration))
+  ideal_response_1_s <- thicken(ideal_response_1_s, paste(duration,'s'), colname='time_group2', rounding='down', 
+                                by='ts', start_val=offset - as.numeric(duration))
+  ideal_response_1_s[ideal_response_1_s$ts==ideal_response_1_s$time_group2,]$time_group <- 
+    ideal_response_1_s[ideal_response_1_s$ts==ideal_response_1_s$time_group2,]$time_group2
+  ideal_response_downsampled <- group_by(ideal_response_1_s, time_group)
+  ideal_response_downsampled <- summarise(ideal_response_downsampled, f=last(f), norm_power=mean(norm_power))
+  ideal_response_downsampled <- data.frame(ideal_response_downsampled)
+  return(ideal_response_downsampled)
+}
+
+calc_error_metric_and_compliance <- function(combined_data, ideal_response_downsampled){
+  error_by_c_id <- calc_error_metric(combined_data, ideal_response_downsampled)
+  threshold_error <- calc_threshold_error(ideal_response_downsampled)
+  error_by_c_id <- calc_compliance_status(error_by_c_id, threshold_error)
+  combined_data <- left_join(combined_data, error_by_c_id, by="site_id")
+  return(combined_data)
+}
+
+calc_error_metric <- function(combined_data, ideal_response_downsampled){
+  combined_data <- distinct(combined_data, site_id, ts, .keep_all=TRUE)
+  combined_data <- inner_join(combined_data, ideal_response_downsampled, by=c("ts"="time_group"))
+  combined_data <- mutate(combined_data, 
+                          abs_percent_diff_actual_cf_ideal=abs(Site_Event_Normalised_Power_kW-norm_power)/norm_power)
+  combined_data <- mutate(combined_data, percent_diff_actual_cf_ideal=(Site_Event_Normalised_Power_kW-norm_power)/norm_power)
+  error_by_c_id <- group_by(combined_data, site_id)
+  error_by_c_id <- summarise(error_by_c_id, abs_percent_diff_actual_cf_ideal=mean(abs_percent_diff_actual_cf_ideal),
+                             percent_diff_actual_cf_ideal=mean(percent_diff_actual_cf_ideal),
+                             min_diff=min(percent_diff_actual_cf_ideal),
+                             max_diff=max(percent_diff_actual_cf_ideal))
+  error_by_c_id <- mutate(error_by_c_id, mixed_wrt_spec=1)
+  error_by_c_id <- mutate(error_by_c_id, below_spec=ifelse(max_diff<=0,1,0))
+  error_by_c_id <- mutate(error_by_c_id, above_spec=ifelse(min_diff>=0,1,0))
+  error_by_c_id <- mutate(error_by_c_id, mixed_wrt_spec=mixed_wrt_spec-below_spec-above_spec)
+  error_by_c_id <- mutate(error_by_c_id, 
+                          combined_error_metric=(below_spec+above_spec) * percent_diff_actual_cf_ideal
+                          + mixed_wrt_spec * abs_percent_diff_actual_cf_ideal)
+  return(error_by_c_id)
+}
+
+calc_compliance_status <- function(error_by_c_id, threshold_error){
+  error_by_c_id <- mutate(error_by_c_id, compliance_status=ifelse(below_spec==1,'Compliant','Undefined'))
+  error_by_c_id <- mutate(error_by_c_id, compliance_status=ifelse(above_spec==1,'Above Ideal Response',compliance_status))
+  error_by_c_id <- mutate(error_by_c_id, compliance_status=ifelse(above_spec==1 & combined_error_metric>threshold_error,
+                                                                  'Non Complinant',compliance_status))
+  error_by_c_id <- mutate(error_by_c_id, compliance_status=ifelse(mixed_wrt_spec==1, 'Ambigous', compliance_status))
+  return(error_by_c_id)
+}
+
+calc_threshold_error <- function(ideal_response_downsampled){
+  threshold_error <- mean((1 - ideal_response_downsampled$norm_power)/ideal_response_downsampled$norm_power)
+  return(threshold_error)
+}
