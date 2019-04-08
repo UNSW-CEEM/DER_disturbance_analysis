@@ -73,10 +73,18 @@ make_offset_filter_label <- function(sample_counts, unique_offsets){
 
 get_offset_sample_counts <- function(time_series_data, unique_offsets){
   time_series_data <- distinct(time_series_data, c_id, .keep_all=TRUE)
-  label <- "Select time offset data subset to use, ("
   sample_counts <- c()
   for(i in 1:length(unique_offsets)){
     sample_counts <- c(sample_counts, length(filter(time_series_data, time_offset==unique_offsets[i])$c_id))
+  }
+  return(sample_counts)
+}
+
+get_duration_sample_counts <- function(time_series_data, duration_options){
+  time_series_data <- distinct(time_series_data, c_id, .keep_all=TRUE)
+  sample_counts <- c()
+  for(i in 1:length(duration_options)){
+    sample_counts <- c(sample_counts, length(filter(time_series_data, d==as.numeric(duration_options[i]))$c_id))
   }
   return(sample_counts)
 }

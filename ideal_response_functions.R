@@ -54,6 +54,9 @@ down_sample_1s <- function(ideal_response_1_s, duration, offset){
                                 by='ts', start_val=offset - as.numeric(duration))
   ideal_response_1_s[ideal_response_1_s$ts==ideal_response_1_s$time_group2,]$time_group <- 
     ideal_response_1_s[ideal_response_1_s$ts==ideal_response_1_s$time_group2,]$time_group2
+  ideal_response_1_s <- filter(
+    ideal_response_1_s, 
+    ts<=max(ideal_response_1_s[ideal_response_1_s$ts==ideal_response_1_s$time_group2,]$time_group2))
   ideal_response_downsampled <- group_by(ideal_response_1_s, time_group)
   ideal_response_downsampled <- summarise(ideal_response_downsampled, f=last(f), norm_power=mean(norm_power))
   ideal_response_downsampled <- data.frame(ideal_response_downsampled)
