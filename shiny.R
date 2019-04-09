@@ -324,7 +324,7 @@ server <- function(input,output,session){
                       zone_count = data.frame(),
                       distance_response = data.frame(),
                       frequency_data = data.frame(),
-                      uniqe_offsets = c(),
+                      unique_offsets = c(),
                       circuit_summary = data.frame()
                       )
   
@@ -348,8 +348,7 @@ server <- function(input,output,session){
         removeNotification(id)
       }else{
         id <- showNotification("Loading timeseries data from csv", duration=1000)
-        ts_data <- read.csv(file=time_series_file(), header=TRUE, 
-                                     stringsAsFactors = FALSE)
+        ts_data <- read.csv(file=time_series_file(), header=TRUE, stringsAsFactors = FALSE)
         removeNotification(id)
         id <- showNotification("Formatting timeseries data and 
                                 creating feather cache file", duration=1000)
@@ -677,7 +676,7 @@ server <- function(input,output,session){
       if (length(zones()) < 3) { combined_data_f <- filter(combined_data_f, zone %in% zones())}
     }
     
-    if (length(offsets()) < length(v$uniqe_offsets)) { 
+    if (length(offsets()) < length(v$unique_offsets)) { 
       combined_data_f <- filter(combined_data_f, time_offset %in% offsets())
     }
   
