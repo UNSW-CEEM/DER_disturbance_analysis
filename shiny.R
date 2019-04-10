@@ -561,22 +561,23 @@ server <- function(input,output,session){
         checkboxGroupButtons(inputId="responses", 
                              label=strong("Select Responses:"),
                              choices=list("1 Ride Through", "2 Curtail", "3 Drop to Zero", "4 Disconnect","5 Off at t0", 
-                                          "6 Not enough data","NA"),
+                                          "6 Not enough data", "Undefined", "NA"),
                              selected=list("1 Ride Through", "2 Curtail", "3 Drop to Zero", "4 Disconnect",
-                                           "5 Off at t0", "6 Not enough data","NA"),
+                                           "5 Off at t0", "6 Not enough data", "Undefined", "NA"),
                              justified=TRUE, status="primary", individual=TRUE,
                              checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")))
       })
       output$zones <- renderUI({
-        checkboxGroupButtons(inputId="zones", label=strong("Zones"), choices=list("1 Zone", "2 Zone", "3 Zone"),
-                             selected=list("1 Zone", "2 Zone", "3 Zone"), justified=TRUE, status="primary", 
-                             individual=TRUE,
+        checkboxGroupButtons(inputId="zones", label=strong("Zones"), 
+                             choices=list("1 Zone", "2 Zone", "3 Zone", "Undefined", "NA"),
+                             selected=list("1 Zone", "2 Zone", "3 Zone", "Undefined", "NA"), 
+                             justified=TRUE, status="primary", individual=TRUE,
                              checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")))
       })
       output$compliance <- renderUI({
         checkboxGroupButtons(inputId="compliance", label=strong("Compliance"), 
-                             choices=list("Compliant", "Ambigous", "Above Ideal Response", "Non Complinant", "Undefined"),
-                             selected=list("Compliant", "Ambigous", "Above Ideal Response", "Non Complinant", "Undefined"), 
+                             choices=list("Compliant", "Ambigous", "Above Ideal Response", "Non Complinant", "Undefined", "NA"),
+                             selected=list("Compliant", "Ambigous", "Above Ideal Response", "Non Complinant", "Undefined", "NA"), 
                              justified=TRUE, status="primary", individual=TRUE,
                              checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")))
       })  
