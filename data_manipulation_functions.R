@@ -12,10 +12,8 @@ process_raw_time_series_data <- function(time_series_data){
   # Convert time stamp to date time object assuming UTC time is being used.
   time_series_data <- time_series_data %>%  mutate(ts = fastPOSIXct(ts))
   time_series_durations = group_by(time_series_data, c_id)
-  time_series_durations <- summarise(time_series_durations, d2=duration_mode(ts), d_e=duration_mean(ts), 
-                                     d_min=duration_min(ts))
-  time_series_durations <- mutate(time_series_durations, d_e=abs(d2-d_e)/d2)
-  time_series_durations <- filter(time_series_durations, d_e<0.05 & d2==d_min)
+  time_series_durations <- summarise(time_series_durations, d2=duration_mode(ts), d_min=duration_min(ts))
+  time_series_durations <- filter(time_series_durations, d2==d_min)
   time_series_data <- left_join(time_series_data, time_series_durations, by="c_id")
   time_series_data <- time_series_data %>%  mutate(d = d2)
   # Assert assumptions about data set
