@@ -103,10 +103,20 @@ documentation_panel <- function(){
         in response categories 3 and 4. As with other geospatial calculations in the tool, circuit locations are taken
         as the postcode centroids. Note the following grouping variables (that are heaviliy correlated with location) 
         are ignored for this chart, Zone, Postcode and Circuit.'),
-    h4('Circuit Responses Chart'),
+    h4('Zone Responses Chart'),
     div('This chart shows the  break down of circuits responses by zone, the percentage is based on the number 
         circuits remaining post filtering in each zone. Break down to further sub categories by color is
         based on the user specified grouping variables. Note the grouping variable circuits is ignored for this chart.'),
+    h4('Geospatail Response Chart'),
+    div('This chart shows the percentage of systems disconnecting in each postcode on a geospatail basis, with a dot
+        representing each postcode located at the postcodes centroid. Note for the purposes of this chart disconnected 
+        systems are counted as those in categories 3 and 4. User chosen grouping variables do not effect this chart. 
+        Cleaned data is dispalyed if available else raw data is used. Be aware that the density of dots does not 
+        represent the density of pv system, rather it represent the density of postcodes, although the two will
+        probably be correlated.'),
+    h4('Circuit Count Table'),
+    div('This table shows the number of circuits in each combination of the user specified grouping variables. Note for
+        this table if the grouping varaible circuits is selected then the number of circuts by site is displayed.'),
     h3('Data processing and cleaning')
     )
   return(panel)
