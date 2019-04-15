@@ -357,6 +357,7 @@ server <- function(input,output,session){
         if ('t_stamp' %in% colnames(ts_data)) {ts_data <- setnames(ts_data, c("t_stamp"), c("ts"))}
         if ('voltage' %in% colnames(ts_data)) {ts_data <- setnames(ts_data, c("voltage"), c("v"))}
         if ('vrms' %in% colnames(ts_data)) {ts_data <- setnames(ts_data, c("vrms"), c("v"))}
+        if ('voltage_max' %in% colnames(ts_data)) {ts_data <- setnames(ts_data, c("voltage_max"), c("v"))}
         if ('frequency' %in% colnames(ts_data)) {ts_data <- setnames(ts_data, c("frequency"), c("f"))}
         if ('energy' %in% colnames(ts_data)) {ts_data <- setnames(ts_data, c("energy"), c("e"))}
         if ('duration' %in% colnames(ts_data)) {ts_data <- setnames(ts_data, c("duration"), c("d"))}
@@ -603,10 +604,10 @@ server <- function(input,output,session){
                   value=floor_date(min(v$combined_data$ts), "day"), startview="year")
       })
       output$event_time <- renderUI({
-        timeInput("event_time", label=strong('Event time'), value = as.POSIXct("13:11:55",format="%H:%M:%S"))
+        timeInput("event_time", label=strong('Pre-event time interval'), value = as.POSIXct("13:11:55",format="%H:%M:%S"))
       })
       output$window_length <- renderUI({
-        numericInput("window_length", label=strong('Set Window Length (min)'), value=5, min = 1, max = 100, step = 1)
+        numericInput("window_length", label=strong('Set window length (min)'), value=5, min = 1, max = 100, step = 1)
       })
       output$event_latitude <- renderUI({
         numericInput("event_latitude", label=strong('Set event latitude'), value=-28.838132)
