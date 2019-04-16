@@ -46,26 +46,26 @@ ui <- fluidPage(
         sidebarPanel(id= "side_panel",
           h4("File selection"),
           textInput("time_series", "Time series file", 
-                    value="E:/AEMO team/20170303_south_australia/20170303_south_australia_energy_short.csv"
+                    value="C:/Users/user/Documents/GitHub/DER_disturbance_analysis/test_data/2018-08-25 aemo data/2018-08-25_sa_qld_fault_aemo.feather"
           ),
           shinyFilesButton("choose_ts", "Choose File", 
                       "Select timeseries data file ...", multiple=FALSE
           ),
           HTML("<br><br>"),
           textInput("circuit_details", "Circuit details file", 
-                    value="E:/AEMO team/20170303_south_australia/20170303_south_australia_c_id_info.csv"
+                    value="C:/Users/user/Documents/GitHub/DER_disturbance_analysis/test_data/2018-08-25 aemo data/circuit_details.csv"
           ),
 
           shinyFilesButton("choose_c", "Choose File", "Select circuit details data file ...", multiple=FALSE
           ),
           HTML("<br><br>"),
           textInput("site_details", "Site details file", 
-                    value="E:/AEMO team/20170303_south_australia/20170303_south_australia_site_info.txt"
+                    value="C:/Users/user/Documents/GitHub/DER_disturbance_analysis/test_data/2018-08-25 aemo data/site_details.csv"
           ),
           shinyFilesButton("choose_site", "Choose File", "Select site details data file ...", multiple=FALSE),
           HTML("<br><br>"),
           textInput("frequency_data", "Frequency data file", 
-                    value="C:/Users/user/Documents/GitHub/DER_disturbance_analysis/frequency_data_sa_2018_08_25.csv"
+                    value=""
           ),
           shinyFilesButton("choose_frequency_data", "Choose File", "Select fequency data file ...", multiple=FALSE),
           HTML("<br><br>"),
@@ -985,6 +985,7 @@ server <- function(input,output,session){
       updateMaterialSwitch(session=session, "circuit_agg", value = FALSE)
       updateMaterialSwitch(session=session, "zone_agg", value = FALSE)
       updateMaterialSwitch(session=session, "compliance_agg", value = FALSE)
+      updateMaterialSwitch(session=session, "response_agg", value = FALSE)
     }
   })
   
