@@ -40,109 +40,111 @@ ui <- fluidPage(
   # Input Bar
   tabsetPanel(
     tabPanel("Main",fluid=TRUE,
-      sidebarLayout(
-        sidebarPanel(
-          h4("File selection"),
-          textInput("time_series", "Time series file", 
-                    value="C:/Users/user/Documents/GitHub/DER_disturbance_analysis/test_data/2018-08-25 aemo data/2018-08-25_sa_qld_fault_aemo.feather"
-          ),
-          shinyFilesButton("choose_ts", "Choose File", 
-                      "Select timeseries data file ...", multiple=FALSE
-          ),
-          HTML("<br><br>"),
-          textInput("circuit_details", "Circuit details file", 
-                    value="C:/Users/user/Documents/GitHub/DER_disturbance_analysis/test_data/2018-08-25 aemo data/circuit_details.csv"
-          ),
-
-          shinyFilesButton("choose_c", "Choose File", 
-                           "Select circuit details data file ...", multiple=FALSE
-          ),
-          HTML("<br><br>"),
-          textInput("site_details", "Site details file", 
-                    value="C:/Users/user/Documents/GitHub/DER_disturbance_analysis/test_data/2018-08-25 aemo data/site_details.csv"
-          ),
-          shinyFilesButton("choose_site", "Choose File", "Select site details data file ...", multiple=FALSE),
-          HTML("<br><br>"),
-          radioButtons("duration", label=strong("Sampled duration (seconds), select one"), choices = list("5","30","60"), 
-                       selected = "60", inline = TRUE),
-          materialSwitch(inputId="perform_clean", label=strong("Perform Clean"), status="primary", right=FALSE),
-          actionButton("load_data", "Load data"),
-          tags$hr(),
-          h4("Time Filter"),
-          uiOutput("dateWidget"),
-          uiOutput("time_start"),
-          uiOutput("time_end"),
-          tags$hr(),
-          h4("Category Filter"),
-          uiOutput("cleaned"),
-          uiOutput("region"),
-          uiOutput("StdVersion"),
-          uiOutput("size_groupings"),
-          uiOutput("responses"),
-          uiOutput("zones"),
-          uiOutput("postcodes"),
-          uiOutput("manufacturers"),
-          uiOutput("models"),
-          uiOutput("sites"),
-          uiOutput("circuits"),
-          tags$hr(),
-          h4("Grouping Categories"),
-          materialSwitch("Std_Agg_Indiv", label=strong("AS4777:"), status="primary", value=TRUE),
-          materialSwitch("grouping_agg", label=strong("Size Grouping:"), status="primary", value=TRUE),
-          materialSwitch("response_agg", label=strong("Response Grouping:"), status="primary", value=FALSE),
-          materialSwitch("pst_agg", label=strong("Postcodes:"), status="primary", value=FALSE),
-          materialSwitch("manufacturer_agg", label=strong("Manufacturer:"),status="primary", value=FALSE),
-          materialSwitch("model_agg", label=strong("Models:"), status="primary", value=FALSE),
-          materialSwitch("circuit_agg", label=strong("Circuits:"), status="primary", value=FALSE),
-          materialSwitch("zone_agg", label=strong("Zones:"), status="primary", value=FALSE),
-          tags$hr(),
-          h4("Additional Processing"),
-          materialSwitch(inputId="raw_upscale", label=strong("Upscaled Data"), status="primary", right=FALSE),
-          tags$hr(),
-          h4("Event information"),
-          uiOutput("event_date"),
-          uiOutput("event_time"),
-          uiOutput("window_length"),
-          uiOutput("event_latitude"),
-          uiOutput("event_longitude"),
-          uiOutput("zone_one_radius"),
-          uiOutput("zone_two_radius"),
-          uiOutput("zone_three_radius"),
-          tags$hr(),
-          uiOutput("update_plots")
-        ),
-        #Output
-        mainPanel(
-          plotlyOutput(outputId="PlotlyTest"),
-          uiOutput("save_agg_power"),
-          HTML("<br>"),
-          uiOutput("save_underlying"),
-          HTML("<br><br>"),
-          plotlyOutput(outputId="NormPower"),
-          plotlyOutput(outputId="Frequency"),
-          plotlyOutput(outputId="Voltage"),
-          plotlyOutput(outputId="ResponseCount"),
-          uiOutput("save_response_count"),
-          plotlyOutput(outputId="distance_response"),
-          uiOutput(outputId="save_distance_response"),
-          plotlyOutput(outputId="ZoneCount"),
-          uiOutput("save_zone_count"),
-          plotlyOutput(outputId="map"),
-          HTML("<br><br>"),
-          dataTableOutput("sample_count_table"),
-          HTML("<br><br>"),
-          uiOutput("save_sample_count")
-
-        )
-      )
+             sidebarLayout(
+               sidebarPanel(
+                 h4("File selection"),
+                 textInput("time_series", "Time series file", 
+                           value="/u02/home/tveijalainen/R/DER_disturbance_analysis/test_data/2018-08-25 pre-cleaned inputs/2018-05-25_sa_qld_fault_aemo_test5.csv"
+                 ),
+                 shinyFilesButton("choose_ts", "Choose File", 
+                                  "Select timeseries data file ...", multiple=FALSE
+                 ),
+                 HTML("<br><br>"),
+                 textInput("circuit_details", "Circuit details file", 
+                           value="/u02/home/tveijalainen/R/DER_disturbance_analysis/test_data/2018-08-25 pre-cleaned inputs/circuit_details.csv"
+                           
+                 ),
+                 
+                 shinyFilesButton("choose_c", "Choose File", 
+                                  "Select circuit details data file ...", multiple=FALSE
+                 ),
+                 HTML("<br><br>"),
+                 textInput("site_details", "Site details file", 
+                           value="/u02/home/tveijalainen/R/DER_disturbance_analysis/test_data/2018-08-25 pre-cleaned inputs/site_details.csv"
+                 ),
+                 shinyFilesButton("choose_site", "Choose File", "Select site details data file ...", multiple=FALSE),
+                 HTML("<br><br>"),
+                 radioButtons("duration", label=strong("Sampled duration (seconds), select one"), choices = list("5","30","60"), 
+                              selected = "60", inline = TRUE),
+                 materialSwitch(inputId="perform_clean", label=strong("Perform Clean"), status="primary", right=FALSE),
+                 actionButton("load_data", "Load data"),
+                 tags$hr(),
+                 h4("Time Filter"),
+                 uiOutput("dateWidget"),
+                 uiOutput("time_start"),
+                 uiOutput("time_end"),
+                 tags$hr(),
+                 h4("Category Filter"),
+                 uiOutput("cleaned"),
+                 uiOutput("region"),
+                 uiOutput("StdVersion"),
+                 uiOutput("size_groupings"),
+                 uiOutput("responses"),
+                 uiOutput("zones"),
+                 uiOutput("postcodes"),
+                 uiOutput("manufacturers"),
+                 uiOutput("models"),
+                 uiOutput("sites"),
+                 uiOutput("circuits"),
+                 tags$hr(),
+                 h4("Grouping Categories"),
+                 materialSwitch("Std_Agg_Indiv", label=strong("AS4777:"), status="primary", value=TRUE),
+                 materialSwitch("grouping_agg", label=strong("Size Grouping:"), status="primary", value=TRUE),
+                 materialSwitch("response_agg", label=strong("Response Grouping:"), status="primary", value=FALSE),
+                 materialSwitch("pst_agg", label=strong("Postcodes:"), status="primary", value=FALSE),
+                 materialSwitch("manufacturer_agg", label=strong("Manufacturer:"),status="primary", value=FALSE),
+                 materialSwitch("model_agg", label=strong("Models:"), status="primary", value=FALSE),
+                 materialSwitch("circuit_agg", label=strong("Circuits:"), status="primary", value=FALSE),
+                 materialSwitch("zone_agg", label=strong("Zones:"), status="primary", value=FALSE),
+                 tags$hr(),
+                 h4("Additional Processing"),
+                 materialSwitch(inputId="raw_upscale", label=strong("Upscaled Data"), status="primary", right=FALSE),
+                 tags$hr(),
+                 h4("Event information"),
+                 uiOutput("event_date"),
+                 uiOutput("event_time"),
+                 uiOutput("window_length"),
+                 uiOutput("event_latitude"),
+                 uiOutput("event_longitude"),
+                 uiOutput("zone_one_radius"),
+                 uiOutput("zone_two_radius"),
+                 uiOutput("zone_three_radius"),
+                 tags$hr(),
+                 uiOutput("update_plots")
+               ),
+               #Output
+               mainPanel(
+                 plotlyOutput(outputId="PlotlyTest"),
+                 uiOutput("save_agg_power"),
+                 HTML("<br>"),
+                 uiOutput("save_underlying"),
+                 HTML("<br><br>"),
+                 plotlyOutput(outputId="NormPower"),
+                 plotlyOutput(outputId="Frequency"),
+                 plotlyOutput(outputId="Voltage"),
+                 plotlyOutput(outputId="ResponseCount"),
+                 uiOutput("save_response_count"),
+                 plotlyOutput(outputId="distance_response"),
+                 uiOutput(outputId="save_distance_response"),
+                 plotlyOutput(outputId="ZoneCount"),
+                 uiOutput("save_zone_count"),
+                 plotlyOutput(outputId="map"),
+                 HTML("<br><br>"),
+                 dataTableOutput("sample_count_table"),
+                 HTML("<br><br>"),
+                 uiOutput("save_sample_count")
+                 
+               )
+             )
     ),
     tabPanel("Data Cleaning", fluid=TRUE, 
-      mainPanel(
-        plotlyOutput("site_plot"),
-        DTOutput('site_details_editor'),
-        DTOutput('circuit_details_editor'),
-        actionButton("save_cleaned_data", "Save cleaned data")
-      )
+             mainPanel(
+               plotlyOutput("site_plot"),
+               DTOutput('site_details_editor'),
+               DTOutput('circuit_details_editor'),
+               HTML("<br><br>"),
+               actionButton("save_cleaned_data", "Save cleaned data")
+             )
     ),
     tabPanel("Assumptions and Methodology", fluid=TRUE, documentation_panel())
   ),
@@ -237,7 +239,7 @@ server <- function(input,output,session){
                       response_count = data.frame(),
                       zone_count = data.frame(),
                       distance_response = data.frame()
-                      )
+  )
   
   # This is the event that runs when the "Load data" button on the GUI is
   # Clicked. 
@@ -258,13 +260,15 @@ server <- function(input,output,session){
       }else{
         id <- showNotification("Loading timeseries data from csv", duration=1000)
         ts_data <- read.csv(file=time_series_file(), header=TRUE, 
-                                     stringsAsFactors = FALSE)
+                            stringsAsFactors = FALSE)
         removeNotification(id)
         id <- showNotification("Formatting timeseries data and 
-                                creating feather cache file", duration=1000)
+                               creating feather cache file", duration=1000)
         # Data from CSV is assumed to need processing.
         if ('utc_tstamp' %in% colnames(ts_data)) {ts_data <- setnames(ts_data, c("utc_tstamp"), c("ts"))}
+        if ('t_stamp' %in% colnames(ts_data)) {ts_data <- setnames(ts_data, c("t_stamp"), c("ts"))}
         if ('voltage' %in% colnames(ts_data)) {ts_data <- setnames(ts_data, c("voltage"), c("v"))}
+        if ('vrms' %in% colnames(ts_data)) {ts_data <- setnames(ts_data, c("vrms"), c("v"))}
         if ('frequency' %in% colnames(ts_data)) {ts_data <- setnames(ts_data, c("frequency"), c("f"))}
         if ('energy' %in% colnames(ts_data)) {ts_data <- setnames(ts_data, c("energy"), c("e"))}
         if ('duration' %in% colnames(ts_data)) {ts_data <- setnames(ts_data, c("duration"), c("d"))}
@@ -301,7 +305,9 @@ server <- function(input,output,session){
         sd_data <- read.csv(file=site_details_file(), header=TRUE, stringsAsFactors = FALSE)
         if ('State' %in% colnames(sd_data)) {sd_data <- setnames(sd_data, c("State"), c("s_state"))}
         if ('AC.Rating.kW.' %in% colnames(sd_data)) {sd_data <- setnames(sd_data, c("AC.Rating.kW."), c("ac"))}
+        if ('AC.Rating(kW)' %in% colnames(sd_data)) {sd_data <- setnames(sd_data, c("AC.Rating(kW)"), c("ac"))}
         if ('DC.Rating.kW.' %in% colnames(sd_data)) {sd_data <- setnames(sd_data, c("DC.Rating.kW."), c("dc"))}
+        if ('DC.Rating(kW)' %in% colnames(sd_data)) {sd_data <- setnames(sd_data, c("DC.Rating(kW)"), c("dc"))}
         if ('inverter_manufacturer' %in% colnames(sd_data)) {
           sd_data <- setnames(sd_data, c("inverter_manufacturer"), c("manufacturer"))
         }
@@ -313,7 +319,7 @@ server <- function(input,output,session){
         # month but keep the original info regarding the date.
         if("pv_install_date" %in% colnames(v$site_details_raw)){
           v$site_details_raw <- setnames(v$site_details_raw, c("pv_install_date"),
-                           c("pv_installation_year_month"))
+                                         c("pv_installation_year_month"))
         }
         removeNotification(id)
         id <- showNotification("Formatting site details and creating feather cache file", duration=1000)
@@ -397,20 +403,20 @@ server <- function(input,output,session){
                        min=floor_date(min(v$combined_data$ts), "day"),
                        max=floor_date(max(v$combined_data$ts), "day"), 
                        startview="year")
-        })
+      })
       output$time_start <- renderUI({
         timeInput("time_start", label=strong('Enter start time'), value=as.POSIXct("07:00:00",format="%H:%M:%S"))
-        })
+      })
       output$time_end <- renderUI({
         timeInput("time_end", label=strong('Enter end time'), value=as.POSIXct("17:00:00",format="%H:%M:%S"))
-        })
+      })
       output$region <- renderUI({
         selectInput(inputId="region", label=strong("Region"), choices=unique(v$combined_data$s_state))
-        })
+      })
       output$postcodes <- renderUI({
         selectizeInput("postcodes", label=strong("Select postcodes"), choices = unique(v$combined_data$s_postcode), 
-                      multiple=TRUE)  
-        })
+                       multiple=TRUE)  
+      })
       output$manufacturers <- renderUI({
         selectizeInput("manufacturers", label=strong("Select manufacturers"), 
                        choices = unique(v$combined_data$manufacturer), multiple=TRUE)  
@@ -439,7 +445,7 @@ server <- function(input,output,session){
                              selected=list("AS4777.3:2005", "Transition", "AS4777.2:2015"),
                              justified=TRUE, status="primary", individual=TRUE,
                              checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")))
-        })
+      })
       output$responses <- renderUI({
         checkboxGroupButtons(inputId="responses", 
                              label=strong("Select Responses:"),
@@ -500,7 +506,7 @@ server <- function(input,output,session){
       removeNotification(id)
     })
   })
-
+  
   # Create plots when update plots button is clicked.
   observeEvent(input$update_plots, {
     id <- showNotification("Updating plots", duration=1000)
@@ -523,7 +529,7 @@ server <- function(input,output,session){
     combined_data_f <- get_distance_from_event(combined_data_f, v$postcode_data, event_latitude(), event_longitude())
     combined_data_f <- get_zones(combined_data_f, zone_one_radius(), zone_two_radius(), zone_three_radius())
     if (length(zones()) < 3) { combined_data_f <- filter(combined_data_f, zone %in% zones())}
-  
+    
     # Decide if the settings mean no grouping is being performed.
     if (agg_on_standard()==FALSE & pst_agg()==FALSE & grouping_agg()==FALSE & 
         manufacturer_agg()==FALSE & model_agg()==FALSE & zone_agg()==FALSE & circuit_agg()==TRUE){
@@ -578,72 +584,72 @@ server <- function(input,output,session){
         v$agg_power <- left_join( v$agg_power, agg_f_and_v[, c("Time", "series", "Voltage", "Frequency")], 
                                   by=c("Time", "series"))
         # Create plots on main tab
-          
-          output$PlotlyTest <- renderPlotly({
-            plot_ly(v$agg_power, x=~Time, y=~Power_kW, color=~series, type="scattergl")  %>% 
-              layout(yaxis = list(title = "Aggregate Power (kW)"))})
-          output$save_agg_power <- renderUI({
-            shinySaveButton("save_agg_power", "Save Aggregated Results", "Save file as ...", filetype=list(xlsx="csv"))
-            })
-          output$save_underlying <- renderUI({
-            shinySaveButton("save_underlying", "Save Underlying Data", "Save file as ...", filetype=list(xlsx="csv"))
-            })
-          output$sample_count_table <- renderDataTable({v$sample_count_table})
-          output$save_sample_count <- renderUI({shinySaveButton("save_sample_count", "Save data", "Save file as ...", 
-                                                                filetype=list(xlsx="csv"))
-            })
-          output$NormPower <- renderPlotly({
-            plot_ly(agg_norm_power, x=~Time, y=~Event_Normalised_Power_kW, color=~series, type="scattergl") %>% 
-              layout(yaxis=list(title="Average site performance factor \n normalised to value of pre-event interval"))
-            })
-          output$ResponseCount <- renderPlotly({
-            plot_ly(v$response_count, x=~series_x, y=~sample_count, color=~series_y, type="bar") %>% 
-              layout(yaxis = list(title = 'Fraction of circuits \n (denominator is count post filtering)'),
-                     xaxis = list(title = 'Response categories'),
-                     barmode = 'stack')
-            })
-          output$save_response_count <- renderUI({
-            shinySaveButton("save_response_count", "Save data", "Save file as ...", filetype=list(xlsx="csv"))
-            })
-          
-          output$ZoneCount <- renderPlotly({
-            plot_ly(v$zone_count, x=~series_x, y=~sample_count, color=~series_y, type="bar") %>%
-              layout(yaxis = list(title = 'Fraction of zone circuits \n (denominator is count post filtering)'),
-                     xaxis = list(title = 'Zone categories'), barmode = 'stack')
-            })
-          output$save_zone_count <- renderUI({
-            shinySaveButton("save_zone_count", "Save data", "Save file as ...", filetype=list(xlsx="csv"))
-            })
-          output$Frequency <- renderPlotly({
-            plot_ly(v$agg_power, x=~Time, y=~Frequency, color=~series, type="scattergl") %>% 
-              layout(yaxis=list(title="Average frequency (Hz)"))
-            })
-          output$Voltage <- renderPlotly({plot_ly(v$agg_power, x=~Time, y=~Voltage, color=~series, type="scattergl") %>% 
-              layout(yaxis=list(title="Average volatge (V)"))
-            })
-          output$distance_response <- renderPlotly({
-            plot_ly(v$distance_response, x=~distance, y=~percentage, color=~series, type="scattergl") %>% 
-              layout(yaxis=list(title="Cumlative  disconnects / Cumulative circuits \n (Includes response categories 3 and 4)"),
-                     xaxis=list(title="Distance from event (km)"))
-            })
-          output$save_distance_response <- renderUI({
-            shinySaveButton("save_distance_response", "Save data", "Save file as ...", filetype=list(xlsx="csv"))
-            })
-          z1<- data.frame(circle.polygon(event_longitude(), event_latitude(), zone_one_radius(), sides = 20, units='km', poly.type = "gc.earth"))
-          z2 <- data.frame(circle.polygon(event_longitude(), event_latitude(), zone_two_radius(), sides = 20, units='km', poly.type = "gc.earth"))
-          z3 <- data.frame(circle.polygon(event_longitude(), event_latitude(), zone_three_radius(), sides = 20, units='km', poly.type = "gc.earth"))
-          output$map <- renderPlotly({plot_geo(geo_data, lat=~lat, lon=~lon, color=~percentage_disconnect) %>%
-              add_polygons(x=~z1$lon, y=~z1$lat, inherit=FALSE, fillcolor='transparent', 
-                           line=list(width=2,color="black"), hoverinfo = "none", showlegend=FALSE) %>%
-              add_polygons(x=~z2$lon, y=~z2$lat, inherit=FALSE, fillcolor='transparent', 
-                           line=list(width=2,color="black"), hoverinfo = "none", showlegend=FALSE) %>%
-              add_polygons(x=~z3$lon, y=~z3$lat, inherit=FALSE, fillcolor='transparent', 
-                           line=list(width=2,color="black"), hoverinfo = "none", showlegend=FALSE) %>%
-              add_markers(x=~geo_data$lon, y=~geo_data$lat, color=~percentage_disconnect, inherit=FALSE, 
-                          hovertext=~geo_data$info, legendgroup = list(title = "Percentage Disconnects"))
-            })
-                
-          removeNotification(id)
+        
+        output$PlotlyTest <- renderPlotly({
+          plot_ly(v$agg_power, x=~Time, y=~Power_kW, color=~series, type="scattergl")  %>% 
+            layout(yaxis = list(title = "Aggregate Power (kW)"))})
+        output$save_agg_power <- renderUI({
+          shinySaveButton("save_agg_power", "Save Aggregated Results", "Save file as ...", filetype=list(xlsx="csv"))
+        })
+        output$save_underlying <- renderUI({
+          shinySaveButton("save_underlying", "Save Underlying Data", "Save file as ...", filetype=list(xlsx="csv"))
+        })
+        output$sample_count_table <- renderDataTable({v$sample_count_table})
+        output$save_sample_count <- renderUI({shinySaveButton("save_sample_count", "Save data", "Save file as ...", 
+                                                              filetype=list(xlsx="csv"))
+        })
+        output$NormPower <- renderPlotly({
+          plot_ly(agg_norm_power, x=~Time, y=~Event_Normalised_Power_kW, color=~series, type="scattergl") %>% 
+            layout(yaxis=list(title="Average site performance factor \n normalised to value of pre-event interval"))
+        })
+        output$ResponseCount <- renderPlotly({
+          plot_ly(v$response_count, x=~series_x, y=~sample_count, color=~series_y, type="bar") %>% 
+            layout(yaxis = list(title = 'Fraction of circuits \n (denominator is count post filtering)'),
+                   xaxis = list(title = 'Response categories'),
+                   barmode = 'stack')
+        })
+        output$save_response_count <- renderUI({
+          shinySaveButton("save_response_count", "Save data", "Save file as ...", filetype=list(xlsx="csv"))
+        })
+        
+        output$ZoneCount <- renderPlotly({
+          plot_ly(v$zone_count, x=~series_x, y=~sample_count, color=~series_y, type="bar") %>%
+            layout(yaxis = list(title = 'Fraction of zone circuits \n (denominator is count post filtering)'),
+                   xaxis = list(title = 'Zone categories'), barmode = 'stack')
+        })
+        output$save_zone_count <- renderUI({
+          shinySaveButton("save_zone_count", "Save data", "Save file as ...", filetype=list(xlsx="csv"))
+        })
+        output$Frequency <- renderPlotly({
+          plot_ly(v$agg_power, x=~Time, y=~Frequency, color=~series, type="scattergl") %>% 
+            layout(yaxis=list(title="Average frequency (Hz)"))
+        })
+        output$Voltage <- renderPlotly({plot_ly(v$agg_power, x=~Time, y=~Voltage, color=~series, type="scattergl") %>% 
+            layout(yaxis=list(title="Average volatge (V)"))
+        })
+        output$distance_response <- renderPlotly({
+          plot_ly(v$distance_response, x=~distance, y=~percentage, color=~series, type="scattergl") %>% 
+            layout(yaxis=list(title="Cumlative circuits / Cumulative disconnects \n (Includes response categories 3 and 4)"),
+                   xaxis=list(title="Distance from event (km)"))
+        })
+        output$save_distance_response <- renderUI({
+          shinySaveButton("save_distance_response", "Save data", "Save file as ...", filetype=list(xlsx="csv"))
+        })
+        z1<- data.frame(circle.polygon(event_longitude(), event_latitude(), zone_one_radius(), sides = 20, units='km', poly.type = "gc.earth"))
+        z2 <- data.frame(circle.polygon(event_longitude(), event_latitude(), zone_two_radius(), sides = 20, units='km', poly.type = "gc.earth"))
+        z3 <- data.frame(circle.polygon(event_longitude(), event_latitude(), zone_three_radius(), sides = 20, units='km', poly.type = "gc.earth"))
+        output$map <- renderPlotly({plot_geo(geo_data, lat=~lat, lon=~lon, color=~percentage_disconnect) %>%
+            add_polygons(x=~z1$lon, y=~z1$lat, inherit=FALSE, fillcolor='transparent', 
+                         line=list(width=2,color="black"), hoverinfo = "none", showlegend=FALSE) %>%
+            add_polygons(x=~z2$lon, y=~z2$lat, inherit=FALSE, fillcolor='transparent', 
+                         line=list(width=2,color="black"), hoverinfo = "none", showlegend=FALSE) %>%
+            add_polygons(x=~z3$lon, y=~z3$lat, inherit=FALSE, fillcolor='transparent', 
+                         line=list(width=2,color="black"), hoverinfo = "none", showlegend=FALSE) %>%
+            add_markers(x=~geo_data$lon, y=~geo_data$lat, color=~percentage_disconnect, inherit=FALSE, 
+                        hovertext=~geo_data$info, legendgroup = list(title = "Percentage Disconnects"))
+        })
+        
+        removeNotification(id)
       } else {
         # If there is no data left after filtering alert the user and create an empty plot.
         shinyalert("Opps", "There is no data to plot")
@@ -697,7 +703,7 @@ server <- function(input,output,session){
   
   # Save data on zones
   observe({
-    volumes <- c(dr="C:\\")
+    volumes <- c(dr="/u02/home/tveijalainen/R/DER_disturbance_analysis/data/")
     shinyFileSave(input, "save_zone_count", roots=volumes, session=session)
     fileinfo <- parseSavePath(volumes, input$save_zone_count)
     if (nrow(fileinfo) > 0) {write.csv(v$zone_count, as.character(fileinfo$datapath), row.names=FALSE)}
@@ -822,7 +828,7 @@ server <- function(input,output,session){
     v$circuit_details_for_editing[i, j] <<- DT::coerceValue(value, v$circuit_details_for_editing[i, j])
     replaceData(v$proxy_circuit_details_editor, v$circuit_details_for_editing, resetPaging=FALSE, rownames=FALSE) # important
   })
-}
+  }
 
 shinyApp(ui = ui, server = server)
 
