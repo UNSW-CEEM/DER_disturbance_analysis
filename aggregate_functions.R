@@ -1,6 +1,6 @@
 
 find_grouping_cols <- function(agg_on_standard, pst_agg, grouping_agg, manufacturer_agg, model_agg, circuit_agg, 
-                               response_agg, zone_agg){
+                               response_agg, zone_agg, compliance_agg){
   grouping_cols <- c("clean")
   if (agg_on_standard==TRUE){grouping_cols <- c(grouping_cols, "Standard_Version")}
   if (pst_agg==TRUE){grouping_cols <- c(grouping_cols, "s_postcode")}
@@ -9,6 +9,7 @@ find_grouping_cols <- function(agg_on_standard, pst_agg, grouping_agg, manufactu
   if (model_agg==TRUE){grouping_cols <- c(grouping_cols, "model")}
   if (response_agg==TRUE){grouping_cols <- c(grouping_cols, "response_category")}
   if (zone_agg==TRUE){grouping_cols <- c(grouping_cols, "zone")}
+  if (compliance_agg==TRUE){grouping_cols <- c(grouping_cols, "compliance_status")}
   if (circuit_agg==TRUE){grouping_cols <- c(grouping_cols, "site_id", "c_id")}
   return(grouping_cols)
 }
