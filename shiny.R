@@ -128,6 +128,8 @@ ui <- fluidPage(
           HTML("<br>"),
           uiOutput("save_circuit_summary"),
           HTML("<br><br>"),
+          uiOutput("batch_save"),
+          HTML("<br><br>"),
           plotlyOutput(outputId="NormPower"),
           plotlyOutput(outputId="Frequency"),
           plotlyOutput(outputId="Voltage"),
@@ -776,6 +778,9 @@ server <- function(input,output,session){
           output$save_circuit_summary <- renderUI({
             shinySaveButton("save_circuit_summary", "Save Circuit Summary", "Save file as ...", filetype=list(xlsx="csv"))
           })
+          output$batch_save <- renderUI({
+            shinySaveButton("batch_save", "Batch save", "Save file as ...", filetype=list(xlsx="csv"))
+          })
           output$sample_count_table <- renderDataTable({v$sample_count_table})
           output$save_sample_count <- renderUI({shinySaveButton("save_sample_count", "Save data", "Save file as ...", 
                                                                 filetype=list(xlsx="csv"))
@@ -934,6 +939,49 @@ server <- function(input,output,session){
     shinyFileSave(input, "save_distance_response", roots=volumes, session=session)
     fileinfo <- parseSavePath(volumes, input$save_distance_response)
     if (nrow(fileinfo) > 0) {write.csv(v$distance_response, as.character(fileinfo$datapath), row.names=FALSE)}
+  })
+  
+  # Save data from aggregate pv power plot
+  observe({
+    variables <- c('time_series_file', 'circuit_details_file', 'site_details_file', 'frequency_data_file', 'region',
+                   'duration', 'standards', 'responses', 'postcodes', 'manufacturers', 'models', 'sites', 'circuits', 
+                   'zones', 'compliance', 'offsets', 'size_groupings', 'clean', 'raw_upscale', 'pst_agg', 
+                   'grouping_agg', 'response_agg', 'manufacturer_agg', 'perform_clean', 'model_agg', 'circuit_agg', 
+                   'zone_agg', 'compliance_agg', 'start_time', 'end_time', 'event_time', 
+                   'agg_on_standard', 'window_length', 'event_latitude', 'event_longitude', 'zone_one_radius', 
+                   'zone_two_radius', 'zone_three_radius')
+   values <- c(time_series_file(), circuit_details_file(), site_details_file(), frequency_data_file(), 
+                   if(is.null(region())){''}else{region()},
+                   if(is.null(duration())){''}else{duration()}, paste(standards(), '; '), paste(responses(), '; '), paste(postcodes(), '; '), 
+                   paste(manufacturers(), '; '), 
+                   paste(models(), '; '), paste(sites(), '; '), paste(circuits(), '; '), 
+                   paste(zones(), '; '),  paste(compliance(), '; '), paste(offsets(), '; '), paste(size_groupings(), '; '),
+                   paste(clean(), '; '), raw_upscale(), pst_agg(), 
+                   grouping_agg(), response_agg(), manufacturer_agg(), perform_clean(), model_agg(), circuit_agg(), 
+                   zone_agg(), compliance_agg(), 
+                   if(length(start_time())==0){''}else{as.character(start_time())}, 
+                   if(length(end_time())==0){''}else{as.character(end_time())}, 
+                   if(length(event_time())==0){''}else{as.character(event_time())},
+                   agg_on_standard(), 
+                   if(is.null(window_length())){''}else{window_length()}, 
+                   if(is.null(event_latitude())){''}else{event_latitude()}, 
+                   if(is.null(event_longitude())){''}else{event_longitude()}, 
+                   if(is.null(zone_one_radius())){''}else{zone_one_radius()}, 
+                   if(is.null(zone_two_radius())){''}else{zone_two_radius()}, 
+                   if(is.null(zone_three_radius())){''}else{zone_three_radius()})
+    meta_data = data.frame(variables, values, stringsAsFactors = FALSE)
+    volumes <- getVolumes()
+    shinyFileSave(input, "batch_save", roots=volumes, session=session)
+    fileinfo <- parseSavePath(volumes, input$batch_save)
+    datapath <- strsplit(fileinfo$datapath, '.')[0]
+    if (nrow(fileinfo) > 0) {write.csv(v$agg_power, paste0(datapath, '_agg_power.csv'), row.names=FALSE)}
+    if (nrow(fileinfo) > 0) {write.csv(v$combined_data_f, paste0(datapath, '_underlying.csv'), row.names=FALSE)}
+    if (nrow(fileinfo) > 0) {write.csv(v$circuit_summary, paste0(datapath, '_circ_sum.csv'), row.names=FALSE)}
+    if (nrow(fileinfo) > 0) {write.csv(v$sample_count_table, paste0(datapath, '_sample.csv'), row.names=FALSE)}
+    if (nrow(fileinfo) > 0) {write.csv(v$response_count, paste0(datapath, '_response_count.csv'), row.names=FALSE)}
+    if (nrow(fileinfo) > 0) {write.csv(v$zone_count, paste0(datapath, '_zone_count.csv'), row.names=FALSE)}
+    if (nrow(fileinfo) > 0) {write.csv(v$distance_response, paste0(datapath, '_distance_response.csv'), row.names=FALSE)}
+    if (nrow(fileinfo) > 0) {write.csv(meta_data, paste0(datapath, '_meta_data.csv'), row.names=FALSE)}
   })
   
   # Time series file selection pop up.
