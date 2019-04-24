@@ -127,7 +127,7 @@ ui <- fluidPage(
           uiOutput("save_underlying"),
           HTML("<br>"),
           uiOutput("save_circuit_summary"),
-          HTML("<br><br>"),
+          HTML("<br>"),
           uiOutput("batch_save"),
           HTML("<br><br>"),
           plotlyOutput(outputId="NormPower"),
@@ -151,7 +151,9 @@ ui <- fluidPage(
     tabPanel("Data Cleaning", fluid=TRUE, 
       mainPanel(
         plotlyOutput("site_plot"),
+        h4("Cleaned site data (select to view trace)"),
         DTOutput('site_details_editor'),
+        h4("Cleaned Circuit data (select to view trace)"),
         DTOutput('circuit_details_editor'),
         HTML("<br><br>"),
         uiOutput("save_cleaned_data")
@@ -530,21 +532,21 @@ server <- function(input,output,session){
         selectInput(inputId="region", label=strong("Region"), choices=unique(v$combined_data$s_state))
         })
       output$postcodes <- renderUI({
-        selectizeInput("postcodes", label=strong("Select postcodes"), choices = unique(v$combined_data$s_postcode), 
+        selectizeInput("postcodes", label=strong("Select postcodes"), choices = sort(unique(v$combined_data$s_postcode)), 
                       multiple=TRUE)  
         })
       output$manufacturers <- renderUI({
         selectizeInput("manufacturers", label=strong("Select manufacturers"), 
-                       choices = unique(v$combined_data$manufacturer), multiple=TRUE)  
+                       choices = sort(unique(v$combined_data$manufacturer)), multiple=TRUE)  
       })
       output$models <- renderUI({
-        selectizeInput("models", label=strong("Select models"), choices = unique(v$combined_data$model), multiple=TRUE)  
+        selectizeInput("models", label=strong("Select models"), choices = sort(unique(v$combined_data$model)), multiple=TRUE)  
       })
       output$sites <- renderUI({
-        selectizeInput("sites", label=strong("Select Sites"), choices = unique(v$site_details$site_id), multiple=TRUE)  
+        selectizeInput("sites", label=strong("Select Sites"), choices = sort(unique(v$site_details$site_id)), multiple=TRUE)  
       })
       output$circuits <- renderUI({
-        selectizeInput("circuits", label=strong("Select Circuits"), choices = unique(v$circuit_details$c_id), 
+        selectizeInput("circuits", label=strong("Select Circuits"), choices = sort(unique(v$circuit_details$c_id)), 
                        multiple=TRUE)  
       })
       shinyjs::show("Std_Agg_Indiv")
@@ -606,10 +608,12 @@ server <- function(input,output,session){
                   value=floor_date(min(v$combined_data$ts), "day"), startview="year")
       })
       output$event_time <- renderUI({
-        timeInput("event_time", label=strong('Pre-event time interval'), value = as.POSIXct("13:11:55",format="%H:%M:%S"))
+        timeInput("event_time", label=strong('Pre-event time interval (Need to match exactly to data timestamp)'), 
+                  value = as.POSIXct("13:11:55",format="%H:%M:%S"))
       })
       output$window_length <- renderUI({
-        numericInput("window_length", label=strong('Set window length (min)'), value=5, min = 1, max = 100, step = 1)
+        numericInput("window_length", label=strong('Set window length (min),
+                                                   Only data in this window is used for response grouping analysis.'), value=5, min = 1, max = 100, step = 1)
       })
       output$event_latitude <- renderUI({
         numericInput("event_latitude", label=strong('Set event latitude'), value=-28.838132)
@@ -618,13 +622,13 @@ server <- function(input,output,session){
         numericInput("event_longitude", label=strong('Set event longitude'), value=151.096832)
       })
       output$zone_one_radius <- renderUI({
-        numericInput("zone_one_radius", label=strong('Set zone one outer radius'), value=200)
+        numericInput("zone_one_radius", label=strong('Set zone one outer radius (km)'), value=200)
       })
       output$zone_two_radius <- renderUI({
-        numericInput("zone_two_radius", label=strong('Set zone two outer radius'), value=600)
+        numericInput("zone_two_radius", label=strong('Set zone two outer radius (km)'), value=600)
       })
       output$zone_three_radius <- renderUI({
-        numericInput("zone_three_radius", label=strong('Set zone three outer radius'), value=1000)
+        numericInput("zone_three_radius", label=strong('Set zone three outer radius (km)'), value=1000)
       })
       output$update_plots <- renderUI({
         actionButton("update_plots", "Update plots")
@@ -796,7 +800,8 @@ server <- function(input,output,session){
             })
           } else {
             output$NormPower <- renderPlotly({
-              plot_ly(agg_norm_power, x=~Time, y=~Event_Normalised_Power_kW, color=~series, type="scattergl") %>% 
+              plot_ly(agg_norm_power, x=~Time, y=~Event_Normalised_Power_kW, color=~series, type="scattergl", 
+                      mode = 'lines+markers') %>% 
                 layout(yaxis=list(title="Average site performance factor \n normalised to value of pre-event interval"))
             }) 
             }
@@ -847,13 +852,15 @@ server <- function(input,output,session){
           z3 <- data.frame(circle.polygon(event_longitude(), event_latitude(), zone_three_radius(), sides = 20, units='km', poly.type = "gc.earth"))
           output$map <- renderPlotly({plot_geo(geo_data, lat=~lat, lon=~lon, color=~percentage_disconnect) %>%
               add_polygons(x=~z1$lon, y=~z1$lat, inherit=FALSE, fillcolor='transparent', 
-                           line=list(width=2,color="black"), hoverinfo = "none", showlegend=FALSE) %>%
+                           line=list(width=2,color="grey"), hoverinfo = "none", showlegend=FALSE) %>%
               add_polygons(x=~z2$lon, y=~z2$lat, inherit=FALSE, fillcolor='transparent', 
-                           line=list(width=2,color="black"), hoverinfo = "none", showlegend=FALSE) %>%
+                           line=list(width=2,color="grey"), hoverinfo = "none", showlegend=FALSE) %>%
               add_polygons(x=~z3$lon, y=~z3$lat, inherit=FALSE, fillcolor='transparent', 
-                           line=list(width=2,color="black"), hoverinfo = "none", showlegend=FALSE) %>%
-              add_markers(x=~geo_data$lon, y=~geo_data$lat, color=~percentage_disconnect, inherit=FALSE, 
-                          hovertext=~geo_data$info, legendgroup = list(title = "Percentage Disconnects")) %>%
+                           line=list(width=2,color="grey"), hoverinfo = "none", showlegend=FALSE) %>%
+              add_markers(x=~geo_data$lon, y=~geo_data$lat,  inherit=FALSE, 
+                          hovertext=~geo_data$info, legendgroup = list(title = "Percentage Disconnects"),
+                          marker=list(color=~percentage_disconnect, colorbar=list(title='Percentage \n Disconnects'), 
+                                      colorscale='Bluered')) %>%
               layout(annotations = 
                        list(x = 1, y = -0.1, text = "Note: pecentage disconnects includes categories 3 and 4.", 
                             showarrow = F, xref='paper', yref='paper', 
@@ -952,11 +959,13 @@ server <- function(input,output,session){
                    'zone_two_radius', 'zone_three_radius')
    values <- c(time_series_file(), circuit_details_file(), site_details_file(), frequency_data_file(), 
                    if(is.null(region())){''}else{region()},
-                   if(is.null(duration())){''}else{duration()}, paste(standards(), '; '), paste(responses(), '; '), paste(postcodes(), '; '), 
+                   if(is.null(duration())){''}else{duration()}, paste(standards(), collapse='; '), paste(responses(), collapse='; '), 
+                   paste(postcodes(), collapse='; '), 
                    paste(manufacturers(), '; '), 
-                   paste(models(), '; '), paste(sites(), '; '), paste(circuits(), '; '), 
-                   paste(zones(), '; '),  paste(compliance(), '; '), paste(offsets(), '; '), paste(size_groupings(), '; '),
-                   paste(clean(), '; '), raw_upscale(), pst_agg(), 
+                   paste(models(), collapse='; '), paste(sites(), collapse='; '), paste(circuits(), collapse='; '), 
+                   paste(zones(), collapse='; '),  paste(compliance(), collapse='; '), paste(offsets(), collapse='; '), 
+                   paste(size_groupings(), collapse='; '),
+                   paste(clean(), collapse='; '), raw_upscale(), pst_agg(), 
                    grouping_agg(), response_agg(), manufacturer_agg(), perform_clean(), model_agg(), circuit_agg(), 
                    zone_agg(), compliance_agg(), 
                    if(length(start_time())==0){''}else{as.character(start_time())}, 
@@ -973,15 +982,19 @@ server <- function(input,output,session){
     volumes <- getVolumes()
     shinyFileSave(input, "batch_save", roots=volumes, session=session)
     fileinfo <- parseSavePath(volumes, input$batch_save)
-    datapath <- strsplit(fileinfo$datapath, '.')[0]
-    if (nrow(fileinfo) > 0) {write.csv(v$agg_power, paste0(datapath, '_agg_power.csv'), row.names=FALSE)}
-    if (nrow(fileinfo) > 0) {write.csv(v$combined_data_f, paste0(datapath, '_underlying.csv'), row.names=FALSE)}
-    if (nrow(fileinfo) > 0) {write.csv(v$circuit_summary, paste0(datapath, '_circ_sum.csv'), row.names=FALSE)}
-    if (nrow(fileinfo) > 0) {write.csv(v$sample_count_table, paste0(datapath, '_sample.csv'), row.names=FALSE)}
-    if (nrow(fileinfo) > 0) {write.csv(v$response_count, paste0(datapath, '_response_count.csv'), row.names=FALSE)}
-    if (nrow(fileinfo) > 0) {write.csv(v$zone_count, paste0(datapath, '_zone_count.csv'), row.names=FALSE)}
-    if (nrow(fileinfo) > 0) {write.csv(v$distance_response, paste0(datapath, '_distance_response.csv'), row.names=FALSE)}
-    if (nrow(fileinfo) > 0) {write.csv(meta_data, paste0(datapath, '_meta_data.csv'), row.names=FALSE)}
+    if (nrow(fileinfo) > 0) {
+      id <- showNotification("Doing batch save", duration=1000)
+      datapath <- strsplit(fileinfo$datapath, '[.]')[[1]][1]
+      write.csv(v$agg_power, paste0(datapath, '_agg_power.csv'), row.names=FALSE)
+      write.csv(v$combined_data_f, paste0(datapath, '_underlying.csv'), row.names=FALSE)
+      write.csv(v$circuit_summary, paste0(datapath, '_circ_sum.csv'), row.names=FALSE)
+      write.csv(v$sample_count_table, paste0(datapath, '_sample.csv'), row.names=FALSE)
+      write.csv(v$response_count, paste0(datapath, '_response_count.csv'), row.names=FALSE)
+      write.csv(v$zone_count, paste0(datapath, '_zone_count.csv'), row.names=FALSE)
+      write.csv(v$distance_response, paste0(datapath, '_distance_response.csv'), row.names=FALSE)
+      write.csv(meta_data, paste0(datapath, '_meta_data.csv'), row.names=FALSE)
+      removeNotification(id)
+    }
   })
   
   # Time series file selection pop up.
