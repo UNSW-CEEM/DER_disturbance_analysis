@@ -608,12 +608,12 @@ server <- function(input,output,session){
                   value=floor_date(min(v$combined_data$ts), "day"), startview="year")
       })
       output$event_time <- renderUI({
-        timeInput("event_time", label=strong('Pre-event time interval (Need to match exactly to data timestamp)'), 
+        timeInput("event_time", label=strong('Pre-event time interval (Needs to match exactly to data timestamp)'), 
                   value = as.POSIXct("13:11:55",format="%H:%M:%S"))
       })
       output$window_length <- renderUI({
         numericInput("window_length", label=strong('Set window length (min),
-                                                   Only data in this window is used for response grouping analysis.'), value=5, min = 1, max = 100, step = 1)
+                                                   Only data in this window is used for response analysis.'), value=5, min = 1, max = 100, step = 1)
       })
       output$event_latitude <- renderUI({
         numericInput("event_latitude", label=strong('Set event latitude'), value=-28.838132)
