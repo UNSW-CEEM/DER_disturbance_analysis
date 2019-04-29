@@ -127,11 +127,8 @@ ui <- fluidPage(
           uiOutput("save_underlying"),
           HTML("<br>"),
           uiOutput("save_circuit_summary"),
-<<<<<<< HEAD
-=======
           HTML("<br>"),
           uiOutput("batch_save"),
->>>>>>> cde1ac0c4439d06607490965b4cbc7f300fa4a3b
           HTML("<br><br>"),
           plotlyOutput(outputId="NormPower"),
           plotlyOutput(outputId="Frequency"),
@@ -154,13 +151,10 @@ ui <- fluidPage(
     tabPanel("Data Cleaning", fluid=TRUE, 
       mainPanel(
         plotlyOutput("site_plot"),
-<<<<<<< HEAD
         DTOutput('site_details_editor'),
-=======
         h4("Cleaned site data (select to view trace)"),
         DTOutput('site_details_editor'),
         h4("Cleaned Circuit data (select to view trace)"),
->>>>>>> cde1ac0c4439d06607490965b4cbc7f300fa4a3b
         DTOutput('circuit_details_editor'),
         HTML("<br><br>"),
         uiOutput("save_cleaned_data")
@@ -593,7 +587,6 @@ server <- function(input,output,session){
                              choices=list("Compliant", "Ambigous", "Above Ideal Response", "Non Complinant", "Undefined", "NA"),
                              selected=list("Compliant", "Ambigous", "Above Ideal Response", "Non Complinant", "Undefined", "NA"), 
                              justified=TRUE, status="primary", individual=TRUE,
-<<<<<<< HEAD
                              checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")))
       })  
       output$offsets <- renderUI({
@@ -601,15 +594,13 @@ server <- function(input,output,session){
                              choices=v$unique_offsets, selected=c(v$unique_offsets[which.max(sample_counts)]) ,
                              justified=TRUE, status="primary", individual=TRUE,
                              checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")))
-=======
-                             checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")))
+                             checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon"))
       })  
       output$offsets <- renderUI({
         checkboxGroupButtons(inputId="offsets", label=unique_offsets_filter_label, 
                              choices=v$unique_offsets, selected=c(v$unique_offsets[which.max(sample_counts)]) ,
                              justified=TRUE, status="primary", individual=TRUE,
                              checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")))
->>>>>>> cde1ac0c4439d06607490965b4cbc7f300fa4a3b
       }) 
       shinyjs::show("raw_upscale")
       shinyjs::show("pst_agg")
@@ -625,19 +616,16 @@ server <- function(input,output,session){
                   value=floor_date(min(v$combined_data$ts), "day"), startview="year")
       })
       output$event_time <- renderUI({
-<<<<<<< HEAD
         timeInput("event_time", label=strong('Pre-event time interval'), value = as.POSIXct("13:11:55",format="%H:%M:%S"))
       })
       output$window_length <- renderUI({
         numericInput("window_length", label=strong('Set window length (min)'), value=5, min = 1, max = 100, step = 1)
-=======
         timeInput("event_time", label=strong('Pre-event time interval (Needs to match exactly to data timestamp)'), 
                   value = as.POSIXct("13:11:55",format="%H:%M:%S"))
       })
       output$window_length <- renderUI({
         numericInput("window_length", label=strong('Set window length (min),
                                                    Only data in this window is used for response analysis.'), value=5, min = 1, max = 100, step = 1)
->>>>>>> cde1ac0c4439d06607490965b4cbc7f300fa4a3b
       })
       output$event_latitude <- renderUI({
         numericInput("event_latitude", label=strong('Set event latitude'), value=-28.838132)
@@ -806,12 +794,10 @@ server <- function(input,output,session){
           output$save_circuit_summary <- renderUI({
             shinySaveButton("save_circuit_summary", "Save Circuit Summary", "Save file as ...", filetype=list(xlsx="csv"))
           })
-<<<<<<< HEAD
-=======
+
           output$batch_save <- renderUI({
             shinySaveButton("batch_save", "Batch save", "Save file as ...", filetype=list(xlsx="csv"))
           })
->>>>>>> cde1ac0c4439d06607490965b4cbc7f300fa4a3b
           output$sample_count_table <- renderDataTable({v$sample_count_table})
           output$save_sample_count <- renderUI({shinySaveButton("save_sample_count", "Save data", "Save file as ...", 
                                                                 filetype=list(xlsx="csv"))
@@ -827,12 +813,10 @@ server <- function(input,output,session){
             })
           } else {
             output$NormPower <- renderPlotly({
-<<<<<<< HEAD
+
               plot_ly(agg_norm_power, x=~Time, y=~Event_Normalised_Power_kW, color=~series, type="scattergl") %>% 
-=======
               plot_ly(agg_norm_power, x=~Time, y=~Event_Normalised_Power_kW, color=~series, type="scattergl", 
                       mode = 'lines+markers') %>% 
->>>>>>> cde1ac0c4439d06607490965b4cbc7f300fa4a3b
                 layout(yaxis=list(title="Average site performance factor \n normalised to value of pre-event interval"))
             }) 
             }
@@ -883,15 +867,13 @@ server <- function(input,output,session){
           z3 <- data.frame(circle.polygon(event_longitude(), event_latitude(), zone_three_radius(), sides = 20, units='km', poly.type = "gc.earth"))
           output$map <- renderPlotly({plot_geo(geo_data, lat=~lat, lon=~lon, color=~percentage_disconnect) %>%
               add_polygons(x=~z1$lon, y=~z1$lat, inherit=FALSE, fillcolor='transparent', 
-<<<<<<< HEAD
                            line=list(width=2,color="black"), hoverinfo = "none", showlegend=FALSE) %>%
               add_polygons(x=~z2$lon, y=~z2$lat, inherit=FALSE, fillcolor='transparent', 
                            line=list(width=2,color="black"), hoverinfo = "none", showlegend=FALSE) %>%
               add_polygons(x=~z3$lon, y=~z3$lat, inherit=FALSE, fillcolor='transparent', 
                            line=list(width=2,color="black"), hoverinfo = "none", showlegend=FALSE) %>%
               add_markers(x=~geo_data$lon, y=~geo_data$lat, color=~percentage_disconnect, inherit=FALSE, 
-                          hovertext=~geo_data$info, legendgroup = list(title = "Percentage Disconnects")) %>%
-=======
+                          # hovertext=~geo_data$info, legendgroup = list(title = "Percentage Disconnects")) %>%
                            line=list(width=2,color="grey"), hoverinfo = "none", showlegend=FALSE) %>%
               add_polygons(x=~z2$lon, y=~z2$lat, inherit=FALSE, fillcolor='transparent', 
                            line=list(width=2,color="grey"), hoverinfo = "none", showlegend=FALSE) %>%
@@ -901,7 +883,6 @@ server <- function(input,output,session){
                           hovertext=~geo_data$info, legendgroup = list(title = "Percentage Disconnects"),
                           marker=list(color=~percentage_disconnect, colorbar=list(title='Percentage \n Disconnects'), 
                                       colorscale='Bluered')) %>%
->>>>>>> cde1ac0c4439d06607490965b4cbc7f300fa4a3b
               layout(annotations = 
                        list(x = 1, y = -0.1, text = "Note: pecentage disconnects includes categories 3 and 4.", 
                             showarrow = F, xref='paper', yref='paper', 
