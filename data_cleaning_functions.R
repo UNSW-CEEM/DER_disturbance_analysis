@@ -120,7 +120,10 @@ calc_sunrise_sunset_bounds <- function(postcode_data, event_date){
 
 clac_output_summary_values <- function(combined_data){
   # Determine if a data point is during daylight hours or not.
-  combined_data <- mutate(combined_data, daylight=ifelse(ts>sunrise & ts<sunset,1,0))
+  combined_data <- mutate(combined_data, comp_t=as.POSIXct(strftime(ts, format="%H:%M:%S"),format="%H:%M:%S"))
+  combined_data <- mutate(combined_data, sunrise=as.POSIXct(strftime(sunrise, format="%H:%M:%S"),format="%H:%M:%S"))
+  combined_data <- mutate(combined_data, sunset=as.POSIXct(strftime(sunset, format="%H:%M:%S"),format="%H:%M:%S"))
+  combined_data <- mutate(combined_data, daylight=ifelse(comp_t>sunrise & comp_t<sunset,1,0))
   # Group data by c_id, calculating values needed to perform data cleaning
   combined_data <- group_by(combined_data, c_id)
   combined_data <- summarise(combined_data, energy_day=round(sum(abs(e[daylight==1]))/1000/(60*60),digits=2), 

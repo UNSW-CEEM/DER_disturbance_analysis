@@ -14,25 +14,25 @@ categorise_response <- function(combined_data, event_time, window_length){
 
 categorise_by_response <- function(event_window_data, window_length){
   event_window_data <- mutate(event_window_data, response_category=ifelse(
-    event_power < 0.1, '5 Off at t0', 'undefined'))
+    event_power < 0.1, '5 Off at t0', 'Undefined'))
   
   event_window_data <- mutate(event_window_data, 
                               response_category=ifelse(num_data_points < (60/d)*window_length & 
-                                                         response_category=='undefined', 
+                                                         response_category=='Undefined', 
                                                        '6 Not enough data', response_category))
   
   event_window_data <- mutate(event_window_data, 
-                              response_category=ifelse(response_category=='undefined' & min_norm_power >= 0.96, 
+                              response_category=ifelse(response_category=='Undefined' & min_norm_power >= 0.96, 
                                                        '1 Ride Through', response_category))
   
   event_window_data <- mutate( event_window_data, response_category=ifelse(
-    response_category=='undefined' & min_norm_power < 0.96 & num_con_zeros == 0, '2 Curtail', response_category))
+    response_category=='Undefined' & min_norm_power < 0.96 & num_con_zeros == 0, '2 Curtail', response_category))
   
   event_window_data <- mutate(event_window_data, response_category=ifelse(
-    response_category=='undefined' & num_con_zeros == 1, '3 Drop to Zero', response_category))
+    response_category=='Undefined' & num_con_zeros == 1, '3 Drop to Zero', response_category))
   
   event_window_data <- mutate(event_window_data, response_category=ifelse(
-    response_category=='undefined' & num_con_zeros > 1, '4 Disconnect', response_category))
+    response_category=='Undefined' & num_con_zeros > 1, '4 Disconnect', response_category))
 }
 
 num_consecutive_zeros <- function(event_power_vector){

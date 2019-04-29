@@ -12,7 +12,8 @@ process_raw_time_series_data <- function(time_series_data){
   # Convert time stamp to date time object assuming UTC time is being used.
   time_series_data <- time_series_data %>%  mutate(ts = fastPOSIXct(ts))
   time_series_durations = group_by(time_series_data, c_id)
-  time_series_durations <- summarise(time_series_durations, d2=duration_mode(ts))
+  time_series_durations <- summarise(time_series_durations, d2=duration_mode(ts), d_min=duration_min(ts))
+  time_series_durations <- filter(time_series_durations, d2==d_min)
   time_series_data <- left_join(time_series_data, time_series_durations, by="c_id")
   time_series_data <- time_series_data %>%  mutate(d = d2)
   # Assert assumptions about data set
@@ -22,6 +23,7 @@ process_raw_time_series_data <- function(time_series_data){
   # Covert columns to numeric type.
   time_series_data <- mutate(time_series_data, e = as.numeric(e))
   time_series_data <- mutate(time_series_data, v = as.numeric(v))
+  time_series_data <- get_time_offsets(time_series_data)
   processed_time_series_data <- mutate(time_series_data, f = as.numeric(f))
   return(processed_time_series_data)
 }
@@ -40,6 +42,49 @@ assert_raw_time_series_assumptions <- function(raw_time_series_data){
   # We assume after interpreting NAs as 5 s data that all duration data should equal 60, 30 or 5
   #assert_that(all(raw_time_series_data$d==5 | raw_time_series_data$d==30 | raw_time_series_data$d==60), 
   #              msg="Not all duration values are 5, 30 or 60")
+}
+
+get_time_offsets <- function(time_series_data){
+  offsets <- mutate(time_series_data, time_offset=format(ts, "%S"))
+  offsets <- group_by(offsets, c_id, time_offset)
+  offsets <- summarise(offsets, time_offset_count=length(time_offset))
+  offsets <- filter(offsets, time_offset_count>=100)
+  offsets <- group_by(offsets, c_id)
+  offsets <- summarise(offsets, time_offset=min(as.numeric(time_offset)))
+  time_series_data <- left_join(time_series_data, offsets, by='c_id')
+  return(time_series_data)
+}
+
+get_time_series_unique_offsets <- function(time_series_data){
+  unique_offsets <- unique(time_series_data$time_offset)
+  return(unique_offsets)
+}
+
+make_offset_filter_label <- function(sample_counts, unique_offsets){
+  label <- "Select time offset data subset to use, ("
+  for(i in 1:length(unique_offsets)){
+    label <- paste(label, unique_offsets[i], ": n=", sample_counts[i], ", ",sep='')
+  }
+  label <- paste(label, ")",sep='')
+  return(label)
+}
+
+get_offset_sample_counts <- function(time_series_data, unique_offsets){
+  time_series_data <- distinct(time_series_data, c_id, .keep_all=TRUE)
+  sample_counts <- c()
+  for(i in 1:length(unique_offsets)){
+    sample_counts <- c(sample_counts, length(filter(time_series_data, time_offset==unique_offsets[i])$c_id))
+  }
+  return(sample_counts)
+}
+
+get_duration_sample_counts <- function(time_series_data, duration_options){
+  time_series_data <- distinct(time_series_data, c_id, .keep_all=TRUE)
+  sample_counts <- c()
+  for(i in 1:length(duration_options)){
+    sample_counts <- c(sample_counts, length(filter(time_series_data, d==as.numeric(duration_options[i]))$c_id))
+  }
+  return(sample_counts)
 }
 
 process_raw_circuit_details <- function(circuit_details){
@@ -237,4 +282,20 @@ duration_mode <- function(time_vector){
   ds <- as.numeric(diff(time_vector), units='secs')
   mode_ds <- get_mode(ds)
   return(mode_ds)
+}
+
+duration_mean <- function(time_vector){
+  ds <- c()
+  time_vector <- sort(time_vector)
+  ds <- as.numeric(diff(time_vector), units='secs')
+  mean_ds <- mean(ds)
+  return(mean_ds)
+}
+
+duration_min <- function(time_vector){
+  ds <- c()
+  time_vector <- sort(time_vector)
+  ds <- as.numeric(diff(time_vector), units='secs')
+  mean_ds <- min(ds)
+  return(mean_ds)
 }

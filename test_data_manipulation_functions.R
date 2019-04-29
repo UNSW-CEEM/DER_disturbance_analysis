@@ -98,11 +98,15 @@ test_that("Test the preprocessing of the timeseries data",{
   v <- c(240.1, 240.2)
   f <- c(50.1, 50.0)
   d <- c(60, 60)
-  expected_answer <- data.frame(c_id, ts, e, d, v, f, stringsAsFactors = FALSE)
+  d2 <- c(60, 60)
+  d_e <- c(0, 0)
+  d_min <- c(60, 60)
+  time_offset <- as.numeric(c(NA, NA))
+  expected_answer <- data.frame(c_id, ts, e, d, v, f, d2, d_e, d_min, time_offset, stringsAsFactors = FALSE)
   # Call processing function
-  processed_time_series = process_raw_time_series_data(test_time_series_data)
+  processed_time_series <- process_raw_time_series_data(test_time_series_data)
   # Test the answer matches the expected answer
-  expect_identical(processed_time_series, expected_answer)
+  expect_equal(processed_time_series, expected_answer)
 })
 
 test_that("Test assertion of site data assumptions, s_state must be NSW, ACT, SA etc",{
