@@ -127,6 +127,11 @@ ui <- fluidPage(
           uiOutput("save_underlying"),
           HTML("<br>"),
           uiOutput("save_circuit_summary"),
+<<<<<<< HEAD
+=======
+          HTML("<br>"),
+          uiOutput("batch_save"),
+>>>>>>> cde1ac0c4439d06607490965b4cbc7f300fa4a3b
           HTML("<br><br>"),
           plotlyOutput(outputId="NormPower"),
           plotlyOutput(outputId="Frequency"),
@@ -149,7 +154,13 @@ ui <- fluidPage(
     tabPanel("Data Cleaning", fluid=TRUE, 
       mainPanel(
         plotlyOutput("site_plot"),
+<<<<<<< HEAD
         DTOutput('site_details_editor'),
+=======
+        h4("Cleaned site data (select to view trace)"),
+        DTOutput('site_details_editor'),
+        h4("Cleaned Circuit data (select to view trace)"),
+>>>>>>> cde1ac0c4439d06607490965b4cbc7f300fa4a3b
         DTOutput('circuit_details_editor'),
         HTML("<br><br>"),
         uiOutput("save_cleaned_data")
@@ -351,7 +362,7 @@ server <- function(input,output,session){
         ts_data <- read.csv(file=time_series_file(), header=TRUE, stringsAsFactors = FALSE)
         removeNotification(id)
         id <- showNotification("Formatting timeseries data and 
-                               creating feather cache file", duration=1000)
+                                creating feather cache file", duration=1000)
         # Data from CSV is assumed to need processing.
         if ('utc_tstamp' %in% colnames(ts_data)) {ts_data <- setnames(ts_data, c("utc_tstamp"), c("ts"))}
         if ('t_stamp' %in% colnames(ts_data)) {ts_data <- setnames(ts_data, c("t_stamp"), c("ts"))}
@@ -395,9 +406,7 @@ server <- function(input,output,session){
         sd_data <- read.csv(file=site_details_file(), header=TRUE, stringsAsFactors = FALSE)
         if ('State' %in% colnames(sd_data)) {sd_data <- setnames(sd_data, c("State"), c("s_state"))}
         if ('AC.Rating.kW.' %in% colnames(sd_data)) {sd_data <- setnames(sd_data, c("AC.Rating.kW."), c("ac"))}
-        if ('AC.Rating(kW)' %in% colnames(sd_data)) {sd_data <- setnames(sd_data, c("AC.Rating(kW)"), c("ac"))}
         if ('DC.Rating.kW.' %in% colnames(sd_data)) {sd_data <- setnames(sd_data, c("DC.Rating.kW."), c("dc"))}
-        if ('DC.Rating(kW)' %in% colnames(sd_data)) {sd_data <- setnames(sd_data, c("DC.Rating(kW)"), c("dc"))}
         if ('inverter_manufacturer' %in% colnames(sd_data)) {
           sd_data <- setnames(sd_data, c("inverter_manufacturer"), c("manufacturer"))
         }
@@ -409,7 +418,7 @@ server <- function(input,output,session){
         # month but keep the original info regarding the date.
         if("pv_install_date" %in% colnames(v$site_details_raw)){
           v$site_details_raw <- setnames(v$site_details_raw, c("pv_install_date"),
-                                         c("pv_installation_year_month"))
+                           c("pv_installation_year_month"))
         }
         removeNotification(id)
         id <- showNotification("Formatting site details and creating feather cache file", duration=1000)
@@ -519,32 +528,32 @@ server <- function(input,output,session){
                        min=floor_date(min(v$combined_data$ts), "day"),
                        max=floor_date(max(v$combined_data$ts), "day"), 
                        startview="year")
-      })
+        })
       output$time_start <- renderUI({
         timeInput("time_start", label=strong('Enter start time'), value=as.POSIXct("07:00:00",format="%H:%M:%S"))
-      })
+        })
       output$time_end <- renderUI({
         timeInput("time_end", label=strong('Enter end time'), value=as.POSIXct("17:00:00",format="%H:%M:%S"))
-      })
+        })
       output$region <- renderUI({
         selectInput(inputId="region", label=strong("Region"), choices=unique(v$combined_data$s_state))
-      })
+        })
       output$postcodes <- renderUI({
-        selectizeInput("postcodes", label=strong("Select postcodes"), choices = unique(v$combined_data$s_postcode), 
-                       multiple=TRUE)  
-      })
+        selectizeInput("postcodes", label=strong("Select postcodes"), choices = sort(unique(v$combined_data$s_postcode)), 
+                      multiple=TRUE)  
+        })
       output$manufacturers <- renderUI({
         selectizeInput("manufacturers", label=strong("Select manufacturers"), 
-                       choices = unique(v$combined_data$manufacturer), multiple=TRUE)  
+                       choices = sort(unique(v$combined_data$manufacturer)), multiple=TRUE)  
       })
       output$models <- renderUI({
-        selectizeInput("models", label=strong("Select models"), choices = unique(v$combined_data$model), multiple=TRUE)  
+        selectizeInput("models", label=strong("Select models"), choices = sort(unique(v$combined_data$model)), multiple=TRUE)  
       })
       output$sites <- renderUI({
-        selectizeInput("sites", label=strong("Select Sites"), choices = unique(v$site_details$site_id), multiple=TRUE)  
+        selectizeInput("sites", label=strong("Select Sites"), choices = sort(unique(v$site_details$site_id)), multiple=TRUE)  
       })
       output$circuits <- renderUI({
-        selectizeInput("circuits", label=strong("Select Circuits"), choices = unique(v$circuit_details$c_id), 
+        selectizeInput("circuits", label=strong("Select Circuits"), choices = sort(unique(v$circuit_details$c_id)), 
                        multiple=TRUE)  
       })
       shinyjs::show("Std_Agg_Indiv")
@@ -561,7 +570,7 @@ server <- function(input,output,session){
                              selected=list("AS4777.3:2005", "Transition", "AS4777.2:2015"),
                              justified=TRUE, status="primary", individual=TRUE,
                              checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")))
-      })
+        })
       output$responses <- renderUI({
         checkboxGroupButtons(inputId="responses", 
                              label=strong("Select Responses:"),
@@ -584,6 +593,7 @@ server <- function(input,output,session){
                              choices=list("Compliant", "Ambigous", "Above Ideal Response", "Non Complinant", "Undefined", "NA"),
                              selected=list("Compliant", "Ambigous", "Above Ideal Response", "Non Complinant", "Undefined", "NA"), 
                              justified=TRUE, status="primary", individual=TRUE,
+<<<<<<< HEAD
                              checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")))
       })  
       output$offsets <- renderUI({
@@ -591,6 +601,15 @@ server <- function(input,output,session){
                              choices=v$unique_offsets, selected=c(v$unique_offsets[which.max(sample_counts)]) ,
                              justified=TRUE, status="primary", individual=TRUE,
                              checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")))
+=======
+                             checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")))
+      })  
+      output$offsets <- renderUI({
+        checkboxGroupButtons(inputId="offsets", label=unique_offsets_filter_label, 
+                             choices=v$unique_offsets, selected=c(v$unique_offsets[which.max(sample_counts)]) ,
+                             justified=TRUE, status="primary", individual=TRUE,
+                             checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")))
+>>>>>>> cde1ac0c4439d06607490965b4cbc7f300fa4a3b
       }) 
       shinyjs::show("raw_upscale")
       shinyjs::show("pst_agg")
@@ -606,10 +625,19 @@ server <- function(input,output,session){
                   value=floor_date(min(v$combined_data$ts), "day"), startview="year")
       })
       output$event_time <- renderUI({
+<<<<<<< HEAD
         timeInput("event_time", label=strong('Pre-event time interval'), value = as.POSIXct("13:11:55",format="%H:%M:%S"))
       })
       output$window_length <- renderUI({
         numericInput("window_length", label=strong('Set window length (min)'), value=5, min = 1, max = 100, step = 1)
+=======
+        timeInput("event_time", label=strong('Pre-event time interval (Needs to match exactly to data timestamp)'), 
+                  value = as.POSIXct("13:11:55",format="%H:%M:%S"))
+      })
+      output$window_length <- renderUI({
+        numericInput("window_length", label=strong('Set window length (min),
+                                                   Only data in this window is used for response analysis.'), value=5, min = 1, max = 100, step = 1)
+>>>>>>> cde1ac0c4439d06607490965b4cbc7f300fa4a3b
       })
       output$event_latitude <- renderUI({
         numericInput("event_latitude", label=strong('Set event latitude'), value=-28.838132)
@@ -618,13 +646,13 @@ server <- function(input,output,session){
         numericInput("event_longitude", label=strong('Set event longitude'), value=151.096832)
       })
       output$zone_one_radius <- renderUI({
-        numericInput("zone_one_radius", label=strong('Set zone one outer radius'), value=200)
+        numericInput("zone_one_radius", label=strong('Set zone one outer radius (km)'), value=200)
       })
       output$zone_two_radius <- renderUI({
-        numericInput("zone_two_radius", label=strong('Set zone two outer radius'), value=600)
+        numericInput("zone_two_radius", label=strong('Set zone two outer radius (km)'), value=600)
       })
       output$zone_three_radius <- renderUI({
-        numericInput("zone_three_radius", label=strong('Set zone three outer radius'), value=1000)
+        numericInput("zone_three_radius", label=strong('Set zone three outer radius (km)'), value=1000)
       })
       output$update_plots <- renderUI({
         actionButton("update_plots", "Update plots")
@@ -644,7 +672,7 @@ server <- function(input,output,session){
       removeNotification(id)
     })
   })
-  
+
   # Create plots when update plots button is clicked.
   observeEvent(input$update_plots, {
     id <- showNotification("Updating plots", duration=1000)
@@ -778,6 +806,12 @@ server <- function(input,output,session){
           output$save_circuit_summary <- renderUI({
             shinySaveButton("save_circuit_summary", "Save Circuit Summary", "Save file as ...", filetype=list(xlsx="csv"))
           })
+<<<<<<< HEAD
+=======
+          output$batch_save <- renderUI({
+            shinySaveButton("batch_save", "Batch save", "Save file as ...", filetype=list(xlsx="csv"))
+          })
+>>>>>>> cde1ac0c4439d06607490965b4cbc7f300fa4a3b
           output$sample_count_table <- renderDataTable({v$sample_count_table})
           output$save_sample_count <- renderUI({shinySaveButton("save_sample_count", "Save data", "Save file as ...", 
                                                                 filetype=list(xlsx="csv"))
@@ -793,7 +827,12 @@ server <- function(input,output,session){
             })
           } else {
             output$NormPower <- renderPlotly({
+<<<<<<< HEAD
               plot_ly(agg_norm_power, x=~Time, y=~Event_Normalised_Power_kW, color=~series, type="scattergl") %>% 
+=======
+              plot_ly(agg_norm_power, x=~Time, y=~Event_Normalised_Power_kW, color=~series, type="scattergl", 
+                      mode = 'lines+markers') %>% 
+>>>>>>> cde1ac0c4439d06607490965b4cbc7f300fa4a3b
                 layout(yaxis=list(title="Average site performance factor \n normalised to value of pre-event interval"))
             }) 
             }
@@ -844,6 +883,7 @@ server <- function(input,output,session){
           z3 <- data.frame(circle.polygon(event_longitude(), event_latitude(), zone_three_radius(), sides = 20, units='km', poly.type = "gc.earth"))
           output$map <- renderPlotly({plot_geo(geo_data, lat=~lat, lon=~lon, color=~percentage_disconnect) %>%
               add_polygons(x=~z1$lon, y=~z1$lat, inherit=FALSE, fillcolor='transparent', 
+<<<<<<< HEAD
                            line=list(width=2,color="black"), hoverinfo = "none", showlegend=FALSE) %>%
               add_polygons(x=~z2$lon, y=~z2$lat, inherit=FALSE, fillcolor='transparent', 
                            line=list(width=2,color="black"), hoverinfo = "none", showlegend=FALSE) %>%
@@ -851,6 +891,17 @@ server <- function(input,output,session){
                            line=list(width=2,color="black"), hoverinfo = "none", showlegend=FALSE) %>%
               add_markers(x=~geo_data$lon, y=~geo_data$lat, color=~percentage_disconnect, inherit=FALSE, 
                           hovertext=~geo_data$info, legendgroup = list(title = "Percentage Disconnects")) %>%
+=======
+                           line=list(width=2,color="grey"), hoverinfo = "none", showlegend=FALSE) %>%
+              add_polygons(x=~z2$lon, y=~z2$lat, inherit=FALSE, fillcolor='transparent', 
+                           line=list(width=2,color="grey"), hoverinfo = "none", showlegend=FALSE) %>%
+              add_polygons(x=~z3$lon, y=~z3$lat, inherit=FALSE, fillcolor='transparent', 
+                           line=list(width=2,color="grey"), hoverinfo = "none", showlegend=FALSE) %>%
+              add_markers(x=~geo_data$lon, y=~geo_data$lat,  inherit=FALSE, 
+                          hovertext=~geo_data$info, legendgroup = list(title = "Percentage Disconnects"),
+                          marker=list(color=~percentage_disconnect, colorbar=list(title='Percentage \n Disconnects'), 
+                                      colorscale='Bluered')) %>%
+>>>>>>> cde1ac0c4439d06607490965b4cbc7f300fa4a3b
               layout(annotations = 
                        list(x = 1, y = -0.1, text = "Note: pecentage disconnects includes categories 3 and 4.", 
                             showarrow = F, xref='paper', yref='paper', 
@@ -924,7 +975,7 @@ server <- function(input,output,session){
   
   # Save data on zones
   observe({
-    volumes <- c(dr="/u02/home/tveijalainen/R/DER_disturbance_analysis/data/")
+    volumes <- c(dr="C:\\")
     shinyFileSave(input, "save_zone_count", roots=volumes, session=session)
     fileinfo <- parseSavePath(volumes, input$save_zone_count)
     if (nrow(fileinfo) > 0) {write.csv(v$zone_count, as.character(fileinfo$datapath), row.names=FALSE)}
@@ -936,6 +987,55 @@ server <- function(input,output,session){
     shinyFileSave(input, "save_distance_response", roots=volumes, session=session)
     fileinfo <- parseSavePath(volumes, input$save_distance_response)
     if (nrow(fileinfo) > 0) {write.csv(v$distance_response, as.character(fileinfo$datapath), row.names=FALSE)}
+  })
+  
+  # Save data from aggregate pv power plot
+  observe({
+    variables <- c('time_series_file', 'circuit_details_file', 'site_details_file', 'frequency_data_file', 'region',
+                   'duration', 'standards', 'responses', 'postcodes', 'manufacturers', 'models', 'sites', 'circuits', 
+                   'zones', 'compliance', 'offsets', 'size_groupings', 'clean', 'raw_upscale', 'pst_agg', 
+                   'grouping_agg', 'response_agg', 'manufacturer_agg', 'perform_clean', 'model_agg', 'circuit_agg', 
+                   'zone_agg', 'compliance_agg', 'start_time', 'end_time', 'event_time', 
+                   'agg_on_standard', 'window_length', 'event_latitude', 'event_longitude', 'zone_one_radius', 
+                   'zone_two_radius', 'zone_three_radius')
+   values <- c(time_series_file(), circuit_details_file(), site_details_file(), frequency_data_file(), 
+                   if(is.null(region())){''}else{region()},
+                   if(is.null(duration())){''}else{duration()}, paste(standards(), collapse='; '), paste(responses(), collapse='; '), 
+                   paste(postcodes(), collapse='; '), 
+                   paste(manufacturers(), '; '), 
+                   paste(models(), collapse='; '), paste(sites(), collapse='; '), paste(circuits(), collapse='; '), 
+                   paste(zones(), collapse='; '),  paste(compliance(), collapse='; '), paste(offsets(), collapse='; '), 
+                   paste(size_groupings(), collapse='; '),
+                   paste(clean(), collapse='; '), raw_upscale(), pst_agg(), 
+                   grouping_agg(), response_agg(), manufacturer_agg(), perform_clean(), model_agg(), circuit_agg(), 
+                   zone_agg(), compliance_agg(), 
+                   if(length(start_time())==0){''}else{as.character(start_time())}, 
+                   if(length(end_time())==0){''}else{as.character(end_time())}, 
+                   if(length(event_time())==0){''}else{as.character(event_time())},
+                   agg_on_standard(), 
+                   if(is.null(window_length())){''}else{window_length()}, 
+                   if(is.null(event_latitude())){''}else{event_latitude()}, 
+                   if(is.null(event_longitude())){''}else{event_longitude()}, 
+                   if(is.null(zone_one_radius())){''}else{zone_one_radius()}, 
+                   if(is.null(zone_two_radius())){''}else{zone_two_radius()}, 
+                   if(is.null(zone_three_radius())){''}else{zone_three_radius()})
+    meta_data = data.frame(variables, values, stringsAsFactors = FALSE)
+    volumes <- getVolumes()
+    shinyFileSave(input, "batch_save", roots=volumes, session=session)
+    fileinfo <- parseSavePath(volumes, input$batch_save)
+    if (nrow(fileinfo) > 0) {
+      id <- showNotification("Doing batch save", duration=1000)
+      datapath <- strsplit(fileinfo$datapath, '[.]')[[1]][1]
+      write.csv(v$agg_power, paste0(datapath, '_agg_power.csv'), row.names=FALSE)
+      write.csv(v$combined_data_f, paste0(datapath, '_underlying.csv'), row.names=FALSE)
+      write.csv(v$circuit_summary, paste0(datapath, '_circ_sum.csv'), row.names=FALSE)
+      write.csv(v$sample_count_table, paste0(datapath, '_sample.csv'), row.names=FALSE)
+      write.csv(v$response_count, paste0(datapath, '_response_count.csv'), row.names=FALSE)
+      write.csv(v$zone_count, paste0(datapath, '_zone_count.csv'), row.names=FALSE)
+      write.csv(v$distance_response, paste0(datapath, '_distance_response.csv'), row.names=FALSE)
+      write.csv(meta_data, paste0(datapath, '_meta_data.csv'), row.names=FALSE)
+      removeNotification(id)
+    }
   })
   
   # Time series file selection pop up.
@@ -1060,7 +1160,7 @@ server <- function(input,output,session){
     v$circuit_details_for_editing[i, j] <<- DT::coerceValue(value, v$circuit_details_for_editing[i, j])
     replaceData(v$proxy_circuit_details_editor, v$circuit_details_for_editing, resetPaging=FALSE, rownames=FALSE) # important
   })
-  }
+}
 
 shinyApp(ui = ui, server = server)
 
