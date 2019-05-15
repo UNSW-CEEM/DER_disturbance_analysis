@@ -1093,7 +1093,7 @@ server <- function(input,output,session){
     combined_data_after_clean <- combined_data_after_clean %>% mutate(clean="cleaned")
     combined_data_after_clean <- select(combined_data_after_clean, c_id, ts, v, f, d, site_id, e, con_type, s_state, 
                                         s_postcode, Standard_Version, Grouping, polarity, first_ac, power_kW, clean, 
-                                        manufacturer, model, sum_ac)
+                                        manufacturer, model, sum_ac, time_offset)
     v$combined_data <- rbind(v$combined_data, combined_data_after_clean)
     removeNotification(id)
   })
