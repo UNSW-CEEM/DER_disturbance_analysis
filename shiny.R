@@ -398,6 +398,9 @@ server <- function(input,output,session){
         id <- showNotification("Loading site details from csv", duration=1000)
         sd_data <- read.csv(file=site_details_file(), header=TRUE, stringsAsFactors = FALSE)
         if ('State' %in% colnames(sd_data)) {sd_data <- setnames(sd_data, c("State"), c("s_state"))}
+        if ('ac_rating_w'%in% colnames(sd_data)) {sd_data <- mutate(sd_data, ac_rating_w = ac_rating_w/1000)}
+        if ('ac_rating_w'%in% colnames(sd_data)) {sd_data <- setnames(sd_data, c("ac_rating_w"), c("ac"))}
+        if ('dc_cap_w' %in% colnames(sd_data)) {sd_data <- setnames(sd_data, c("dc_cap_w"), c("dc"))}
         if ('AC.Rating.kW.' %in% colnames(sd_data)) {sd_data <- setnames(sd_data, c("AC.Rating.kW."), c("ac"))}
         if ('DC.Rating.kW.' %in% colnames(sd_data)) {sd_data <- setnames(sd_data, c("DC.Rating.kW."), c("dc"))}
         if ('inverter_manufacturer' %in% colnames(sd_data)) {

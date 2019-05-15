@@ -11,6 +11,8 @@ process_raw_time_series_data <- function(time_series_data){
   #time_series_data <- time_series_data %>%  mutate(d = as.numeric(d))
   # Convert time stamp to date time object assuming UTC time is being used.
   time_series_data <- time_series_data %>%  mutate(ts = fastPOSIXct(ts))
+  time_series_data_1 <- group_by(time_series_data, c_id) %>% summarise(Count=n()) %>% filter(Count==1)
+  time_series_data <- anti_join(time_series_data, time_series_data_1,by="c_id")
   time_series_durations = group_by(time_series_data, c_id)
   time_series_durations <- summarise(time_series_durations, d2=duration_mode(ts), d_min=duration_min(ts))
   time_series_durations <- filter(time_series_durations, d2==d_min)
@@ -296,6 +298,6 @@ duration_min <- function(time_vector){
   ds <- c()
   time_vector <- sort(time_vector)
   ds <- as.numeric(diff(time_vector), units='secs')
-  mean_ds <- min(ds)
-  return(mean_ds)
+  min_ds <- min(ds)
+  return(min_ds)
 }
