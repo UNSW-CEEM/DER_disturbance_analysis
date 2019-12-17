@@ -400,6 +400,8 @@ server <- function(input,output,session){
         if ('State' %in% colnames(sd_data)) {sd_data <- setnames(sd_data, c("State"), c("s_state"))}
         if ('ac_rating_w'%in% colnames(sd_data)) {sd_data <- mutate(sd_data, ac_rating_w = ac_rating_w/1000)}
         if ('ac_rating_w'%in% colnames(sd_data)) {sd_data <- setnames(sd_data, c("ac_rating_w"), c("ac"))}
+        if ('ac_cap_w'%in% colnames(sd_data)) {sd_data <- mutate(sd_data, ac_cap_w = ac_cap_w/1000)}
+        if ('ac_cap_w'%in% colnames(sd_data)) {sd_data <- setnames(sd_data, c("ac_cap_w"), c("ac"))}
         if ('dc_cap_w' %in% colnames(sd_data)) {sd_data <- mutate(sd_data, dc_cap_w = dc_cap_w/1000)}
         if ('dc_cap_w' %in% colnames(sd_data)) {sd_data <- setnames(sd_data, c("dc_cap_w"), c("dc"))}
         if ('AC.Rating.kW.' %in% colnames(sd_data)) {sd_data <- setnames(sd_data, c("AC.Rating.kW."), c("ac"))}
