@@ -400,8 +400,12 @@ server <- function(input,output,session){
         if ('State' %in% colnames(sd_data)) {sd_data <- setnames(sd_data, c("State"), c("s_state"))}
         if ('ac_rating_w'%in% colnames(sd_data)) {sd_data <- mutate(sd_data, ac_rating_w = ac_rating_w/1000)}
         if ('ac_rating_w'%in% colnames(sd_data)) {sd_data <- setnames(sd_data, c("ac_rating_w"), c("ac"))}
+        if ('ac_cap_w'%in% colnames(sd_data)) {sd_data <- mutate(sd_data, ac_cap_w = ac_cap_w/1000)}
+        if ('ac_cap_w'%in% colnames(sd_data)) {sd_data <- setnames(sd_data, c("ac_cap_w"), c("ac"))}
+        if ('dc_cap_w' %in% colnames(sd_data)) {sd_data <- mutate(sd_data, dc_cap_w = dc_cap_w/1000)}
         if ('dc_cap_w' %in% colnames(sd_data)) {sd_data <- setnames(sd_data, c("dc_cap_w"), c("dc"))}
         if ('AC.Rating.kW.' %in% colnames(sd_data)) {sd_data <- setnames(sd_data, c("AC.Rating.kW."), c("ac"))}
+        if ('DC.Rating.kW.' %in% colnames(sd_data)) {sd_data <- mutate(sd_data, DC.Rating.kW.=DC.Rating.kW.*1000)}
         if ('DC.Rating.kW.' %in% colnames(sd_data)) {sd_data <- setnames(sd_data, c("DC.Rating.kW."), c("dc"))}
         if ('inverter_manufacturer' %in% colnames(sd_data)) {
           sd_data <- setnames(sd_data, c("inverter_manufacturer"), c("manufacturer"))
@@ -886,7 +890,7 @@ server <- function(input,output,session){
   })
   
   # Save data from aggregate pv power plot
-  observe({
+  observeEvent(input$save_agg_power,{
     volumes <- getVolumes()
     shinyFileSave(input, "save_agg_power", roots=volumes, session=session)
     fileinfo <- parseSavePath(volumes, input$save_agg_power)
@@ -896,7 +900,7 @@ server <- function(input,output,session){
   })
   
   # Save underlying data by circuit id and time stamp
-  observe({
+  observeEvent(input$save_underlying,{
     volumes <- getVolumes()
     shinyFileSave(input, "save_underlying", roots=volumes, session=session)
     fileinfo <- parseSavePath(volumes, input$save_underlying)
@@ -908,7 +912,7 @@ server <- function(input,output,session){
   })
   
   # Save circuit summary
-  observe({
+  observeEvent(input$save_circuit_summary,{
     volumes <- getVolumes()
     shinyFileSave(input, "save_circuit_summary", roots=volumes, session=session)
     fileinfo <- parseSavePath(volumes, input$save_circuit_summary)
@@ -920,7 +924,7 @@ server <- function(input,output,session){
   })
   
   # Save data from sample count table
-  observe({
+  observeEvent(input$save_sample_count,{
     volumes <- getVolumes()
     shinyFileSave(input, "save_sample_count", roots=volumes, session=session)
     fileinfo <- parseSavePath(volumes, input$save_sample_count)
@@ -928,7 +932,7 @@ server <- function(input,output,session){
   })
   
   # Save data on aggregated response categories
-  observe({
+  observeEvent(input$save_response_count,{
     volumes <- getVolumes()
     shinyFileSave(input, "save_response_count", roots=volumes, session=session)
     fileinfo <- parseSavePath(volumes, input$save_response_count)
@@ -936,7 +940,7 @@ server <- function(input,output,session){
   })
   
   # Save data on zones
-  observe({
+  observeEvent(input$save_zone_count, {
     volumes <- c(dr="C:\\")
     shinyFileSave(input, "save_zone_count", roots=volumes, session=session)
     fileinfo <- parseSavePath(volumes, input$save_zone_count)
@@ -944,7 +948,7 @@ server <- function(input,output,session){
   })
   
   # Save data on response percentage by distance
-  observe({
+  observeEvent(input$save_distance_response, {
     volumes <- getVolumes()
     shinyFileSave(input, "save_distance_response", roots=volumes, session=session)
     fileinfo <- parseSavePath(volumes, input$save_distance_response)
@@ -952,7 +956,7 @@ server <- function(input,output,session){
   })
   
   # Save data from aggregate pv power plot
-  observe({
+  observeEvent(input$batch_save, {
     variables <- c('time_series_file', 'circuit_details_file', 'site_details_file', 'frequency_data_file', 'region',
                    'duration', 'standards', 'responses', 'postcodes', 'manufacturers', 'models', 'sites', 'circuits', 
                    'zones', 'compliance', 'offsets', 'size_groupings', 'clean', 'raw_upscale', 'pst_agg', 

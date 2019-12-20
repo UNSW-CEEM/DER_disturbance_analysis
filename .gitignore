@@ -55,8 +55,9 @@ POA_2016_AUST.prj
 POA_2016_AUST.dbf
 data/*
 
+.idea/vcs.xml
 auto_test_data/*
-
+data/NEM_20191116_data/*
 #pycharm
 .idea/*
 .idea/vcs.xml
