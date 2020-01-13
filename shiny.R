@@ -46,21 +46,21 @@ ui <- fluidPage(
         sidebarPanel(id= "side_panel",
           h4("File selection"),
           textInput("time_series", "Time series file", 
-                    value="C:/Users/user/Documents/GitHub/DER_disturbance_analysis/test_data/2018-08-25 aemo data/2018-08-25_sa_qld_fault_aemo.feather"
+                    value=""
           ),
           shinyFilesButton("choose_ts", "Choose File", 
                       "Select timeseries data file ...", multiple=FALSE
           ),
           HTML("<br><br>"),
           textInput("circuit_details", "Circuit details file", 
-                    value="C:/Users/user/Documents/GitHub/DER_disturbance_analysis/test_data/2018-08-25 aemo data/circuit_details.csv"
+                    value=""
           ),
 
           shinyFilesButton("choose_c", "Choose File", "Select circuit details data file ...", multiple=FALSE
           ),
           HTML("<br><br>"),
           textInput("site_details", "Site details file", 
-                    value="C:/Users/user/Documents/GitHub/DER_disturbance_analysis/test_data/2018-08-25 aemo data/site_details.csv"
+                    value=""
           ),
           shinyFilesButton("choose_site", "Choose File", "Select site details data file ...", multiple=FALSE),
           HTML("<br><br>"),
@@ -1006,7 +1006,7 @@ server <- function(input,output,session){
   
   # Time series file selection pop up.
   observe({
-    volumes <- getVolumes()
+    volumes <- c(home=getwd())
     shinyFileChoose(input, "choose_ts", roots=volumes, session=session)
     fileinfo <- parseFilePaths(volumes, input$choose_ts)
     if (nrow(fileinfo) > 0) {updateTextInput(session, "time_series", value=as.character(fileinfo$datapath))}
@@ -1014,7 +1014,7 @@ server <- function(input,output,session){
   
   # Circuit details file selection pop up.
   observe({
-    volumes <- getVolumes()
+    volumes <- c(home=getwd())
     shinyFileChoose(input, "choose_c", roots=volumes, session=session)
     fileinfo <- parseFilePaths(volumes, input$choose_c)
     if (nrow(fileinfo) > 0) {updateTextInput(session, "circuit_details", value=as.character(fileinfo$datapath))}
@@ -1022,7 +1022,7 @@ server <- function(input,output,session){
   
   # Site details file selection pop up.
   observe({
-    volumes <- getVolumes()
+    volumes <- c(home=getwd())
     shinyFileChoose(input, "choose_site", roots=volumes, session=session)
     fileinfo <- parseFilePaths(volumes, input$choose_site)
     if (nrow(fileinfo) > 0) {updateTextInput(session, "site_details", value=as.character(fileinfo$datapath))}
@@ -1030,7 +1030,7 @@ server <- function(input,output,session){
   
   # frequency file selection pop up.
   observe({
-    volumes <- getVolumes()
+    volumes <- c(home=getwd())
     shinyFileChoose(input, "choose_frequency_data", roots=volumes, session=session)
     fileinfo <- parseFilePaths(volumes, input$choose_frequency_data)
     if (nrow(fileinfo) > 0) {updateTextInput(session, "frequency_data", value=as.character(fileinfo$datapath))}
