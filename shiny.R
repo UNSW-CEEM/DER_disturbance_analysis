@@ -339,7 +339,7 @@ server <- function(input,output,session){
     # an error or warning during the data table combing process. The "tryCatch"
     # function catches these, aborts the loading process and reports the error 
     # to the users. Importantly this prevent the app from crashing.
-    result = tryCatch({
+    #result = tryCatch({
       # Load data from storage.
       duration_options <- c("5", "30", "60")
       if (str_sub(time_series_file(), start=-7)=="feather"){
@@ -640,20 +640,20 @@ server <- function(input,output,session){
       output$update_plots <- renderUI({
         actionButton("update_plots", "Update plots")
       })
-    }, warning = function(war) {
-      shinyalert("Opps", paste("",war))
-      reset_sidebar(input, output, session)
-      reset_chart_area(input, output, session)
-      reset_data_cleaning_tab(input, output, session)
-    }, error = function(err) {
-      shinyalert("Opps", paste("",err))
-      reset_sidebar(input, output, session)
-      reset_chart_area(input, output, session)
-      reset_data_cleaning_tab(input, output, session)
-    }, finally = {
-      reset_chart_area(input, output, session)
-      removeNotification(id)
-    })
+   # }, warning = function(war) {
+  #    shinyalert("Opps", paste("",war))
+   #   reset_sidebar(input, output, session)
+  #    reset_chart_area(input, output, session)
+  #    reset_data_cleaning_tab(input, output, session)
+  #  }, error = function(err) {
+  #    shinyalert("Opps", paste("",err))
+  #    reset_sidebar(input, output, session)
+  #    reset_chart_area(input, output, session)
+  #    reset_data_cleaning_tab(input, output, session)
+  #  }, finally = {
+   #   reset_chart_area(input, output, session)
+  #    removeNotification(id)
+  #  })
   })
 
   # Create plots when update plots button is clicked.
