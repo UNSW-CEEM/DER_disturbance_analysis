@@ -69,6 +69,9 @@ ui <- fluidPage(
           ),
           shinyFilesButton("choose_frequency_data", "Choose File", "Select fequency data file ...", multiple=FALSE),
           HTML("<br><br>"),
+          radioButtons("region_to_load", label=strong("Regions"), choices = list("All","QLD","NSW", "VIC", "SA", "TAS"), 
+                                                    selected = "All", inline = TRUE),
+          HTML("<br><br>"),
           uiOutput("duration"),
           materialSwitch(inputId="perform_clean", label=strong("Perform Clean"), status="primary", right=FALSE),
           actionButton("load_data", "Load data"),
@@ -252,6 +255,7 @@ server <- function(input,output,session){
   circuit_details_file <- reactive({input$circuit_details})
   site_details_file <- reactive({input$site_details})
   frequency_data_file <- reactive({input$frequency_data})
+  region_to_load <- reactive({input$region_to_load})
   region <- reactive({input$region})
   duration <- reactive({input$duration})
   standards <- reactive({input$StdVersion})
@@ -339,7 +343,7 @@ server <- function(input,output,session){
     # an error or warning during the data table combing process. The "tryCatch"
     # function catches these, aborts the loading process and reports the error 
     # to the users. Importantly this prevent the app from crashing.
-    result = tryCatch({
+    #result = tryCatch({
       # Load data from storage.
       duration_options <- c("5", "30", "60")
       if (str_sub(time_series_file(), start=-7)=="feather"){
@@ -431,6 +435,10 @@ server <- function(input,output,session){
         write_feather(v$site_details, file_type_feather)
         removeNotification(id)
       }
+      
+      # Filter the site details file if All is not selected, this means only the data cleaning for the region selected is peformed.
+      v$site_details <- filter(v$site_details, s_state==region_to_load())
+      
       
       # Load in the install data from CSV.
       id <- showNotification("Load CER capacity data", duration=1000)
@@ -640,20 +648,20 @@ server <- function(input,output,session){
       output$update_plots <- renderUI({
         actionButton("update_plots", "Update plots")
       })
-    }, warning = function(war) {
-      shinyalert("Opps", paste("",war))
-      reset_sidebar(input, output, session)
-      reset_chart_area(input, output, session)
-      reset_data_cleaning_tab(input, output, session)
-    }, error = function(err) {
-      shinyalert("Opps", paste("",err))
-      reset_sidebar(input, output, session)
-      reset_chart_area(input, output, session)
-      reset_data_cleaning_tab(input, output, session)
-    }, finally = {
-      reset_chart_area(input, output, session)
-      removeNotification(id)
-    })
+    #}, warning = function(war) {
+    #  shinyalert("Opps", paste("",war))
+    #  reset_sidebar(input, output, session)
+    #  reset_chart_area(input, output, session)
+    #  reset_data_cleaning_tab(input, output, session)
+    #}, error = function(err) {
+    #  shinyalert("Opps", paste("",err))
+    #  reset_sidebar(input, output, session)
+    #  reset_chart_area(input, output, session)
+    #  reset_data_cleaning_tab(input, output, session)
+    #}, finally = {
+    #  reset_chart_area(input, output, session)
+    #  removeNotification(id)
+    #})
   })
 
   # Create plots when update plots button is clicked.
