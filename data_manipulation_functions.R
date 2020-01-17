@@ -301,3 +301,15 @@ duration_min <- function(time_vector){
   min_ds <- min(ds)
   return(min_ds)
 }
+
+write_sql_filter <- function(c_ids){
+  filter_statement_head <- "SELECT * FROM file JOIN TABLE(SELECT column_value FROM sys.dbms_debug_vc2coll("
+  
+  filter_statement_c_id_list <- paste(c_ids, collapse = ', ')
+  
+  filter_statement_tail <- ")) c on table.c_id = c.column_value;"
+  
+  filter_statement <- paste0(c(filter_statement_head, filter_statement_c_id_list, filter_statement_tail), 
+                             collapse = "")
+  return(filter_statement)
+}

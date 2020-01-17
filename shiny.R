@@ -22,6 +22,7 @@ library(assertthat)
 library(geosphere)
 library(swfscMisc)
 library(padr)
+library(sqldf)
 source("data_manipulation_functions.R")
 source("aggregate_functions.R")
 source("upscale_function.R")
@@ -46,21 +47,21 @@ ui <- fluidPage(
         sidebarPanel(id= "side_panel",
           h4("File selection"),
           textInput("time_series", "Time series file", 
-                    value="C:/Users/user/Documents/GitHub/DER_disturbance_analysis/test_data/2018-08-25 aemo data/2018-08-25_sa_qld_fault_aemo.feather"
+                    value="C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/data/NEM_20191116_data.csv"
           ),
           shinyFilesButton("choose_ts", "Choose File", 
                       "Select timeseries data file ...", multiple=FALSE
           ),
           HTML("<br><br>"),
           textInput("circuit_details", "Circuit details file", 
-                    value="C:/Users/user/Documents/GitHub/DER_disturbance_analysis/test_data/2018-08-25 aemo data/circuit_details.csv"
+                    value="C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/data/circuit_details_nem.csv"
           ),
 
           shinyFilesButton("choose_c", "Choose File", "Select circuit details data file ...", multiple=FALSE
           ),
           HTML("<br><br>"),
           textInput("site_details", "Site details file", 
-                    value="C:/Users/user/Documents/GitHub/DER_disturbance_analysis/test_data/2018-08-25 aemo data/site_details.csv"
+                    value="C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/data/site_details_nem.csv"
           ),
           shinyFilesButton("choose_site", "Choose File", "Select site details data file ...", multiple=FALSE),
           HTML("<br><br>"),
@@ -345,52 +346,6 @@ server <- function(input,output,session){
     # to the users. Importantly this prevent the app from crashing.
     #result = tryCatch({
       # Load data from storage.
-      duration_options <- c("5", "30", "60")
-      if (str_sub(time_series_file(), start=-7)=="feather"){
-        # If a feather file is used it is assumed the data is pre-processed.
-        # Hence the data is not passed to the raw data processor.
-        id <- showNotification("Loading timeseries data from feather", duration=1000)
-        time_series_data <- read_feather(time_series_file())
-        duration_sample_sizes <- get_duration_sample_counts(time_series_data, duration_options)
-        time_series_data <- filter(time_series_data, d==duration())
-        removeNotification(id)
-      }else{
-        id <- showNotification("Loading timeseries data from csv", duration=1000)
-        ts_data <- read.csv(file=time_series_file(), header=TRUE, stringsAsFactors = FALSE)
-        removeNotification(id)
-        id <- showNotification("Formatting timeseries data and 
-                                creating feather cache file", duration=1000)
-        # Data from CSV is assumed to need processing.
-        if ('utc_tstamp' %in% colnames(ts_data)) {ts_data <- setnames(ts_data, c("utc_tstamp"), c("ts"))}
-        if ('t_stamp' %in% colnames(ts_data)) {ts_data <- setnames(ts_data, c("t_stamp"), c("ts"))}
-        if ('voltage' %in% colnames(ts_data)) {ts_data <- setnames(ts_data, c("voltage"), c("v"))}
-        if ('vrms' %in% colnames(ts_data)) {ts_data <- setnames(ts_data, c("vrms"), c("v"))}
-        if ('voltage_max' %in% colnames(ts_data)) {ts_data <- setnames(ts_data, c("voltage_max"), c("v"))}
-        if ('frequency' %in% colnames(ts_data)) {ts_data <- setnames(ts_data, c("frequency"), c("f"))}
-        if ('energy' %in% colnames(ts_data)) {ts_data <- setnames(ts_data, c("energy"), c("e"))}
-        if ('duration' %in% colnames(ts_data)) {ts_data <- setnames(ts_data, c("duration"), c("d"))}
-        time_series_data <- ts_data
-        time_series_data <- time_series_data %>% distinct(c_id, ts, .keep_all=TRUE)
-        time_series_data <- mutate(time_series_data, c_id = as.character(c_id))
-        time_series_data <- process_raw_time_series_data(time_series_data)
-        # Automatically create a cache of the processed data as a feather file.
-        # Allows for much faster data loading for subsequent anaylsis.
-        file_no_type = str_sub(time_series_file(), end=-4)
-        file_type_feather = paste(file_no_type, "feather", sep="")
-        write_feather(time_series_data, file_type_feather)
-        duration_sample_sizes <- get_duration_sample_counts(time_series_data, duration_options)
-        time_series_data <- filter(time_series_data, d==duration())
-        removeNotification(id)
-      }
-      # The circuit details file requires no processing and is small so always 
-      # load from CSV.
-      id <- showNotification("Loading circuit details from csv", duration=1000)
-      v$circuit_details <- read.csv(file=circuit_details_file(), header=TRUE, stringsAsFactors = FALSE)
-      v$circuit_details <- select(v$circuit_details, c_id, site_id, con_type, polarity)
-      v$circuit_details <- v$circuit_details %>% mutate(site_id = as.character(site_id))
-      v$circuit_details <- v$circuit_details %>% mutate(c_id = as.character(c_id))
-      removeNotification(id)
-      
       # Load site details data.
       if (str_sub(site_details_file(), start=-7)=="feather"){
         # If a feather file is used it is assumed the data is pre-processed.
@@ -422,7 +377,7 @@ server <- function(input,output,session){
         # month but keep the original info regarding the date.
         if("pv_install_date" %in% colnames(v$site_details_raw)){
           v$site_details_raw <- setnames(v$site_details_raw, c("pv_install_date"),
-                           c("pv_installation_year_month"))
+                                         c("pv_installation_year_month"))
         }
         removeNotification(id)
         id <- showNotification("Formatting site details and creating feather cache file", duration=1000)
@@ -439,7 +394,58 @@ server <- function(input,output,session){
       # Filter the site details file if All is not selected, this means only the data cleaning for the region selected is peformed.
       v$site_details <- filter(v$site_details, s_state==region_to_load())
       
-      
+      # The circuit details file requires no processing and is small so always 
+      # load from CSV.
+      id <- showNotification("Loading circuit details from csv", duration=1000)
+      v$circuit_details <- read.csv(file=circuit_details_file(), header=TRUE, stringsAsFactors = FALSE)
+      v$circuit_details <- select(v$circuit_details, c_id, site_id, con_type, polarity)
+      v$circuit_details <- v$circuit_details %>% mutate(site_id = as.character(site_id))
+      v$circuit_details <- v$circuit_details %>% mutate(c_id = as.character(c_id))
+      v$circuit_details <- filter(v$circuit_details, site_id %in% v$site_details$site_id)
+      removeNotification(id)
+    
+      duration_options <- c("5", "30", "60")
+      if (str_sub(time_series_file(), start=-7)=="feather"){
+        # If a feather file is used it is assumed the data is pre-processed.
+        # Hence the data is not passed to the raw data processor.
+        id <- showNotification("Loading timeseries data from feather", duration=1000)
+        time_series_data <- read_feather(time_series_file())
+        duration_sample_sizes <- get_duration_sample_counts(time_series_data, duration_options)
+        time_series_data <- filter(time_series_data, d==duration())
+        time_series_data <- inner_join(time_series_data, select(v$circuit_details, c_id, site_id), by="c_id")
+        time_series_data <- inner_join(time_series_data, select(v$site_details, site_id), by="site_id")
+        removeNotification(id)
+      }else{
+        id <- showNotification("Loading timeseries data from csv", duration=1000)
+        cd_data <- v$circuit_details
+        ts_data <- read.csv.sql(file = time_series_file(), 
+                                sql="select * from file where c_id in (select c_id from cd_data)", eol = "\n")
+        # Data from CSV is assumed to need processing.
+        if ('utc_tstamp' %in% colnames(ts_data)) {ts_data <- setnames(ts_data, c("utc_tstamp"), c("ts"))}
+        if ('t_stamp' %in% colnames(ts_data)) {ts_data <- setnames(ts_data, c("t_stamp"), c("ts"))}
+        if ('voltage' %in% colnames(ts_data)) {ts_data <- setnames(ts_data, c("voltage"), c("v"))}
+        if ('vrms' %in% colnames(ts_data)) {ts_data <- setnames(ts_data, c("vrms"), c("v"))}
+        if ('voltage_max' %in% colnames(ts_data)) {ts_data <- setnames(ts_data, c("voltage_max"), c("v"))}
+        if ('frequency' %in% colnames(ts_data)) {ts_data <- setnames(ts_data, c("frequency"), c("f"))}
+        if ('energy' %in% colnames(ts_data)) {ts_data <- setnames(ts_data, c("energy"), c("e"))}
+        if ('duration' %in% colnames(ts_data)) {ts_data <- setnames(ts_data, c("duration"), c("d"))}
+        ts_data <- ts_data %>% distinct(c_id, ts, .keep_all=TRUE)
+        ts_data <- mutate(ts_data, c_id = as.character(c_id))
+        removeNotification(id)
+        id <- showNotification("Formatting timeseries data and 
+                                creating feather cache file", duration=1000)
+        browser()
+        time_series_data <- process_raw_time_series_data(ts_data)
+        # Automatically create a cache of the processed data as a feather file.
+        # Allows for much faster data loading for subsequent anaylsis.
+        file_no_type = str_sub(time_series_file(), end=-5)
+        file_type_feather = paste(file_no_type, '_', region_to_load(), ".feather", sep="")
+        write_feather(time_series_data, file_type_feather)
+        duration_sample_sizes <- get_duration_sample_counts(time_series_data, duration_options)
+        time_series_data <- filter(time_series_data, d==duration())
+        removeNotification(id)
+      }
+    
       # Load in the install data from CSV.
       id <- showNotification("Load CER capacity data", duration=1000)
       intall_data_file <- "cumulative_capacity_and_number_20190121.csv"
