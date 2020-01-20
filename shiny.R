@@ -47,7 +47,7 @@ ui <- fluidPage(
         sidebarPanel(id= "side_panel",
           h4("File selection"),
           textInput("time_series", "Time series file", 
-                    value="C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/data/NEM_20191116_data.csv"
+                    value="C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/data/NEM_20191116_data_NSW.feather"
           ),
           shinyFilesButton("choose_ts", "Choose File", 
                       "Select timeseries data file ...", multiple=FALSE
@@ -392,7 +392,10 @@ server <- function(input,output,session){
       }
       
       # Filter the site details file if All is not selected, this means only the data cleaning for the region selected is peformed.
-      v$site_details <- filter(v$site_details, s_state==region_to_load())
+      if (region_to_load() != 'All'){
+        v$site_details <- filter(v$site_details, s_state==region_to_load())
+      }
+      
       
       # The circuit details file requires no processing and is small so always 
       # load from CSV.
@@ -412,8 +415,7 @@ server <- function(input,output,session){
         time_series_data <- read_feather(time_series_file())
         duration_sample_sizes <- get_duration_sample_counts(time_series_data, duration_options)
         time_series_data <- filter(time_series_data, d==duration())
-        time_series_data <- inner_join(time_series_data, select(v$circuit_details, c_id, site_id), by="c_id")
-        time_series_data <- inner_join(time_series_data, select(v$site_details, site_id), by="site_id")
+        time_series_data <- inner_join(time_series_data, select(v$circuit_details, c_id), by="c_id")
         removeNotification(id)
       }else{
         id <- showNotification("Loading timeseries data from csv", duration=1000)
@@ -434,7 +436,6 @@ server <- function(input,output,session){
         removeNotification(id)
         id <- showNotification("Formatting timeseries data and 
                                 creating feather cache file", duration=1000)
-        browser()
         time_series_data <- process_raw_time_series_data(ts_data)
         # Automatically create a cache of the processed data as a feather file.
         # Allows for much faster data loading for subsequent anaylsis.
@@ -537,10 +538,10 @@ server <- function(input,output,session){
       })
       output$dateWidget <- renderUI({
         dateRangeInput("date", label=strong('Date range (yyyy-mm-dd):'),
-                       start=floor_date(min(v$combined_data$ts), "day"),
-                       end=floor_date(max(v$combined_data$ts), "day"),
-                       min=floor_date(min(v$combined_data$ts), "day"),
-                       max=floor_date(max(v$combined_data$ts), "day"), 
+                       start=strftime(floor_date(min(v$combined_data$ts), "day"), format="%Y-%m-%d"),
+                       end=strftime(floor_date(max(v$combined_data$ts), "day"), format="%Y-%m-%d"),
+                       min=strftime(floor_date(min(v$combined_data$ts), "day"), format="%Y-%m-%d"),
+                       max=strftime(floor_date(max(v$combined_data$ts), "day"), format="%Y-%m-%d"), 
                        startview="year")
         })
       output$time_start <- renderUI({
