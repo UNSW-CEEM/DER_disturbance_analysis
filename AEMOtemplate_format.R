@@ -1,0 +1,66 @@
+library(extrafont)
+#extrafont::font_import()
+extrafont::loadfonts(device = "win")
+
+AEMOColours <- c(
+  red = "#C41230",
+  orange = "#F37421",
+  yellow = "#FFC222",
+  purple = "#360F3C",
+  blue = "#B3E0EE",
+  purpleGrey = "#82859C",
+  white = "#FFFFFF",
+  darkGrey = "#222324",
+  lightGrey = "#E6E7EB",
+  black = "#000000")
+
+AEMOCpp <- c( "#C41230",
+              "#360F3C",
+              "#F37421",
+             "#FFC222",
+             "#82859C",
+             "#B3E0EE",
+             "#E6E7EB",
+             "#222324",
+             "#FFFFFF",
+              "#000000")
+
+theme_AEMO <- function() {
+  theme(panel.background = element_blank(),
+        panel.grid.major.y = element_line(color="lightGrey",
+                                          size = 0.5),
+        strip.background = element_blank(),
+        strip.text = element_text(size = 17,
+                                  family = "Segoe UI Semilight"),
+        plot.title = element_text(face = "bold",
+                                  size = 12,
+                                  hjust = 0.5,
+                                  family = "Segoe UI Semilight",
+                                  color="darkGrey"),
+        plot.subtitle = element_text(size = 17,
+                                     hjust = 0.5,
+                                     family = "Segoe UI Semilight"),
+        axis.text.y = element_text(size = 17,
+                                   family = "Segoe UI Semilight",
+                                   margin = margin(l = 10)),
+        axis.text.x = element_text(size= 17,
+                                   angle = 0,
+                                   family = "Segoe UI Semilight",
+                                   margin = margin(t = 12)),
+        axis.title = element_text(size = 17,
+                                  face = "bold",
+                                  family = "Segoe UI Semilight"),
+        axis.ticks.x = element_line(color="lightGrey",
+                                    size = 0.8),
+        axis.ticks.y = element_blank(),
+        legend.position = "bottom",
+        legend.key = element_rect(fill = AEMOColours[["white"]]),
+        legend.spacing.x = unit(0.2, "cm"),
+        legend.title = element_blank(),
+        legend.text = element_text(size = 17,
+                                   family = "Segoe UI Semilight"),
+        axis.line.x = element_blank(),
+        axis.line.y = element_blank(),
+        panel.spacing = unit(1.4, "lines"),
+        plot.background = element_rect(fill = AEMOColours[["white"]]))
+}

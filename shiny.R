@@ -23,6 +23,7 @@ library(geosphere)
 library(swfscMisc)
 library(padr)
 library(sqldf)
+library(gridExtra)
 source("data_manipulation_functions.R")
 source("aggregate_functions.R")
 source("upscale_function.R")
@@ -32,6 +33,8 @@ source("response_categorisation_function.R")
 source("distance_from_event.R")
 source("documentation.R")
 source("ideal_response_functions.R")
+source("AEMOtemplate_format.R")
+source("create_report_files.R")
 
 ui <- fluidPage(
   tags$head(
@@ -47,7 +50,7 @@ ui <- fluidPage(
         sidebarPanel(id= "side_panel",
           h4("File selection"),
           textInput("time_series", "Time series file", 
-                    value="C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/data/NEM_20191116_data_NSW.feather"
+                    value="C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/data/NEM_20191116_data_SA.feather"
           ),
           shinyFilesButton("choose_ts", "Choose File", 
                       "Select timeseries data file ...", multiple=FALSE
@@ -66,7 +69,7 @@ ui <- fluidPage(
           shinyFilesButton("choose_site", "Choose File", "Select site details data file ...", multiple=FALSE),
           HTML("<br><br>"),
           textInput("frequency_data", "Frequency data file", 
-                    value=""
+                    value="C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/data/frequency_data_for_analysis_ng.csv"
           ),
           shinyFilesButton("choose_frequency_data", "Choose File", "Select fequency data file ...", multiple=FALSE),
           HTML("<br><br>"),
@@ -113,6 +116,7 @@ ui <- fluidPage(
           tags$hr(),
           h4("Event information"),
           uiOutput("event_date"),
+          uiOutput("pre_event_interval"),
           uiOutput("event_time"),
           uiOutput("window_length"),
           uiOutput("event_latitude"),
@@ -133,6 +137,8 @@ ui <- fluidPage(
           uiOutput("save_circuit_summary"),
           HTML("<br>"),
           uiOutput("batch_save"),
+          HTML("<br>"),
+          uiOutput("save_report"),
           HTML("<br><br>"),
           plotlyOutput(outputId="NormPower"),
           plotlyOutput(outputId="Frequency"),
@@ -197,6 +203,7 @@ reset_sidebar <- function(input, output, session, stringsAsFactors) {
   shinyjs::hide("compliance_agg")
   output$event_date <- renderUI({})
   output$event_time <- renderUI({})
+  output$pre_event_interval <- renderUI({})
   output$window_length <- renderUI({})
   output$event_latitude <- renderUI({})
   output$event_longitude <- renderUI({})
@@ -301,6 +308,13 @@ server <- function(input,output,session){
     date_time_as_str <- paste(date_as_str, time_as_str)
     event_date_time <- strptime(date_time_as_str, format="%Y-%m-%d %H:%M:%S", tz="Australia/Brisbane")
     event_date_time
+  })
+  pre_event_interval <- reactive({
+    date_as_str <- as.character(input$event_date)
+    time_as_str <- substr(input$pre_event_interval, 12, 19)
+    date_time_as_str <- paste(date_as_str, time_as_str)
+    pre_event_interval_date_time <- strptime(date_time_as_str, format="%Y-%m-%d %H:%M:%S", tz="Australia/Brisbane")
+    pre_event_interval_date_time
   })
   agg_on_standard <- reactive({input$Std_Agg_Indiv})
   window_length <- reactive({input$window_length})
@@ -629,9 +643,13 @@ server <- function(input,output,session){
         dateInput("event_date", label=strong('Event date (yyyy-mm-dd):'), 
                   value=floor_date(min(v$combined_data$ts), "day"), startview="year")
       })
+      output$pre_event_interval <- renderUI({
+        timeInput("pre_event_interval", label=strong('Pre-event time interval (Needs to match exactly to data timestamp)'), 
+                  value = as.POSIXct("18:06:50",format="%H:%M:%S"))
+      })
       output$event_time <- renderUI({
-        timeInput("event_time", label=strong('Pre-event time interval (Needs to match exactly to data timestamp)'), 
-                  value = as.POSIXct("13:11:55",format="%H:%M:%S"))
+        timeInput("event_time", label=strong('Time of event'), 
+                  value = as.POSIXct("18:06:53",format="%H:%M:%S"))
       })
       output$window_length <- renderUI({
         numericInput("window_length", label=strong('Set window length (min),
@@ -697,7 +715,7 @@ server <- function(input,output,session){
     if (length(sites()) > 0) {combined_data_f <- filter(combined_data_f, site_id %in% sites())}
     if (length(circuits()) > 0) {combined_data_f <- filter(combined_data_f, c_id %in% circuits())}
     if(length(combined_data_f$ts) > 0){
-      combined_data_f <- categorise_response(combined_data_f, event_time(), window_length())
+      combined_data_f <- categorise_response(combined_data_f, pre_event_interval(), window_length())
       if (length(responses()) < 6) {combined_data_f <- filter(combined_data_f, response_category %in% responses())}
     }
     # Filter data by user selected time window
@@ -725,7 +743,7 @@ server <- function(input,output,session){
       id2 <- showNotification("Calculating site performance factors", duration=1000)
       combined_data_f <- calc_site_performance_factors(combined_data_f)
       combined_data_f <- setnames(combined_data_f, c("ts"), c("Time"))
-      combined_data_f <- event_normalised_power(combined_data_f, event_time(), keep_site_id=TRUE)
+      combined_data_f <- event_normalised_power(combined_data_f, pre_event_interval(), keep_site_id=TRUE)
       combined_data_f <- setnames(combined_data_f, c("Event_Normalised_Power_kW"), c("Site_Event_Normalised_Power_kW"))
       combined_data_f <- setnames(combined_data_f, c("Time"), c("ts"))
       if(dim(ideal_response_to_plot)[1]>0){
@@ -777,12 +795,12 @@ server <- function(input,output,session){
                                     con_type, first_ac, polarity, compliance_status)
         # Combine data sets that have the same grouping so they can be saved in a single file
         if (no_grouping){
-          et <- event_time()
+          et <- pre_event_interval()
           agg_norm_power <- event_normalised_power(agg_norm_power, et, keep_site_id=TRUE)
           v$agg_power <- left_join( v$agg_power, agg_norm_power[, c("Event_Normalised_Power_kW", "site_id", "Time")], 
                                     by=c("Time", "site_id"))
         } else {
-          et <- event_time()
+          et <- pre_event_interval()
           agg_norm_power <- event_normalised_power(agg_norm_power, et,  keep_site_id=FALSE)
           v$agg_power <- left_join(v$agg_power, agg_norm_power[, c("Event_Normalised_Power_kW", "series", "Time")], 
                                    by=c("Time", "series"))
@@ -806,6 +824,9 @@ server <- function(input,output,session){
           })
           output$batch_save <- renderUI({
             shinySaveButton("batch_save", "Batch save", "Save file as ...", filetype=list(xlsx="csv"))
+          })
+          output$save_report <- renderUI({
+            shinyDirButton("save_report", "Save report", "Choose directory for report files ...")
           })
           output$sample_count_table <- renderDataTable({v$sample_count_table})
           output$save_sample_count <- renderUI({shinySaveButton("save_sample_count", "Save data", "Save file as ...", 
@@ -970,13 +991,25 @@ server <- function(input,output,session){
     if (nrow(fileinfo) > 0) {write.csv(v$distance_response, as.character(fileinfo$datapath), row.names=FALSE)}
   })
   
+  observeEvent(input$save_report, {
+    volumes <- getVolumes()
+    shinyDirChoose(input, "save_report", roots=volumes, session=session)
+    datapath <- parseDirPath(volumes, input$save_report)
+    if(length(datapath) > 0){
+      browser()
+      create_files(v$agg_power, v$combined_data_f, pre_event_interval(), 
+                   event_time(), data_path)      
+    }
+
+  })
+  
   # Save data from aggregate pv power plot
   observeEvent(input$batch_save, {
     variables <- c('time_series_file', 'circuit_details_file', 'site_details_file', 'frequency_data_file', 'region',
                    'duration', 'standards', 'responses', 'postcodes', 'manufacturers', 'models', 'sites', 'circuits', 
                    'zones', 'compliance', 'offsets', 'size_groupings', 'clean', 'raw_upscale', 'pst_agg', 
                    'grouping_agg', 'response_agg', 'manufacturer_agg', 'perform_clean', 'model_agg', 'circuit_agg', 
-                   'zone_agg', 'compliance_agg', 'start_time', 'end_time', 'event_time', 
+                   'zone_agg', 'compliance_agg', 'start_time', 'end_time', 'pre_event_interval', 
                    'agg_on_standard', 'window_length', 'event_latitude', 'event_longitude', 'zone_one_radius', 
                    'zone_two_radius', 'zone_three_radius')
    values <- c(time_series_file(), circuit_details_file(), site_details_file(), frequency_data_file(), 
@@ -992,7 +1025,7 @@ server <- function(input,output,session){
                    zone_agg(), compliance_agg(), 
                    if(length(start_time())==0){''}else{as.character(start_time())}, 
                    if(length(end_time())==0){''}else{as.character(end_time())}, 
-                   if(length(event_time())==0){''}else{as.character(event_time())},
+                   if(length(pre_event_interval())==0){''}else{as.character(pre_event_interval())},
                    agg_on_standard(), 
                    if(is.null(window_length())){''}else{window_length()}, 
                    if(is.null(event_latitude())){''}else{event_latitude()}, 
@@ -1018,6 +1051,7 @@ server <- function(input,output,session){
       removeNotification(id)
     }
   })
+  
   
   # Time series file selection pop up.
   observe({
