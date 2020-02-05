@@ -33,8 +33,8 @@ source("response_categorisation_function.R")
 source("distance_from_event.R")
 source("documentation.R")
 source("ideal_response_functions.R")
-source("AEMOtemplate_format.R")
 source("create_report_files.R")
+source("create_report_tables.R")
 
 ui <- fluidPage(
   tags$head(
@@ -50,26 +50,26 @@ ui <- fluidPage(
         sidebarPanel(id= "side_panel",
           h4("File selection"),
           textInput("time_series", "Time series file",
-                    value="C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/data/NEM_20191116_data_SA.feather"
+                    value="C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/data/Event 20191116/NEM_20191116_data_SA.feather"
           ),
           shinyFilesButton("choose_ts", "Choose File", 
                       "Select timeseries data file ...", multiple=FALSE
           ),
           HTML("<br><br>"),
           textInput("circuit_details", "Circuit details file",
-                    value="C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/data/circuit_details_nem.csv"
+                    value="C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/data/Event 20191116/circuit_details_nem.csv"
                     ),
 
           shinyFilesButton("choose_c", "Choose File", "Select circuit details data file ...", multiple=FALSE
           ),
           HTML("<br><br>"),
           textInput("site_details", "Site details file", 
-                    value="C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/data/site_details_nem.csv"
+                    value="C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/data/Event 20191116/site_details_nem.csv"
           ),
           shinyFilesButton("choose_site", "Choose File", "Select site details data file ...", multiple=FALSE),
           HTML("<br><br>"),
           textInput("frequency_data", "Frequency data file", 
-                    value="C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/data/frequency_data_for_analysis_ng.csv"
+                    value="C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/data/Event 20191116/frequency_data_for_analysis_ng.csv"
           ),
           shinyFilesButton("choose_frequency_data", "Choose File", "Select fequency data file ...", multiple=FALSE),
           HTML("<br><br>"),
@@ -559,10 +559,10 @@ server <- function(input,output,session){
                        startview="year")
         })
       output$time_start <- renderUI({
-        timeInput("time_start", label=strong('Enter start time'), value=as.POSIXct("07:00:00",format="%H:%M:%S"))
+        timeInput("time_start", label=strong('Enter start time'), value=as.POSIXct("18:00:00",format="%H:%M:%S"))
         })
       output$time_end <- renderUI({
-        timeInput("time_end", label=strong('Enter end time'), value=as.POSIXct("17:00:00",format="%H:%M:%S"))
+        timeInput("time_end", label=strong('Enter end time'), value=as.POSIXct("19:00:00",format="%H:%M:%S"))
         })
       output$region <- renderUI({
         selectInput(inputId="region", label=strong("Region"), choices=unique(v$combined_data$s_state))
@@ -645,11 +645,11 @@ server <- function(input,output,session){
       })
       output$pre_event_interval <- renderUI({
         timeInput("pre_event_interval", label=strong('Pre-event time interval (Needs to match exactly to data timestamp)'), 
-                  value = as.POSIXct("18:06:50",format="%H:%M:%S"))
+                  value = as.POSIXct("18:05:55",format="%H:%M:%S"))
       })
       output$event_time <- renderUI({
         timeInput("event_time", label=strong('Time of event'), 
-                  value = as.POSIXct("18:06:53",format="%H:%M:%S"))
+                  value = as.POSIXct("18:11:55",format="%H:%M:%S"))
       })
       output$window_length <- renderUI({
         numericInput("window_length", label=strong('Set window length (min),
@@ -927,7 +927,7 @@ server <- function(input,output,session){
   
   # Save data from aggregate pv power plot
   observeEvent(input$save_agg_power,{
-    volumes <- getVolumes()
+    volumes <- c(home=getwd())
     shinyFileSave(input, "save_agg_power", roots=volumes, session=session)
     fileinfo <- parseSavePath(volumes, input$save_agg_power)
     if (nrow(fileinfo) > 0) {
@@ -937,7 +937,7 @@ server <- function(input,output,session){
   
   # Save underlying data by circuit id and time stamp
   observeEvent(input$save_underlying,{
-    volumes <- getVolumes()
+    volumes <- c(home=getwd())
     shinyFileSave(input, "save_underlying", roots=volumes, session=session)
     fileinfo <- parseSavePath(volumes, input$save_underlying)
     if (nrow(fileinfo) > 0) {
@@ -949,7 +949,7 @@ server <- function(input,output,session){
   
   # Save circuit summary
   observeEvent(input$save_circuit_summary,{
-    volumes <- getVolumes()
+    volumes <- c(home=getwd())
     shinyFileSave(input, "save_circuit_summary", roots=volumes, session=session)
     fileinfo <- parseSavePath(volumes, input$save_circuit_summary)
     if (nrow(fileinfo) > 0) {
@@ -961,7 +961,7 @@ server <- function(input,output,session){
   
   # Save data from sample count table
   observeEvent(input$save_sample_count,{
-    volumes <- getVolumes()
+    volumes <- c(home=getwd())
     shinyFileSave(input, "save_sample_count", roots=volumes, session=session)
     fileinfo <- parseSavePath(volumes, input$save_sample_count)
     if (nrow(fileinfo) > 0) {write.csv(v$sample_count_table, as.character(fileinfo$datapath), row.names=FALSE)}
@@ -969,7 +969,7 @@ server <- function(input,output,session){
   
   # Save data on aggregated response categories
   observeEvent(input$save_response_count,{
-    volumes <- getVolumes()
+    volumes <- c(home=getwd())
     shinyFileSave(input, "save_response_count", roots=volumes, session=session)
     fileinfo <- parseSavePath(volumes, input$save_response_count)
     if (nrow(fileinfo) > 0) {write.csv(v$response_count, as.character(fileinfo$datapath), row.names=FALSE)}
@@ -977,7 +977,7 @@ server <- function(input,output,session){
   
   # Save data on zones
   observeEvent(input$save_zone_count, {
-    volumes <- c(dr="C:\\")
+    volumes <- c(home=getwd())
     shinyFileSave(input, "save_zone_count", roots=volumes, session=session)
     fileinfo <- parseSavePath(volumes, input$save_zone_count)
     if (nrow(fileinfo) > 0) {write.csv(v$zone_count, as.character(fileinfo$datapath), row.names=FALSE)}
@@ -985,20 +985,22 @@ server <- function(input,output,session){
   
   # Save data on response percentage by distance
   observeEvent(input$save_distance_response, {
-    volumes <- getVolumes()
+    volumes <- c(home=getwd())
     shinyFileSave(input, "save_distance_response", roots=volumes, session=session)
     fileinfo <- parseSavePath(volumes, input$save_distance_response)
     if (nrow(fileinfo) > 0) {write.csv(v$distance_response, as.character(fileinfo$datapath), row.names=FALSE)}
   })
   
   observeEvent(input$save_report, {
-    volumes <- getVolumes()
+    volumes <- c(home=getwd())
     shinyDirChoose(input, "save_report", roots=volumes, session=session)
     datapath <- parseDirPath(volumes, input$save_report)
     if(length(datapath) > 0){
-      browser()
+      id <- showNotification("Creating report", duration=1000)
       create_files(v$agg_power, v$combined_data_f, pre_event_interval(), 
-                   event_time(), data_path)      
+                   event_time(), datapath, zone_one_radius(), zone_two_radius(), 
+                   zone_three_radius())
+      removeNotification(id)
     }
 
   })

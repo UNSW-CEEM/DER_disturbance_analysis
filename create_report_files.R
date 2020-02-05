@@ -1,10 +1,22 @@
 
 create_files <- function(upscaled_timeseries, timeseries_by_site, 
-                         pre_event_interval, event_time, data_path){
+                         pre_event_interval, time_min, data_path,
+                         zone1, zone2, zone3){
+  timeseries_by_site <- check_for_duplicates(timeseries_by_site, "Underlying")
+  
+  timeseries_by_site <- re_name_response_categories(timeseries_by_site)
+  
   upscaled_power_by_response <- categorise_upscaled_power(upscaled_timeseries, 
                                                           timeseries_by_site)
+  
   create_plots(upscaled_power_by_response, timeseries_by_site, pre_event_interval, 
-               event_time, data_path)
+               time_min, data_path, zone1, zone2, zone3)
+  
+  create_raw_tables(timeseries_by_site,  pre_event_interval, time_min, 
+                    data_path)
+  
+  create_upscaled_tables(upscaled_power_by_response, pre_event_interval, time_min, data_path)
+  
 }
 
 categorise_upscaled_power <- function(upscaled_timeseries, timeseries_by_site){
@@ -12,10 +24,6 @@ categorise_upscaled_power <- function(upscaled_timeseries, timeseries_by_site){
   
   upscaled_timeseries <- dplyr::mutate(upscaled_timeseries, 
                                        Time=ymd_hms(Time,tz="Australia/Brisbane"))
-  
-  timeseries_by_site <- check_for_duplicates(timeseries_by_site, "Underlying")
-  
-  timeseries_by_site <- re_name_response_categories(timeseries_by_site)
   
   response_percentage_by_standard <- 
     calc_response_percentage_by_standard(timeseries_by_site)
@@ -109,12 +117,19 @@ disaggregate_upscaled_power_by_response <- function(
   return(upscaled_power_by_response)
 }
 
+
+add_missing_cols <- function(data, cname) {
+  add <-cname[!cname%in%names(data)]
+  if(length(add)!=0) data[add] <- 0
+  data
+}
+
 create_plots <- function(upscaled_timeseries, timeseries_by_site, 
-                         pre_event_interval, event_time, data_path){
-  
+                         pre_event_interval, event_time, data_path, 
+                         zone1, zone2, zone3){
   t0 <- as.POSIXct(pre_event_interval)
   tx <- as.POSIXct(event_time)
-  browser()
+  event_date <- str_replace_all(as.character(as.Date(t0)), "-", "_")
   ## plot 2 ## raw data PV output short (for the time near the event) ####
   temp.plot <- aggregate(power_kW ~ ts + response_category, timeseries_by_site, 
                          sum) %>% 
@@ -206,7 +221,7 @@ create_plots <- function(upscaled_timeseries, timeseries_by_site,
   
   ## plot 6 ## response by zone bar graph
   ## collate sample count for standard version, zone, and response of each circuit ID
-  temp.sample <- unique(select(timeseries_by_site, c_id,Standard_Version,zone,
+  temp.sample <- unique(select(timeseries_by_site, c_id, Standard_Version,zone,
                                response_category)) %>% 
     mutate(response_category=gsub("-","_",response_category),
            count=1)
@@ -225,7 +240,7 @@ create_plots <- function(upscaled_timeseries, timeseries_by_site,
   
   temp.n0 <- sapply(temp.zones,function(x){
     
-    temp.bind <-  data.frame(c_id=c(1,2,3),
+    temp.bind <-  data.frame(c_id=as.factor(c("1","2","3")),
                              Standard_Version=as.factor(c("AS4777.3:2005", "Transition", "AS4777.2:2015")),
                              zone=x,
                              response_category=as.character("null"),
@@ -269,12 +284,12 @@ create_plots <- function(upscaled_timeseries, timeseries_by_site,
     scale_colour_manual(values=c("black","black","black"))+
     ylim(limits = c(0, 100))
   
-  
   temp.plot7 <- temp.sample %>% 
     group_by(zone, response_category) %>% 
     summarise(d=sum(count)) %>% 
     spread(response_category, d)
   temp.plot7[is.na(temp.plot7)] <- 0
+  temp.plot7 <- add_missing_cols(temp.plot7, c("Curtail", "Disconnect", "Ride_Through"))
   temp.plot7 <- temp.plot7 %>% 
     mutate(Total = sum(Curtail+Disconnect+Ride_Through)) %>% 
     mutate(perc_disc= 100*Disconnect/Total) %>% 
@@ -381,14 +396,12 @@ create_plots <- function(upscaled_timeseries, timeseries_by_site,
   rm(list=ls(pattern="temp"))
   
   ##### 6. save outputs ####
-  #setwd(paste0("",directory,"/PP_output_",event_date,""))
-  
-  ggsave(p2,file=paste0("plot_2_",savetime,".png"),height =7, width =10, path=data_path)
-  ggsave(p3,file=paste0("plot_3_",savetime,".png"),height =7, width =10, path=data_path)
-  ggsave(p4,file=paste0("plot_4_",savetime,".png"),height =7, width =10, path=data_path)
-  ggsave(p5,file=paste0("plot_5_",savetime,".png"),height =7, width =10, path=data_path)
-  ggsave(p6,file=paste0("plot_6_",savetime,".png"),height =7, width =10, path=data_path)
-  ggsave(p7,file=paste0("plot_7_",savetime,".png"),height =7, width =10, path=data_path)
-  ggsave(p8,file=paste0("plot_8_",savetime,".png"),height =7, width =10, path=data_path)
-  ggsave(p9,file=paste0("plot_9_",savetime,".png"),height =7, width =10, path=data_path)
+  ggsave(p2,file=paste0("plot_2_",event_date,".png"),height =7, width =10, path=data_path)
+  ggsave(p3,file=paste0("plot_3_",event_date,".png"),height =7, width =10, path=data_path)
+  ggsave(p4,file=paste0("plot_4_",event_date,".png"),height =7, width =10, path=data_path)
+  ggsave(p5,file=paste0("plot_5_",event_date,".png"),height =7, width =10, path=data_path)
+  ggsave(p6,file=paste0("plot_6_",event_date,".png"),height =7, width =10, path=data_path)
+  ggsave(p7,file=paste0("plot_7_",event_date,".png"),height =7, width =10, path=data_path)
+  ggsave(p8,file=paste0("plot_8_",event_date,".png"),height =7, width =10, path=data_path)
+  ggsave(p9,file=paste0("plot_9_",event_date,".png"),height =7, width =10, path=data_path)
 }
