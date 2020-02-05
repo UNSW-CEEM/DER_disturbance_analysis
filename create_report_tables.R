@@ -226,7 +226,7 @@ create_raw_tables <- function(timeseries_by_site,  pre_event_interval, time_min,
   ## join BC with A
   temp.join <- left_join(table_2,select(temp.bind,-ts,-legend),by="key") %>% 
     dplyr::select(-key)
-  
+  temp.join <- add_missing_cols_with_NA(temp.join, c("Curtail", "Disconnect", "Ride-Through"))
   ## mutate so response category columns (B and C) are percentage of A
   ## (will require manual changes if response categories are changed)
   temp.table <- temp.join %>% 
@@ -523,4 +523,10 @@ create_upscaled_tables <- function(upscaled_timeseries, pre_event_interval,
   
   rm(list=ls(pattern="temp"))
   
+}
+
+add_missing_cols_with_NA <- function(data, cname) {
+  add <-cname[!cname%in%names(data)]
+  if(length(add)!=0) data[add] <- NA
+  data
 }

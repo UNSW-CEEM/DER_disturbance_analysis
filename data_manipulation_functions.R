@@ -3,10 +3,6 @@ process_raw_time_series_data <- function(time_series_data){
   # Sometimes data from solar analytics contains rows that are additional 
   # headers explicity remove these.
   time_series_data <- time_series_data[!time_series_data$c_id=="c_id",]
-  # If a data record does not have a specified duration assume it is equal to 
-  # 5 s.
-  #time_series_data$d[is.na(time_series_data$d)] <- "5.0"
-  #time_series_data$d[time_series_data$d == ""] <- "5.0"
   # Convert data that comes as strings to numeric where applicable.
   #time_series_data <- time_series_data %>%  mutate(d = as.numeric(d))
   # Convert time stamp to date time object assuming UTC time is being used.

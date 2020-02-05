@@ -1000,6 +1000,37 @@ server <- function(input,output,session){
       create_files(v$agg_power, v$combined_data_f, pre_event_interval(), 
                    event_time(), datapath, zone_one_radius(), zone_two_radius(), 
                    zone_three_radius())
+      variables <- c('time_series_file', 'circuit_details_file', 'site_details_file', 'frequency_data_file', 'region',
+                     'duration', 'standards', 'responses', 'postcodes', 'manufacturers', 'models', 'sites', 'circuits', 
+                     'zones', 'compliance', 'offsets', 'size_groupings', 'clean', 'raw_upscale', 'pst_agg', 
+                     'grouping_agg', 'response_agg', 'manufacturer_agg', 'perform_clean', 'model_agg', 'circuit_agg', 
+                     'zone_agg', 'compliance_agg', 'start_time', 'end_time', 'pre_event_interval', 
+                     'agg_on_standard', 'window_length', 'event_latitude', 'event_longitude', 'zone_one_radius', 
+                     'zone_two_radius', 'zone_three_radius')
+      values <- c(time_series_file(), circuit_details_file(), site_details_file(), frequency_data_file(), 
+                  if(is.null(region())){''}else{region()},
+                  if(is.null(duration())){''}else{duration()}, paste(standards(), collapse='; '), paste(responses(), collapse='; '), 
+                  paste(postcodes(), collapse='; '), 
+                  paste(manufacturers(), '; '), 
+                  paste(models(), collapse='; '), paste(sites(), collapse='; '), paste(circuits(), collapse='; '), 
+                  paste(zones(), collapse='; '),  paste(compliance(), collapse='; '), paste(offsets(), collapse='; '), 
+                  paste(size_groupings(), collapse='; '),
+                  paste(clean(), collapse='; '), raw_upscale(), pst_agg(), 
+                  grouping_agg(), response_agg(), manufacturer_agg(), perform_clean(), model_agg(), circuit_agg(), 
+                  zone_agg(), compliance_agg(), 
+                  if(length(start_time())==0){''}else{as.character(start_time())}, 
+                  if(length(end_time())==0){''}else{as.character(end_time())}, 
+                  if(length(pre_event_interval())==0){''}else{as.character(pre_event_interval())},
+                  agg_on_standard(), 
+                  if(is.null(window_length())){''}else{window_length()}, 
+                  if(is.null(event_latitude())){''}else{event_latitude()}, 
+                  if(is.null(event_longitude())){''}else{event_longitude()}, 
+                  if(is.null(zone_one_radius())){''}else{zone_one_radius()}, 
+                  if(is.null(zone_two_radius())){''}else{zone_two_radius()}, 
+                  if(is.null(zone_three_radius())){''}else{zone_three_radius()})
+      meta_data = data.frame(variables, values, stringsAsFactors = FALSE)
+      write.csv(meta_data, paste0(datapath, '_meta_data.csv'), row.names=FALSE)
+      write.csv(v$circuit_summary, paste0(datapath, '_circ_sum.csv'), row.names=FALSE)
       removeNotification(id)
     }
 
