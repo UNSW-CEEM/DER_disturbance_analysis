@@ -463,7 +463,7 @@ server <- function(input,output,session){
     
       # Load in the install data from CSV.
       id <- showNotification("Load CER capacity data", duration=1000)
-      intall_data_file <- "cumulative_capacity_and_number_20190121.csv"
+      intall_data_file <- "cumulative_capacity_and_number.csv"
       install_data <- read.csv(file=intall_data_file, header=TRUE, stringsAsFactors = FALSE)
       v$install_data <- process_install_data(install_data)
       
@@ -519,6 +519,7 @@ server <- function(input,output,session){
         v$combined_data <- rbind(v$combined_data, combined_data_after_clean)
         remove(combined_data_after_clean)
         output$save_cleaned_data <- renderUI({actionButton("save_cleaned_data", "Save cleaned data")})
+        show("save_cleaned_data")
         removeNotification(id)
       } else {
         # Don't let the user crash the tool by trying to save data that doesn't exist
