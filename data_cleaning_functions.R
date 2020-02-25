@@ -14,7 +14,9 @@ group_site_details_to_one_row_per_site <- function(site_details){
   processed_site_details <- site_details %>%
     summarise(s_state=first(s_state), 
               pv_installation_year_month=first(pv_installation_year_month),
-              sum_ac=sum(ac), sum_dc=sum(dc),
+              #sum_ac=sum(ac), sum_dc=sum(dc),
+             ##CHANGES MADE AS TOTAL SITE AC SEEMS TO BE THE TOTAL SITE VALUES AS THEY ARE ALL THE SAME REGARDLESS OF INVERTER
+              sum_ac=mean(ac), sum_dc=mean(dc),
               sum_ac_old=sum(ac_old), sum_dc_old=sum(dc_old),
               ac_dc_ratio=mean(ac_dc_ratio),
               manufacturer=paste(manufacturer, collapse=' '),
@@ -113,16 +115,16 @@ calc_sunrise_sunset_bounds <- function(postcode_data, event_date){
   postcode_data <- mutate(postcode_data, sunrise=sunrise-60*60)
   postcode_data <- mutate(postcode_data, sunset=sunset+60*60)
   # Format sunrise and sunset as character so it is displayed in brisbane time in gui.
-  postcode_data <- mutate(postcode_data, dis_sunrise=as.character(sunrise))
-  postcode_data <- mutate(postcode_data, dis_sunset=as.character(sunset))
+  postcode_data <- mutate(postcode_data, dis_sunrise=strftime(sunrise, tz="Australia/Brisbane", format="%H:%M:%S"))
+  postcode_data <- mutate(postcode_data, dis_sunset=strftime(sunset, tz="Australia/Brisbane", format="%H:%M:%S"))
   return(postcode_data)
 }
 
 clac_output_summary_values <- function(combined_data){
   # Determine if a data point is during daylight hours or not.
-  combined_data <- mutate(combined_data, comp_t=as.POSIXct(strftime(ts, format="%H:%M:%S"),format="%H:%M:%S"))
-  combined_data <- mutate(combined_data, sunrise=as.POSIXct(strftime(sunrise, format="%H:%M:%S"),format="%H:%M:%S"))
-  combined_data <- mutate(combined_data, sunset=as.POSIXct(strftime(sunset, format="%H:%M:%S"),format="%H:%M:%S"))
+  combined_data <- mutate(combined_data, comp_t=strftime(ts, tz="Australia/Brisbane", format="%H:%M:%S"))
+  combined_data <- mutate(combined_data, sunrise=strftime(sunrise, tz="Australia/Brisbane", format="%H:%M:%S"))
+  combined_data <- mutate(combined_data, sunset=strftime(sunset, tz="Australia/Brisbane", format="%H:%M:%S"))
   combined_data <- mutate(combined_data, daylight=ifelse(comp_t>sunrise & comp_t<sunset,1,0))
   # Group data by c_id, calculating values needed to perform data cleaning
   combined_data <- group_by(combined_data, c_id)

@@ -3,14 +3,12 @@ process_raw_time_series_data <- function(time_series_data){
   # Sometimes data from solar analytics contains rows that are additional 
   # headers explicity remove these.
   time_series_data <- time_series_data[!time_series_data$c_id=="c_id",]
-  # If a data record does not have a specified duration assume it is equal to 
-  # 5 s.
-  #time_series_data$d[is.na(time_series_data$d)] <- "5.0"
-  #time_series_data$d[time_series_data$d == ""] <- "5.0"
   # Convert data that comes as strings to numeric where applicable.
   #time_series_data <- time_series_data %>%  mutate(d = as.numeric(d))
   # Convert time stamp to date time object assuming UTC time is being used.
   time_series_data <- time_series_data %>%  mutate(ts = fastPOSIXct(ts))
+  time_series_data_1 <- group_by(time_series_data, c_id) %>% summarise(Count=n()) %>% filter(Count==1)
+  time_series_data <- anti_join(time_series_data, time_series_data_1,by="c_id")
   time_series_durations = group_by(time_series_data, c_id)
   time_series_durations <- summarise(time_series_durations, d2=duration_mode(ts), d_min=duration_min(ts))
   time_series_durations <- filter(time_series_durations, d2==d_min)
@@ -296,6 +294,18 @@ duration_min <- function(time_vector){
   ds <- c()
   time_vector <- sort(time_vector)
   ds <- as.numeric(diff(time_vector), units='secs')
-  mean_ds <- min(ds)
-  return(mean_ds)
+  min_ds <- min(ds)
+  return(min_ds)
+}
+
+write_sql_filter <- function(c_ids){
+  filter_statement_head <- "SELECT * FROM file JOIN TABLE(SELECT column_value FROM sys.dbms_debug_vc2coll("
+  
+  filter_statement_c_id_list <- paste(c_ids, collapse = ', ')
+  
+  filter_statement_tail <- ")) c on table.c_id = c.column_value;"
+  
+  filter_statement <- paste0(c(filter_statement_head, filter_statement_c_id_list, filter_statement_tail), 
+                             collapse = "")
+  return(filter_statement)
 }
