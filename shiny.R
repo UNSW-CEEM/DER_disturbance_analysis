@@ -428,7 +428,7 @@ server <- function(input,output,session){
         id <- showNotification("Loading timeseries data from feather", duration=1000)
         time_series_data <- read_feather(time_series_file())
         duration_sample_sizes <- get_duration_sample_counts(time_series_data, duration_options)
-        time_series_data <- filter(time_series_data, d==duration())
+        time_series_data <- filter(time_series_data, d_filter==duration())
         time_series_data <- inner_join(time_series_data, select(v$circuit_details, c_id), by="c_id")
         removeNotification(id)
       }else{
@@ -457,7 +457,7 @@ server <- function(input,output,session){
         file_type_feather = paste(file_no_type, '_', region_to_load(), ".feather", sep="")
         write_feather(time_series_data, file_type_feather)
         duration_sample_sizes <- get_duration_sample_counts(time_series_data, duration_options)
-        time_series_data <- filter(time_series_data, d==duration())
+        time_series_data <- filter(time_series_data, d_filter==duration())
         removeNotification(id)
       }
     
@@ -553,8 +553,8 @@ server <- function(input,output,session){
       })
       output$dateWidget <- renderUI({
         dateRangeInput("date", label=strong('Date range (yyyy-mm-dd):'),
-                       start=strftime(floor_date(min(v$combined_data$ts), "day"), format="%Y-%m-%d"),
-                       end=strftime(floor_date(max(v$combined_data$ts), "day"), format="%Y-%m-%d"),
+                       start=strftime(floor_date(get_mode(v$combined_data$ts), "day"), format="%Y-%m-%d"),
+                       end=strftime(floor_date(get_mode(v$combined_data$ts), "day"), format="%Y-%m-%d"),
                        min=strftime(floor_date(min(v$combined_data$ts), "day"), format="%Y-%m-%d"),
                        max=strftime(floor_date(max(v$combined_data$ts), "day"), format="%Y-%m-%d"), 
                        startview="year")
@@ -642,7 +642,7 @@ server <- function(input,output,session){
       shinyjs::show("compliance_agg")
       output$event_date <- renderUI({
         dateInput("event_date", label=strong('Event date (yyyy-mm-dd):'), 
-                  value=floor_date(min(v$combined_data$ts), "day"), startview="year")
+                  value=strftime(floor_date(get_mode(v$combined_data$ts), "day"), format="%Y-%m-%d"), startview="year")
       })
       output$pre_event_interval <- renderUI({
         timeInput("pre_event_interval", label=strong('Pre-event time interval (Needs to match exactly to data timestamp)'), 
@@ -790,7 +790,7 @@ server <- function(input,output,session){
         v$zone_count <- vector_groupby_count_zones(combined_data_f, grouping_cols)
         v$distance_response <- vector_groupby_cumulative_distance(combined_data_f, grouping_cols)
         geo_data <- vector_groupby_system(combined_data_f, grouping_cols)
-        v$circuit_summary <- distinct(combined_data_f, ts, .keep_all=TRUE)
+        v$circuit_summary <- distinct(combined_data_f, c_id, .keep_all=TRUE)
         v$circuit_summary <- select(v$circuit_summary, site_id, c_id, s_state, s_postcode, Standard_Version, Grouping, 
                                     sum_ac, clean, manufacturer, model, response_category, zone, distance, lat, lon,
                                     con_type, first_ac, polarity, compliance_status)

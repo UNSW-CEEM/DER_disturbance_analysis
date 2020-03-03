@@ -9,11 +9,11 @@ process_raw_time_series_data <- function(time_series_data){
   time_series_data <- time_series_data %>%  mutate(ts = fastPOSIXct(ts))
   time_series_data_1 <- group_by(time_series_data, c_id) %>% summarise(Count=n()) %>% filter(Count==1)
   time_series_data <- anti_join(time_series_data, time_series_data_1,by="c_id")
+  time_series_data <- mutate(time_series_data, d=ifelse(d == 0, 5, d))
   time_series_durations = group_by(time_series_data, c_id)
-  time_series_durations <- summarise(time_series_durations, d2=duration_mode(ts), d_min=duration_min(ts))
-  time_series_durations <- filter(time_series_durations, d2==d_min)
+  time_series_durations <- summarise(time_series_durations, d_filter=duration_mode(ts), d_min=duration_min(ts))
+  time_series_durations <- filter(time_series_durations, d_filter==d_min)
   time_series_data <- left_join(time_series_data, time_series_durations, by="c_id")
-  time_series_data <- time_series_data %>%  mutate(d = d2)
   # Assert assumptions about data set
   assert_raw_time_series_assumptions(time_series_data)
   # Change time zone to NEM standard time.
