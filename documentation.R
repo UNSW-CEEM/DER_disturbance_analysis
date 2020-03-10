@@ -37,7 +37,8 @@ documentation_panel <- function(){
             tags$li('The "NA" zone is assigned to circuits with no location data, i.e. no postcode')),
     div('Note circuit locations are based on the centroid of their site\'s postcode.'),
     h4('Compliance status category definition'),
-    div('Compliance status is assigned on a site basis, currently it pertains only to a site\'s aggregate over 
+    div('Compliance status is assigned on a site basis (because we only know the applicable standard on a site basis), 
+        currently it pertains only to a site\'s aggregate over 
         frequency droop response, i.e. it assumes sites are responing only to an over frequency event. 
         An error metric, max percentage error and min percentage error are calculated for each site. 
         The error metric is defined as per slide 1, the min percentage error and max percentage error
