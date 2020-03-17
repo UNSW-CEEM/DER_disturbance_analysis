@@ -177,7 +177,7 @@ ui <- fluidPage(
        uiOutput("set_site_compliance"),
        fluidRow(
          div(style="display:inline-block", uiOutput("get_previous_site")),
-         div(style="display:inline-block", uiOutput("get_next_site")))
+         div(style="display:inline-block", uiOutput("get_next_site"))),
      )
     ),
     tabPanel("Assumptions and Methodology", fluid=TRUE, documentation_panel())
@@ -440,10 +440,10 @@ server <- function(input,output,session){
         # If a feather file is used it is assumed the data is pre-processed.
         # Hence the data is not passed to the raw data processor.
         id <- showNotification("Loading timeseries data from feather", duration=1000)
-        time_series_data <- read_feather(time_series_file())
-        duration_sample_sizes <- get_duration_sample_counts(time_series_data, duration_options)
-        time_series_data <- filter(time_series_data, d_filter==duration())
-        time_series_data <- inner_join(time_series_data, select(v$circuit_details, c_id), by="c_id")
+        ts_data <- read_feather(time_series_file())
+        duration_sample_sizes <- get_duration_sample_counts(ts_data, duration_options)
+        ts_data <- filter(ts_data, d_filter==duration())
+        ts_data <- inner_join(ts_data, select(v$circuit_details, c_id), by="c_id")
         removeNotification(id)
       }else{
         id <- showNotification("Loading timeseries data from csv", duration=1000)
@@ -464,14 +464,15 @@ server <- function(input,output,session){
         removeNotification(id)
         id <- showNotification("Formatting timeseries data and 
                                 creating feather cache file", duration=1000)
-        time_series_data <- process_raw_time_series_data(ts_data)
+        ts_data <- process_raw_time_series_data(ts_data)
         # Automatically create a cache of the processed data as a feather file.
         # Allows for much faster data loading for subsequent anaylsis.
         file_no_type = str_sub(time_series_file(), end=-5)
         file_type_feather = paste(file_no_type, '_', region_to_load(), ".feather", sep="")
-        write_feather(time_series_data, file_type_feather)
-        duration_sample_sizes <- get_duration_sample_counts(time_series_data, duration_options)
-        time_series_data <- filter(time_series_data, d_filter==duration())
+        gc()
+        write_feather(ts_data, file_type_feather)
+        duration_sample_sizes <- get_duration_sample_counts(ts_data, duration_options)
+        ts_data <- filter(ts_data, d_filter==duration())
         removeNotification(id)
       }
     
@@ -489,7 +490,7 @@ server <- function(input,output,session){
       
       # Perform data, processing and combine data table into a single data frame
       id <- showNotification("Combining data tables", duration=1000)
-      v$combined_data <- combine_data_tables(time_series_data, v$circuit_details, v$site_details)
+      v$combined_data <- combine_data_tables(ts_data, v$circuit_details, v$site_details)
       v$combined_data <- v$combined_data %>% mutate(clean="raw")
       v$combined_data <- select(v$combined_data, c_id, ts, v, f, d, site_id, e, con_type, s_state, s_postcode, 
                                 Standard_Version, Grouping, polarity, first_ac,power_kW, clean, manufacturer, model, 
@@ -521,9 +522,9 @@ server <- function(input,output,session){
         
         # Add cleaned data to display data for main tab
         site_details_cleaned_processed <- process_raw_site_details(v$site_details_cleaned)
-        combined_data_after_clean <- combine_data_tables(time_series_data, v$circuit_details_for_editing, 
+        combined_data_after_clean <- combine_data_tables(ts_data, v$circuit_details_for_editing, 
                                                          site_details_cleaned_processed)
-        remove(time_series_data)
+        remove(ts_data)
         combined_data_after_clean <- filter(combined_data_after_clean, sum_ac<=100)
         v$combined_data <- filter(v$combined_data, clean=="raw")
         combined_data_after_clean <- combined_data_after_clean %>% mutate(clean="cleaned")
@@ -536,9 +537,11 @@ server <- function(input,output,session){
         show("save_cleaned_data")
         removeNotification(id)
       } else {
+        remove(ts_data)
         # Don't let the user crash the tool by trying to save data that doesn't exist
         hide("save_cleaned_data")
       }
+      gc()
       
       # Set default manual cleaning value.
       v$combined_data <- mutate(v$combined_data, manual_compliance = 'Not set')
@@ -928,6 +931,7 @@ server <- function(input,output,session){
                             showarrow = F, xref='paper', yref='paper', 
                             xanchor='right', yanchor='auto', xshift=0, yshift=0))
             })
+          
           output$compliance_cleaned_or_raw <- 
             renderUI({radioButtons("compliance_cleaned_or_raw", 
                                    label=strong("Choose data set"), 
@@ -955,7 +959,9 @@ server <- function(input,output,session){
     if(compliance_cleaned_or_raw() %in% v$combined_data_f$clean){
       # Setting up manual compliance tab.
       site_options <- filter(v$combined_data_f, clean==compliance_cleaned_or_raw())
-      v$sites_vector <- sort(unique(site_options$site_id))
+      set.seed(001)
+      v$sites_vector <- sample(unique(site_options$site_id))
+      set.seed(NULL)
       v$compliance_counter <- 1
       message <- paste0("Select site (now viewing site ", v$compliance_counter, ' of ', length(v$sites_vector) ,")")
       site_to_view <- v$sites_vector[[v$compliance_counter]]
@@ -967,42 +973,47 @@ server <- function(input,output,session){
       output$compliance_cleaned_or_raw <- renderUI({radioButtons("compliance_cleaned_or_raw", 
                                                                  label=strong("Choose data set"), 
                                                                  choices = list("cleaned","raw"), 
-                                                                 selected = v$combined_data_f$clean[1], inline = TRUE)})
+                                                                 selected = v$combined_data_f$clean[1], 
+                                                                 inline = TRUE)})
     }
   })
   
   # Change site displayed in manual compliance tab.
-  observeEvent(input$compliance_sites,{
-    browser()
-    v$compliance_counter <- match(c(compliance_sites()), v$sites_vector)
-    message <- paste0("Select site (now viewing site ", v$compliance_counter, ' of ', length(v$sites_vector) ,")")
-    site_to_view <- v$sites_vector[[v$compliance_counter]]
-    output$compliance_sites <- isolate(renderUI({selectizeInput("compliance_sites", label=strong(message), choices=as.list(v$sites_vector), 
-                                                        multiple=FALSE, selected=site_to_view)}))
-    data_to_view <- filter(filter(v$combined_data_f, clean==compliance_cleaned_or_raw()), site_id==compliance_sites())
-    output$set_site_compliance <- isolate(renderUI({radioButtons("set_site_compliance", 
-                                                                 label=strong("Compliance"), 
-                                                                 choices = list("Not set","Compliant","Non-compliant", "Unsure"), 
-                                                                 selected = data_to_view$manual_compliance[1], inline = TRUE)}))
-    data_to_view <- mutate(data_to_view, Time=ts)
-    data_to_view <- group_by(data_to_view, Time, site_id)
-    data_to_view <- summarise(data_to_view, site_performance_factor=first(site_performance_factor))
-    data_to_view <- event_normalised_power(data_to_view, pre_event_interval(), keep_site_id=TRUE)
-    if(dim(v$ideal_response_to_plot)[1]>0){
-      output$compliance_plot <- renderPlotly({
-        plot_ly(data_to_view, x=~Time, y=~Event_Normalised_Power_kW, type="scatter") %>% 
-          add_trace(x=~v$ideal_response_to_plot$ts, y=~v$ideal_response_to_plot$norm_power, name='Ideal Response', 
-                    mode='markers', inherit=FALSE) %>%
-          add_trace(x=~v$ideal_response_downsampled$time_group, y=~v$ideal_response_downsampled$norm_power, 
-                    name='Ideal Response Downsampled', mode='markers', inherit=FALSE) %>%
-          layout(yaxis=list(title="Site performance factor \n normalised to value of pre-event interval"))
-      })
+  observeEvent(input$compliance_sites, {
+    if (compliance_sites() %in% v$sites_vector){
+      v$compliance_counter <- match(c(compliance_sites()), v$sites_vector)
+      message <- paste0("Select site (now viewing site ", v$compliance_counter, ' of ', length(v$sites_vector) ,")")
+      site_to_view <- v$sites_vector[[v$compliance_counter]]
+      output$compliance_sites <- isolate(renderUI({selectizeInput("compliance_sites", label=strong(message), choices=as.list(v$sites_vector), 
+                                                          multiple=FALSE, selected=site_to_view)}))
+      data_to_view <- filter(filter(v$combined_data_f, clean==compliance_cleaned_or_raw()), site_id==compliance_sites())
+      output$set_site_compliance <- renderUI({radioButtons("set_site_compliance", 
+                                                                   label=strong("Compliance"), 
+                                                                   choices = list("Not set","Compliant","Non-compliant", "Unsure"), 
+                                                                   selected = data_to_view$manual_compliance[1], inline = TRUE)})
+      updateRadioButtons(session, "set_site_compliance", 
+                         selected = data_to_view$manual_compliance[1])
+      data_to_view <- mutate(data_to_view, Time=ts)
+      data_to_view <- group_by(data_to_view, Time, site_id)
+      data_to_view <- summarise(data_to_view, site_performance_factor=first(site_performance_factor))
+      data_to_view <- event_normalised_power(data_to_view, pre_event_interval(), keep_site_id=TRUE)
+      if(dim(v$ideal_response_to_plot)[1]>0){
+        output$compliance_plot <- renderPlotly({
+          plot_ly(data_to_view, x=~Time, y=~Event_Normalised_Power_kW, type="scatter") %>% 
+            add_trace(x=~v$ideal_response_to_plot$ts, y=~v$ideal_response_to_plot$norm_power, name='Ideal Response', 
+                      mode='markers', inherit=FALSE) %>%
+            add_trace(x=~v$ideal_response_downsampled$time_group, y=~v$ideal_response_downsampled$norm_power, 
+                      name='Ideal Response Downsampled', mode='markers', inherit=FALSE) %>%
+            layout(yaxis=list(title="Site performance factor \n normalised to value of pre-event interval"))
+        })
+      } else {
+        output$compliance_plot <- renderPlotly({
+          plot_ly(data_to_view, x=~Time, y=~Event_Normalised_Power_kW, type="scatter") %>% 
+            layout(yaxis=list(title="Site performance factor \n normalised to value of pre-event interval"))
+        })
+      }
     } else {
-      output$NormPower <- renderPlotly({
-        plot_ly(data_to_view, x=~Time, y=~Event_Normalised_Power_kW, type="scatter", 
-                mode = 'lines+markers') %>% 
-          layout(yaxis=list(title="Site performance factor \n normalised to value of pre-event interval"))
-      })
+      shinyalert("Wow", "That site id does not exist.")
     }
   })
   
@@ -1014,7 +1025,7 @@ server <- function(input,output,session){
                                          (clean==compliance_cleaned_or_raw()),
                                        set_site_compliance(),
                                        manual_compliance))
-    v$combined_data_f <- mutate(v$combined_data, 
+    v$combined_data_f <- mutate(v$combined_data_f, 
                                 manual_compliance=
                                   ifelse((site_id==current_site) & 
                                            (clean==compliance_cleaned_or_raw()),
@@ -1291,9 +1302,9 @@ server <- function(input,output,session){
     write.csv(v$circuit_details_for_editing, new_file_name)
     # Add cleaned data to dispay dat set
     site_details_cleaned_processed <- process_raw_site_details(v$site_details_cleaned)
-    time_series_data <- read_feather(time_series_file())
-    time_series_data <- filter(time_series_data, d==duration())
-    combined_data_after_clean <- combine_data_tables(time_series_data, v$circuit_details_for_editing, 
+    ts_data <- read_feather(time_series_file())
+    ts_data <- filter(ts_data, d==duration())
+    combined_data_after_clean <- combine_data_tables(ts_data, v$circuit_details_for_editing, 
                                                      site_details_cleaned_processed)
     combined_data_after_clean <- filter(combined_data_after_clean, sum_ac<=100)
     v$combined_data <- filter(v$combined_data, clean=="raw")
