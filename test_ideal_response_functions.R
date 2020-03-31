@@ -234,3 +234,39 @@ test_that("Test the calc of error metrics and categorisation" ,{
   expect_equal(out, expected_output, tolerance=0.001)
 })
 
+
+test_that("Test the calc of error metrics and categorisation" ,{
+  site_id <- c("100", "100", "100",
+               "100", "100", "100", 
+               "101", "101", "101", 
+               "102", "102", "102",
+               "103", "103", "103")
+  c_id <- c("1000", "1000", "1000", 
+            "1001", "1001", "1001", 
+            "1011", "1011", "1011", 
+            "1021", "1021", "1021",
+            "1031", "1031", "1031")
+  ts <- c("2018-01-01 13:11:55", "2018-01-01 13:12:55", "2018-01-01 13:13:55", 
+          "2018-01-01 13:11:55", "2018-01-01 13:12:55", "2018-01-01 13:13:55",
+          "2018-01-01 13:11:55", "2018-01-01 13:12:55", "2018-01-01 13:13:55", 
+          "2018-01-01 13:11:55", "2018-01-01 13:12:55", "2018-01-01 13:13:55",
+          "2018-01-01 13:11:55", "2018-01-01 13:12:55", "2018-01-01 13:13:55")
+  ts <- as.POSIXct(strptime(ts, "%Y-%m-%d %H:%M:%S", tz="Australia/Brisbane"))
+  Site_Event_Normalised_Power_kW <- c(1, 0.96, 0.96,
+                                      1, 0.96, 0.96,
+                                      1, 0.95, 0.95,
+                                      1, 0.97, 0.97,
+                                      1, 1, 0.9)
+  input_data <- data.frame(ts, site_id, c_id,  Site_Event_Normalised_Power_kW, stringsAsFactors=FALSE)
+  time_group <- c("2018-01-01 13:11:55", "2018-01-01 13:12:55", "2018-01-01 13:13:55")
+  time_group <- as.POSIXct(strptime(time_group, "%Y-%m-%d %H:%M:%S", tz="Australia/Brisbane"))
+  norm_power <- c(1, 0.95, 0.95)
+  ideal_response_downsampled <- data.frame(time_group, norm_power, stringsAsFactors=FALSE)
+  out <- calc_error_metric_and_compliance_2(input_data, ideal_response_downsampled)
+  site_id <- c("100", "101", "102", "103")
+  compliance_status <- c("Compliant", "Compliant", "Non Complinant", "Non Complinant")
+  expected_output <- data.frame(site_id, compliance_status, stringsAsFactors=FALSE)
+  expected_output <- left_join(input_data, expected_output, by="site_id")
+  expect_equal(out, expected_output, tolerance=0.001)
+})
+

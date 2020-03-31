@@ -493,7 +493,7 @@ server <- function(input,output,session){
       v$combined_data <- combine_data_tables(ts_data, v$circuit_details, v$site_details)
       v$combined_data <- v$combined_data %>% mutate(clean="raw")
       v$combined_data <- select(v$combined_data, c_id, ts, v, f, d, site_id, e, con_type, s_state, s_postcode, 
-                                Standard_Version, Grouping, polarity, first_ac,power_kW, clean, manufacturer, model, 
+                                Standard_Version, Grouping, polarity, first_ac, power_kW, clean, manufacturer, model, 
                                 sum_ac, time_offset)
       removeNotification(id)
       
@@ -770,7 +770,7 @@ server <- function(input,output,session){
       if(dim(ideal_response_to_plot)[1]>0){
         ideal_response_downsampled <- down_sample_1s(ideal_response_to_plot, duration(), min(combined_data_f$ts))
         v$ideal_response_downsampled <- ideal_response_downsampled
-        combined_data_f <- calc_error_metric_and_compliance(combined_data_f, ideal_response_downsampled)
+        combined_data_f <- calc_error_metric_and_compliance_2(combined_data_f, ideal_response_downsampled)
       } else {
         combined_data_f <- mutate(combined_data_f, compliance_status="Undefined")  
       }

@@ -113,13 +113,14 @@ calc_threshold_error <- function(ideal_response_downsampled){
 
 calc_error_metric_and_compliance_2 <- function(combined_data, ideal_response_downsampled){
   error_by_c_id <- distinct(combined_data, site_id, ts, .keep_all=TRUE)
-  ramp_time <- min(ideal_response_downsampled$ts) + 60
-  ideal_response_downsampled <- filter(ideal_response_downsampled, ts > ramp_time)
+  ramp_time <- min(ideal_response_downsampled$time_group) + 60
+  ideal_response_downsampled <- filter(ideal_response_downsampled, time_group >= ramp_time)
   error_by_c_id <- inner_join(error_by_c_id, ideal_response_downsampled, by=c("ts"="time_group"))
   error_by_c_id <- mutate(error_by_c_id, error=(1 - Site_Event_Normalised_Power_kW) - ((1 - norm_power) * 0.8))
   error_by_c_id <- group_by(error_by_c_id, site_id)
   error_by_c_id <- summarise(error_by_c_id, min_error=min(error))
-  error_by_c_id <- mutate(error_by_c_id, compliance_status=ifelse(min_error>=0.0, 'Compliant', 'Non Complinant'))
+  error_by_c_id <- mutate(error_by_c_id, compliance_status=ifelse(min_error>0.0, 'Compliant', 'Non Complinant'))
+  error_by_c_id <- select(error_by_c_id, site_id, compliance_status)
   combined_data <- left_join(combined_data, error_by_c_id, by="site_id")
   return(combined_data)
 }
