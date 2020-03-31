@@ -236,35 +236,60 @@ test_that("Test the calc of error metrics and categorisation" ,{
 
 
 test_that("Test the calc of error metrics and categorisation" ,{
-  site_id <- c("100", "100", "100",
-               "100", "100", "100", 
-               "101", "101", "101", 
-               "102", "102", "102",
-               "103", "103", "103")
-  c_id <- c("1000", "1000", "1000", 
-            "1001", "1001", "1001", 
-            "1011", "1011", "1011", 
-            "1021", "1021", "1021",
-            "1031", "1031", "1031")
-  ts <- c("2018-01-01 13:11:55", "2018-01-01 13:12:55", "2018-01-01 13:13:55", 
-          "2018-01-01 13:11:55", "2018-01-01 13:12:55", "2018-01-01 13:13:55",
-          "2018-01-01 13:11:55", "2018-01-01 13:12:55", "2018-01-01 13:13:55", 
-          "2018-01-01 13:11:55", "2018-01-01 13:12:55", "2018-01-01 13:13:55",
-          "2018-01-01 13:11:55", "2018-01-01 13:12:55", "2018-01-01 13:13:55")
+  site_id <- c("100", "100", "100", "100",
+               "100", "100", "100", "100", 
+               "101", "101", "101", "101", 
+               "102", "102", "102", "102",
+               "103", "103", "103", "103",
+               "104", "104", "104", "104",
+               "105", "105", "105", "105",
+               "106", "106", "106", "106")
+  c_id <- c("1000", "1000", "1000", "1000", 
+            "1001", "1001", "1001", "1001", 
+            "1011", "1011", "1011", "1011", 
+            "1021", "1021", "1021", "1021",
+            "1031", "1031", "1031", "1031",
+            "1041", "1041", "1041", "1041",
+            "1051", "1051", "1051", "1051",
+            "1061", "1061", "1061", "1061")
+  ts <- c("2018-01-01 13:11:55", "2018-01-01 13:12:55", "2018-01-01 13:13:55", "2018-01-01 13:14:55",  
+          "2018-01-01 13:11:55", "2018-01-01 13:12:55", "2018-01-01 13:13:55", "2018-01-01 13:14:55", 
+          "2018-01-01 13:11:55", "2018-01-01 13:12:55", "2018-01-01 13:13:55", "2018-01-01 13:14:55",  
+          "2018-01-01 13:11:55", "2018-01-01 13:12:55", "2018-01-01 13:13:55", "2018-01-01 13:14:55", 
+          "2018-01-01 13:11:55", "2018-01-01 13:12:55", "2018-01-01 13:13:55", "2018-01-01 13:14:55",
+          "2018-01-01 13:11:55", "2018-01-01 13:12:55", "2018-01-01 13:13:55", "2018-01-01 13:14:55",
+          "2018-01-01 13:11:55", "2018-01-01 13:12:55", "2018-01-01 13:13:55", "2018-01-01 13:14:55",
+          "2018-01-01 13:11:55", "2018-01-01 13:12:55", "2018-01-01 13:13:55", "2018-01-01 13:14:55")
   ts <- as.POSIXct(strptime(ts, "%Y-%m-%d %H:%M:%S", tz="Australia/Brisbane"))
-  Site_Event_Normalised_Power_kW <- c(1, 0.96, 0.96,
-                                      1, 0.96, 0.96,
-                                      1, 0.95, 0.95,
-                                      1, 0.97, 0.97,
-                                      1, 1, 0.9)
-  input_data <- data.frame(ts, site_id, c_id,  Site_Event_Normalised_Power_kW, stringsAsFactors=FALSE)
-  time_group <- c("2018-01-01 13:11:55", "2018-01-01 13:12:55", "2018-01-01 13:13:55")
+  Site_Event_Normalised_Power_kW <- c(1, 0.96, 0.96, 0.96, # Standard good response
+                                      1, 0.96, 0.96, 0.96, # Standard good response
+                                      1, 0.95, 0.95, 1.0, # Good but comes up early
+                                      1, 0.97, 0.97, 0.97, # Doesn't drop far enough
+                                      1, 1, 1, 0.96, # Doesn't come down quick enough
+                                      1, 0.8, 1, 1, # Should end in the Non Compliant Responding cat
+                                      1, 0.8, 1, 1, # Should end up in the dissconect cat
+                                      1, 0.8, 1, 1) # Should end up in the drop to zero cat
+  response_category <- c('1', '1', '1', '1', 
+                         '1', '1', '1', '1', 
+                         '2', '2', '2', '2', 
+                         '3', '3', '3', '3', 
+                         '4', '4', '4', '4', 
+                         '6', '6', '6', '6', 
+                         '4 Disconnect', '4 Disconnect', '4 Disconnect', '4 Disconnect', 
+                         '3 Drop to Zero', '3 Drop to Zero', '3 Drop to Zero', '3 Drop to Zero')
+  input_data <- data.frame(ts, site_id, c_id,  Site_Event_Normalised_Power_kW, response_category, stringsAsFactors=FALSE)
+  time_group <- c("2018-01-01 13:11:55", "2018-01-01 13:12:55", "2018-01-01 13:13:55", "2018-01-01 13:14:55")
   time_group <- as.POSIXct(strptime(time_group, "%Y-%m-%d %H:%M:%S", tz="Australia/Brisbane"))
-  norm_power <- c(1, 0.95, 0.95)
+  norm_power <- c(1, 0.95, 0.95, 0.95)
   ideal_response_downsampled <- data.frame(time_group, norm_power, stringsAsFactors=FALSE)
-  out <- calc_error_metric_and_compliance_2(input_data, ideal_response_downsampled)
-  site_id <- c("100", "101", "102", "103")
-  compliance_status <- c("Compliant", "Compliant", "Non Complinant", "Non Complinant")
+  start_buffer <- 60
+  end_buffer <- 60
+  end_buffer_responding <- 60
+  disconnecting_threshold <- 0.05
+  threshold <- 0.8
+  out <- calc_error_metric_and_compliance_2(input_data, ideal_response_downsampled, threshold, start_buffer, end_buffer, end_buffer_responding, disconnecting_threshold)
+  site_id <- c("100", "101", "102", "103", "104", "105", "106")
+  compliance_status <- c("Compliant", "Compliant", "Non Compliant", "Non Compliant", "Non Compliant Responding", 'Disconnect', 'Drop to Zero')
   expected_output <- data.frame(site_id, compliance_status, stringsAsFactors=FALSE)
   expected_output <- left_join(input_data, expected_output, by="site_id")
   expect_equal(out, expected_output, tolerance=0.001)
