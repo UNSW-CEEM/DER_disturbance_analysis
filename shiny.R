@@ -173,13 +173,35 @@ ui <- fluidPage(
      mainPanel(
        plotlyOutput("compliance_plot"),
        uiOutput("compliance_cleaned_or_raw"),
-       uiOutput("compliance_sites"),
-       uiOutput("set_site_compliance"),
+       uiOutput("compliance_circuits"),
+       uiOutput("set_c_id_compliance"),
        fluidRow(
-         div(style="display:inline-block", uiOutput("get_previous_site")),
-         div(style="display:inline-block", uiOutput("get_next_site"))),
+         div(style="display:inline-block", uiOutput("get_previous_c_id")),
+         div(style="display:inline-block", uiOutput("get_next_c_id"))),
      )
     ),
+    tabPanel("Settings", fluid=TRUE, 
+             sidebarLayout(
+               sidebarPanel(id="side_panel",
+                            numericInput("compliance_threshold", 
+                                         label=strong('Compliance threshold'), 
+                                         value=0.5, max=1, min=0),
+                            numericInput("start_buffer", 
+                                         label=strong('Start buffer, allowed time to reach compliance threshold, in seconds.'), 
+                                         value=60),
+                            numericInput("end_buffer", 
+                                         label=strong('End buffer, allowed time for system ending response early, in seconds.'), 
+                                         value=60),
+                            numericInput("end_buffer_responding", 
+                                         label=strong('Response time, window length for systems to be considered Non Compliant Responding, in seconds.'), 
+                                         value=120),
+                            numericInput("disconnecting_threshold", 
+                                         label=strong('Disconnecting threshold, level below which the ideal response allows disconnecting systems to be considered compliant.'), 
+                                         value=0.05, max=1, min=0)
+                            ),
+               mainPanel()
+               )
+             ),
     tabPanel("Assumptions and Methodology", fluid=TRUE, documentation_panel())
   ),
   useShinyalert()
@@ -280,9 +302,9 @@ server <- function(input,output,session){
   standards <- reactive({input$StdVersion})
   responses <- reactive({input$responses})
   postcodes <- reactive({input$postcodes})
-  compliance_sites <- reactive({input$compliance_sites})
+  compliance_circuits <- reactive({input$compliance_circuits})
   compliance_cleaned_or_raw <- reactive({input$compliance_cleaned_or_raw})
-  set_site_compliance <- reactive({input$set_site_compliance})
+  set_c_id_compliance <- reactive({input$set_c_id_compliance})
   manufacturers <- reactive({input$manufacturers})
   models <- reactive({input$models})
   sites <- reactive({input$sites})
@@ -337,6 +359,14 @@ server <- function(input,output,session){
   zone_one_radius <- reactive({input$zone_one_radius})
   zone_two_radius <- reactive({input$zone_two_radius})
   zone_three_radius <- reactive({input$zone_three_radius})
+  
+  # Values from settings tab
+  compliance_threshold <- reactive({input$compliance_threshold})
+  start_buffer <- reactive({input$start_buffer})
+  end_buffer <- reactive({input$end_buffer})
+  end_buffer_responding <- reactive({input$end_buffer_responding})
+  disconnecting_threshold <- reactive({input$disconnecting_threshold})
+  
   
   # Store the main data table in a reactive value so it is accessable outside 
   # the observe event that creates it.
@@ -442,6 +472,7 @@ server <- function(input,output,session){
         id <- showNotification("Loading timeseries data from feather", duration=1000)
         ts_data <- read_feather(time_series_file())
         duration_sample_sizes <- get_duration_sample_counts(ts_data, duration_options)
+        gc()
         ts_data <- filter(ts_data, d_filter==duration())
         ts_data <- inner_join(ts_data, select(v$circuit_details, c_id), by="c_id")
         removeNotification(id)
@@ -526,6 +557,7 @@ server <- function(input,output,session){
                                                          site_details_cleaned_processed)
         remove(ts_data)
         combined_data_after_clean <- filter(combined_data_after_clean, sum_ac<=100)
+        gc()
         v$combined_data <- filter(v$combined_data, clean=="raw")
         combined_data_after_clean <- combined_data_after_clean %>% mutate(clean="cleaned")
         combined_data_after_clean <- select(combined_data_after_clean, c_id, ts, v, f, d, site_id, e, con_type,
@@ -726,6 +758,7 @@ server <- function(input,output,session){
     v$ideal_response_to_plot <- ideal_response_to_plot
     # Perform filtering step
     combined_data_f <- filter(v$combined_data, sum_ac<=100)
+    gc()
     combined_data_f <- filter(combined_data_f, s_state==region())
     if (length(clean()) < 2) {combined_data_f <- filter(combined_data_f, clean %in% clean())}
     if (length(size_groupings()) < 2) {combined_data_f <- filter(combined_data_f, Grouping %in% size_groupings())}
@@ -759,6 +792,13 @@ server <- function(input,output,session){
       no_grouping=FALSE
     }
     
+    # Calc event normalised power
+    event_powers <- filter(combined_data_f, ts==pre_event_interval())
+    event_powers <- mutate(event_powers, event_power=power_kW)
+    event_powers <- select(event_powers, c_id, clean, event_power)
+    combined_data_f <- left_join(combined_data_f, event_powers, by=c("c_id", "clean"))
+    combined_data_f <- mutate(combined_data_f, c_id_norm_power=power_kW/event_power)
+    
     if(length(combined_data_f$ts) > 0){
       # Calaculate the site peformance factors.
       id2 <- showNotification("Calculating site performance factors", duration=1000)
@@ -770,7 +810,15 @@ server <- function(input,output,session){
       if(dim(ideal_response_to_plot)[1]>0){
         ideal_response_downsampled <- down_sample_1s(ideal_response_to_plot, duration(), min(combined_data_f$ts))
         v$ideal_response_downsampled <- ideal_response_downsampled
-        combined_data_f <- calc_error_metric_and_compliance_2(combined_data_f, ideal_response_downsampled)
+        combined_data_f <- 
+          calc_error_metric_and_compliance_2(combined_data_f, 
+                                             ideal_response_downsampled,
+                                             ideal_response_to_plot,
+                                             compliance_threshold(),
+                                             start_buffer(),
+                                             end_buffer(),
+                                             end_buffer_responding(),
+                                             disconnecting_threshold())
       } else {
         combined_data_f <- mutate(combined_data_f, compliance_status="Undefined")  
       }
@@ -794,7 +842,7 @@ server <- function(input,output,session){
         (length(v$sample_count_table$sample_count)<1000 & !no_grouping)){
       if(length(combined_data_f$ts) > 0){
       # Copy data for saving
-      v$combined_data_f <- select(combined_data_f, ts, site_id, c_id, power_kW, v, f, s_state, s_postcode, 
+      v$combined_data_f <- select(combined_data_f, ts, site_id, c_id, power_kW, c_id_norm_power, v, f, s_state, s_postcode, 
                                   Standard_Version, Grouping, sum_ac, clean, manufacturer, model,
                                   site_performance_factor, response_category, zone, distance, lat, lon, e, con_type,
                                   first_ac, polarity, compliance_status, manual_compliance)
@@ -958,17 +1006,17 @@ server <- function(input,output,session){
   observeEvent(input$compliance_cleaned_or_raw, {
     if(compliance_cleaned_or_raw() %in% v$combined_data_f$clean){
       # Setting up manual compliance tab.
-      site_options <- filter(v$combined_data_f, clean==compliance_cleaned_or_raw())
+      circuit_options <- filter(v$combined_data_f, clean==compliance_cleaned_or_raw())
       set.seed(001)
-      v$sites_vector <- sample(unique(site_options$site_id))
+      v$c_id_vector <- sample(unique(circuit_options$c_id))
       set.seed(NULL)
       v$compliance_counter <- 1
-      message <- paste0("Select site (now viewing site ", v$compliance_counter, ' of ', length(v$sites_vector) ,")")
-      site_to_view <- v$sites_vector[[v$compliance_counter]]
-      output$compliance_sites <- renderUI({selectizeInput("compliance_sites", label=strong(message), choices=as.list(v$sites_vector), 
-                                                          multiple=FALSE, selected=site_to_view)})
-      output$get_next_site <- renderUI({actionButton("get_next_site", "Next")})
-      output$get_previous_site <- renderUI({actionButton("get_previous_site", "Previous")})
+      message <- paste0("Select circuit (now viewing circuit ", v$compliance_counter, ' of ', length(v$c_id_vector) ,")")
+      circuit_to_view <- v$c_id_vector[[v$compliance_counter]]
+      output$compliance_circuits <- renderUI({selectizeInput("compliance_circuits", label=strong(message), choices=as.list(v$c_id_vector), 
+                                                          multiple=FALSE, selected=circuit_to_view)})
+      output$get_next_c_id <- renderUI({actionButton("get_next_c_id", "Next")})
+      output$get_previous_c_id <- renderUI({actionButton("get_previous_c_id", "Previous")})
     } else {
       output$compliance_cleaned_or_raw <- renderUI({radioButtons("compliance_cleaned_or_raw", 
                                                                  label=strong("Choose data set"), 
@@ -979,37 +1027,36 @@ server <- function(input,output,session){
   })
   
   # Change site displayed in manual compliance tab.
-  observeEvent(input$compliance_sites, {
-    if (compliance_sites() %in% v$sites_vector){
-      v$compliance_counter <- match(c(compliance_sites()), v$sites_vector)
-      message <- paste0("Select site (now viewing site ", v$compliance_counter, ' of ', length(v$sites_vector) ,")")
-      site_to_view <- v$sites_vector[[v$compliance_counter]]
-      output$compliance_sites <- isolate(renderUI({selectizeInput("compliance_sites", label=strong(message), choices=as.list(v$sites_vector), 
-                                                          multiple=FALSE, selected=site_to_view)}))
-      data_to_view <- filter(filter(v$combined_data_f, clean==compliance_cleaned_or_raw()), site_id==compliance_sites())
-      output$set_site_compliance <- renderUI({radioButtons("set_site_compliance", 
+  observeEvent(input$compliance_circuits, {
+    if (compliance_circuits() %in% v$c_id_vector){
+      v$compliance_counter <- match(c(compliance_circuits()), v$c_id_vector)
+      message <- paste0("Select circuit (now viewing circuit ", v$compliance_counter, ' of ', length(v$c_id_vector) ,")")
+      circuit_to_view <- v$c_id_vector[[v$compliance_counter]]
+      output$compliance_circuits <- isolate(renderUI({selectizeInput("compliance_circuits", label=strong(message), choices=as.list(v$c_id_vector), 
+                                                          multiple=FALSE, selected=circuit_to_view)}))
+      data_to_view <- filter(filter(v$combined_data_f, clean==compliance_cleaned_or_raw()), c_id==compliance_circuits())
+      output$set_c_id_compliance <- renderUI({radioButtons("set_c_id_compliance", 
                                                                    label=strong("Compliance"), 
-                                                                   choices = list("Not set","Compliant","Non-compliant", "Unsure"), 
+                                                                   choices = list("Not set","Compliant","Non-compliant", 
+                                                                                  "Non-compliant Responding", "Disconnect", 
+                                                                                  "Unsure"), 
                                                                    selected = data_to_view$manual_compliance[1], inline = TRUE)})
-      updateRadioButtons(session, "set_site_compliance", 
+      updateRadioButtons(session, "set_c_id_compliance", 
                          selected = data_to_view$manual_compliance[1])
       data_to_view <- mutate(data_to_view, Time=ts)
-      data_to_view <- group_by(data_to_view, Time, site_id)
-      data_to_view <- summarise(data_to_view, site_performance_factor=first(site_performance_factor))
-      data_to_view <- event_normalised_power(data_to_view, pre_event_interval(), keep_site_id=TRUE)
       if(dim(v$ideal_response_to_plot)[1]>0){
         output$compliance_plot <- renderPlotly({
-          plot_ly(data_to_view, x=~Time, y=~Event_Normalised_Power_kW, type="scatter") %>% 
-            add_trace(x=~v$ideal_response_to_plot$ts, y=~v$ideal_response_to_plot$norm_power, name='Ideal Response', 
+          plot_ly(data_to_view, x=~Time, y=~c_id_norm_power, type="scatter") %>% 
+            add_trace(x=v$ideal_response_to_plot$ts, y=v$ideal_response_to_plot$norm_power, name='Ideal Response', 
                       mode='markers', inherit=FALSE) %>%
-            add_trace(x=~v$ideal_response_downsampled$time_group, y=~v$ideal_response_downsampled$norm_power, 
+            add_trace(x=v$ideal_response_downsampled$time_group, y=v$ideal_response_downsampled$norm_power, 
                       name='Ideal Response Downsampled', mode='markers', inherit=FALSE) %>%
-            layout(yaxis=list(title="Site performance factor \n normalised to value of pre-event interval"))
+            layout(yaxis=list(title="Circuit power \n normalised to value of pre-event interval"))
         })
       } else {
         output$compliance_plot <- renderPlotly({
-          plot_ly(data_to_view, x=~Time, y=~Event_Normalised_Power_kW, type="scatter") %>% 
-            layout(yaxis=list(title="Site performance factor \n normalised to value of pre-event interval"))
+          plot_ly(data_to_view, x=~Time, y=~c_id_norm_power, type="scatter") %>% 
+            layout(yaxis=list(title="Circuit power \n normalised to value of pre-event interval"))
         })
       }
     } else {
@@ -1017,40 +1064,40 @@ server <- function(input,output,session){
     }
   })
   
-  observeEvent(input$set_site_compliance, {
-    current_site <- v$sites_vector[[v$compliance_counter]]
+  observeEvent(input$set_c_id_compliance, {
+    current_c_id <- v$c_id_vector[[v$compliance_counter]]
     v$combined_data <- mutate(v$combined_data, 
                               manual_compliance=
-                                ifelse((site_id==current_site) & 
+                                ifelse((c_id==current_c_id) & 
                                          (clean==compliance_cleaned_or_raw()),
-                                       set_site_compliance(),
+                                       set_c_id_compliance(),
                                        manual_compliance))
     v$combined_data_f <- mutate(v$combined_data_f, 
                                 manual_compliance=
-                                  ifelse((site_id==current_site) & 
+                                  ifelse((c_id==current_c_id) & 
                                            (clean==compliance_cleaned_or_raw()),
-                                         set_site_compliance(),
+                                         set_c_id_compliance(),
                                          manual_compliance))
     
   })
   
-  observeEvent(input$get_next_site,{
-    if (v$compliance_counter < length(v$sites_vector)){
+  observeEvent(input$get_next_c_id,{
+    if (v$compliance_counter < length(v$c_id_vector)){
       v$compliance_counter <- v$compliance_counter + 1
-      site_to_view <- v$sites_vector[[v$compliance_counter]]
-      message <- paste0("Select site (now viewing site ", v$compliance_counter, ' of ', length(v$sites_vector) ,")")
-      output$compliance_sites <- renderUI({selectizeInput("compliance_sites", label=strong(message), choices=as.list(v$sites_vector), 
-                                                          multiple=FALSE, selected=site_to_view)})      
+      circuit_to_view <- v$c_id_vector[[v$compliance_counter]]
+      message <- paste0("Select circuit (now viewing circuit ", v$compliance_counter, ' of ', length(v$c_id_vector) ,")")
+      output$compliance_circuits <- renderUI({selectizeInput("compliance_circuits", label=strong(message), choices=as.list(v$c_id_vector), 
+                                                          multiple=FALSE, selected=circuit_to_view)})      
     }
   })
   
-  observeEvent(input$get_previous_site,{
+  observeEvent(input$get_previous_c_id,{
     if (v$compliance_counter > 1){
       v$compliance_counter <- v$compliance_counter - 1
-      site_to_view <- v$sites_vector[[v$compliance_counter]]
-      message <- paste0("Select site (now viewing site ", v$compliance_counter, ' of ', length(v$sites_vector) ,")")
-      output$compliance_sites <- renderUI({selectizeInput("compliance_sites", label=strong(message), choices=as.list(v$sites_vector), 
-                                                          multiple=FALSE, selected=site_to_view)})      
+      circuit_to_view <- v$c_id_vector[[v$compliance_counter]]
+      message <- paste0("Select circuit (now viewing circuit ", v$compliance_counter, ' of ', length(v$c_id_vector) ,")")
+      output$compliance_circuits <- renderUI({selectizeInput("compliance_circuits", label=strong(message), choices=as.list(v$c_id_vector), 
+                                                          multiple=FALSE, selected=circuit_to_view)})      
     }
   })
   

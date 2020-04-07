@@ -111,41 +111,40 @@ calc_threshold_error <- function(ideal_response_downsampled){
   return(threshold_error)
 }
 
-calc_error_metric_and_compliance_2 <- function(combined_data, ideal_response_downsampled, threshold, start_buffer, end_buffer, end_buffer_responding, disconnecting_threshold){
-  start_buffer_t <- min(ideal_response_downsampled$time_group) + start_buffer
-  end_buffer <- max(ideal_response_downsampled$time_group) - end_buffer
-  end_buffer_responding <- min(ideal_response_downsampled$time_group) + start_buffer + end_buffer_responding
+calc_error_metric_and_compliance_2 <- function(combined_data, ideal_response_downsampled, ideal_response,
+                                               threshold, start_buffer, end_buffer, end_buffer_responding, disconnecting_threshold){
+  start_buffer_t <- min(ideal_response$ts) + start_buffer
+  end_buffer <- max(ideal_response$ts) - end_buffer
+  end_buffer_responding <- min(ideal_response$ts) + end_buffer_responding
   disconnecting_threshold <- disconnecting_threshold
-
+  
   # First pass compliance
-  error_by_site_id <- distinct(combined_data, site_id, ts, .keep_all=TRUE)
   ideal_response_downsampled <- filter(ideal_response_downsampled, time_group >= start_buffer_t)
   ideal_response_downsampled <- filter(ideal_response_downsampled, time_group <= end_buffer)
-  error_by_site_id <- inner_join(error_by_site_id, ideal_response_downsampled, by=c("ts"="time_group"))
-  error_by_site_id <- mutate(error_by_site_id, error=(1 - Site_Event_Normalised_Power_kW) - ((1 - norm_power) * threshold))
-  error_by_site_id <- group_by(error_by_site_id, site_id)
-  error_by_site_id <- summarise(error_by_site_id, min_error=min(error))
-  error_by_site_id <- mutate(error_by_site_id, compliance_status=ifelse(min_error>=0.0, 'Compliant', 'Non Compliant'))
-  error_by_site_id <- select(error_by_site_id, site_id, compliance_status)
-  combined_data <- left_join(combined_data, error_by_site_id, by="site_id")
+  error_by_c_id <- inner_join(combined_data, ideal_response_downsampled, by=c("ts"="time_group"))
+  error_by_c_id <- mutate(error_by_c_id, error=(1 - c_id_norm_power) - ((1 - norm_power) * threshold))
+  error_by_c_id <- group_by(error_by_c_id, c_id, clean)
+  error_by_c_id <- summarise(error_by_c_id, min_error=min(error))
+  error_by_c_id <- mutate(error_by_c_id, compliance_status=ifelse(min_error>=0.0, 'Compliant', 'Non-compliant'))
+  error_by_c_id <- select(error_by_c_id, c_id, compliance_status, clean)
+  combined_data <- left_join(combined_data, error_by_c_id, by=c("c_id","clean"))
   
   # Change 'Non compliant' to 'Non Compliant Responding' where complaint at start
-  error_by_site_id <- distinct(combined_data, site_id, ts, .keep_all=TRUE)
-  ideal_response_downsampled <- filter(ideal_response_downsampled, time_group >= start_buffer_t)
   ideal_response_downsampled <- filter(ideal_response_downsampled, time_group <= end_buffer_responding)
-  error_by_site_id <- inner_join(error_by_site_id, ideal_response_downsampled, by=c("ts"="time_group"))
-  error_by_site_id <- mutate(error_by_site_id, error=(1 - Site_Event_Normalised_Power_kW) - ((1 - norm_power) * threshold))
-  error_by_site_id <- group_by(error_by_site_id, site_id)
-  error_by_site_id <- summarise(error_by_site_id, max_error=max(error), compliance_status=first(compliance_status))
-  error_by_site_id <- mutate(error_by_site_id, compliance_status=ifelse((max_error>=0.0) & (compliance_status=='Non Compliant'), 'Non Compliant Responding', compliance_status))
-  error_by_site_id <- select(error_by_site_id, site_id, compliance_status)
-  combined_data <- left_join(subset(combined_data, select = -c(compliance_status)), error_by_site_id, by="site_id")
+  error_by_c_id <- inner_join(combined_data, ideal_response_downsampled, by=c("ts"="time_group"))
+  error_by_c_id <- mutate(error_by_c_id, error=(1 - c_id_norm_power) - ((1 - norm_power) * threshold))
+  error_by_c_id <- group_by(error_by_c_id, c_id, clean)
+  error_by_c_id <- summarise(error_by_c_id, max_error=max(error), compliance_status=first(compliance_status))
+  error_by_c_id <- mutate(error_by_c_id, compliance_status=ifelse((max_error>=0.0) & (compliance_status=='Non-compliant'), 'Non-compliant Responding', compliance_status))
+  error_by_c_id <- select(error_by_c_id, c_id, compliance_status, clean)
+  combined_data <- left_join(subset(combined_data, select = -c(compliance_status)), error_by_c_id, by=c("c_id","clean"))
   
   # Set disconnecting categories 
   min_ideal_response <- min(ideal_response_downsampled$norm_power)
   if (min_ideal_response > disconnecting_threshold) {
     combined_data <- mutate(combined_data, compliance_status=ifelse(response_category=='4 Disconnect', 'Disconnect', compliance_status))
     combined_data <- mutate(combined_data, compliance_status=ifelse(response_category=='3 Drop to Zero', 'Drop to Zero', compliance_status))
+    combined_data <- mutate(combined_data, compliance_status=ifelse(response_category=='5 Off at t0', 'Off at t0', compliance_status))
   } 
   
   return(combined_data)

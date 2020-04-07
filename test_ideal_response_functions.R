@@ -235,7 +235,7 @@ test_that("Test the calc of error metrics and categorisation" ,{
 })
 
 
-test_that("Test the calc of error metrics and categorisation" ,{
+test_that("Test compliance categorisation " ,{
   site_id <- c("100", "100", "100", "100",
                "100", "100", "100", "100", 
                "101", "101", "101", "101", 
@@ -289,7 +289,7 @@ test_that("Test the calc of error metrics and categorisation" ,{
   threshold <- 0.8
   out <- calc_error_metric_and_compliance_2(input_data, ideal_response_downsampled, threshold, start_buffer, end_buffer, end_buffer_responding, disconnecting_threshold)
   site_id <- c("100", "101", "102", "103", "104", "105", "106")
-  compliance_status <- c("Compliant", "Compliant", "Non Compliant", "Non Compliant", "Non Compliant Responding", 'Disconnect', 'Drop to Zero')
+  compliance_status <- c("Compliant", "Compliant", "Non-compliant", "Non-compliant", "Non-compliant Responding", 'Disconnect', 'Drop to Zero')
   expected_output <- data.frame(site_id, compliance_status, stringsAsFactors=FALSE)
   expected_output <- left_join(input_data, expected_output, by="site_id")
   expect_equal(out, expected_output, tolerance=0.001)
@@ -350,7 +350,7 @@ test_that("Test the calc of error metrics and categorisation" ,{
   threshold <- 0.8
   out <- calc_error_metric_and_compliance_2(input_data, ideal_response_downsampled, threshold, start_buffer, end_buffer, end_buffer_responding, disconnecting_threshold)
   site_id <- c("100", "101", "102", "103", "104", "105", "106")
-  compliance_status <- c("Compliant", "Compliant", "Non Compliant", "Non Compliant", "Non Compliant Responding", 'Non Compliant Responding', 'Non Compliant Responding')
+  compliance_status <- c("Compliant", "Compliant", "Non Compliant", "Non-compliant", "Non-compliant Responding", 'Non-compliant Responding', 'Non-compliant Responding')
   expected_output <- data.frame(site_id, compliance_status, stringsAsFactors=FALSE)
   expected_output <- left_join(input_data, expected_output, by="site_id")
   expect_equal(out, expected_output, tolerance=0.001)
