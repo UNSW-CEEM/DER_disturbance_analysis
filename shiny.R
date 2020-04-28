@@ -139,6 +139,10 @@ ui <- fluidPage(
           uiOutput("batch_save"),
           HTML("<br>"),
           uiOutput("save_report"),
+          HTML("<br>"),
+          uiOutput("save_ideal_response"),
+          HTML("<br>"),
+          uiOutput("save_ideal_response_downsampled"),
           HTML("<br><br>"),
           plotlyOutput(outputId="NormPower"),
           plotlyOutput(outputId="Frequency"),
@@ -672,8 +676,11 @@ server <- function(input,output,session){
       })
       output$compliance <- renderUI({
         checkboxGroupButtons(inputId="compliance", label=strong("Compliance"), 
-                             choices=list("Compliant", "Ambigous", "Above Ideal Response", "Non Complinant", "Undefined", "NA"),
-                             selected=list("Compliant", "Ambigous", "Above Ideal Response", "Non Complinant", "Undefined", "NA"), 
+                             choices=list("Compliant", "Non-compliant Responding", 
+                                          "Non-compliant", "Disconnect/Drop to Zero",
+                                          "Off at t0", "Not enough data"),
+                             selected=list("Compliant", "Non-compliant Responding", 
+                                           "Non-compliant", "Disconnect/Drop to Zero"), 
                              justified=TRUE, status="primary", individual=TRUE,
                              checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")))
       })  
@@ -822,7 +829,7 @@ server <- function(input,output,session){
       } else {
         combined_data_f <- mutate(combined_data_f, compliance_status="Undefined")  
       }
-      if (length(compliance()) < 5) {combined_data_f <- filter(combined_data_f, compliance_status %in% compliance())}
+      if (length(compliance()) < 6) {combined_data_f <- filter(combined_data_f, compliance_status %in% compliance())}
       removeNotification(id2)
     }
     
@@ -863,16 +870,17 @@ server <- function(input,output,session){
         v$circuit_summary <- select(v$circuit_summary, site_id, c_id, s_state, s_postcode, Standard_Version, Grouping, 
                                     sum_ac, clean, manufacturer, model, response_category, zone, distance, lat, lon,
                                     con_type, first_ac, polarity, compliance_status, manual_compliance)
+        
         # Combine data sets that have the same grouping so they can be saved in a single file
         if (no_grouping){
           et <- pre_event_interval()
-          agg_norm_power <- event_normalised_power(agg_norm_power, et, keep_site_id=TRUE)
-          v$agg_power <- left_join( v$agg_power, agg_norm_power[, c("Event_Normalised_Power_kW", "site_id", "Time")], 
-                                    by=c("Time", "site_id"))
+          # agg_norm_power <- event_normalised_power(agg_norm_power, et, keep_site_id=TRUE)
+          v$agg_power <- left_join( v$agg_power, agg_norm_power[, c("c_id_norm_power", "c_id", "Time")], 
+                                    by=c("Time", "c_id"))
         } else {
           et <- pre_event_interval()
-          agg_norm_power <- event_normalised_power(agg_norm_power, et,  keep_site_id=FALSE)
-          v$agg_power <- left_join(v$agg_power, agg_norm_power[, c("Event_Normalised_Power_kW", "series", "Time")], 
+          # agg_norm_power <- event_normalised_power(agg_norm_power, et,  keep_site_id=FALSE)
+          v$agg_power <- left_join(v$agg_power, agg_norm_power[, c("c_id_norm_power", "series", "Time")], 
                                    by=c("Time", "series"))
         }
         v$agg_power <- left_join( v$agg_power, agg_f_and_v[, c("Time", "series", "Voltage", "Frequency")], 
@@ -898,26 +906,32 @@ server <- function(input,output,session){
           output$save_report <- renderUI({
             shinyDirButton("save_report", "Save report", "Choose directory for report files ...")
           })
+          output$save_ideal_response <- renderUI({
+            shinySaveButton("save_ideal_response", "Save response", "Choose directory for report files ...")
+          })
+          output$save_ideal_response_downsampled <- renderUI({
+            shinySaveButton("save_ideal_response_downsampled", "Save downsampled response", "Choose directory for report files ...")
+          })
           output$sample_count_table <- renderDataTable({v$sample_count_table})
           output$save_sample_count <- renderUI({shinySaveButton("save_sample_count", "Save data", "Save file as ...", 
                                                                 filetype=list(xlsx="csv"))
             })
           if(dim(ideal_response_to_plot)[1]>0){
             output$NormPower <- renderPlotly({
-              plot_ly(agg_norm_power, x=~Time, y=~Event_Normalised_Power_kW, color=~series, type="scattergl") %>% 
+              plot_ly(agg_norm_power, x=~Time, y=~c_id_norm_power, color=~series, type="scattergl") %>% 
                 add_trace(x=~ideal_response_to_plot$ts, y=~ideal_response_to_plot$norm_power, name='Ideal Response', 
                           mode='markers', inherit=FALSE) %>%
                 add_trace(x=~ideal_response_downsampled$time_group, y=~ideal_response_downsampled$norm_power, 
                           name='Ideal Response Downsampled', mode='markers', inherit=FALSE) %>%
-                layout(yaxis=list(title="Average site performance factor \n normalised to value of pre-event interval"))
+                layout(yaxis=list(title="Circuit power normalised to value of pre-event interval, \n aggregated by averaging"))
             })
           } else {
             output$NormPower <- renderPlotly({
-              plot_ly(agg_norm_power, x=~Time, y=~Event_Normalised_Power_kW, color=~series, type="scattergl", 
+              plot_ly(agg_norm_power, x=~Time, y=~c_id_norm_power, color=~series, type="scattergl", 
                       mode = 'lines+markers') %>% 
-                layout(yaxis=list(title="Average site performance factor \n normalised to value of pre-event interval"))
+                layout(yaxis=list(title="Circuit power normalised to value of pre-event interval, \n aggregated by averaging"))
             }) 
-            }
+          }
           output$ResponseCount <- renderPlotly({
             plot_ly(v$response_count, x=~series_x, y=~sample_count, color=~series_y, type="bar") %>% 
               layout(yaxis = list(title = 'Fraction of circuits \n (denominator is count post filtering)'),
@@ -1007,7 +1021,7 @@ server <- function(input,output,session){
     if(compliance_cleaned_or_raw() %in% v$combined_data_f$clean){
       # Setting up manual compliance tab.
       circuit_options <- filter(v$combined_data_f, clean==compliance_cleaned_or_raw())
-      set.seed(001)
+      set.seed(002)
       v$c_id_vector <- sample(unique(circuit_options$c_id))
       set.seed(NULL)
       v$compliance_counter <- 1
@@ -1165,6 +1179,27 @@ server <- function(input,output,session){
     shinyFileSave(input, "save_distance_response", roots=volumes, session=session)
     fileinfo <- parseSavePath(volumes, input$save_distance_response)
     if (nrow(fileinfo) > 0) {write.csv(v$distance_response, as.character(fileinfo$datapath), row.names=FALSE)}
+  })
+  
+  # Save ideal response curve
+  observeEvent(input$save_ideal_response,{
+    volumes <- c(home=getwd())
+    shinyFileSave(input, "save_ideal_response", roots=volumes, session=session)
+    fileinfo <- parseSavePath(volumes, input$save_ideal_response)
+    if (nrow(fileinfo) > 0) {
+      write.csv(v$ideal_response_to_plot, as.character(fileinfo$datapath), row.names=FALSE)
+    }
+  })
+  
+  
+  # Save downsampled ideal response curve
+  observeEvent(input$save_ideal_response_downsampled,{
+    volumes <- c(home=getwd())
+    shinyFileSave(input, "save_ideal_response_downsampled", roots=volumes, session=session)
+    fileinfo <- parseSavePath(volumes, input$save_ideal_response_downsampled)
+    if (nrow(fileinfo) > 0) {
+      write.csv(v$ideal_response_downsampled, as.character(fileinfo$datapath), row.names=FALSE)
+    }
   })
   
   observeEvent(input$save_report, {

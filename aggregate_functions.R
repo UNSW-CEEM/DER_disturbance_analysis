@@ -37,15 +37,10 @@ vector_groupby_f_and_v <- function(data, grouping_cols){
 }
 
 vector_groupby_norm_power <- function(data, grouping_cols){
-  grouping_cols <- grouping_cols[grouping_cols != "c_id"]
   series_cols <- grouping_cols
   grouping_cols <- c("ts", series_cols)
   data <- group_by(data, .dots=grouping_cols)
-  if ("site_id" %in% grouping_cols){
-    data <- summarise(data , site_performance_factor=first(site_performance_factor))
-  } else {
-    data <- summarise(data , site_performance_factor=mean(site_performance_factor))
-  }
+  data <- summarise(data , c_id_norm_power=mean(c_id_norm_power))
   data$series <- do.call(paste, c(data[series_cols], sep = "-" ))
   data <- setnames(data, c("ts"), c("Time"))
   data <- as.data.frame(data)
