@@ -467,6 +467,8 @@ server <- function(input,output,session){
       v$circuit_details <- v$circuit_details %>% mutate(site_id = as.character(site_id))
       v$circuit_details <- v$circuit_details %>% mutate(c_id = as.character(c_id))
       v$circuit_details <- filter(v$circuit_details, site_id %in% v$site_details$site_id)
+      site_types <- c("pv_site_net", "pv_site", "pv_inverter_net", "pv_inverter")
+      v$circuit_details <- filter(v$circuit_details, con_type %in% site_types)
       removeNotification(id)
     
       duration_options <- c("5", "30", "60")
@@ -477,7 +479,7 @@ server <- function(input,output,session){
         ts_data <- read_feather(time_series_file())
         duration_sample_sizes <- get_duration_sample_counts(ts_data, duration_options)
         gc()
-        ts_data <- filter(ts_data, d_filter==duration())
+        ts_data <- filter(ts_data, d==duration())
         ts_data <- inner_join(ts_data, select(v$circuit_details, c_id), by="c_id")
         removeNotification(id)
       }else{
@@ -507,10 +509,9 @@ server <- function(input,output,session){
         gc()
         write_feather(ts_data, file_type_feather)
         duration_sample_sizes <- get_duration_sample_counts(ts_data, duration_options)
-        ts_data <- filter(ts_data, d_filter==duration())
+        ts_data <- filter(ts_data, d==duration())
         removeNotification(id)
       }
-    
       # Load in the install data from CSV.
       id <- showNotification("Load CER capacity data", duration=1000)
       intall_data_file <- "cumulative_capacity_and_number.csv"
@@ -567,6 +568,7 @@ server <- function(input,output,session){
         combined_data_after_clean <- select(combined_data_after_clean, c_id, ts, v, f, d, site_id, e, con_type,
                                             s_state, s_postcode, Standard_Version, Grouping, polarity, first_ac,
                                             power_kW, clean, manufacturer, model, sum_ac, time_offset)
+        gc()
         v$combined_data <- rbind(v$combined_data, combined_data_after_clean)
         remove(combined_data_after_clean)
         output$save_cleaned_data <- renderUI({actionButton("save_cleaned_data", "Save cleaned data")})
@@ -680,7 +682,8 @@ server <- function(input,output,session){
                                           "Non-compliant", "Disconnect/Drop to Zero",
                                           "Off at t0", "Not enough data"),
                              selected=list("Compliant", "Non-compliant Responding", 
-                                           "Non-compliant", "Disconnect/Drop to Zero"), 
+                                           "Non-compliant", "Disconnect/Drop to Zero",
+                                           "Off at t0", "Not enough data"), 
                              justified=TRUE, status="primary", individual=TRUE,
                              checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")))
       })  
@@ -1332,7 +1335,7 @@ server <- function(input,output,session){
   # Inforce mutual exclusivity of Aggregation settings
   observe({
     if(manufacturer_agg() | model_agg() | pst_agg() | circuit_agg() | circuit_agg() | response_agg() | zone_agg()
-       | compliance_agg()){
+       | compliance_agg() | grouping_agg()){
       updateMaterialSwitch(session=session, "raw_upscale", value = FALSE)
     }
   })
@@ -1347,6 +1350,7 @@ server <- function(input,output,session){
       updateMaterialSwitch(session=session, "zone_agg", value = FALSE)
       updateMaterialSwitch(session=session, "compliance_agg", value = FALSE)
       updateMaterialSwitch(session=session, "response_agg", value = FALSE)
+      updateMaterialSwitch(session=session, "grouping_agg", value = FALSE)
     }
   })
   

@@ -1,6 +1,6 @@
 upscale <- function(performance_data, install_capacity){
   performance_data <- distinct(performance_data, site_id, ts, clean, .keep_all=TRUE)
-  performance_data <- group_by(performance_data, ts, s_state, Standard_Version, Grouping, clean)
+  performance_data <- group_by(performance_data, ts, s_state, Standard_Version, clean)
   performance_data <- summarise(performance_data , performance_factor=mean(site_performance_factor))
   performance_data <- as.data.frame(performance_data)
   performance_data <- mutate(performance_data, date=as.Date(ts))
@@ -10,7 +10,7 @@ upscale <- function(performance_data, install_capacity){
   install_capacity <- summarise(install_capacity, standard_capacity=last(standard_capacity))
   install_capacity <- as.data.frame(install_capacity)
   performance_and_install <- inner_join(performance_data, install_capacity, 
-                                        by=c("Grouping", "Standard_Version", "s_state"))
+                                        by=c("Standard_Version", "s_state"))
   performance_and_install <- mutate(performance_and_install, power_kW=performance_factor * standard_capacity)
   performance_and_install <- performance_and_install[,c("ts", "s_state", "Standard_Version", "Grouping", "clean", 
                                                         "performance_factor", "standard_capacity", "power_kW")]

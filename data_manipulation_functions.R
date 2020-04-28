@@ -2,6 +2,7 @@
 process_raw_time_series_data <- function(time_series_data){
   # Sometimes data from solar analytics contains rows that are additional 
   # headers explicity remove these.
+  gc()
   time_series_data <- time_series_data[!time_series_data$c_id=="c_id",]
   # Convert data that comes as strings to numeric where applicable.
   #time_series_data <- time_series_data %>%  mutate(d = as.numeric(d))
@@ -10,13 +11,21 @@ process_raw_time_series_data <- function(time_series_data){
   time_series_data_1 <- group_by(time_series_data, c_id) %>% summarise(Count=n()) %>% filter(Count==1)
   time_series_data <- anti_join(time_series_data, time_series_data_1,by="c_id")
   time_series_data <- mutate(time_series_data, d=as.numeric(d))
-  time_series_data <- mutate(time_series_data, d=ifelse(d == 0, 5, d))
-  time_series_durations = group_by(time_series_data, c_id)
-  time_series_durations <- summarise(time_series_durations, d_filter=duration_mode(ts), d_min=duration_min(ts))
+  
+  #time_series_data <- mutate(time_series_data, d=ifelse(d == 0, 5, d))
+  #time_series_durations = group_by(time_series_data, c_id)
+  #time_series_durations <- summarise(time_series_durations, d_filter=duration_mode(ts), d_min=duration_min(ts))
   gc()
-  time_series_durations <- filter(time_series_durations, d_filter==d_min)
-  time_series_data <- left_join(time_series_data, time_series_durations, by="c_id")
+  #time_series_durations <- filter(time_series_durations, d_filter==d_min)
+  #time_series_data <- left_join(time_series_data, time_series_durations, by="c_id")
   # Assert assumptions about data set
+  
+  time_series_data <- time_series_data %>% group_by(c_id) %>% mutate(interval = ts - lag(ts, order_by = ts))
+  gc()
+  time_series_data <- mutate(time_series_data, d=ifelse(interval==5,5,d))
+  gc()
+  time_series_data <- select(time_series_data, ts, c_id, e, f, v, d) 
+  gc()
   assert_raw_time_series_assumptions(time_series_data)
   # Change time zone to NEM standard time.
   time_series_data <- mutate(time_series_data, ts = with_tz(ts,"Australia/Brisbane"))
@@ -298,6 +307,12 @@ duration_min <- function(time_vector){
   ds <- as.numeric(diff(time_vector), units='secs')
   min_ds <- min(ds)
   return(min_ds)
+}
+
+calc_interval <- function(time_series){
+  time_series <- time_series[order(time_series$ts),]
+  time_series <- time_series %>% group_by(c_id) %>% mutate(interval = ts - lag(ts))
+  return(time_series)
 }
 
 write_sql_filter <- function(c_ids){
