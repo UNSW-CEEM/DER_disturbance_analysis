@@ -50,26 +50,26 @@ ui <- fluidPage(
         sidebarPanel(id= "side_panel",
           h4("File selection"),
           textInput("time_series", "Time series file",
-                    value="C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/data/Event 20191116/NEM_20191116_data_SA.feather"
+                    value="C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/data/20200131/20200131_data_NSW.feather"
           ),
           shinyFilesButton("choose_ts", "Choose File", 
                       "Select timeseries data file ...", multiple=FALSE
           ),
           HTML("<br><br>"),
           textInput("circuit_details", "Circuit details file",
-                    value="C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/data/Event 20191116/circuit_details_nem.csv"
+                    value="C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/data/20200131/20200131_circuit_details_nem.csv"
                     ),
 
           shinyFilesButton("choose_c", "Choose File", "Select circuit details data file ...", multiple=FALSE
           ),
           HTML("<br><br>"),
           textInput("site_details", "Site details file", 
-                    value="C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/data/Event 20191116/site_details_nem.csv"
+                    value="C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/data/20200131/20200131_site_details_nem.csv"
           ),
           shinyFilesButton("choose_site", "Choose File", "Select site details data file ...", multiple=FALSE),
           HTML("<br><br>"),
           textInput("frequency_data", "Frequency data file", 
-                    value="C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/data/Event 20191116/frequency_data_for_analysis_ng.csv"
+                    value=""
           ),
           shinyFilesButton("choose_frequency_data", "Choose File", "Select fequency data file ...", multiple=FALSE),
           HTML("<br><br>"),
@@ -77,7 +77,8 @@ ui <- fluidPage(
                                                     selected = "All", inline = TRUE),
           HTML("<br><br>"),
           uiOutput("duration"),
-          materialSwitch(inputId="perform_clean", label=strong("Perform Clean"), status="primary", right=FALSE),
+          materialSwitch(inputId="perform_clean", label=strong("Perform Clean"), status="primary", right=TRUE),
+          materialSwitch(inputId="keep_raw", label=strong("Keep pre-cleaned data"), status="primary", right=FALSE),
           actionButton("load_data", "Load data"),
           tags$hr(),
           h4("Time Filter"),
@@ -324,6 +325,7 @@ server <- function(input,output,session){
   response_agg <- reactive({input$response_agg})
   manufacturer_agg <- reactive({input$manufacturer_agg})
   perform_clean <- reactive({input$perform_clean})
+  keep_raw <- reactive({input$keep_raw})
   model_agg <- reactive({input$model_agg})
   circuit_agg <- reactive({input$circuit_agg})
   zone_agg <- reactive({input$zone_agg})
@@ -547,7 +549,10 @@ server <- function(input,output,session){
         site_details_cleaned <- site_details_data_cleaning(v$combined_data, v$site_details_raw)
         v$site_details_cleaned <- site_details_cleaned[order(site_details_cleaned$site_id),]
         # Clean circuit details file
-        v$circuit_details_for_editing <- clean_connection_types(v$combined_data, v$circuit_details, v$postcode_data)
+        
+        v$circuit_details_for_editing <- clean_connection_types(
+          select(v$combined_data, ts, c_id, e, power_kW, s_postcode, con_type, polarity, first_ac), 
+                 v$circuit_details, v$postcode_data)
         # Display data cleaning output in data cleaning tab
         output$site_details_editor <- renderDT(isolate(v$site_details_cleaned), selection='single', rownames=FALSE, 
                                                editable=TRUE)
@@ -557,9 +562,14 @@ server <- function(input,output,session){
         v$proxy_circuit_details_editor <- dataTableProxy('circuit_details_editor')
         
         # Add cleaned data to display data for main tab
+        gc()
         site_details_cleaned_processed <- process_raw_site_details(v$site_details_cleaned)
-        combined_data_after_clean <- combine_data_tables(ts_data, v$circuit_details_for_editing, 
-                                                         site_details_cleaned_processed)
+        combined_data_after_clean <- combine_data_tables(
+          ts_data,  
+          select(v$circuit_details_for_editing, c_id, site_id, con_type, polarity),
+          site_details_cleaned_processed)
+        
+        browser()
         remove(ts_data)
         combined_data_after_clean <- filter(combined_data_after_clean, sum_ac<=100)
         gc()
@@ -569,7 +579,12 @@ server <- function(input,output,session){
                                             s_state, s_postcode, Standard_Version, Grouping, polarity, first_ac,
                                             power_kW, clean, manufacturer, model, sum_ac, time_offset)
         gc()
-        v$combined_data <- rbind(v$combined_data, combined_data_after_clean)
+        if (keep_raw()){
+          v$combined_data <- rbind(v$combined_data, combined_data_after_clean)
+        } else {
+          v$combined_data <- combined_data_after_clean
+        }
+        gc()
         remove(combined_data_after_clean)
         output$save_cleaned_data <- renderUI({actionButton("save_cleaned_data", "Save cleaned data")})
         show("save_cleaned_data")
@@ -604,11 +619,21 @@ server <- function(input,output,session){
       # because they are only usable once there is data to filter. Additionally
       # The data loaded can then be used to create the appropraite options for 
       # filtering.
-      output$cleaned <- renderUI({
-        checkboxGroupButtons(inputId="cleaned", label=strong("Data processing:"), choices=list("cleaned", "raw"),
-                             selected=list("raw"), justified=TRUE, status="primary", individual=TRUE,
-                             checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")))
-      })
+      if(perform_clean()){
+        output$cleaned <- renderUI({
+          checkboxGroupButtons(inputId="cleaned", label=strong("Data processing:"), choices=list("cleaned", "raw"),
+                               selected=list("cleaned"), justified=TRUE, status="primary", individual=TRUE,
+                               checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")))
+        })
+      } else {
+        output$cleaned <- renderUI({
+          checkboxGroupButtons(inputId="cleaned", label=strong("Data processing:"), choices=list("cleaned", "raw"),
+                               selected=list("raw"), justified=TRUE, status="primary", individual=TRUE,
+                               checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")))
+        })
+        
+      }
+
       output$dateWidget <- renderUI({
         dateRangeInput("date", label=strong('Date range (yyyy-mm-dd):'),
                        start=strftime(floor_date(get_mode(v$combined_data$ts), "day"), format="%Y-%m-%d"),
