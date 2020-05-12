@@ -436,7 +436,7 @@ server <- function(input,output,session){
         if ('inverter_model' %in% colnames(sd_data)) {sd_data <- setnames(sd_data, c("inverter_model"), c("model"))}
         v$site_details_raw <- sd_data
         v$site_details_raw <- v$site_details_raw %>% mutate(site_id = as.character(site_id))
-        # Older site details proided the day of installation not just the month. We 
+        # Older site details provided the day of installation not just the month. We 
         # change the name of the column to match the new format which is just by 
         # month but keep the original info regarding the date.
         if("pv_install_date" %in% colnames(v$site_details_raw)){
@@ -526,13 +526,16 @@ server <- function(input,output,session){
       v$postcode_data <- process_postcode_data(postcode_data)
       removeNotification(id)
       
-      # Perform data, processing and combine data table into a single data frame
+      # Combine the data needed to perform data cleaning.
       id <- showNotification("Combining data tables", duration=1000)
-      v$combined_data <- combine_data_tables(ts_data, v$circuit_details, v$site_details)
-      v$combined_data <- v$combined_data %>% mutate(clean="raw")
-      v$combined_data <- select(v$combined_data, c_id, ts, v, f, d, site_id, e, con_type, s_state, s_postcode, 
-                                Standard_Version, Grouping, polarity, first_ac, power_kW, clean, manufacturer, model, 
-                                sum_ac, time_offset)
+      v$circuit_details <- mutate(v$circuit_details, c_id=as.character(c_id))
+      circuit_details_for_cleaning <- select(v$circuit_details, c_id, site_id,
+                                             con_type, polarity)
+      ts_data <- inner_join(ts_data, circuit_details_for_cleaning, by="c_id")
+      site_details_for_cleaning <- select(v$site_details, site_id, s_postcode, first_ac)
+      ts_data <- inner_join(ts_data, site_details_for_cleaning, by="site_id")
+      ts_data <- perform_power_calculations(ts_data)
+
       removeNotification(id)
       
       if(frequency_data_file()!=''){
@@ -546,12 +549,12 @@ server <- function(input,output,session){
       if (perform_clean()){
         id <- showNotification("Cleaning data", duration=1000)
         # Clean site details data
-        site_details_cleaned <- site_details_data_cleaning(v$combined_data, v$site_details_raw)
+        site_details_cleaned <- site_details_data_cleaning(ts_data, v$site_details_raw)
         v$site_details_cleaned <- site_details_cleaned[order(site_details_cleaned$site_id),]
         # Clean circuit details file
         
         v$circuit_details_for_editing <- clean_connection_types(
-          select(v$combined_data, ts, c_id, e, power_kW, s_postcode, con_type, polarity, first_ac), 
+          select(ts_data, ts, c_id, e, power_kW, s_postcode, con_type, polarity, first_ac), 
                  v$circuit_details, v$postcode_data)
         # Display data cleaning output in data cleaning tab
         output$site_details_editor <- renderDT(isolate(v$site_details_cleaned), selection='single', rownames=FALSE, 
@@ -563,42 +566,22 @@ server <- function(input,output,session){
         
         # Add cleaned data to display data for main tab
         gc()
-        site_details_cleaned_processed <- process_raw_site_details(v$site_details_cleaned)
-        combined_data_after_clean <- combine_data_tables(
-          ts_data,  
-          select(v$circuit_details_for_editing, c_id, site_id, con_type, polarity),
-          site_details_cleaned_processed)
-        
-        remove(ts_data)
-        combined_data_after_clean <- filter(combined_data_after_clean, sum_ac<=100)
+        v$combined_data <- select(ts_data, ts, c_id, e, v, f, d)
         gc()
-        v$combined_data <- filter(v$combined_data, clean=="raw")
-        combined_data_after_clean <- combined_data_after_clean %>% mutate(clean="cleaned")
-        combined_data_after_clean <- select(combined_data_after_clean, c_id, ts, v, f, d, site_id, e, con_type,
-                                            s_state, s_postcode, Standard_Version, Grouping, polarity, first_ac,
-                                            power_kW, clean, manufacturer, model, sum_ac, time_offset)
-        gc()
-        if (keep_raw()){
-          v$combined_data <- rbind(v$combined_data, combined_data_after_clean)
-        } else {
-          v$combined_data <- combined_data_after_clean
-        }
-        gc()
-        remove(combined_data_after_clean)
         output$save_cleaned_data <- renderUI({actionButton("save_cleaned_data", "Save cleaned data")})
         show("save_cleaned_data")
         removeNotification(id)
       } else {
-        remove(ts_data)
         # Don't let the user crash the tool by trying to save data that doesn't exist
         hide("save_cleaned_data")
       }
+      
+      remove(ts_data)
       gc()
       
-      # Set default manual cleaning value.
-      v$combined_data <- mutate(v$combined_data, manual_compliance = 'Not set')
       
       # Get offset filter options and label
+      v$combined_data <- get_time_offsets(v$combined_data)
       v$unique_offsets <- get_time_series_unique_offsets(v$combined_data)
       sample_counts <- get_offset_sample_counts(v$combined_data, v$unique_offsets)
       unique_offsets_filter_label <- make_offset_filter_label(sample_counts, v$unique_offsets)
@@ -648,18 +631,18 @@ server <- function(input,output,session){
         timeInput("time_end", label=strong('Enter end time'), value=as.POSIXct("19:00:00",format="%H:%M:%S"))
         })
       output$region <- renderUI({
-        selectInput(inputId="region", label=strong("Region"), choices=unique(v$combined_data$s_state))
+        selectInput(inputId="region", label=strong("Region"), choices=unique(v$site_details$s_state))
         })
       output$postcodes <- renderUI({
-        selectizeInput("postcodes", label=strong("Select postcodes"), choices = sort(unique(v$combined_data$s_postcode)), 
+        selectizeInput("postcodes", label=strong("Select postcodes"), choices = sort(unique(v$site_details$s_postcode)), 
                       multiple=TRUE)  
         })
       output$manufacturers <- renderUI({
         selectizeInput("manufacturers", label=strong("Select manufacturers"), 
-                       choices = sort(unique(v$combined_data$manufacturer)), multiple=TRUE)  
+                       choices = sort(unique(v$site_details$manufacturer)), multiple=TRUE)  
       })
       output$models <- renderUI({
-        selectizeInput("models", label=strong("Select models"), choices = sort(unique(v$combined_data$model)), multiple=TRUE)  
+        selectizeInput("models", label=strong("Select models"), choices = sort(unique(v$site_details$model)), multiple=TRUE)  
       })
       output$sites <- renderUI({
         selectizeInput("sites", label=strong("Select Sites"), choices = sort(unique(v$site_details$site_id)), multiple=TRUE)  
@@ -790,8 +773,60 @@ server <- function(input,output,session){
       ideal_response_to_plot <- data.frame()
     }
     v$ideal_response_to_plot <- ideal_response_to_plot
-    # Perform filtering step
-    combined_data_f <- filter(v$combined_data, sum_ac<=100)
+    
+    
+    # Filter to just the time window being plotted/analyised. 
+    combined_data_f <- filter(v$combined_data, ts>=start_time() & ts<= end_time())
+    
+    # Data frame for after adding meta data.
+    combined_data_f2 <- data.frame()
+    
+    # If the raw data is needed for analysis then combine time series data and
+    # raw meta data.
+    if ('raw' %in% clean()){
+      combined_data_raw <- combine_data_tables(
+        select(combined_data_f, ts, c_id, e, v, f, d, time_offset),  
+        select(v$circuit_details, c_id, site_id, con_type, polarity),
+        v$site_details)
+      combined_data_raw <- combined_data_raw %>% mutate(clean="raw")
+      combined_data_raw <- select(combined_data_raw, c_id, ts, v, f, d, site_id,
+                                  e, con_type, s_state, s_postcode, 
+                                  Standard_Version, Grouping, polarity, first_ac,
+                                  power_kW, clean, manufacturer, model, sum_ac, 
+                                  time_offset)
+      combined_data_f2 <- rbind(combined_data_f2, combined_data_raw)
+      remove(combined_data_raw)
+    }
+    
+    
+    # If the cleaned data is needed for analysis then combine time series data
+    # and cleaned meta data.
+    if (perform_clean() & 'cleaned' %in% clean()){
+    site_details_cleaned_processed <- process_raw_site_details(v$site_details_cleaned)
+      combined_data_clean <- combine_data_tables(
+        select(combined_data_f, ts, c_id, e, v, f, d, time_offset),  
+        select(v$circuit_details_for_editing, c_id, site_id, con_type, polarity),
+        site_details_cleaned_processed)
+      combined_data_clean <- combined_data_clean %>% mutate(clean="cleaned")
+      combined_data_clean <- select(combined_data_clean, c_id, ts, v, f, d, 
+                                    site_id, e, con_type, s_state, s_postcode, 
+                                    Standard_Version, Grouping, polarity, 
+                                    first_ac, power_kW, clean, manufacturer, model, 
+                                    sum_ac, time_offset)
+      combined_data_f2 <- rbind(combined_data_f2, combined_data_clean)
+      remove(combined_data_clean)
+    }
+    
+    combined_data_f <- combined_data_f2
+    gc()
+  
+    
+    # Set default manual cleaning value.
+    combined_data_f <- mutate(combined_data_f, manual_compliance = 'Not set')
+
+
+    # Perform meta data filtering.    
+    combined_data_f <- filter(combined_data_f, sum_ac<=100)
     gc()
     combined_data_f <- filter(combined_data_f, s_state==region())
     if (length(clean()) < 2) {combined_data_f <- filter(combined_data_f, clean %in% clean())}
@@ -807,7 +842,6 @@ server <- function(input,output,session){
       if (length(responses()) < 6) {combined_data_f <- filter(combined_data_f, response_category %in% responses())}
     }
     # Filter data by user selected time window
-    combined_data_f <- filter(combined_data_f, ts>=start_time() & ts<= end_time())
     if(length(combined_data_f$ts) > 0){
       combined_data_f <- get_distance_from_event(combined_data_f, v$postcode_data, event_latitude(), event_longitude())
       combined_data_f <- get_zones(combined_data_f, zone_one_radius(), zone_two_radius(), zone_three_radius())
@@ -1449,6 +1483,7 @@ server <- function(input,output,session){
     replaceData(v$proxy_circuit_details_editor, v$circuit_details_for_editing, resetPaging=FALSE, rownames=FALSE) # important
   })
 }
+
 
 shinyApp(ui = ui, server = server)
 
