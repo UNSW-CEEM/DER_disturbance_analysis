@@ -568,8 +568,6 @@ server <- function(input,output,session){
           ts_data,  
           select(v$circuit_details_for_editing, c_id, site_id, con_type, polarity),
           site_details_cleaned_processed)
-        
-        browser()
         remove(ts_data)
         combined_data_after_clean <- filter(combined_data_after_clean, sum_ac<=100)
         gc()
