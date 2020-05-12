@@ -166,7 +166,6 @@ ui <- fluidPage(
     tabPanel("Data Cleaning", fluid=TRUE, 
       mainPanel(
         plotlyOutput("site_plot"),
-        DTOutput('site_details_editor'),
         h4("Cleaned site data (select to view trace)"),
         DTOutput('site_details_editor'),
         h4("Cleaned Circuit data (select to view trace)"),
@@ -570,7 +569,6 @@ server <- function(input,output,session){
           select(v$circuit_details_for_editing, c_id, site_id, con_type, polarity),
           site_details_cleaned_processed)
         
-        browser()
         remove(ts_data)
         combined_data_after_clean <- filter(combined_data_after_clean, sum_ac<=100)
         gc()
@@ -712,13 +710,6 @@ server <- function(input,output,session){
                                            "Off at t0", "Not enough data"), 
                              justified=TRUE, status="primary", individual=TRUE,
                              checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")))
-      })  
-      output$offsets <- renderUI({
-        checkboxGroupButtons(inputId="offsets", label=unique_offsets_filter_label, 
-                             choices=v$unique_offsets, selected=c(v$unique_offsets[which.max(sample_counts)]) ,
-                             justified=TRUE, status="primary", individual=TRUE,
-                             checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")))
-                             checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon"))
       })  
       output$offsets <- renderUI({
         checkboxGroupButtons(inputId="offsets", label=unique_offsets_filter_label, 
@@ -1016,13 +1007,6 @@ server <- function(input,output,session){
           z3 <- data.frame(circle.polygon(event_longitude(), event_latitude(), zone_three_radius(), sides = 20, units='km', poly.type = "gc.earth"))
           output$map <- renderPlotly({plot_geo(geo_data, lat=~lat, lon=~lon, color=~percentage_disconnect) %>%
               add_polygons(x=~z1$lon, y=~z1$lat, inherit=FALSE, fillcolor='transparent', 
-                           line=list(width=2,color="black"), hoverinfo = "none", showlegend=FALSE) %>%
-              add_polygons(x=~z2$lon, y=~z2$lat, inherit=FALSE, fillcolor='transparent', 
-                           line=list(width=2,color="black"), hoverinfo = "none", showlegend=FALSE) %>%
-              add_polygons(x=~z3$lon, y=~z3$lat, inherit=FALSE, fillcolor='transparent', 
-                           line=list(width=2,color="black"), hoverinfo = "none", showlegend=FALSE) %>%
-              add_markers(x=~geo_data$lon, y=~geo_data$lat, color=~percentage_disconnect, inherit=FALSE, 
-                          # hovertext=~geo_data$info, legendgroup = list(title = "Percentage Disconnects")) %>%
                            line=list(width=2,color="grey"), hoverinfo = "none", showlegend=FALSE) %>%
               add_polygons(x=~z2$lon, y=~z2$lat, inherit=FALSE, fillcolor='transparent', 
                            line=list(width=2,color="grey"), hoverinfo = "none", showlegend=FALSE) %>%
