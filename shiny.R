@@ -166,6 +166,7 @@ ui <- fluidPage(
     tabPanel("Data Cleaning", fluid=TRUE, 
       mainPanel(
         plotlyOutput("site_plot"),
+        DTOutput('site_details_editor'),
         h4("Cleaned site data (select to view trace)"),
         DTOutput('site_details_editor'),
         h4("Cleaned Circuit data (select to view trace)"),
@@ -717,6 +718,13 @@ server <- function(input,output,session){
                              choices=v$unique_offsets, selected=c(v$unique_offsets[which.max(sample_counts)]) ,
                              justified=TRUE, status="primary", individual=TRUE,
                              checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")))
+                             checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon"))
+      })  
+      output$offsets <- renderUI({
+        checkboxGroupButtons(inputId="offsets", label=unique_offsets_filter_label, 
+                             choices=v$unique_offsets, selected=c(v$unique_offsets[which.max(sample_counts)]) ,
+                             justified=TRUE, status="primary", individual=TRUE,
+                             checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")))
       }) 
       shinyjs::show("raw_upscale")
       shinyjs::show("pst_agg")
@@ -736,7 +744,7 @@ server <- function(input,output,session){
                   value = as.POSIXct("18:05:55",format="%H:%M:%S"))
       })
       output$event_time <- renderUI({
-        timeInput("event_time", label=strong('Time of event'), 
+        timeInput("event_time", label=strong('Time of maximum pv response (Needs to match exactly to data timestamp)'), 
                   value = as.POSIXct("18:11:55",format="%H:%M:%S"))
       })
       output$window_length <- renderUI({
@@ -928,6 +936,7 @@ server <- function(input,output,session){
           output$save_circuit_summary <- renderUI({
             shinySaveButton("save_circuit_summary", "Save Circuit Summary", "Save file as ...", filetype=list(xlsx="csv"))
           })
+
           output$batch_save <- renderUI({
             shinySaveButton("batch_save", "Batch save", "Save file as ...", filetype=list(xlsx="csv"))
           })
@@ -1007,6 +1016,13 @@ server <- function(input,output,session){
           z3 <- data.frame(circle.polygon(event_longitude(), event_latitude(), zone_three_radius(), sides = 20, units='km', poly.type = "gc.earth"))
           output$map <- renderPlotly({plot_geo(geo_data, lat=~lat, lon=~lon, color=~percentage_disconnect) %>%
               add_polygons(x=~z1$lon, y=~z1$lat, inherit=FALSE, fillcolor='transparent', 
+                           line=list(width=2,color="black"), hoverinfo = "none", showlegend=FALSE) %>%
+              add_polygons(x=~z2$lon, y=~z2$lat, inherit=FALSE, fillcolor='transparent', 
+                           line=list(width=2,color="black"), hoverinfo = "none", showlegend=FALSE) %>%
+              add_polygons(x=~z3$lon, y=~z3$lat, inherit=FALSE, fillcolor='transparent', 
+                           line=list(width=2,color="black"), hoverinfo = "none", showlegend=FALSE) %>%
+              add_markers(x=~geo_data$lon, y=~geo_data$lat, color=~percentage_disconnect, inherit=FALSE, 
+                          # hovertext=~geo_data$info, legendgroup = list(title = "Percentage Disconnects")) %>%
                            line=list(width=2,color="grey"), hoverinfo = "none", showlegend=FALSE) %>%
               add_polygons(x=~z2$lon, y=~z2$lat, inherit=FALSE, fillcolor='transparent', 
                            line=list(width=2,color="grey"), hoverinfo = "none", showlegend=FALSE) %>%
