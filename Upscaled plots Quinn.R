@@ -1,7 +1,7 @@
-UnderlyingData <- read.csv("C://Users//qpatterson//Documents//My Documents//DER//Events//2020-01-31//Cleaned 2020-01-31//FINAL//SA 60s_underlying.csv",stringsAsFactors=FALSE)
+UnderlyingData <- read.csv("C://Users//qpatterson//Documents//My Documents//DER//Events//2018-08-25//Cleaned//FINAL//NSW 60s_underlying.csv",stringsAsFactors=FALSE)
 APVICapacity <- read.csv("C://Users//qpatterson//Documents//My Documents//DER//DER_disturbance_analysis-nick_dev//DER_disturbance_analysis-nick_dev//cumulative_capacity_and_number.csv")
-DateOfEvent <- "2020-01-30"
-Region <- "SA"
+DateOfEvent <- "2018-08-25"
+Region <- "NSW"
 
 library(dplyr)
 library(ggplot2)
@@ -105,11 +105,11 @@ CapFactors <- mutate(CapFactors,Legend=factor(StdComplianceCombined,levels=c('Of
 # This will determine how dense the x-axis time values are on the plot
 XAxisBreaks <- group_by(CapFactors,Time) %>% summarise()
 # Edit to reflect how many minutes between each x-axis label. 2 is good for an hour of data.
-BreaksBetween <- 3
+BreaksBetween <- 2
 XAxisBreaks <- filter(XAxisBreaks,as.numeric(substr(as.character(XAxisBreaks$Time),4,5))%%BreaksBetween==0)
 
 # This will save the plot in high resolution at the specified dimensions in your directory
-tiff(paste(DateOfEvent,"upscaled response.tiff"), units="in", width=8, height=4, res=300)
+tiff(paste(DateOfEvent,Region,"upscaled response.tiff"), units="in", width=8, height=4, res=300)
 
 p <- ggplot(CapFactors, aes(Time, UpscaledMW,fill=Legend))+
   geom_area(position="stack")+
@@ -130,12 +130,12 @@ plot(p)
 dev.off()
 
 # And another file that shows each category on its own
-tiff(paste(DateOfEvent,"upscaled response split.tiff"), units="in", width=8, height=4, res=300)
+tiff(paste(DateOfEvent,Region,"upscaled response split.tiff"), units="in", width=8, height=4, res=300)
 
 # This will determine how dense the x-axis time values are on the plot
 XAxisBreaks <- group_by(CapFactors,Time) %>% summarise()
 # Edit to reflect how many minutes between each x-axis label.
-BreaksBetween <- 10
+BreaksBetween <- 6
 XAxisBreaks <- filter(XAxisBreaks,as.numeric(substr(as.character(XAxisBreaks$Time),4,5))%%BreaksBetween==0)
 
 p <- p + facet_wrap(~Legend) + scale_x_time(breaks=XAxisBreaks$Time)
