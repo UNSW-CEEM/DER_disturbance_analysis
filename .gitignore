@@ -57,7 +57,8 @@ data/*
 
 .idea/vcs.xml
 auto_test_data/*
-data/NEM_20191116_data/*
+data/*
+
 #pycharm
 .idea/*
 .idea/vcs.xml
@@ -65,3 +66,4 @@ data/NEM_20191116_data/*
 
 AEMOtemplate_format.R
 cumulative_capacity_and_number_20200218.csv
+cumulative_capacity_and_number.csv

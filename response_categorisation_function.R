@@ -33,6 +33,7 @@ categorise_by_response <- function(event_window_data, window_length){
   
   event_window_data <- mutate(event_window_data, response_category=ifelse(
     response_category=='Undefined' & num_con_zeros > 1, '4 Disconnect', response_category))
+  return(event_window_data)
 }
 
 num_consecutive_zeros <- function(event_power_vector){

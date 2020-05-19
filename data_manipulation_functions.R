@@ -270,7 +270,6 @@ assert_site_install_date_assumptions <- function(site_details){
 
 combine_data_tables <- function(time_series_data, circuit_details, 
                                 site_details) {
-  time_series_data <- get_time_offsets(time_series_data)
   circuit_details <- process_raw_circuit_details(circuit_details)
   site_details <- site_categorisation(site_details)
   site_details <- size_grouping(site_details)
