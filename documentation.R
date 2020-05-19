@@ -37,36 +37,37 @@ documentation_panel <- function(){
             tags$li('The "NA" zone is assigned to circuits with no location data, i.e. no postcode')),
     div('Note circuit locations are based on the centroid of their site\'s postcode.'),
     h4('Compliance status category definition'),
-    div('Compliance status is assigned on a site basis (because we only know the applicable standard on a site basis), 
-        currently it pertains only to a site\'s aggregate over 
-        frequency droop response, i.e. it assumes sites are responing only to an over frequency event. 
-        An error metric, max percentage error and min percentage error are calculated for each site. 
-        The error metric is defined as per slide 1, the min percentage error and max percentage error
-        are calculated similarly. Additionally a threshold error metric is calculated as the error metric 
-        of a "flat line" response (see slide 2). Based on these metric, sites are then categorised as follows:'),
-    tags$ul(tags$li('"Compliant" which is asigned to sites where the max percentage error is less than or equal to zero,
-                      i.e. the response of the site was always less than or equal to the ideal response'),
-            tags$li('"Ambigous" which is asigned to sites where the max percentage error is equal to or greater than zero 
-                      and the min percentage error is equal to or less than zero'),
-            tags$li('"Above Ideal Response" which is asigned to sites where the min percentage error is equal to or
-                      greater than zero and the error metric is less than the threshold error metric'),
-            tags$li('"Non Compliant" which is assigned to sites where the min percentage error is greater than or
-                    equal to zero and the error metric is greater than or equal to the threshold error metric'),
+    div('Compliance status is assigned on a circuit basis according to the following definitions. The categories Disconnect, 
+         Off at t0 and not enough data are taken from the output of the response catergorisation algo.'),
+    tags$ul(tags$li('"Compliant" A fast and sustained reduction in output. The system reduces power by at least  
+                      50 % of the ideal reduction for the whole response period excluding the first minute and 
+                      last minute. These paramaters are editable on the settings tab using the compliance threshold to change
+                      the percentage, start buffer to change the time excluded at the start and the end buffer to change the 
+                      time excluded at the end.'),
+            tags$li('"Non-compliant Responding" A fast but unsustained reduction in output. The system reduces power by at 
+                      least  50 % of the ideal reduction for at least one measurement interval in the first two minutes.
+                      The percentage can be set by changing the compliance thresold and the window to resopnd can be changed
+                      using the response time.'),
+            tags$li('"Non-compliant" Neither a fast nor sustained reduction in output. The system does not fit into the 
+                      Compliant or Non-compliant Responding categories'),
+            tags$li('"Disconnect" The system dropped to zero at any stage in the response period. The system had a pre event 
+                      normalised power level less than 5% for at least one measurement interval.'),
+            tags$li('"Drop to Zero" The system dropped to zero at any stage in the response period. The system had a pre event 
+                      normalised power level less than 5% for at least one measurement interval. '),
+            tags$li('"Off at t0" The systems initial power level is too low to categorise. The system had a pre event power 
+                      level of less than 100 W.'),
             tags$li('"NA" which is assigned to sites where there is no data available during the Ideal Response peroid'),
             tags$li('"Undefined" is the default category for sites that do not fall into one of the above categories, 
                     sites should only fall into this category if there is no Ideal Response for the given frequency 
                     data set.')),
-    img(src='slide1.png'),
-    img(src='slide2.png'),
     h3('Further methodology notes on a chart basis'),
     h4('Aggregate power chart'),
     div('By default this chart shows the aggregate power on a basis determined by the grouping
         variables chosen by the user. If no grouping variables are chosen the data is grouped on a cleaned/raw basis.
         If the additional processing of "Upscaling" is selected then the aggregate power is upscaled to estimate the output
-        of the population of systems. Note upscaling is only possible with grouping variables "AS4777" and 
-        "Size Grouping". The upscaling methodology is as follows:'),
+        of the population of systems. Note upscaling is only possible with grouping variable "AS4777". The upscaling methodology is as follows:'),
     tags$ul(tags$li('The installed capacity of systems at the time of the event for each combination of the grouping 
-                     variables is determined from the data file "cumulative_capacity_and_number_20190121"'),
+                     variables is determined from the data file "cumulative_capacity_and_number.csv"'),
             tags$li('For each time interval where output data is available the performance factor of each site is determined, 
                      as the: site power / site capacity. This is done to levelise the effect of large and small systems
                     on the upscaling'),
@@ -75,16 +76,17 @@ documentation_panel <- function(){
                     than interpreting it as zero value'),
             tags$li('Then the mean peformance factor for each  time interval and combination of grouping variables is 
                      multiplied by the corresponding intalled capacity number to find the upscaled aggregate power.')),
-    h4('Event normalised chart'),
-    div('By default this chart shows event normalised site performance factors on a basis determined by the grouping 
+    h4('Event normalised power chart'),
+    div('By default this chart shows event normalised circuit power on a basis determined by the grouping 
          variables chosen by the user. If no grouping variables are chosen the data is grouped on a cleaned/raw basis.
         The calculation of these values procceds in the following way:'),
-    tags$ul(tags$li('For each time interval and combination of grouping variables the mean site performance factor is 
-                    found, as in the upscaling method'),
-            tags$li('The mean peformance factor at the time of the users specified pre-event interval is found'),
-            tags$li('Then the mean peformance factor for each interval is divided by the corresponding pre-event mean
-                    performance factor, to give the time series of pre-event normalised mean peformance factors on
-                    an aggregate basis.')),
+    tags$ul(tags$li('The power produced by each circuit is normalised by the power produced during the pre-event time
+                    interval.'),
+            tags$li('The normalised power values of each circuit is aggregated by averaging to level of the grouping 
+                    variables.'),
+            tags$li('Missing data occurs in the is plot because some circuits contain NA normalised power values and
+                     these propergate through the aggregation. This can be solved by filtering out the Off at t0,
+                     not enough data, undefined and NA compliance categories.')),
     div('Note if the event normalised power is equal to or less than 0.00001, then the pre-event normalised mean 
         peformance factor is given a value of NA, to avoid the effects of divition by near zero numbers.'),
     h4('Frequency chart'),
@@ -178,7 +180,12 @@ documentation_panel <- function(){
                     greater than 10 % of the site\'s first AC capacity. And the site\'s minimum power is 
                     greater than 10 % of the site\'s first AC capacity times by negative one. Then change the site con_type
                     to "mixed".')
-            )
+            ),
+    h3('Manual compliance'),
+    div('This tab can be used to manually assign compliance categories to circuits. The functionality will become active after
+        the updating plots on the main tab, in order to save the manually assigned categories to the manual_compliance column 
+        in the circuit summary data set the update plots step needs to be run again on the main tab. The circuits are order 
+        in randomised way but with consistent seed value, so order will be consistent.')
     )
   return(panel)
   }

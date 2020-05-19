@@ -144,9 +144,11 @@ calc_error_metric_and_compliance_2 <- function(combined_data, ideal_response_dow
   if (min_ideal_response > disconnecting_threshold) {
     combined_data <- mutate(combined_data, compliance_status=ifelse(response_category=='4 Disconnect', 'Disconnect/Drop to Zero', compliance_status))
     combined_data <- mutate(combined_data, compliance_status=ifelse(response_category=='3 Drop to Zero', 'Disconnect/Drop to Zero', compliance_status))
-    combined_data <- mutate(combined_data, compliance_status=ifelse(response_category=='5 Off at t0', 'Off at t0', compliance_status))
-    combined_data <- mutate(combined_data, compliance_status=ifelse(response_category=='6 Not enough data', 'Not enough data', compliance_status))
   } 
+  
+  
+  combined_data <- mutate(combined_data, compliance_status=ifelse(response_category=='5 Off at t0', 'Off at t0', compliance_status))
+  combined_data <- mutate(combined_data, compliance_status=ifelse(response_category=='6 Not enough data', 'Not enough data', compliance_status))
   
   return(combined_data)
 }
