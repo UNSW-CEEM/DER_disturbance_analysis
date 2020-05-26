@@ -50,26 +50,26 @@ ui <- fluidPage(
         sidebarPanel(id= "side_panel",
           h4("File selection"),
           textInput("time_series", "Time series file",
-                    value="C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/data/20200131/20200131_data_NSW.feather"
+                    value="C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/data/Event 20191116/NEM_20191116_data_SA.feather"
           ),
           shinyFilesButton("choose_ts", "Choose File", 
                       "Select timeseries data file ...", multiple=FALSE
           ),
           HTML("<br><br>"),
           textInput("circuit_details", "Circuit details file",
-                    value="C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/data/20200131/20200131_circuit_details_nem.csv"
+                    value="C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/data/Event 20191116/circuit_details_nem.csv"
                     ),
 
           shinyFilesButton("choose_c", "Choose File", "Select circuit details data file ...", multiple=FALSE
           ),
           HTML("<br><br>"),
           textInput("site_details", "Site details file", 
-                    value="C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/data/20200131/20200131_site_details_nem.csv"
+                    value="C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/data/Event 20191116/site_details_nem.csv"
           ),
           shinyFilesButton("choose_site", "Choose File", "Select site details data file ...", multiple=FALSE),
           HTML("<br><br>"),
           textInput("frequency_data", "Frequency data file", 
-                    value=""
+                    value="C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/data/Event 20191116/frequency_data_for_analysis_ng.csv"
           ),
           shinyFilesButton("choose_frequency_data", "Choose File", "Select fequency data file ...", multiple=FALSE),
           HTML("<br><br>"),
@@ -118,7 +118,7 @@ ui <- fluidPage(
           h4("Event information"),
           uiOutput("event_date"),
           uiOutput("pre_event_interval"),
-          uiOutput("event_time"),
+          #uiOutput("event_time"),
           uiOutput("window_length"),
           uiOutput("event_latitude"),
           uiOutput("event_longitude"),
@@ -166,6 +166,9 @@ ui <- fluidPage(
     tabPanel("Data Cleaning", fluid=TRUE, 
       mainPanel(
         plotlyOutput("site_plot"),
+        h4("Editing the tables below changes the data used in the analysis on 
+           the main tab, however plots need to be updated for the changes to
+           take affect."),
         h4("Cleaned site data (select to view trace)"),
         DTOutput('site_details_editor'),
         h4("Cleaned Circuit data (select to view trace)"),
@@ -182,7 +185,7 @@ ui <- fluidPage(
        uiOutput("set_c_id_compliance"),
        fluidRow(
          div(style="display:inline-block", uiOutput("get_previous_c_id")),
-         div(style="display:inline-block", uiOutput("get_next_c_id"))),
+         div(style="display:inline-block", uiOutput("get_next_c_id")))
      )
     ),
     tabPanel("Settings", fluid=TRUE, 
@@ -240,7 +243,7 @@ reset_sidebar <- function(input, output, session, stringsAsFactors) {
   shinyjs::hide("zone_agg")
   shinyjs::hide("compliance_agg")
   output$event_date <- renderUI({})
-  output$event_time <- renderUI({})
+  #output$event_time <- renderUI({})
   output$pre_event_interval <- renderUI({})
   output$window_length <- renderUI({})
   output$event_latitude <- renderUI({})
@@ -344,13 +347,13 @@ server <- function(input,output,session){
     end_date_time <- strptime(end_time_as_str, format="%Y-%m-%d %H:%M:%S", tz="Australia/Brisbane")
     end_date_time
   })
-  event_time <- reactive({
-    date_as_str <- as.character(input$event_date)
-    time_as_str <- substr(input$event_time, 12, 19)
-    date_time_as_str <- paste(date_as_str, time_as_str)
-    event_date_time <- strptime(date_time_as_str, format="%Y-%m-%d %H:%M:%S", tz="Australia/Brisbane")
-    event_date_time
-  })
+  # event_time <- reactive({
+  #   date_as_str <- as.character(input$event_date)
+  #   time_as_str <- substr(input$event_time, 12, 19)
+  #   date_time_as_str <- paste(date_as_str, time_as_str)
+  #   event_date_time <- strptime(date_time_as_str, format="%Y-%m-%d %H:%M:%S", tz="Australia/Brisbane")
+  #   event_date_time
+  # })
   pre_event_interval <- reactive({
     date_as_str <- as.character(input$event_date)
     time_as_str <- substr(input$pre_event_interval, 12, 19)
@@ -565,27 +568,29 @@ server <- function(input,output,session){
         v$proxy_circuit_details_editor <- dataTableProxy('circuit_details_editor')
         
         # Add cleaned data to display data for main tab
-        gc()
-        v$combined_data <- select(ts_data, ts, c_id, e, v, f, d)
-        gc()
         output$save_cleaned_data <- renderUI({actionButton("save_cleaned_data", "Save cleaned data")})
         show("save_cleaned_data")
         removeNotification(id)
+        
+        v$circuit_details_for_editing <- mutate(v$circuit_details_for_editing, manual_compliance = 'Not set')
       } else {
         # Don't let the user crash the tool by trying to save data that doesn't exist
         hide("save_cleaned_data")
       }
-      
+      gc()
+      v$combined_data <- select(ts_data, ts, c_id, e, v, f, d, power_kW)
+      gc()
       remove(ts_data)
       gc()
       
+      # Set default manual cleaning value.
+      v$circuit_details <- mutate(v$circuit_details, manual_compliance = 'Not set')
       
       # Get offset filter options and label
       v$combined_data <- get_time_offsets(v$combined_data)
       v$unique_offsets <- get_time_series_unique_offsets(v$combined_data)
       sample_counts <- get_offset_sample_counts(v$combined_data, v$unique_offsets)
       unique_offsets_filter_label <- make_offset_filter_label(sample_counts, v$unique_offsets)
-      
       #Update duration selection button
       base_label <- "Sampled duration (seconds), select one. Note durations are calculated based on most frequently 
                      occuring time between  measurements for each c_id. Sample sizes in last data set loaded 
@@ -687,10 +692,10 @@ server <- function(input,output,session){
         checkboxGroupButtons(inputId="compliance", label=strong("Compliance"), 
                              choices=list("Compliant", "Non-compliant Responding", 
                                           "Non-compliant", "Disconnect/Drop to Zero",
-                                          "Off at t0", "Not enough data"),
+                                          "Off at t0", "Not enough data", "Undefined", "NA"),
                              selected=list("Compliant", "Non-compliant Responding", 
                                            "Non-compliant", "Disconnect/Drop to Zero",
-                                           "Off at t0", "Not enough data"), 
+                                           "Off at t0", "Not enough data", "Undefined", "NA"), 
                              justified=TRUE, status="primary", individual=TRUE,
                              checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")))
       })  
@@ -717,10 +722,10 @@ server <- function(input,output,session){
         timeInput("pre_event_interval", label=strong('Pre-event time interval (Needs to match exactly to data timestamp)'), 
                   value = as.POSIXct("18:05:55",format="%H:%M:%S"))
       })
-      output$event_time <- renderUI({
-        timeInput("event_time", label=strong('Time of maximum pv response (Needs to match exactly to data timestamp)'), 
-                  value = as.POSIXct("18:11:55",format="%H:%M:%S"))
-      })
+      # output$event_time <- renderUI({
+      #   timeInput("event_time", label=strong('Time of maximum pv response (Needs to match exactly to data timestamp)'), 
+      #             value = as.POSIXct("18:11:55",format="%H:%M:%S"))
+      # })
       output$window_length <- renderUI({
         numericInput("window_length", label=strong('Set window length (min),
                                                    Only data in this window is used for response analysis.'), value=5, min = 1, max = 100, step = 1)
@@ -786,15 +791,16 @@ server <- function(input,output,session){
     if ('raw' %in% clean()){
       combined_data_raw <- combine_data_tables(
         select(combined_data_f, ts, c_id, e, v, f, d, time_offset),  
-        select(v$circuit_details, c_id, site_id, con_type, polarity),
+        select(v$circuit_details, c_id, site_id, con_type, polarity, 
+               manual_compliance),
         v$site_details)
       combined_data_raw <- combined_data_raw %>% mutate(clean="raw")
       combined_data_raw <- select(combined_data_raw, c_id, ts, v, f, d, site_id,
                                   e, con_type, s_state, s_postcode, 
                                   Standard_Version, Grouping, polarity, first_ac,
                                   power_kW, clean, manufacturer, model, sum_ac, 
-                                  time_offset)
-      combined_data_f2 <- rbind(combined_data_f2, combined_data_raw)
+                                  time_offset, manual_compliance)
+      combined_data_f2 <- bind_rows(combined_data_f2, combined_data_raw)
       remove(combined_data_raw)
     }
     
@@ -805,25 +811,22 @@ server <- function(input,output,session){
     site_details_cleaned_processed <- process_raw_site_details(v$site_details_cleaned)
       combined_data_clean <- combine_data_tables(
         select(combined_data_f, ts, c_id, e, v, f, d, time_offset),  
-        select(v$circuit_details_for_editing, c_id, site_id, con_type, polarity),
+        select(v$circuit_details_for_editing, c_id, site_id, con_type, polarity,
+               manual_compliance),
         site_details_cleaned_processed)
       combined_data_clean <- combined_data_clean %>% mutate(clean="cleaned")
       combined_data_clean <- select(combined_data_clean, c_id, ts, v, f, d, 
                                     site_id, e, con_type, s_state, s_postcode, 
                                     Standard_Version, Grouping, polarity, 
                                     first_ac, power_kW, clean, manufacturer, model, 
-                                    sum_ac, time_offset)
-      combined_data_f2 <- rbind(combined_data_f2, combined_data_clean)
+                                    sum_ac, time_offset, manual_compliance)
+      combined_data_f2 <- bind_rows(combined_data_f2, combined_data_clean)
       remove(combined_data_clean)
     }
     
     combined_data_f <- combined_data_f2
     gc()
   
-    
-    # Set default manual cleaning value.
-    combined_data_f <- mutate(combined_data_f, manual_compliance = 'Not set')
-
 
     # Perform meta data filtering.    
     combined_data_f <- filter(combined_data_f, sum_ac<=100)
@@ -890,7 +893,7 @@ server <- function(input,output,session){
       } else {
         combined_data_f <- mutate(combined_data_f, compliance_status="Undefined")  
       }
-      if (length(compliance()) < 6) {combined_data_f <- filter(combined_data_f, compliance_status %in% compliance())}
+      if (length(compliance()) < 8) {combined_data_f <- filter(combined_data_f, compliance_status %in% compliance())}
       removeNotification(id2)
     }
     
@@ -1142,19 +1145,19 @@ server <- function(input,output,session){
   
   observeEvent(input$set_c_id_compliance, {
     current_c_id <- v$c_id_vector[[v$compliance_counter]]
-    v$combined_data <- mutate(v$combined_data, 
-                              manual_compliance=
-                                ifelse((c_id==current_c_id) & 
-                                         (clean==compliance_cleaned_or_raw()),
-                                       set_c_id_compliance(),
-                                       manual_compliance))
-    v$combined_data_f <- mutate(v$combined_data_f, 
+    if (compliance_cleaned_or_raw() =="raw"){
+      v$circuit_details <- mutate(v$circuit_details, 
                                 manual_compliance=
-                                  ifelse((c_id==current_c_id) & 
-                                           (clean==compliance_cleaned_or_raw()),
+                                  ifelse((c_id==current_c_id),
                                          set_c_id_compliance(),
                                          manual_compliance))
-    
+    } else {
+      v$circuit_details_for_editing <- mutate(v$circuit_details_for_editing, 
+                                  manual_compliance=
+                                    ifelse((c_id==current_c_id),
+                                           set_c_id_compliance(),
+                                           manual_compliance))
+    }
   })
   
   observeEvent(input$get_next_c_id,{
@@ -1264,50 +1267,50 @@ server <- function(input,output,session){
     }
   })
   
-  observeEvent(input$save_report, {
-    volumes <- c(home=getwd())
-    shinyDirChoose(input, "save_report", roots=volumes, session=session)
-    datapath <- parseDirPath(volumes, input$save_report)
-    if(length(datapath) > 0){
-      id <- showNotification("Creating report", duration=1000)
-      create_files(v$agg_power, v$combined_data_f, pre_event_interval(), 
-                   event_time(), datapath, zone_one_radius(), zone_two_radius(), 
-                   zone_three_radius())
-      variables <- c('time_series_file', 'circuit_details_file', 'site_details_file', 'frequency_data_file', 'region',
-                     'duration', 'standards', 'responses', 'postcodes', 'manufacturers', 'models', 'sites', 'circuits', 
-                     'zones', 'compliance', 'offsets', 'size_groupings', 'clean', 'raw_upscale', 'pst_agg', 
-                     'grouping_agg', 'response_agg', 'manufacturer_agg', 'perform_clean', 'model_agg', 'circuit_agg', 
-                     'zone_agg', 'compliance_agg', 'start_time', 'end_time', 'pre_event_interval', 
-                     'agg_on_standard', 'window_length', 'event_latitude', 'event_longitude', 'zone_one_radius', 
-                     'zone_two_radius', 'zone_three_radius')
-      values <- c(time_series_file(), circuit_details_file(), site_details_file(), frequency_data_file(), 
-                  if(is.null(region())){''}else{region()},
-                  if(is.null(duration())){''}else{duration()}, paste(standards(), collapse='; '), paste(responses(), collapse='; '), 
-                  paste(postcodes(), collapse='; '), 
-                  paste(manufacturers(), '; '), 
-                  paste(models(), collapse='; '), paste(sites(), collapse='; '), paste(circuits(), collapse='; '), 
-                  paste(zones(), collapse='; '),  paste(compliance(), collapse='; '), paste(offsets(), collapse='; '), 
-                  paste(size_groupings(), collapse='; '),
-                  paste(clean(), collapse='; '), raw_upscale(), pst_agg(), 
-                  grouping_agg(), response_agg(), manufacturer_agg(), perform_clean(), model_agg(), circuit_agg(), 
-                  zone_agg(), compliance_agg(), 
-                  if(length(start_time())==0){''}else{as.character(start_time())}, 
-                  if(length(end_time())==0){''}else{as.character(end_time())}, 
-                  if(length(pre_event_interval())==0){''}else{as.character(pre_event_interval())},
-                  agg_on_standard(), 
-                  if(is.null(window_length())){''}else{window_length()}, 
-                  if(is.null(event_latitude())){''}else{event_latitude()}, 
-                  if(is.null(event_longitude())){''}else{event_longitude()}, 
-                  if(is.null(zone_one_radius())){''}else{zone_one_radius()}, 
-                  if(is.null(zone_two_radius())){''}else{zone_two_radius()}, 
-                  if(is.null(zone_three_radius())){''}else{zone_three_radius()})
-      meta_data = data.frame(variables, values, stringsAsFactors = FALSE)
-      write.csv(meta_data, paste0(datapath, '_meta_data.csv'), row.names=FALSE)
-      write.csv(v$circuit_summary, paste0(datapath, '_circ_sum.csv'), row.names=FALSE)
-      removeNotification(id)
-    }
-
-  })
+  # observeEvent(input$save_report, {
+  #   volumes <- c(home=getwd())
+  #   shinyDirChoose(input, "save_report", roots=volumes, session=session)
+  #   datapath <- parseDirPath(volumes, input$save_report)
+  #   if(length(datapath) > 0){
+  #     id <- showNotification("Creating report", duration=1000)
+  #     create_files(v$agg_power, v$combined_data_f, pre_event_interval(), 
+  #                  event_time(), datapath, zone_one_radius(), zone_two_radius(), 
+  #                  zone_three_radius())
+  #     variables <- c('time_series_file', 'circuit_details_file', 'site_details_file', 'frequency_data_file', 'region',
+  #                    'duration', 'standards', 'responses', 'postcodes', 'manufacturers', 'models', 'sites', 'circuits', 
+  #                    'zones', 'compliance', 'offsets', 'size_groupings', 'clean', 'raw_upscale', 'pst_agg', 
+  #                    'grouping_agg', 'response_agg', 'manufacturer_agg', 'perform_clean', 'model_agg', 'circuit_agg', 
+  #                    'zone_agg', 'compliance_agg', 'start_time', 'end_time', 'pre_event_interval', 
+  #                    'agg_on_standard', 'window_length', 'event_latitude', 'event_longitude', 'zone_one_radius', 
+  #                    'zone_two_radius', 'zone_three_radius')
+  #     values <- c(time_series_file(), circuit_details_file(), site_details_file(), frequency_data_file(), 
+  #                 if(is.null(region())){''}else{region()},
+  #                 if(is.null(duration())){''}else{duration()}, paste(standards(), collapse='; '), paste(responses(), collapse='; '), 
+  #                 paste(postcodes(), collapse='; '), 
+  #                 paste(manufacturers(), '; '), 
+  #                 paste(models(), collapse='; '), paste(sites(), collapse='; '), paste(circuits(), collapse='; '), 
+  #                 paste(zones(), collapse='; '),  paste(compliance(), collapse='; '), paste(offsets(), collapse='; '), 
+  #                 paste(size_groupings(), collapse='; '),
+  #                 paste(clean(), collapse='; '), raw_upscale(), pst_agg(), 
+  #                 grouping_agg(), response_agg(), manufacturer_agg(), perform_clean(), model_agg(), circuit_agg(), 
+  #                 zone_agg(), compliance_agg(), 
+  #                 if(length(start_time())==0){''}else{as.character(start_time())}, 
+  #                 if(length(end_time())==0){''}else{as.character(end_time())}, 
+  #                 if(length(pre_event_interval())==0){''}else{as.character(pre_event_interval())},
+  #                 agg_on_standard(), 
+  #                 if(is.null(window_length())){''}else{window_length()}, 
+  #                 if(is.null(event_latitude())){''}else{event_latitude()}, 
+  #                 if(is.null(event_longitude())){''}else{event_longitude()}, 
+  #                 if(is.null(zone_one_radius())){''}else{zone_one_radius()}, 
+  #                 if(is.null(zone_two_radius())){''}else{zone_two_radius()}, 
+  #                 if(is.null(zone_three_radius())){''}else{zone_three_radius()})
+  #     meta_data = data.frame(variables, values, stringsAsFactors = FALSE)
+  #     write.csv(meta_data, paste0(datapath, '_meta_data.csv'), row.names=FALSE)
+  #     write.csv(v$circuit_summary, paste0(datapath, '_circ_sum.csv'), row.names=FALSE)
+  #     removeNotification(id)
+  #   }
+  # 
+  # })
   
   # Save data from aggregate pv power plot
   observeEvent(input$batch_save, {
@@ -1317,7 +1320,8 @@ server <- function(input,output,session){
                    'grouping_agg', 'response_agg', 'manufacturer_agg', 'perform_clean', 'model_agg', 'circuit_agg', 
                    'zone_agg', 'compliance_agg', 'start_time', 'end_time', 'pre_event_interval', 
                    'agg_on_standard', 'window_length', 'event_latitude', 'event_longitude', 'zone_one_radius', 
-                   'zone_two_radius', 'zone_three_radius')
+                   'zone_two_radius', 'zone_three_radius', 'compliance_threshold', 'start_buffer', 'end_buffer',
+                   'end_buffer_responding', 'disconnecting_threshold')
    values <- c(time_series_file(), circuit_details_file(), site_details_file(), frequency_data_file(), 
                    if(is.null(region())){''}else{region()},
                    if(is.null(duration())){''}else{duration()}, paste(standards(), collapse='; '), paste(responses(), collapse='; '), 
@@ -1338,7 +1342,10 @@ server <- function(input,output,session){
                    if(is.null(event_longitude())){''}else{event_longitude()}, 
                    if(is.null(zone_one_radius())){''}else{zone_one_radius()}, 
                    if(is.null(zone_two_radius())){''}else{zone_two_radius()}, 
-                   if(is.null(zone_three_radius())){''}else{zone_three_radius()})
+                   if(is.null(zone_three_radius())){''}else{zone_three_radius()},
+                   compliance_threshold(), start_buffer(), end_buffer(),
+                   end_buffer_responding(), disconnecting_threshold())
+   
     meta_data = data.frame(variables, values, stringsAsFactors = FALSE)
     volumes <- getVolumes()
     shinyFileSave(input, "batch_save", roots=volumes, session=session)
@@ -1418,7 +1425,7 @@ server <- function(input,output,session){
     v$proxy_site_details_editor %>% selectRows(NULL)
     if (length(input$circuit_details_editor_rows_selected==1)) {
       c_id_to_plot <- v$circuit_details_for_editing$c_id[input$circuit_details_editor_rows_selected]
-      data_to_view <- filter(filter(v$combined_data, clean=="raw"), c_id==c_id_to_plot)
+      data_to_view <- filter(v$combined_data, c_id==c_id_to_plot)
       output$site_plot <- renderPlotly({plot_ly(data_to_view, x=~ts, y=~power_kW, type="scatter")})
     }
     
@@ -1429,7 +1436,9 @@ server <- function(input,output,session){
     v$proxy_circuit_details_editor %>% selectRows(NULL)
     if (length(input$site_details_editor_rows_selected==1)) {
       site_id_to_plot <- v$site_details_cleaned$site_id[input$site_details_editor_rows_selected]
-      data_to_view <- filter(filter(v$combined_data, clean=="raw"), site_id==site_id_to_plot)
+      circuits <- filter(v$circuit_details_for_editing, site_id==site_id_to_plot)
+      circuits <- unique(circuits$c_id)
+      data_to_view <- filter(v$combined_data, c_id %in% circuits)
       output$site_plot <- renderPlotly({plot_ly(data_to_view, x=~ts, y=~power_kW, color=~c_id, type="scatter")})
     }
   })
@@ -1445,19 +1454,6 @@ server <- function(input,output,session){
     file_no_type = str_sub(circuit_details_file(), end=-5)
     new_file_name = paste(file_no_type, "_cleaned.csv", sep="")
     write.csv(v$circuit_details_for_editing, new_file_name)
-    # Add cleaned data to dispay dat set
-    site_details_cleaned_processed <- process_raw_site_details(v$site_details_cleaned)
-    ts_data <- read_feather(time_series_file())
-    ts_data <- filter(ts_data, d==duration())
-    combined_data_after_clean <- combine_data_tables(ts_data, v$circuit_details_for_editing, 
-                                                     site_details_cleaned_processed)
-    combined_data_after_clean <- filter(combined_data_after_clean, sum_ac<=100)
-    v$combined_data <- filter(v$combined_data, clean=="raw")
-    combined_data_after_clean <- combined_data_after_clean %>% mutate(clean="cleaned")
-    combined_data_after_clean <- select(combined_data_after_clean, c_id, ts, v, f, d, site_id, e, con_type, s_state, 
-                                        s_postcode, Standard_Version, Grouping, polarity, first_ac, power_kW, clean, 
-                                        manufacturer, model, sum_ac, time_offset)
-    v$combined_data <- rbind(v$combined_data, combined_data_after_clean)
     removeNotification(id)
   })
   
