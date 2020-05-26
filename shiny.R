@@ -50,26 +50,26 @@ ui <- fluidPage(
         sidebarPanel(id= "side_panel",
           h4("File selection"),
           textInput("time_series", "Time series file",
-                    value="C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/data/20200131/20200131_data_SA.feather"
+                    value="C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/data/Event 20191116/NEM_20191116_data_SA.feather"
           ),
           shinyFilesButton("choose_ts", "Choose File", 
                       "Select timeseries data file ...", multiple=FALSE
           ),
           HTML("<br><br>"),
           textInput("circuit_details", "Circuit details file",
-                    value="C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/data/20200131/20200131_circuit_details_nem.csv"
+                    value="C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/data/Event 20191116/circuit_details_nem.csv"
                     ),
 
           shinyFilesButton("choose_c", "Choose File", "Select circuit details data file ...", multiple=FALSE
           ),
           HTML("<br><br>"),
           textInput("site_details", "Site details file", 
-                    value="C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/data/20200131/20200131_site_details_nem.csv"
+                    value="C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/data/Event 20191116/site_details_nem.csv"
           ),
           shinyFilesButton("choose_site", "Choose File", "Select site details data file ...", multiple=FALSE),
           HTML("<br><br>"),
           textInput("frequency_data", "Frequency data file", 
-                    value="C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/data/20200131/20200131_Frequency data for analysis.csv"
+                    value="C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/data/Event 20191116/frequency_data_for_analysis_ng.csv"
           ),
           shinyFilesButton("choose_frequency_data", "Choose File", "Select fequency data file ...", multiple=FALSE),
           HTML("<br><br>"),
@@ -571,6 +571,8 @@ server <- function(input,output,session){
         output$save_cleaned_data <- renderUI({actionButton("save_cleaned_data", "Save cleaned data")})
         show("save_cleaned_data")
         removeNotification(id)
+        
+        v$circuit_details_for_editing <- mutate(v$circuit_details_for_editing, manual_compliance = 'Not set')
       } else {
         # Don't let the user crash the tool by trying to save data that doesn't exist
         hide("save_cleaned_data")
@@ -580,6 +582,9 @@ server <- function(input,output,session){
       gc()
       remove(ts_data)
       gc()
+      
+      # Set default manual cleaning value.
+      v$circuit_details <- mutate(v$circuit_details, manual_compliance = 'Not set')
       
       # Get offset filter options and label
       v$combined_data <- get_time_offsets(v$combined_data)
@@ -786,14 +791,15 @@ server <- function(input,output,session){
     if ('raw' %in% clean()){
       combined_data_raw <- combine_data_tables(
         select(combined_data_f, ts, c_id, e, v, f, d, time_offset),  
-        select(v$circuit_details, c_id, site_id, con_type, polarity),
+        select(v$circuit_details, c_id, site_id, con_type, polarity, 
+               manual_compliance),
         v$site_details)
       combined_data_raw <- combined_data_raw %>% mutate(clean="raw")
       combined_data_raw <- select(combined_data_raw, c_id, ts, v, f, d, site_id,
                                   e, con_type, s_state, s_postcode, 
                                   Standard_Version, Grouping, polarity, first_ac,
                                   power_kW, clean, manufacturer, model, sum_ac, 
-                                  time_offset)
+                                  time_offset, manual_compliance)
       combined_data_f2 <- bind_rows(combined_data_f2, combined_data_raw)
       remove(combined_data_raw)
     }
@@ -805,14 +811,15 @@ server <- function(input,output,session){
     site_details_cleaned_processed <- process_raw_site_details(v$site_details_cleaned)
       combined_data_clean <- combine_data_tables(
         select(combined_data_f, ts, c_id, e, v, f, d, time_offset),  
-        select(v$circuit_details_for_editing, c_id, site_id, con_type, polarity),
+        select(v$circuit_details_for_editing, c_id, site_id, con_type, polarity,
+               manual_compliance),
         site_details_cleaned_processed)
       combined_data_clean <- combined_data_clean %>% mutate(clean="cleaned")
       combined_data_clean <- select(combined_data_clean, c_id, ts, v, f, d, 
                                     site_id, e, con_type, s_state, s_postcode, 
                                     Standard_Version, Grouping, polarity, 
                                     first_ac, power_kW, clean, manufacturer, model, 
-                                    sum_ac, time_offset)
+                                    sum_ac, time_offset, manual_compliance)
       combined_data_f2 <- bind_rows(combined_data_f2, combined_data_clean)
       remove(combined_data_clean)
     }
@@ -820,9 +827,6 @@ server <- function(input,output,session){
     combined_data_f <- combined_data_f2
     gc()
   
-    
-    # Set default manual cleaning value.
-    combined_data_f <- mutate(combined_data_f, manual_compliance = 'Not set')
 
     # Perform meta data filtering.    
     combined_data_f <- filter(combined_data_f, sum_ac<=100)
@@ -1141,19 +1145,19 @@ server <- function(input,output,session){
   
   observeEvent(input$set_c_id_compliance, {
     current_c_id <- v$c_id_vector[[v$compliance_counter]]
-    v$combined_data <- mutate(v$combined_data, 
-                              manual_compliance=
-                                ifelse((c_id==current_c_id) & 
-                                         (clean==compliance_cleaned_or_raw()),
-                                       set_c_id_compliance(),
-                                       manual_compliance))
-    v$combined_data_f <- mutate(v$combined_data_f, 
+    if (compliance_cleaned_or_raw() =="raw"){
+      v$circuit_details <- mutate(v$circuit_details, 
                                 manual_compliance=
-                                  ifelse((c_id==current_c_id) & 
-                                           (clean==compliance_cleaned_or_raw()),
+                                  ifelse((c_id==current_c_id),
                                          set_c_id_compliance(),
                                          manual_compliance))
-    
+    } else {
+      v$circuit_details_for_editing <- mutate(v$circuit_details_for_editing, 
+                                  manual_compliance=
+                                    ifelse((c_id==current_c_id),
+                                           set_c_id_compliance(),
+                                           manual_compliance))
+    }
   })
   
   observeEvent(input$get_next_c_id,{
