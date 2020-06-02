@@ -1,5 +1,6 @@
 library(R6)
 library(sqldf)
+library(RSQLite)
 
 #' The DataProcessor class
 #' @description 
@@ -18,7 +19,8 @@ DataProcessor <- R6::R6Class("DataProcessor",
     #' dp$connect_to_new_database("database_one.db")
     connect_to_new_database = function(db_path_name){
       # Create the database.
-      sqldf::sqldf(paste0("attach ", db_path_name, " as new"))
+      con <- RSQLite::dbConnect(RSQLite::SQLite(), db_path_name)
+      RSQLite::dbDisconnect(con)
       # Store its name so it can be accessed later.
       self$db_path_name = db_path_name
     },
@@ -48,8 +50,16 @@ DataProcessor <- R6::R6Class("DataProcessor",
     #' @param site_details The path and name of a csv file containting the 
     #' meta data of the measurements on a circuit basis.
     build_database = function(timeseries, circuit_details, site_details) {
-      read.csv.sql(timeseries, sql = "create table timeseries as select * from file", 
-                   dbname = self$db_path_name)
+      column_names <- names(read.csv(timeseries, nrows=3, header = TRUE))
+      column_aliases <- list(ts='_ts', 'time_stamp'='_ts', c_id='_c_id', v='_v', 
+                             f='_f', e='_e', d='_d')
+      query <- "create table timeseries as 
+                select _ts as ts, _c_id as c_id, _e as e, _v as v,
+                       _f as f, _d as d from file"
+      for (name in column_names){
+        query <- gsub(column_aliases[[name]], name, query)
+      }
+      read.csv.sql(timeseries, sql = query, dbname = self$db_path_name)
       read.csv.sql(circuit_details, sql = "create table circuit_details_raw as select * from file", 
                    dbname = self$db_path_name)
       read.csv.sql(site_details, sql = "create table site_details_raw as select * from file", 
