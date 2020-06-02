@@ -67,3 +67,4 @@ data/*
 AEMOtemplate_format.R
 cumulative_capacity_and_number_20200218.csv
 cumulative_capacity_and_number.csv
+.Rproj.user
