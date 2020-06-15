@@ -7,7 +7,15 @@ circuit_details_path_name <- "../../data/2018-08-25/circuit_details.csv"
 
 if (file.exists("20180825.db")){file.remove("20180825.db")}
 dp <- DataProcessor$new()
-dp$connect_to_new_database("20180825.db")
+dp$connect_to_existing_database("20180825.db")
+start_time <- Sys.time()
 dp$build_database(timeseries=timeseries_path_name,
                   circuit_details=circuit_details_path_name,
                   site_details=site_details_path_name)
+dp$drop_repeated_headers()
+end_time <- Sys.time()
+print(end_time - start_time)
+start_time <- Sys.time()
+dp$calculate_duration_values(500)
+end_time <- Sys.time()
+print(end_time - start_time)
