@@ -2,8 +2,15 @@ library(R6)
 library(sqldf)
 library(RSQLite)
 library(dplyr)
+library(data.table)
 library(fasttime)
-#source("data_cleaning_functions.R")
+library(suncalc)
+
+wd <- getwd()
+setwd(dirname(parent.frame(2)$ofile))
+source("data_cleaning_functions.R")
+setwd(wd)
+
 
 #' The DataProcessor class
 #' @description 
@@ -172,58 +179,107 @@ DataProcessor <- R6::R6Class("DataProcessor",
     #' dp <- DataProcessor()
     #' dp$connect_to_existing_database("database_one.db")
     #' dp$calculate_duration_values()
-    run_data_cleaning_loop = function(max_chunk_size=100, calc_duration_values=TRUE){
+    run_data_cleaning_loop = function(max_chunk_size=100){
       con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)
-      ids <- RSQLite::dbGetQuery(con, "SELECT DISTINCT c_id FROM timeseries")
       
-      # The setup for iteratively selecting chunks of the sql table and pulling
-      # them into memory.
+      ids <- RSQLite::dbGetQuery(con, "SELECT DISTINCT c_id FROM timeseries")
+      circuit_details <- self$get_circuit_details_raw()
+      site_details <- self$get_site_details_raw()
+      postcode_data <- self$get_postcode_lon_lat()
+      
+      site_details <- site_details_data_cleaning_one(site_details)
 
       # Setup for first iteration.
-      length_ids <- length(ids$c_id)
+      length_ids <- length(site_details$site_id)
       iteration_number <- 1
       start_chunk_index <- self$calc_start_chunk_index(iteration_number, max_chunk_size)
       end_chunk_index <- self$calc_end_chunk_index(length_ids, max_chunk_size, start_chunk_index)
+      sites_in_chunk <- self$fiter_dataframe_by_start_and_end_index(site_details, start_chunk_index, end_chunk_index)
+      circuits <- filter(circuit_details, site_id %in% sites_in_chunk$site_id)
       
-      while (start_chunk_index <= length_ids){
+    
+      site_details_cleaned <- dplyr::data_frame()
+      circuit_details_cleaned <- dplyr::data_frame()
+      
+      while (length(circuits$c_id) > 0){
         start_time <- Sys.time()
-        # Get the ids to select on this iteration.
-        
-        ids_in_chunk <- ids[start_chunk_index:end_chunk_index,,drop=F]
-        
-        time_series <- self$get_time_series_data_by_c_id(ids_in_chunk)
-        
-        if (calc_duration_values){
-          # Calculate the time between each measurement for each circuit id.
-          time_series <- time_series %>%  dplyr::mutate(time = fasttime::fastPOSIXct(ts))
-          time_series <- time_series %>% dplyr::group_by(c_id) %>% 
-            dplyr::mutate(interval = time - lag(time, order_by = time))
-          # If the calculated time is 5 s then set this as the duration.
-          time_series <- dplyr::filter(time_series, !d %in% 5, interval %in% 5)
-          time_series <- dplyr::mutate(time_series, d=ifelse(interval %in% 5,5,d))
-          time_series <- dplyr::select(time_series, ts, c_id, e, f, v, d)
-          
-          # Replace existing data in database.
-          sqldf::read.csv.sql(
-            sql = "REPLACE INTO timeseries SELECT ts, c_id, d, e, v, f FROM time_series", 
-            dbname = self$db_path_name)
-        }
 
+        time_series <- self$get_time_series_data_by_c_id(circuits)
+        time_series <- self$clean_duration_values(time_series)
+        updated_records <- self$filter_out_unchanged_records(time_series)
+        self$update_timeseries_table_in_database(updated_records)
+   
         
-        # Setup for next iteration. 
+        time_series <- self$add_meta_data_to_time_series(time_series, circuit_details)
+        time_series <- self$perform_power_calculations(time_series)
+        
+        site_details_cleaned_chunk <- site_details_data_cleaning_two(time_series, sites_in_chunk)
+        site_details_cleaned <- bind_rows(site_details_cleaned, site_details_cleaned_chunk)
+        
+        details_to_add <- select(site_details_cleaned_chunk,  site_id, s_postcode, ac)
+        time_series <- inner_join(time_series, details_to_add, by='site_id')
+        
+        circuit_details_cleaned_chunk <- clean_connection_types(time_series, circuits, postcode_data)
+        circuit_details_cleaned <- bind_rows(circuit_details_cleaned, circuit_details_cleaned_chunk)
+
+
+        # Setup for next iteration.
         iteration_number <- iteration_number + 1
         start_chunk_index <- self$calc_start_chunk_index(iteration_number, max_chunk_size)
         end_chunk_index <- self$calc_end_chunk_index(length_ids, max_chunk_size, start_chunk_index)
+        sites_in_chunk <- self$fiter_dataframe_by_start_and_end_index(site_details, start_chunk_index, end_chunk_index)
+        circuits <- filter(circuit_details, site_id %in% sites_in_chunk$site_id)
+        if (start_chunk_index > length_ids){circuits <- ids[0:0,,drop=FALSE]}
         
         end_time <- Sys.time()
         print(end_time - start_time)
       }
+      
+      
+      self$create_site_details_cleaned_table()
+      self$insert_site_details_cleaned(site_details_cleaned)
+      
+      
+      self$create_circuit_details_cleaned_table()
+      self$insert_circuit_details_cleaned(circuit_details_cleaned)
+      
       RSQLite::dbDisconnect(con)
+    },
+    get_circuit_details_raw = function(){
+      circuit_details_raw <- sqldf::read.csv.sql(sql = "select * from circuit_details_raw", dbname = self$db_path_name)
+      return(circuit_details_raw)
+    },
+    get_site_details_raw = function(){
+      site_details_raw <- sqldf::read.csv.sql(sql = "select * from site_details_raw", dbname = self$db_path_name)
+      return(site_details_raw)
+    },
+    get_site_details_cleaned = function(){
+      site_details_cleaned <- sqldf::read.csv.sql(sql = "select * from site_details_cleaned", 
+                                                  dbname = self$db_path_name)
+      return(site_details_cleaned)
+    },
+    get_circuit_details_cleaned = function(){
+      circuit_details_cleaned <- sqldf::read.csv.sql(sql = "select * from circuit_details_cleaned", 
+                                                  dbname = self$db_path_name)
+      return(circuit_details_cleaned)
+    },
+    get_site_details_processed = function(){
+      site_details_processed <- sqldf::read.csv.sql(sql = "select * from site_details_processed", 
+                                                  dbname = self$db_path_name)
+      return(site_details_processed)
     },
     get_time_series_data_by_c_id = function(c_ids){
       time_series <- sqldf::read.csv.sql(
         sql = "select * from timeseries where c_id in (select c_id from c_ids)", dbname = self$db_path_name)
       return(time_series)
+    },
+    get_time_series_data = function(c_ids){
+      time_series <- sqldf::read.csv.sql(sql = "select * from timeseries", dbname = self$db_path_name)
+      return(time_series)
+    },
+    get_postcode_lon_lat = function(){
+      postcodes <- sqldf::read.csv.sql(sql = "select * from postcode_lon_lat", dbname = self$db_path_name)
+      return(postcodes)
     },
     calc_start_chunk_index = function(iteration_number, max_chunk_size){
       start_chunk_index <- (iteration_number - 1) * max_chunk_size + 1
@@ -232,7 +288,99 @@ DataProcessor <- R6::R6Class("DataProcessor",
     calc_end_chunk_index = function(number_of_ids, max_chunk_size, start_chunk_index){
       end_chunk_index <- start_chunk_index + max_chunk_size - 1
       if (end_chunk_index > number_of_ids){end_chunk_index <- number_of_ids}
-      return(start_chunk_index)
+      return(end_chunk_index)
+    },
+    fiter_dataframe_by_start_and_end_index = function(df, start_index, end_index){
+      df <- df[start_index:end_index,,drop=F]
+      return(df)
+    },
+    clean_duration_values = function(time_series){
+      time_series <- self$calc_interval_between_measurements(time_series)
+      time_series <- self$flag_duration_for_updating_if_value_non_standard_and_calced_interval_is_5s(time_series)
+      time_series <- self$replace_duration_value_with_calced_interval(time_series)
+      return(time_series)
+    },
+    calc_interval_between_measurements = function(time_series){
+      time_series <- time_series %>%  dplyr::mutate(time = fasttime::fastPOSIXct(ts))
+      time_series <- time_series %>% dplyr::group_by(c_id) %>% 
+        dplyr::mutate(interval = time - lag(time, order_by = time))
+      return(time_series)
+    },
+    filter_out_unchanged_records = function(time_series){
+      time_series <- dplyr::filter(time_series, d_change)
+      time_series <- select(time_series, ts, c_id, d, e, v, f)
+      return(time_series)
+    },
+    replace_duration_value_with_calced_interval = function(time_series){
+      time_series <- dplyr::mutate(time_series, d=ifelse(d_change, 5, d))
+      return(time_series)
+    },
+    flag_duration_for_updating_if_value_non_standard_and_calced_interval_is_5s = function(time_series){
+      time_series <- dplyr::mutate(time_series, d_change=ifelse((interval %in% 5) & (!d %in% c(5, 30, 60)), TRUE, FALSE))
+      return(time_series)
+    },
+    update_timeseries_table_in_database = function(time_series){
+      sqldf::read.csv.sql(
+        sql = "REPLACE INTO timeseries SELECT ts, c_id, d, e, v, f FROM time_series", 
+        dbname = self$db_path_name)
+    },
+    perform_power_calculations = function(time_series){
+      # Calculate the average power output over the sample time base on the 
+      # cumulative energy and duration length.Assuming energy is joules and duration is in seconds.
+      time_series <- mutate(time_series, e_polarity=e*polarity)
+      time_series <- mutate(time_series, power_kW = e_polarity/(d * 1000))
+      return(time_series)
+    },
+    add_meta_data_to_time_series = function(time_series, circuit_details){
+      details_to_add <- select(circuit_details, c_id, site_id, polarity, con_type)
+      time_series <- inner_join(time_series, details_to_add, by='c_id')
+      return(time_series)
+    },
+    create_site_details_cleaned_table = function(){
+      con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)
+      RSQLite::dbExecute(con, "DROP TABLE IF EXISTS site_details_cleaned")
+      RSQLite::dbExecute(con, "CREATE TABLE site_details_cleaned(
+                                 site_id INT PRIMARY KEY, s_postcode INT, s_state TEXT, pv_installation_year_month TEXT, 
+                                 ac REAL, dc REAL, ac_old REAL, dc_old REAL, ac_dc_ratio REAL, manufacturer TEXT, 
+                                 model TEXT, rows_grouped REAL, max_power_kW REAL, change_ac INT, change_dc INT)")
+      RSQLite::dbDisconnect(con)
+    },
+    insert_site_details_cleaned = function(site_details){
+      query <- "INSERT INTO site_details_cleaned
+                            SELECT site_id, s_postcode, s_state, pv_installation_year_month, ac, dc, ac_old, dc_old, 
+                                   ac_dc_ratio, manufacturer, model, rows_grouped, max_power_kW, change_ac, change_dc 
+                              FROM site_details"
+      sqldf::read.csv.sql(sql = query, dbname = self$db_path_name)
+    },
+    create_circuit_details_cleaned_table = function(){
+      con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)
+      RSQLite::dbExecute(con, "DROP TABLE IF EXISTS circuit_details_cleaned")
+      RSQLite::dbExecute(con, "CREATE TABLE circuit_details_cleaned(
+                         c_id INT PRIMARY KEY, site_id INT, con_type TEXT, sunrise TEXT, sunset REAL, 
+                         min_power REAL, max_power REAL, polarity INT, frac_day REAL, old_con_type TEXT, 
+                         con_type_changed INT, polarity_changed TEXT)")
+      RSQLite::dbDisconnect(con)
+    },
+    insert_circuit_details_cleaned = function(circuit_details){
+      query <- "INSERT INTO circuit_details_cleaned
+                            SELECT c_id, site_id, con_type, sunrise, sunset, min_power, max_power, polarity, frac_day, old_con_type, 
+                                   con_type_changed, polarity_changed
+                              FROM circuit_details"
+      sqldf::read.csv.sql(sql = query, dbname = self$db_path_name)
+    },
+    add_postcode_lon_lat_to_database = function(file_path_name){
+      self$create_postcode_lon_lat_table()
+      self$insert_postcode_lon_lat_cleaned(file_path_name)
+    },
+    create_postcode_lon_lat_table = function(){
+      con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)
+      RSQLite::dbExecute(con, "DROP TABLE IF EXISTS postcode_lon_lat")
+      RSQLite::dbExecute(con, "CREATE TABLE postcode_lon_lat(postcode INT PRIMARY KEY, lon REAL, lat REAL)")
+      RSQLite::dbDisconnect(con)
+    },
+    insert_postcode_lon_lat_cleaned = function(file_path_name){
+      query <- "INSERT INTO postcode_lon_lat SELECT postcode, lon, lat FROM file"
+      sqldf::read.csv.sql(file_path_name, sql = query, dbname = self$db_path_name)
     },
     #' @description
     #' Peform minimal processing needed before site_details can be used in 
@@ -247,11 +395,34 @@ DataProcessor <- R6::R6Class("DataProcessor",
     #' dp$connect_to_existing_database("database_one.db")
     #' dp$create_processed_copy_of_site_details()
     create_processed_copy_of_site_details = function(){
-      # Read the raw data from the database.
-      site_details_raw <- sqldf::read.csv.sql(
-        sql = "select * from site_details_raw", 
-        dbname = self$db_path_name)
+      con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)
       
+      # Read the raw data from the database.
+      site_details_raw <- sqldf::read.csv.sql(sql = "select * from site_details_raw", dbname = self$db_path_name)
+      
+      processed_site_details <- self$process_site_details(site_details_raw)
+      
+      # Create a new table for the processed data.
+      RSQLite::dbExecute(con, "DROP TABLE IF EXISTS site_details_processed")
+      RSQLite::dbExecute(con, "CREATE TABLE site_details_processed(
+                         site_id INT PRIMARY KEY,
+                         s_postcode INT,
+                         s_state TEXT,
+                         sum_ac REAL,
+                         first_ac REAL,
+                         manufacturer TEXT,
+                         model TEXT,
+                         pv_installation_year_month TEXT)")
+      
+      # Insert processed data back into the database.
+      query <- "INSERT INTO site_details_processed
+                            SELECT site_id,  s_postcode,  s_state, sum_ac, first_ac, 
+                            manufacturer, model, pv_installation_year_month 
+                              FROM processed_site_details"
+      sqldf::read.csv.sql(sql = query, dbname = self$db_path_name)
+      RSQLite::dbDisconnect(con)
+    },
+    process_site_details = function(site_details_raw){
       # Peform minimal processing need before data can be used in analysis.
       site_details <- filter(site_details_raw, !is.na(ac) & ac != "")
       site_details <- mutate(site_details, s_postcode = as.character(s_postcode))
@@ -262,25 +433,7 @@ DataProcessor <- R6::R6Class("DataProcessor",
                                           manufacturer=paste(manufacturer, collapse=' '),
                                           model=paste(model, collapse=' '))
       processed_site_details <- as.data.frame(processed_site_details)
-      
-      # Create a new table for the processed data.
-      RSQLite::dbExecute(con, "DROP TABLE IF EXISTS")
-      RSQLite::dbExecute(con, "CREATE TABLE site_details_processed(
-                         site_id INT PRIMARY KEY,
-                         s_postcode TEXT,
-                         s_state TEXT,
-                         sum_ac REAL,
-                         first_ac REAL,
-                         manufacturer TEXT,
-                         model TEXT,
-                         pv_installation_year_month TEXT)")
-      
-      # Insert processed data back into the database.
-      query <- "INSERT INTO table site_details_processed
-                SELECT site_id,  s_postcode,  s_state, sum_ac, first_ac, 
-                       manufacturer, model, pv_installation_year_month 
-                  FROM processed_site_details"
-      sqldf::read.csv.sql(circuit_details, sql = query, dbname = self$db_path_name)
+      return(processed_site_details)
     },
     #' @description
     #' Clean site and circuit details data.
