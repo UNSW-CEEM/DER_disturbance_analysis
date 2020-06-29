@@ -76,8 +76,7 @@ DataProcessor <- R6::R6Class("DataProcessor",
       column_names <- names(read.csv(timeseries, nrows=3, header = TRUE))
       # Define a map of possible column names to names to use in the database.
       # note the prefex underscores are just for matching into the query.
-      column_aliases <- list(ts='_ts', time_stamp='_ts', c_id='_c_id', v='_v', 
-                             f='_f', e='_e', d='_d')
+      column_aliases <- list(ts='_ts', time_stamp='_ts', c_id='_c_id', v='_v', f='_f', e='_e', d='_d')
       # Define the template query.
       query <- "REPLACE INTO timeseries 
                 SELECT _ts as ts, _c_id as c_id, _d as d, _e as e, _v as v,
@@ -89,9 +88,7 @@ DataProcessor <- R6::R6Class("DataProcessor",
         }
       }
       # Read the timeseries data into the sqlite database.
-      sqldf::read.csv.sql(timeseries, sql = query, dbname = self$db_path_name, 
-                          eol='\n')
-      
+      sqldf::read.csv.sql(timeseries, sql = query, dbname = self$db_path_name, eol='\n')
 
       # Read in circuit_details data
       # Create a table for the circuit data.
@@ -117,8 +114,11 @@ DataProcessor <- R6::R6Class("DataProcessor",
         }
       }
       # Read the circuit_details data into the sqlite database.
-      sqldf::read.csv.sql(circuit_details, sql = query, dbname = self$db_path_name)
+      sqldf::read.csv.sql(circuit_details, sql = query, dbname = self$db_path_name, eol='\n')
       
+      RSQLite::dbExecute(con, "CREATE TABLE site_details_raw(
+                         site_id INT, s_postcode INT, s_state TEXT, ac REAL, dc REAL, manufacturer TEXT, model TEXT,
+                         pv_installation_year_month TEXT)")
       
       # Read in site_details data
       # Get current column names.
@@ -130,11 +130,11 @@ DataProcessor <- R6::R6Class("DataProcessor",
                              model='_model', s_postcode='_s_postcode',
                              pv_installation_year_month='_pv_installation_year_month')
       # Define the template query.
-      query <- "create table site_details_raw as 
-                select _site_id as site_id, _s_postcode as s_postcode, _s_state as s_state, 
+      query <- "REPLACE INTO site_details_raw 
+                SELECT _site_id as site_id, _s_postcode as s_postcode, _s_state as s_state, 
                        _ac as ac, _dc as dc, _manufacturer as manufacturer,
                        _model as model, _pv_installation_year_month as
-                       pv_installation_year_month from file"
+                       pv_installation_year_month from site_details"
       # Replace the names with  underscores with the current column names.
       for (name in column_names){
         if (name %in% names(column_aliases)){
@@ -142,7 +142,8 @@ DataProcessor <- R6::R6Class("DataProcessor",
         }
       }
       # Read the site_details data into the sqlite database.
-      sqldf::read.csv.sql(site_details, sql = query, dbname = self$db_path_name)
+      site_details <- read.csv(file = site_details, header = TRUE, stringsAsFactors = FALSE)
+      sqldf::read.csv.sql(sql = query, dbname = self$db_path_name)
       
       RSQLite::dbDisconnect(con)
     },
@@ -197,7 +198,6 @@ DataProcessor <- R6::R6Class("DataProcessor",
       sites_in_chunk <- self$fiter_dataframe_by_start_and_end_index(site_details, start_chunk_index, end_chunk_index)
       circuits <- filter(circuit_details, site_id %in% sites_in_chunk$site_id)
       
-    
       site_details_cleaned <- dplyr::data_frame()
       circuit_details_cleaned <- dplyr::data_frame()
       
@@ -233,6 +233,7 @@ DataProcessor <- R6::R6Class("DataProcessor",
         
         end_time <- Sys.time()
         print(end_time - start_time)
+        
       }
       
       
@@ -273,8 +274,10 @@ DataProcessor <- R6::R6Class("DataProcessor",
         sql = "select * from timeseries where c_id in (select c_id from c_ids)", dbname = self$db_path_name)
       return(time_series)
     },
-    get_time_series_data = function(c_ids){
+    get_time_series_data = function(){
       time_series <- sqldf::read.csv.sql(sql = "select * from timeseries", dbname = self$db_path_name)
+      time_series <- time_series[with(time_series, order(c_id, ts)), ]
+      rownames(time_series) <- NULL
       return(time_series)
     },
     get_postcode_lon_lat = function(){
@@ -327,6 +330,7 @@ DataProcessor <- R6::R6Class("DataProcessor",
     perform_power_calculations = function(time_series){
       # Calculate the average power output over the sample time base on the 
       # cumulative energy and duration length.Assuming energy is joules and duration is in seconds.
+      time_series <- mutate(time_series, d = as.numeric(d))
       time_series <- mutate(time_series, e_polarity=e*polarity)
       time_series <- mutate(time_series, power_kW = e_polarity/(d * 1000))
       return(time_series)
@@ -356,15 +360,15 @@ DataProcessor <- R6::R6Class("DataProcessor",
       con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)
       RSQLite::dbExecute(con, "DROP TABLE IF EXISTS circuit_details_cleaned")
       RSQLite::dbExecute(con, "CREATE TABLE circuit_details_cleaned(
-                         c_id INT PRIMARY KEY, site_id INT, con_type TEXT, sunrise TEXT, sunset REAL, 
-                         min_power REAL, max_power REAL, polarity INT, frac_day REAL, old_con_type TEXT, 
-                         con_type_changed INT, polarity_changed TEXT)")
+                         c_id INT PRIMARY KEY, site_id INT, con_type TEXT, polarity INT, sunrise TEXT, sunset TEXT, 
+                         min_power REAL, max_power REAL, frac_day REAL, old_con_type TEXT, 
+                         con_type_changed INT, polarity_changed INT)")
       RSQLite::dbDisconnect(con)
     },
     insert_circuit_details_cleaned = function(circuit_details){
       query <- "INSERT INTO circuit_details_cleaned
-                            SELECT c_id, site_id, con_type, sunrise, sunset, min_power, max_power, polarity, frac_day, old_con_type, 
-                                   con_type_changed, polarity_changed
+                            SELECT c_id, site_id, con_type, polarity, sunrise, sunset, min_power, max_power, frac_day, 
+                                   old_con_type, con_type_changed, polarity_changed
                               FROM circuit_details"
       sqldf::read.csv.sql(sql = query, dbname = self$db_path_name)
     },
@@ -381,6 +385,18 @@ DataProcessor <- R6::R6Class("DataProcessor",
     insert_postcode_lon_lat_cleaned = function(file_path_name){
       query <- "INSERT INTO postcode_lon_lat SELECT postcode, lon, lat FROM file"
       sqldf::read.csv.sql(file_path_name, sql = query, dbname = self$db_path_name)
+    },
+    get_min_timestamp = function(){
+      con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)
+      min_timestamp <- RSQLite::dbGetQuery(con, "SELECT MIN(ts) as ts FROM timeseries")
+      RSQLite::dbDisconnect(con)
+      return(min_timestamp$ts[1])
+    },
+    get_max_timestamp = function(){
+      con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)
+      max_timestamp <- RSQLite::dbGetQuery(con, "SELECT MAX(ts) as ts FROM timeseries")
+      RSQLite::dbDisconnect(con)
+      return(max_timestamp$ts[1])
     },
     #' @description
     #' Peform minimal processing needed before site_details can be used in 
@@ -434,72 +450,6 @@ DataProcessor <- R6::R6Class("DataProcessor",
                                           model=paste(model, collapse=' '))
       processed_site_details <- as.data.frame(processed_site_details)
       return(processed_site_details)
-    },
-    #' @description
-    #' Clean site and circuit details data.
-    #' @details
-    #' Find the time elasped between each measurement for each circuit. If the
-    #' time is 5 s then set the duration for this measurement to 5 s. This has
-    #' the effect of greatly reducing the number of measurements with missing
-    #' duration data.
-    #' @param max_chunk_size the number of sites to load into memory
-    #' and peform the calculation on at a time. A lower number should lead to
-    #' lower memory usage but take a longer time.
-    #' @examples
-    #' dp <- DataProcessor()
-    #' dp$connect_to_existing_database("database_one.db")
-    #' dp$clean_site_details()
-    clean_site_details = function(max_chunk_size=100){
-      con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)
-      ids <- RSQLite::dbGetQuery(con, "SELECT DISTINCT c_id FROM timeseries")
-      
-      # The setup for iteratively selecting chunks of the sql table and pulling
-      # them into memory.
-      length_ids <- length(ids$c_id)
-      iteration_number <- 1
-      start_chunk_index <- (iteration_number - 1) * max_chunk_size + 1
-      end_chunk_index <- start_chunk_index + max_chunk_size - 1
-      if (end_chunk_index > length_ids){end_chunk_index <- length_ids}
-      # Start the iteration.
-      while (start_chunk_index <= length_ids){
-        start_time <- Sys.time()
-        # Get the ids to select on this iteration.
-        ids_in_chunk <- ids[start_chunk_index:end_chunk_index,,drop=F]
-        
-        time_series <- sqldf::read.csv.sql(
-          sql = "select * from timeseries where c_id in (select c_id from ids_in_chunk)", 
-          dbname = self$db_path_name)
-        
-        # Clean site details data
-        site_details_cleaned <- site_details_data_cleaning(ts_data, v$site_details_raw)
-        v$site_details_cleaned <- site_details_cleaned[order(site_details_cleaned$site_id),]
-        
-        # Clean circuit details file
-        v$circuit_details_for_editing <- clean_connection_types(
-          select(ts_data, ts, c_id, e, power_kW, s_postcode, con_type, polarity, first_ac), 
-          v$circuit_details, v$postcode_data)
-        
-        # Display data cleaning output in data cleaning tab
-        output$site_details_editor <- renderDT(isolate(v$site_details_cleaned), selection='single', rownames=FALSE, 
-                                               editable=TRUE)
-        v$proxy_site_details_editor <- dataTableProxy('site_details_editor')
-        output$circuit_details_editor <- renderDT(isolate(v$circuit_details_for_editing), selection='single', 
-                                                  rownames=FALSE, editable=TRUE)
-        v$proxy_circuit_details_editor <- dataTableProxy('circuit_details_editor')
-        
-        # Add cleaned data to display data for main tab
-        output$save_cleaned_data <- renderUI({actionButton("save_cleaned_data", "Save cleaned data")})
-        
-        
-        # Setup for next iteration. 
-        iteration_number <- iteration_number + 1
-        start_chunk_index <- (iteration_number - 1) * max_chunk_size + 1
-        end_chunk_index <- start_chunk_index + max_chunk_size - 1
-        if (end_chunk_index > length_ids){end_chunk_index <- length_ids}
-        end_time <- Sys.time()
-        print(end_time - start_time)
-      }
-      RSQLite::dbDisconnect(con)
     }
   )
 )

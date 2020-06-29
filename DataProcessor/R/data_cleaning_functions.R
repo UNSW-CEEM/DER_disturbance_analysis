@@ -133,12 +133,14 @@ clac_output_summary_values <- function(combined_data){
   combined_data <- mutate(combined_data, daylight=ifelse(comp_t>sunrise & comp_t<sunset,1,0))
   # Group data by c_id, calculating values needed to perform data cleaning
   combined_data <- group_by(combined_data, c_id)
-  combined_data <- summarise(combined_data, energy_day=round(sum(abs(e[daylight==1]))/1000/(60*60),digits=2), 
-                             energy_night= round(sum(abs(e[daylight!=1]))/1000/(60*60), digits=2),
+  combined_data <- summarise(combined_data, energy_day=sum(abs(e[daylight==1]))/1000/(60*60), 
+                             energy_night=sum(abs(e[daylight!=1]))/1000/(60*60),
                              con_type=first(con_type), sunrise=first(dis_sunrise), 
                              sunset=first(dis_sunset), ac=first(ac),
                              min_power=min(power_kW), max_power=max(power_kW), polarity=first(polarity))
   combined_data <- as.data.frame(combined_data)
+  combined_data <- mutate(combined_data, energy_day=ifelse(is.na(energy_day), 0.0, energy_day))
+  combined_data <- mutate(combined_data, energy_night=ifelse(is.na(energy_night), 0.0, energy_night))
   # Calculate the fraction of gen/load that occured during daylight hours, just
   # use absolute value of power as polarity has not been checked yet.
   combined_data <- mutate(combined_data, frac_day=round(energy_day/(energy_day+energy_night), digits=2))

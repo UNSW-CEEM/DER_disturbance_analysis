@@ -1,0 +1,3 @@
+c_id,site_id,con_type,polarity,sunrise,sunset,min_power,max_power,frac_day,old_con_type,con_type_changed,polarity_changed
+1,3,pv_site_net,1,03:48:22,20:10:29,0.02,0.02,0,pv_site_net,0,0
+2,4,pv_site_net,1,06:15:06,22:26:59,0.0202,0.0202,0,pv_site_net,0,0
