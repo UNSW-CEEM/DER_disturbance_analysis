@@ -116,6 +116,8 @@ DataProcessor <- R6::R6Class("DataProcessor",
       # Read the circuit_details data into the sqlite database.
       sqldf::read.csv.sql(circuit_details, sql = query, dbname = self$db_path_name, eol='\n')
       
+      RSQLite::dbExecute(con, "ALTER TABLE circuit_details_raw ADD manual_compliance TEXT DEFAULT 'Not set'")
+      
       RSQLite::dbExecute(con, "CREATE TABLE site_details_raw(
                          site_id INT, s_postcode INT, s_state TEXT, ac REAL, dc REAL, manufacturer TEXT, model TEXT,
                          pv_installation_year_month TEXT)")
@@ -208,6 +210,7 @@ DataProcessor <- R6::R6Class("DataProcessor",
         time_series <- self$clean_duration_values(time_series)
         updated_records <- self$filter_out_unchanged_records(time_series)
         self$update_timeseries_table_in_database(updated_records)
+        time_series <- mutate(time_series, ts=time)
    
         
         time_series <- self$add_meta_data_to_time_series(time_series, circuit_details)
@@ -255,13 +258,26 @@ DataProcessor <- R6::R6Class("DataProcessor",
       return(site_details_raw)
     },
     get_site_details_cleaned = function(){
-      site_details_cleaned <- sqldf::read.csv.sql(sql = "select * from site_details_cleaned", 
+      site_details_cleaned <- sqldf::read.csv.sql(sql = "select site_id, s_state, s_postcode, ac,
+                                                           manufacturer, model, pv_installation_year_month
+                                                           from site_details_cleaned", 
                                                   dbname = self$db_path_name)
       return(site_details_cleaned)
     },
     get_circuit_details_cleaned = function(){
-      circuit_details_cleaned <- sqldf::read.csv.sql(sql = "select * from circuit_details_cleaned", 
+      circuit_details_cleaned <- sqldf::read.csv.sql(sql = "select c_id, site_id, con_type, polarity, manual_compliance
+                                                              from circuit_details_cleaned", 
                                                   dbname = self$db_path_name)
+      return(circuit_details_cleaned)
+    },
+    get_site_details_cleaning_report = function(){
+      site_details_cleaned <- sqldf::read.csv.sql(sql = "select * from site_details_cleaned", 
+                                                  dbname = self$db_path_name)
+      return(site_details_cleaned)
+    },
+    get_circuit_details_cleaning_report = function(){
+      circuit_details_cleaned <- sqldf::read.csv.sql(sql = "select * from circuit_details_cleaned", 
+                                                     dbname = self$db_path_name)
       return(circuit_details_cleaned)
     },
     get_site_details_processed = function(){
@@ -272,12 +288,30 @@ DataProcessor <- R6::R6Class("DataProcessor",
     get_time_series_data_by_c_id = function(c_ids){
       time_series <- sqldf::read.csv.sql(
         sql = "select * from timeseries where c_id in (select c_id from c_ids)", dbname = self$db_path_name)
+      time_series <- mutate(time_series, time = fastPOSIXct(ts, tz="Australia/Brisbane"))
       return(time_series)
     },
     get_time_series_data = function(){
       time_series <- sqldf::read.csv.sql(sql = "select * from timeseries", dbname = self$db_path_name)
       time_series <- time_series[with(time_series, order(c_id, ts)), ]
       rownames(time_series) <- NULL
+      return(time_series)
+    },
+    get_filtered_time_series_data = function(state, duration, start_time, end_time){
+      circuit_details = self$get_circuit_details_raw()
+      site_details = self$get_site_details_raw()
+      site_in_state = filter(site_details, s_state==state)
+      circuit_in_state = filter(circuit_details, site_id %in% site_in_state$site_id)
+      query <- "select * from timeseries 
+                        where c_id in (select c_id from circuit_in_state)
+                        and d=duration
+                        and ts >= 'start_time'
+                        and ts <= 'end_time'"
+      query <- gsub('duration', duration, query)
+      query <- gsub('start_time', format(as.POSIXct(start_time), tz='GMT'), query)
+      query <- gsub('end_time', format(as.POSIXct(end_time), tz='GMT'), query)
+      time_series <- sqldf::read.csv.sql(sql = query , dbname = self$db_path_name)
+      time_series <- mutate(time_series, ts = fastPOSIXct(ts, tz="Australia/Brisbane"))
       return(time_series)
     },
     get_postcode_lon_lat = function(){
@@ -304,7 +338,6 @@ DataProcessor <- R6::R6Class("DataProcessor",
       return(time_series)
     },
     calc_interval_between_measurements = function(time_series){
-      time_series <- time_series %>%  dplyr::mutate(time = fasttime::fastPOSIXct(ts))
       time_series <- time_series %>% dplyr::group_by(c_id) %>% 
         dplyr::mutate(interval = time - lag(time, order_by = time))
       return(time_series)
@@ -329,7 +362,7 @@ DataProcessor <- R6::R6Class("DataProcessor",
     },
     perform_power_calculations = function(time_series){
       # Calculate the average power output over the sample time base on the 
-      # cumulative energy and duration length.Assuming energy is joules and duration is in seconds.
+      # cumulative energy and duration length. Assuming energy is joules and duration is in seconds.
       time_series <- mutate(time_series, d = as.numeric(d))
       time_series <- mutate(time_series, e_polarity=e*polarity)
       time_series <- mutate(time_series, power_kW = e_polarity/(d * 1000))
@@ -352,6 +385,13 @@ DataProcessor <- R6::R6Class("DataProcessor",
     insert_site_details_cleaned = function(site_details){
       query <- "INSERT INTO site_details_cleaned
                             SELECT site_id, s_postcode, s_state, pv_installation_year_month, ac, dc, ac_old, dc_old, 
+                                   ac_dc_ratio, manufacturer, model, rows_grouped, max_power_kW, change_ac, change_dc
+                              FROM site_details"
+      sqldf::read.csv.sql(sql = query, dbname = self$db_path_name)
+    },
+    update_site_details_cleaned = function(site_details){
+      query <- "REPLACE INTO site_details_cleaned
+                            SELECT site_id, s_postcode, s_state, pv_installation_year_month, ac, dc, ac_old, dc_old, 
                                    ac_dc_ratio, manufacturer, model, rows_grouped, max_power_kW, change_ac, change_dc 
                               FROM site_details"
       sqldf::read.csv.sql(sql = query, dbname = self$db_path_name)
@@ -361,14 +401,27 @@ DataProcessor <- R6::R6Class("DataProcessor",
       RSQLite::dbExecute(con, "DROP TABLE IF EXISTS circuit_details_cleaned")
       RSQLite::dbExecute(con, "CREATE TABLE circuit_details_cleaned(
                          c_id INT PRIMARY KEY, site_id INT, con_type TEXT, polarity INT, sunrise TEXT, sunset TEXT, 
-                         min_power REAL, max_power REAL, frac_day REAL, old_con_type TEXT, 
-                         con_type_changed INT, polarity_changed INT)")
+                         min_power REAL, max_power REAL, frac_day REAL, old_con_type TEXT,
+                         con_type_changed INT, polarity_changed INT, manual_compliance TEXT)")
       RSQLite::dbDisconnect(con)
     },
     insert_circuit_details_cleaned = function(circuit_details){
       query <- "INSERT INTO circuit_details_cleaned
                             SELECT c_id, site_id, con_type, polarity, sunrise, sunset, min_power, max_power, frac_day, 
-                                   old_con_type, con_type_changed, polarity_changed
+                                   old_con_type, con_type_changed, polarity_changed, manual_compliance
+                              FROM circuit_details"
+      sqldf::read.csv.sql(sql = query, dbname = self$db_path_name)
+    },
+    update_circuit_details_cleaned = function(circuit_details){
+      query <- "REPLACE INTO circuit_details_cleaned
+                            SELECT c_id, site_id, con_type, polarity, sunrise, sunset, min_power, max_power, frac_day, 
+                                   old_con_type, con_type_changed, polarity_changed, manual_compliance
+                              FROM circuit_details"
+      sqldf::read.csv.sql(sql = query, dbname = self$db_path_name)
+    },
+    update_circuit_details_raw = function(circuit_details){
+      query <- "REPLACE INTO circuit_details_raw
+                            SELECT c_id,  site_id,  con_type, polarity, manual_compliance
                               FROM circuit_details"
       sqldf::read.csv.sql(sql = query, dbname = self$db_path_name)
     },
@@ -390,13 +443,13 @@ DataProcessor <- R6::R6Class("DataProcessor",
       con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)
       min_timestamp <- RSQLite::dbGetQuery(con, "SELECT MIN(ts) as ts FROM timeseries")
       RSQLite::dbDisconnect(con)
-      return(min_timestamp$ts[1])
+      return(fastPOSIXct(min_timestamp$ts[1], tz="Australia/Brisbane"))
     },
     get_max_timestamp = function(){
       con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)
       max_timestamp <- RSQLite::dbGetQuery(con, "SELECT MAX(ts) as ts FROM timeseries")
       RSQLite::dbDisconnect(con)
-      return(max_timestamp$ts[1])
+      return(fastPOSIXct(max_timestamp$ts[1], tz="Australia/Brisbane"))
     },
     #' @description
     #' Peform minimal processing needed before site_details can be used in 

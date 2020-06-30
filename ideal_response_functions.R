@@ -49,9 +49,9 @@ norm_p_over_frequency <- function(f){
 
 down_sample_1s <- function(ideal_response_1_s, duration, offset){
   ideal_response_1_s <- thicken(ideal_response_1_s, paste(duration,'s'), colname='time_group', rounding='up',
-                                start_val=offset - as.numeric(duration))
+                                start_val=min(ideal_response_1_s$ts) - as.numeric(duration))
   ideal_response_1_s <- thicken(ideal_response_1_s, paste(duration,'s'), colname='time_group2', rounding='down', 
-                                by='ts', start_val=offset - as.numeric(duration))
+                                by='ts', start_val=min(ideal_response_1_s$ts) - as.numeric(duration))
   ideal_response_1_s[ideal_response_1_s$ts==ideal_response_1_s$time_group2,]$time_group <- 
     ideal_response_1_s[ideal_response_1_s$ts==ideal_response_1_s$time_group2,]$time_group2
   ideal_response_1_s <- filter(
@@ -112,7 +112,9 @@ calc_threshold_error <- function(ideal_response_downsampled){
 }
 
 calc_error_metric_and_compliance_2 <- function(combined_data, ideal_response_downsampled, ideal_response,
-                                               threshold, start_buffer, end_buffer, end_buffer_responding, disconnecting_threshold){
+                                               threshold, start_buffer, end_buffer, end_buffer_responding, 
+                                               disconnecting_threshold){
+  
   start_buffer_t <- min(ideal_response$ts) + start_buffer
   end_buffer <- max(ideal_response$ts) - end_buffer
   end_buffer_responding <- min(ideal_response$ts) + end_buffer_responding
