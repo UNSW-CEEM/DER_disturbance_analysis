@@ -1,4 +1,5 @@
 library(testthat)
 setwd(dirname(parent.frame(2)$ofile))
 source("../R/interface.R")
+source("../R/data_cleaning_functions.R")
 test_dir("testthat")

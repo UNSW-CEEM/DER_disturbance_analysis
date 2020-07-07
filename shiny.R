@@ -35,7 +35,7 @@ source("documentation.R")
 source("ideal_response_functions.R")
 source("create_report_files.R")
 source("create_report_tables.R")
-source("DataProcessor/R/interface.R")
+source("DBInterface/R/interface.R")
 
 ui <- fluidPage(
   tags$head(
@@ -51,7 +51,7 @@ ui <- fluidPage(
         sidebarPanel(id = "side_panel",
           h4("File selection"),
           textInput("database_name", "SQLite database file",
-                    value = "C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/DataProcessor/tests/20180825.db"
+                    value = "C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/DBInterface/tests/20180825.db"
           ),
           fluidRow(
             div(style="display:inline-block", shinyFilesButton("choose_database", "Choose File", 
@@ -151,20 +151,19 @@ ui <- fluidPage(
     tabPanel("Data Cleaning", fluid=TRUE, 
       mainPanel(
         plotlyOutput("site_plot"),
-        h4("Editing the tables below changes the data used in the analysis on 
-           the main tab, however plots need to be updated for the changes to
-           take affect."),
+        h4("Editing the tables below changes the connected database, to use these changes in the analysis data must
+           be reloaded on the main tab."),
         h4("Cleaned site data (select to view trace)"),
         DTOutput('site_details_editor'),
         h4("Cleaned Circuit data (select to view trace)"),
-        DTOutput('circuit_details_editor'),
-        HTML("<br><br>"),
-        uiOutput("save_cleaned_data")
+        DTOutput('circuit_details_editor')
       )
     ),
     tabPanel("Manual compliance", fluid=TRUE, 
      mainPanel(
        plotlyOutput("compliance_plot"),
+       h4("Editing the compliance value changes the connected database, to use these changes in the analysis data must
+           be reloaded on the main tab."),
        uiOutput("compliance_cleaned_or_raw"),
        uiOutput("compliance_circuits"),
        uiOutput("set_c_id_compliance"),
@@ -259,7 +258,6 @@ reset_data_cleaning_tab <- function(input, output, session, stringsAsFactors) {
   output$circuit_details_editor <- renderDT({})
   output$site_details_editor <- renderDT({})
   output$site_plot <- renderPlotly({})
-  output$save_cleaned_data <- renderUI({})
 }
 
 server <- function(input,output,session){
@@ -399,11 +397,11 @@ server <- function(input,output,session){
                       )
   
   observeEvent(input$connect_to_database, {
-    v$dp <- DataProcessor$new()
-    v$dp$connect_to_existing_database(database_name())
+    v$db <- DBInterface$new()
+    v$db$connect_to_existing_database(database_name())
     
-    min_timestamp <- v$dp$get_min_timestamp()
-    max_timestamp <- v$dp$get_max_timestamp()
+    min_timestamp <- v$db$get_min_timestamp()
+    max_timestamp <- v$db$get_max_timestamp()
     
     output$load_time_start <- renderUI({
       timeInput("load_time_start", label = strong('Enter start time'), 
@@ -436,15 +434,18 @@ server <- function(input,output,session){
   # Clicked. 
   observeEvent(input$load_data, {
 
-      site_details_raw <- v$dp$get_site_details_raw()
+      site_details_raw <- v$db$get_site_details_raw()
       site_details_raw <- process_raw_site_details(site_details_raw)
       site_details_raw <- mutate(site_details_raw, clean = 'raw')
-      site_details_clean <- v$dp$get_site_details_cleaned()
+      
+      site_details_clean <- v$db$get_site_details_cleaned()
       site_details_clean <- process_raw_site_details(site_details_clean)
       site_details_clean <- mutate(site_details_clean, clean = 'clean')
-      circuit_details_raw <- v$dp$get_circuit_details_raw()
+      
+      circuit_details_raw <- v$db$get_circuit_details_raw()
       v$circuit_details_raw <- mutate(circuit_details_raw, clean = 'raw')
-      circuit_details_clean <- v$dp$get_circuit_details_cleaned()
+      
+      circuit_details_clean <- v$db$get_circuit_details_cleaned()
       circuit_details_clean <- mutate(circuit_details_clean, clean = 'clean')
       
       v$site_details <- bind_rows(site_details_raw, site_details_clean)
@@ -452,11 +453,8 @@ server <- function(input,output,session){
       v$site_details <- size_grouping(v$site_details)
       v$circuit_details <- bind_rows(v$circuit_details_raw, circuit_details_clean)
   
-      site_types <- c("pv_site_net", "pv_site", "pv_inverter_net", "pv_inverter")
-      v$circuit_details <- filter(v$circuit_details, con_type %in% site_types)
-      
-      
-      time_series_data <- v$dp$get_filtered_time_series_data(state = region_to_load(), duration = duration(), 
+
+      time_series_data <- v$db$get_filtered_time_series_data(state = region_to_load(), duration = duration(), 
                                                              start_time = load_start_time(), end_time = load_end_time())
 
       v$combined_data <- inner_join(time_series_data, v$circuit_details, by = "c_id")
@@ -465,8 +463,12 @@ server <- function(input,output,session){
       v$combined_data <- perform_power_calculations(v$combined_data)
       
       
-      v$circuit_details_for_editing <- v$dp$get_circuit_details_cleaning_report()
-      v$site_details_for_editing <- v$dp$get_site_details_cleaning_report()
+      v$site_details_for_editing <- v$db$get_site_details_cleaning_report()
+      v$site_details_for_editing <- filter(v$site_details_for_editing, s_state == region_to_load())
+      v$circuit_details_for_editing <- v$db$get_circuit_details_cleaning_report()
+      v$circuit_details_for_editing <- filter(v$circuit_details_for_editing, site_id %in% v$site_details_for_editing$site_id)
+      
+     
       
       output$site_details_editor <- renderDT(isolate(v$site_details_for_editing), selection='single', rownames=FALSE, 
                                              editable=TRUE)
@@ -474,10 +476,7 @@ server <- function(input,output,session){
       output$circuit_details_editor <- renderDT(isolate(v$circuit_details_for_editing), selection='single', 
                                                 rownames=FALSE, editable=TRUE)
       v$proxy_circuit_details_editor <- dataTableProxy('circuit_details_editor')
-      
-      # Add cleaned data to display data for main tab
-      output$save_cleaned_data <- renderUI({actionButton("save_cleaned_data", "Save cleaned data")})
-      
+
 
       # Load in the install data from CSV.
       id <- showNotification("Load CER capacity data", duration=1000)
@@ -643,14 +642,14 @@ server <- function(input,output,session){
     v$ideal_response_to_plot <- ideal_response_to_plot
     
     
-    # Filter to just the time window being plotted/analyised. 
-    combined_data_f <- filter(v$combined_data, clean %in% clean())
 
-    # Perform meta data filtering.    
+    combined_data_f <- filter(v$combined_data, clean %in% clean())
     combined_data_f <- filter(combined_data_f, sum_ac<=100)
-    if (length(clean()) < 2) {combined_data_f <- filter(combined_data_f, clean %in% clean())}
-    if (length(size_groupings()) < 2) {combined_data_f <- filter(combined_data_f, Grouping %in% size_groupings())}
-    if (length(standards()) < 3) {combined_data_f <- filter(combined_data_f, Standard_Version %in% standards())}
+    site_types <- c("pv_site_net", "pv_site", "pv_inverter_net", "pv_inverter")
+    combined_data_f <- filter(combined_data_f, con_type %in% site_types)
+    combined_data_f <- filter(combined_data_f, clean %in% clean())
+    combined_data_f <- filter(combined_data_f, Grouping %in% size_groupings())
+    combined_data_f <- filter(combined_data_f, Standard_Version %in% standards())
     if (length(postcodes()) > 0) {combined_data_f <- filter(combined_data_f, s_postcode %in% postcodes())}
     if (length(manufacturers()) > 0) {combined_data_f <- filter(combined_data_f, manufacturer %in% manufacturers())}
     if (length(models()) > 0) {combined_data_f <- filter(combined_data_f, model %in% models())}
@@ -658,7 +657,7 @@ server <- function(input,output,session){
     if (length(circuits()) > 0) {combined_data_f <- filter(combined_data_f, c_id %in% circuits())}
     if(length(combined_data_f$ts) > 0){
       combined_data_f <- categorise_response(combined_data_f, pre_event_interval(), window_length())
-      if (length(responses()) < 6) {combined_data_f <- filter(combined_data_f, response_category %in% responses())}
+      combined_data_f <- filter(combined_data_f, response_category %in% responses())
     }
     # Filter data by user selected time window
     if(length(combined_data_f$ts) > 0){
@@ -937,11 +936,11 @@ server <- function(input,output,session){
                                                                                   "Unsure"), 
                                                                    selected = data_to_view$manual_compliance[1], inline = TRUE)})
       if (compliance_cleaned_or_raw() == 'clean'){
-        circuit_data <- filter(v$circuit_details_raw, c_id==compliance_circuits())
+        circuit_data <- filter(v$circuit_details_for_editing, c_id==compliance_circuits())
         updateRadioButtons(session, "set_c_id_compliance", 
                            selected = circuit_data$manual_compliance[1])
       } else {
-        circuit_data <- filter(v$circuit_details_for_edting, c_id==compliance_circuits())
+        circuit_data <- filter(v$circuit_details_raw, c_id==compliance_circuits())
         updateRadioButtons(session, "set_c_id_compliance", 
                            selected = circuit_data$manual_compliance[1])
         
@@ -970,21 +969,20 @@ server <- function(input,output,session){
   
   observeEvent(input$set_c_id_compliance, {
     current_c_id <- v$c_id_vector[[v$compliance_counter]]
-    if (compliance_cleaned_or_raw() =="raw"){
-      v$circuit_details_raw <- mutate(v$circuit_details_raw, 
+    if (compliance_cleaned_or_raw() == "clean"){
+      v$circuit_details_for_editing <- mutate(v$circuit_details_for_editing, 
                                 manual_compliance=
                                   ifelse((c_id==current_c_id),
                                          set_c_id_compliance(),
                                          manual_compliance))
-      v$dp$update_circuit_details_raw(v$circuit_details_raw)
-      
+      v$db$update_circuit_details_cleaned(v$circuit_details_for_editing)
     } else {
-      v$circuit_details_for_editing <- mutate(v$circuit_details_for_editing, 
+      v$circuit_details_raw <- mutate(v$circuit_details_raw, 
                                   manual_compliance=
                                     ifelse((c_id==current_c_id),
                                            set_c_id_compliance(),
                                            manual_compliance))
-      v$dp$update_circuit_details_cleaned(v$circuit_details_for_editing)
+      v$db$update_circuit_details_raw(v$circuit_details_raw)
     }
   })
   
@@ -1193,7 +1191,7 @@ server <- function(input,output,session){
     if (length(input$circuit_details_editor_rows_selected==1)) {
       c_id_to_plot <- v$circuit_details_for_editing$c_id[input$circuit_details_editor_rows_selected]
       data_to_view <- filter(v$combined_data, c_id==c_id_to_plot)
-      output$site_plot <- renderPlotly({plot_ly(data_to_view, x=~ts, y=~power_kW, type="scatter")})
+      output$site_plot <- renderPlotly({plot_ly(data_to_view, x=~ts, y=~power_kW, type="scattergl")})
     }
     
   })
@@ -1206,18 +1204,11 @@ server <- function(input,output,session){
       circuits <- filter(v$circuit_details_for_editing, site_id==site_id_to_plot)
       circuits <- unique(circuits$c_id)
       data_to_view <- filter(v$combined_data, c_id %in% circuits)
-      output$site_plot <- renderPlotly({plot_ly(data_to_view, x=~ts, y=~power_kW, color=~c_id, type="scatter")})
+      data_to_view <- mutate(data_to_view, c_id=as.character(c_id))
+      output$site_plot <- renderPlotly({plot_ly(data_to_view, x=~ts, y=~power_kW, color=~c_id, type="scattergl")})
     }
   })
   
-  # Save data cleaning tables to csv, also override data currently used as "cleaned" in tool.
-  observeEvent(input$save_cleaned_data, {
-    # Save cleaned data to csv
-    id <- showNotification("Saving cleaned files", duration=1000)
-    v$dp$update_site_details_cleaned(v$site_details_for_editing)
-    v$dp$update_circuit_details_cleaned(v$circuit_details_for_editing)
-    removeNotification(id)
-   })
   
   # Allow user to edit site details in data cleaning tab
   observeEvent(input$site_details_editor_cell_edit, {

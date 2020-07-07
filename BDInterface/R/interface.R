@@ -12,57 +12,23 @@ source("data_cleaning_functions.R")
 setwd(wd)
 
 
-#' The DataProcessor class
-#' @description 
-#' Class for managing creating and interacting with an sqlite database of solar
-#' analytics data.
-DataProcessor <- R6::R6Class("DataProcessor",
+
+DBInterface <- R6::R6Class("DBInterface",
   public = list(
     db_path_name = NULL,
-    #' @description 
-    #' Creates a new sqlite database with the path and name provided. All 
-    #' subsequent actions are peformed on this database unless the connection
-    #' is changed.
-    #' @param db_path_name the path and name of the database to create.
-    #' @examples
-    #' dp <- DataProcessor()
-    #' dp$connect_to_new_database("database_one.db")
     connect_to_new_database = function(db_path_name){
-      # Create the database.
       con <- RSQLite::dbConnect(RSQLite::SQLite(), db_path_name)
       RSQLite::dbDisconnect(con)
-      # Store its name so it can be accessed later.
       self$db_path_name = db_path_name
     },
-    #' @description 
-    #' Conects to an existing sqlite database with the path and name provided. 
-    #' All subsequent actions are peformed on this database unless the 
-    #' connection is changed.
-    #  @param db_path_name the path and name of the database to create.
-    #' @examples
-    #' dp <- DataProcessor()
-    #' dp$connect_to_existing_database("database_one.db")
     connect_to_existing_database = function(db_path_name){
       self$db_path_name = db_path_name
     },
-    #' @description 
-    #' Inserts data from csvs into the connected database.
-    #' @details
-    #' None yet
-    #' @param time_series The path and name of a csv file containting the time
-    #' series data from solar analytics. It should contain, a column for the 
-    #' timestamp (time ending of the measurement), a column with the circuit id,
-    #' a column with the duration of the measurement, a column with the 
-    #' cumulative energy over the measurement time, and columns for volatge and
-    #' frequency measurements.
-    #' @param circuit_details The path and name of a csv file containting the 
-    #' meta data of the measurements on a circuit basis.
-    #' @param site_details The path and name of a csv file containting the 
-    #' meta data of the measurements on a circuit basis.
     build_database = function(timeseries, circuit_details, site_details) {
       con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)
       
-      # Create table for time series data.
+      RSQLite::dbExecute(con, "DROP TABLE IF EXISTS timeseries")
+      
       RSQLite::dbExecute(con, "CREATE TABLE timeseries(
                          ts TEXT,
                          c_id INT,
@@ -71,117 +37,102 @@ DataProcessor <- R6::R6Class("DataProcessor",
                          v REAL,
                          f REAL,
                          PRIMARY KEY (ts, c_id))")
-      # Read in timeseries data
-      # Get current column names.
+      
       column_names <- names(read.csv(timeseries, nrows=3, header = TRUE))
-      # Define a map of possible column names to names to use in the database.
-      # note the prefex underscores are just for matching into the query.
       column_aliases <- list(ts='_ts', time_stamp='_ts', c_id='_c_id', v='_v', f='_f', e='_e', d='_d')
-      # Define the template query.
       query <- "REPLACE INTO timeseries 
                 SELECT _ts as ts, _c_id as c_id, _d as d, _e as e, _v as v,
                        _f as f from file"
-      # Replace the names with underscores with the current column names.
+      
       for (name in column_names){
         if (name %in% names(column_aliases)){
           query <- gsub(column_aliases[[name]], name, query)
+        } else {
+          message <- "The provided time series file should have the columns ts, c_id, d
+                      and e, v and f, or known aliases of these columns. 
+
+                      The columns {} where found instead.
+
+                      Please edit the column alaises in the database interface and try again."
+          
+          message <- gsub('{}', paste(column_names, sep=', '), message)
+          
+          throw()
         }
       }
-      # Read the timeseries data into the sqlite database.
+      
+
       sqldf::read.csv.sql(timeseries, sql = query, dbname = self$db_path_name, eol='\n')
 
-      # Read in circuit_details data
-      # Create a table for the circuit data.
+      RSQLite::dbExecute(con, "DROP TABLE IF EXISTS circuit_details_raw")
+      
       RSQLite::dbExecute(con, "CREATE TABLE circuit_details_raw(
                          c_id INT PRIMARY KEY,
                          site_id INT,
                          con_type TEXT,
                          polarity REAL)")
-      # Get current column names.
+      
       column_names <- names(read.csv(circuit_details, nrows=3, header = TRUE))
-      # Define a map of possible column names to names to use in the database.
-      # note the prefex underscores are just for matching into the query.
+      
       column_aliases <- list(c_id='_c_id', site_id='_site_id', 
                              con_type='_con_type', polarity='_polarity')
-      # Define the template query.
+
       query <- "REPLACE INTO circuit_details_raw  
                 SELECT _c_id as c_id, _site_id as site_id, _con_type as con_type,
                        _polarity as polarity from file"
-      # Replace the names with  underscores with the current column names.
+      
       for (name in column_names){
         if (name %in% names(column_aliases)){
           query <- gsub(column_aliases[[name]], name, query)
+        } else {
+          throw("The provided circuit details file should have the columns c_id, site_id, con_type
+                 and polarity. Please check this file and try again.")
         }
       }
-      # Read the circuit_details data into the sqlite database.
+
       sqldf::read.csv.sql(circuit_details, sql = query, dbname = self$db_path_name, eol='\n')
       
       RSQLite::dbExecute(con, "ALTER TABLE circuit_details_raw ADD manual_compliance TEXT DEFAULT 'Not set'")
+      
+      RSQLite::dbExecute(con, "DROP TABLE IF EXISTS site_details_raw")
       
       RSQLite::dbExecute(con, "CREATE TABLE site_details_raw(
                          site_id INT, s_postcode INT, s_state TEXT, ac REAL, dc REAL, manufacturer TEXT, model TEXT,
                          pv_installation_year_month TEXT)")
       
-      # Read in site_details data
-      # Get current column names.
       column_names <- names(read.csv(site_details, nrows=3, header = TRUE))
-      # Define a map of possible column names to names to use in the database.
-      # note the prefex underscores are just for matching into the query.
+      
       column_aliases <- list(site_id='_site_id', s_state='_s_state', ac='_ac',
                              dc='_dc', manufacturer='_manufacturer',
                              model='_model', s_postcode='_s_postcode',
                              pv_installation_year_month='_pv_installation_year_month')
-      # Define the template query.
+
       query <- "REPLACE INTO site_details_raw 
                 SELECT _site_id as site_id, _s_postcode as s_postcode, _s_state as s_state, 
                        _ac as ac, _dc as dc, _manufacturer as manufacturer,
                        _model as model, _pv_installation_year_month as
                        pv_installation_year_month from site_details"
-      # Replace the names with  underscores with the current column names.
+      
       for (name in column_names){
         if (name %in% names(column_aliases)){
           query <- gsub(column_aliases[[name]], name, query)
+        } else {
+          throw("The provided site details file should have the columns site_id, s_postcode, s_state,
+                ac, dc, manufacturer, model and pv_installation_year_month. The ac column should be in
+                kW and the the dc in W. Please check this file and try again.")
         }
       }
-      # Read the site_details data into the sqlite database.
+
       site_details <- read.csv(file = site_details, header = TRUE, stringsAsFactors = FALSE)
       sqldf::read.csv.sql(sql = query, dbname = self$db_path_name)
       
       RSQLite::dbDisconnect(con)
     },
-    #' @description
-    #' Delete rows in the time series table containing values that are the 
-    #' header.
-    #' @details
-    #' Sometimes the timeseries csv files from solar analytics contain rows
-    #' that are actuall just the header repeated. This method attemps to delete
-    #' them from the database by deleting rows where the timestamp value equals
-    #' 'ts'.
-    #' @examples
-    #' dp <- DataProcessor()
-    #' dp$connect_to_existing_database("database_one.db")
-    #' dp$drop_repeated_headers()
     drop_repeated_headers = function(){
       con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)
       RSQLite::dbExecute(con, "DELETE FROM timeseries where ts=='ts'")
       RSQLite::dbDisconnect(con)
     },
-    #' @description
-    #' Peforms data clean operations.
-    #' @details 
-    #' Iteratively retrives the timesieries data for circuits from the database in chunks of n circuits. Depending
-    #' on options set different data cleaning procedrues are run and then the clean data is inserted back into the
-    #' database. Timeseries data is inserted back into the table 'timeseries' and circuit and site data go into the
-    #' tables 'circuit_details_clean' and 'site_details_clean'.
-    #' @param max_chunk_size the number of circuits to load into memory and peform the calculation on at a time. A lower 
-    #' number should lead to lower memory usage but take a longer time.
-    #' @param calc_duration_values Find the time elasped between each measurement for each circuit. If the time is 5 s 
-    #' then set the duration for this measurement to 5 s. This has the effect of greatly reducing the number of 
-    #' measurements with missing duration data.
-    #' @examples
-    #' dp <- DataProcessor()
-    #' dp$connect_to_existing_database("database_one.db")
-    #' dp$calculate_duration_values()
     run_data_cleaning_loop = function(max_chunk_size=100){
       con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)
       
@@ -238,7 +189,6 @@ DataProcessor <- R6::R6Class("DataProcessor",
         print(end_time - start_time)
         
       }
-      
       
       self$create_site_details_cleaned_table()
       self$insert_site_details_cleaned(site_details_cleaned)
@@ -361,8 +311,6 @@ DataProcessor <- R6::R6Class("DataProcessor",
         dbname = self$db_path_name)
     },
     perform_power_calculations = function(time_series){
-      # Calculate the average power output over the sample time base on the 
-      # cumulative energy and duration length. Assuming energy is joules and duration is in seconds.
       time_series <- mutate(time_series, d = as.numeric(d))
       time_series <- mutate(time_series, e_polarity=e*polarity)
       time_series <- mutate(time_series, power_kW = e_polarity/(d * 1000))
@@ -450,59 +398,6 @@ DataProcessor <- R6::R6Class("DataProcessor",
       max_timestamp <- RSQLite::dbGetQuery(con, "SELECT MAX(ts) as ts FROM timeseries")
       RSQLite::dbDisconnect(con)
       return(fastPOSIXct(max_timestamp$ts[1], tz="Australia/Brisbane"))
-    },
-    #' @description
-    #' Peform minimal processing needed before site_details can be used in 
-    #' analysis.
-    #' @details
-    #' Summarise data to one row per site, taking the first state value, first
-    #' postcode value, the first ac value and the sum of ac values are recorded
-    #' as these are both used in seperate parts of the subsequent analysis, 
-    #' manafacture and model data is summarised by concatenating.
-    #' @examples
-    #' dp <- DataProcessor()
-    #' dp$connect_to_existing_database("database_one.db")
-    #' dp$create_processed_copy_of_site_details()
-    create_processed_copy_of_site_details = function(){
-      con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)
-      
-      # Read the raw data from the database.
-      site_details_raw <- sqldf::read.csv.sql(sql = "select * from site_details_raw", dbname = self$db_path_name)
-      
-      processed_site_details <- self$process_site_details(site_details_raw)
-      
-      # Create a new table for the processed data.
-      RSQLite::dbExecute(con, "DROP TABLE IF EXISTS site_details_processed")
-      RSQLite::dbExecute(con, "CREATE TABLE site_details_processed(
-                         site_id INT PRIMARY KEY,
-                         s_postcode INT,
-                         s_state TEXT,
-                         sum_ac REAL,
-                         first_ac REAL,
-                         manufacturer TEXT,
-                         model TEXT,
-                         pv_installation_year_month TEXT)")
-      
-      # Insert processed data back into the database.
-      query <- "INSERT INTO site_details_processed
-                            SELECT site_id,  s_postcode,  s_state, sum_ac, first_ac, 
-                            manufacturer, model, pv_installation_year_month 
-                              FROM processed_site_details"
-      sqldf::read.csv.sql(sql = query, dbname = self$db_path_name)
-      RSQLite::dbDisconnect(con)
-    },
-    process_site_details = function(site_details_raw){
-      # Peform minimal processing need before data can be used in analysis.
-      site_details <- filter(site_details_raw, !is.na(ac) & ac != "")
-      site_details <- mutate(site_details, s_postcode = as.character(s_postcode))
-      site_details <- group_by(site_details, site_id)
-      processed_site_details <- summarise(site_details, s_state=first(s_state), 
-                                          pv_installation_year_month=first(pv_installation_year_month),
-                                          sum_ac=sum(ac), first_ac=first(ac), s_postcode=first(s_postcode),
-                                          manufacturer=paste(manufacturer, collapse=' '),
-                                          model=paste(model, collapse=' '))
-      processed_site_details <- as.data.frame(processed_site_details)
-      return(processed_site_details)
     }
   )
 )

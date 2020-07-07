@@ -1,5 +1,0 @@
-Documentation steps.
-1. In the console: 
-  roxygen2::roxygenise("/DER_disturbance_analysis/DataProcessor")
-2. In the RStudio terminal:
-  R CMD Rdconv --type=html --output=/DER_disturbance_analysis/DataProcessor/man/DataProcessor.Rd.html /DER_disturbance_analysis/DataProcessor/man/DataProcessor.Rd
