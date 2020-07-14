@@ -16,6 +16,7 @@ setwd(wd)
 DBInterface <- R6::R6Class("DBInterface",
   public = list(
     db_path_name = NULL,
+    default_timeseries_column_aliases = list(ts='_ts', time_stamp='_ts', c_id='_c_id', v='_v', f='_f', e='_e', d='_d'),
     connect_to_new_database = function(db_path_name){
       con <- RSQLite::dbConnect(RSQLite::SQLite(), db_path_name)
       RSQLite::dbDisconnect(con)
@@ -39,30 +40,33 @@ DBInterface <- R6::R6Class("DBInterface",
                          PRIMARY KEY (ts, c_id))")
       
       column_names <- names(read.csv(timeseries, nrows=3, header = TRUE))
-      column_aliases <- list(ts='_ts', time_stamp='_ts', c_id='_c_id', v='_v', f='_f', e='_e', d='_d')
       query <- "REPLACE INTO timeseries 
                 SELECT _ts as ts, _c_id as c_id, _d as d, _e as e, _v as v,
                        _f as f from file"
       
       for (name in column_names){
-        if (name %in% names(column_aliases)){
-          query <- gsub(column_aliases[[name]], name, query)
+        if (name %in% names(self$default_timeseries_column_aliases)){
+          query <- gsub(self$default_timeseries_column_aliases[[name]], name, query)
         } else {
-          message <- "The provided time series file should have the columns ts, c_id, d
-                      and e, v and f, or known aliases of these columns. 
+          error_message <- "The provided time series file should have the columns ts, c_id, d e, v and f, 
+or known aliases of these columns. 
 
-                      The columns {} where found instead.
+The columns _cols_ where found instead.
 
-                      Please edit the column alaises in the database interface and try again."
+Please overide the column alaises in the database interface and try again."
           
-          message <- gsub('{}', paste(column_names, sep=', '), message)
+          error_message <- gsub('_cols_', paste(column_names, collapse=', '), error_message)
           
-          throw()
+          RSQLite::dbDisconnect(con)
+          
+          stop(error_message)
         }
       }
       
 
-      sqldf::read.csv.sql(timeseries, sql = query, dbname = self$db_path_name, eol='\n')
+      sqldf::read.csv.sql(timeseries, sql = query, dbname = self$db_path_name, eol = '\n')
+      
+      self$drop_repeated_headers()
 
       RSQLite::dbExecute(con, "DROP TABLE IF EXISTS circuit_details_raw")
       
@@ -85,12 +89,12 @@ DBInterface <- R6::R6Class("DBInterface",
         if (name %in% names(column_aliases)){
           query <- gsub(column_aliases[[name]], name, query)
         } else {
-          throw("The provided circuit details file should have the columns c_id, site_id, con_type
+          stop("The provided circuit details file should have the columns c_id, site_id, con_type
                  and polarity. Please check this file and try again.")
         }
       }
 
-      sqldf::read.csv.sql(circuit_details, sql = query, dbname = self$db_path_name, eol='\n')
+      sqldf::read.csv.sql(circuit_details, sql = query, dbname = self$db_path_name, eol = '\n')
       
       RSQLite::dbExecute(con, "ALTER TABLE circuit_details_raw ADD manual_compliance TEXT DEFAULT 'Not set'")
       
@@ -117,7 +121,7 @@ DBInterface <- R6::R6Class("DBInterface",
         if (name %in% names(column_aliases)){
           query <- gsub(column_aliases[[name]], name, query)
         } else {
-          throw("The provided site details file should have the columns site_id, s_postcode, s_state,
+          stop("The provided site details file should have the columns site_id, s_postcode, s_state,
                 ac, dc, manufacturer, model and pv_installation_year_month. The ac column should be in
                 kW and the the dc in W. Please check this file and try again.")
         }
@@ -133,7 +137,7 @@ DBInterface <- R6::R6Class("DBInterface",
       RSQLite::dbExecute(con, "DELETE FROM timeseries where ts=='ts'")
       RSQLite::dbDisconnect(con)
     },
-    run_data_cleaning_loop = function(max_chunk_size=100){
+    run_data_cleaning_loop = function(max_chunk_size=500){
       con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)
       
       ids <- RSQLite::dbGetQuery(con, "SELECT DISTINCT c_id FROM timeseries")
@@ -155,9 +159,9 @@ DBInterface <- R6::R6Class("DBInterface",
       circuit_details_cleaned <- dplyr::data_frame()
       
       while (length(circuits$c_id) > 0){
-        start_time <- Sys.time()
 
         time_series <- self$get_time_series_data_by_c_id(circuits)
+        time_series <- mutate(time_series, time = fastPOSIXct(ts, tz="Australia/Brisbane"))
         time_series <- self$clean_duration_values(time_series)
         updated_records <- self$filter_out_unchanged_records(time_series)
         self$update_timeseries_table_in_database(updated_records)
@@ -184,9 +188,6 @@ DBInterface <- R6::R6Class("DBInterface",
         sites_in_chunk <- self$fiter_dataframe_by_start_and_end_index(site_details, start_chunk_index, end_chunk_index)
         circuits <- filter(circuit_details, site_id %in% sites_in_chunk$site_id)
         if (start_chunk_index > length_ids){circuits <- ids[0:0,,drop=FALSE]}
-        
-        end_time <- Sys.time()
-        print(end_time - start_time)
         
       }
       
@@ -238,7 +239,6 @@ DBInterface <- R6::R6Class("DBInterface",
     get_time_series_data_by_c_id = function(c_ids){
       time_series <- sqldf::read.csv.sql(
         sql = "select * from timeseries where c_id in (select c_id from c_ids)", dbname = self$db_path_name)
-      time_series <- mutate(time_series, time = fastPOSIXct(ts, tz="Australia/Brisbane"))
       return(time_series)
     },
     get_time_series_data = function(){
@@ -254,14 +254,13 @@ DBInterface <- R6::R6Class("DBInterface",
       circuit_in_state = filter(circuit_details, site_id %in% site_in_state$site_id)
       query <- "select * from timeseries 
                         where c_id in (select c_id from circuit_in_state)
-                        and d=duration
+                        and d = duration
                         and ts >= 'start_time'
                         and ts <= 'end_time'"
       query <- gsub('duration', duration, query)
-      query <- gsub('start_time', format(as.POSIXct(start_time), tz='GMT'), query)
-      query <- gsub('end_time', format(as.POSIXct(end_time), tz='GMT'), query)
+      query <- gsub('start_time', start_time, query)
+      query <- gsub('end_time', end_time, query)
       time_series <- sqldf::read.csv.sql(sql = query , dbname = self$db_path_name)
-      time_series <- mutate(time_series, ts = fastPOSIXct(ts, tz="Australia/Brisbane"))
       return(time_series)
     },
     get_postcode_lon_lat = function(){
@@ -384,8 +383,9 @@ DBInterface <- R6::R6Class("DBInterface",
       RSQLite::dbDisconnect(con)
     },
     insert_postcode_lon_lat_cleaned = function(file_path_name){
-      query <- "INSERT INTO postcode_lon_lat SELECT postcode, lon, lat FROM file"
-      sqldf::read.csv.sql(file_path_name, sql = query, dbname = self$db_path_name)
+      postcode_lon_lat_df <- read.csv(file = file_path_name, header = TRUE, stringsAsFactors = FALSE)
+      query <- "REPLACE INTO postcode_lon_lat SELECT * FROM postcode_lon_lat_df"
+      invisible(sqldf::read.csv.sql(sql = query, dbname = self$db_path_name)) # stops an empty df being prinited.
     },
     get_min_timestamp = function(){
       con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)

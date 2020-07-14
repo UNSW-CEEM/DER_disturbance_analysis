@@ -1,0 +1,205 @@
+---
+title: "Database interface user guide"
+author: "Nick Gorman"
+date: "7 July 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Table of Contents
+1. [Creating a sqlite database from solar analytics data](#creating-a-sqlite-database-from-solar-analytics-data)
+n. [Data available post cleaing](#data-available-post-cleaing)
+
+## Using the database interface
+
+To use the database interface we need to source the file containing it.
+
+```{R, message=FALSE}
+source("BDInterface/R/interface.R")
+```
+
+### Creating a sqlite database from solar analytics data
+
+Define the paths of the solar analytics files to use in the database.
+
+```{r}
+timeseries_path_name <- "BDInterface/tests/testthat/data/simple_timeseries.csv"
+site_details_path_name <- "BDInterface/tests/testthat/data/simple_site_details.csv"
+circuit_details_path_name <- "BDInterface/tests/testthat/data/simple_circuit_details.csv"
+```
+
+Create an instance of the database interface and use it to create a new database.
+
+```{r}
+db <- DBInterface$new()
+
+db$connect_to_new_database("example_database.db")
+```
+
+Add the solar analytics data to the new database.
+
+```{r, warning=FALSE}
+db$build_database(timeseries = timeseries_path_name,
+                  circuit_details = circuit_details_path_name,
+                  site_details = site_details_path_name)
+```
+
+Now these data sets should be avaible through the interface, the methods for accessing them are explained 
+[here](#data-available-before-cleaning).
+
+#### Troubleshooting
+
+You may receive three possible errors at this stag.
+
+##### 3. If the timeseries csv from solar analytics does not contain the expected header.
+
+```{r, error=TRUE}
+timeseries_path_name <- "BDInterface/tests/testthat/data/simple_timeseries_unknown_header.csv"
+site_details_path_name <- "BDInterface/tests/testthat/data/simple_site_details.csv"
+circuit_details_path_name <- "BDInterface/tests/testthat/data/simple_circuit_details.csv"
+db_two <- DBInterface$new()
+db_two$connect_to_new_database("example_database_two.db")
+db_two$build_database(timeseries = timeseries_path_name,
+                  circuit_details = circuit_details_path_name,
+                  site_details = site_details_path_name)
+```
+This is fixed by overiding the default timeseries columns, in this case the 'v' column is givem the alias 'voltage'.
+
+```{r}
+db_two$default_timeseries_column_aliases <- list(ts='_ts', time_stamp='_ts', c_id='_c_id', voltage='_v', 
+                                                 f='_f', e='_e', d='_d')
+```
+
+Then the build procedure needs to be rerun.
+
+```{r, warning=FALSE}
+db_two$build_database(timeseries = timeseries_path_name,
+                  circuit_details = circuit_details_path_name,
+                  site_details = site_details_path_name)
+```
+
+##### 2. If the circuit details csv from solar analytics does not contain the expected header. 
+
+```{r, error=TRUE, warning=FALSE}
+timeseries_path_name <- "BDInterface/tests/testthat/data/simple_timeseries.csv"
+site_details_path_name <- "BDInterface/tests/testthat/data/simple_site_details.csv"
+circuit_details_path_name <- "BDInterface/tests/testthat/data/simple_circuit_details_unknown_header.csv"
+db_two <- DBInterface$new()
+db_two$connect_to_new_database("example_database_two.db")
+db_two$build_database(timeseries = timeseries_path_name,
+                  circuit_details = circuit_details_path_name,
+                  site_details = site_details_path_name)
+```
+This is fixed by editing the circuit details file directly.
+
+##### 3. If the site details csv from solar analytics does not contain the expected header. 
+
+```{r, error=TRUE, warning=FALSE}
+timeseries_path_name <- "BDInterface/tests/testthat/data/simple_timeseries.csv"
+site_details_path_name <- "BDInterface/tests/testthat/data/simple_site_details_unknown_header.csv"
+circuit_details_path_name <- "BDInterface/tests/testthat/data/simple_circuit_details.csv"
+db_two <- DBInterface$new()
+db_two$connect_to_new_database("example_database_two.db")
+db_two$build_database(timeseries = timeseries_path_name,
+                  circuit_details = circuit_details_path_name,
+                  site_details = site_details_path_name)
+```
+This is fixed by editing the site details file directly and my require adjusting the ac and dc capacity units.
+
+
+### Cleaning the database
+
+This step attempts to fill in missing sample duration values and correct errors in the ciruit and site details data.
+
+Before running data cleaning postcode lattiude and longditude data needs to be added to the database, this is for 
+calculating sunrise and sunset times that are used for validating if a pofile is from a PV system.
+```{r, warning=FALSE, message=FALSE}
+db$add_postcode_lon_lat_to_database("BDInterface/tests/testthat/data/postcode_lon_lat.csv")
+```
+Then the data cleaning loop can be run.
+```{r, warning=FALSE, message=FALSE}
+db$run_data_cleaning_loop()
+```
+Now new cleaned data sets should be avaible through the interface, the methods for accessing them are explained 
+[here](#data-available-post-cleaing).
+
+### Setting up a database for use with the disturbance analysis tool
+The disturbance analysis tool currently requires data cleaning to be performed. An example script for building the
+database ready for use by the tool is as follows. On data sets of 1 GB from solar analytics this takes aproximately 40 
+min to run. 
+```{r, warning=FALSE, message=FALSE}
+timeseries_path_name <- "BDInterface/tests/testthat/data/simple_timeseries.csv"
+site_details_path_name <- "BDInterface/tests/testthat/data/simple_site_details.csv"
+circuit_details_path_name <- "BDInterface/tests/testthat/data/simple_circuit_details.csv"
+db <- DBInterface$new()
+db$connect_to_new_database("example_database.db")
+db$build_database(timeseries = timeseries_path_name,
+                  circuit_details = circuit_details_path_name,
+                  site_details = site_details_path_name)
+db$add_postcode_lon_lat_to_database("BDInterface/tests/testthat/data/postcode_lon_lat.csv")
+db$run_data_cleaning_loop()
+```
+
+
+### Accessing data
+
+#### Data available before cleaning
+
+* Get the **complete set of time series data** in a dataframe
+
+```{r}
+db$get_time_series_data()
+```
+
+* Get a **single circuit's time series data** in a dataframe, this is preferable to loading all time series data and then 
+filter because selection is done before loading the data into memory.
+
+```{r}
+c_id <- c(1)
+circuits_to_load <- data.frame(c_id)
+db$get_time_series_data_by_c_id(c_ids = circuits_to_load)
+```
+
+* Get **time series data by state, duration and time**, this is preferable to loading all time series data and then 
+filter because selection is done before loading the data into memory.
+
+```{r}
+db$get_filtered_time_series_data(state = 'NSW', duration = 5, start_time = '2018-01-01 00:00:20', 
+                                 end_time = '2018-01-01 00:00:30')
+```
+
+* Get **raw circuit details**.
+
+```{r}
+db$get_circuit_details_raw()
+```
+
+* Get **raw site details**.
+
+```{r}
+db$get_site_details_raw()
+```
+
+#### Data available post cleaing
+After running the data cleaning loop additional outputs are available from the data base interface.
+
+* Get **cleaned circuit details**.
+
+```{r}
+db$get_circuit_details_cleaned()
+```
+
+* Get **circuit details cleaning report**.
+
+```{r}
+db$get_circuit_details_cleaning_report()
+```
+
+* Get **site details cleaning report**.
+
+```{r}
+db$get_site_details_cleaning_report()
+```

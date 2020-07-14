@@ -184,24 +184,215 @@ summary {
 </div>
 
 
-<div id="getting-started" class="section level2">
-<h2>Getting started</h2>
+<div id="table-of-contents" class="section level2">
+<h2>Table of Contents</h2>
+<ol style="list-style-type: decimal">
+<li><a href="#creating-a-sqlite-database-from-solar-analytics-data">Creating a sqlite database from solar analytics data</a></li>
+</ol>
+<ol start="14" style="list-style-type: lower-alpha">
+<li><a href="#data-available-post-cleaing">Data available post cleaing</a></li>
+</ol>
+</div>
+<div id="using-the-database-interface" class="section level2">
+<h2>Using the database interface</h2>
 <p>To use the database interface we need to source the file containing it.</p>
-<pre class="r"><code>source(&quot;R/interface.R&quot;)</code></pre>
-<div id="creating-a-sqlite-database-from-solar-analytics-data." class="section level3">
-<h3>Creating a sqlite database from solar analytics data.</h3>
+<pre class="r"><code>source(&quot;BDInterface/R/interface.R&quot;)</code></pre>
+<div id="creating-a-sqlite-database-from-solar-analytics-data" class="section level3">
+<h3>Creating a sqlite database from solar analytics data</h3>
 <p>Define the paths of the solar analytics files to use in the database.</p>
-<pre class="r"><code>timeseries_path_name &lt;- &quot;tests/testthat/data/simple_timeseries.csv&quot;
-site_details_path_name &lt;- &quot;tests/testthat/data/simple_site_details.csv&quot;
-circuit_details_path_name &lt;- &quot;tests/testthat/data/simple_circuit_details.csv&quot;</code></pre>
+<pre class="r"><code>timeseries_path_name &lt;- &quot;BDInterface/tests/testthat/data/simple_timeseries.csv&quot;
+site_details_path_name &lt;- &quot;BDInterface/tests/testthat/data/simple_site_details.csv&quot;
+circuit_details_path_name &lt;- &quot;BDInterface/tests/testthat/data/simple_circuit_details.csv&quot;</code></pre>
 <p>Create an instance of the database interface and use it to create a new database.</p>
-<pre class="r"><code>dp &lt;- DBInterface$new()
+<pre class="r"><code>db &lt;- DBInterface$new()
 
-dp$connect_to_new_database(&quot;example_database.db&quot;)</code></pre>
+db$connect_to_new_database(&quot;example_database.db&quot;)</code></pre>
 <p>Add the solar analytics data to the new database.</p>
-<pre class="r"><code>dp$build_database(timeseries=timeseries_path_name,
-                  circuit_details=circuit_details_path_name,
-                  site_details=site_details_path_name)</code></pre>
+<pre class="r"><code>db$build_database(timeseries = timeseries_path_name,
+                  circuit_details = circuit_details_path_name,
+                  site_details = site_details_path_name)</code></pre>
+<p>Now these data sets should be avaible through the interface, the methods for accessing them are explained <a href="#data-available-before-cleaning">here</a>.</p>
+<div id="troubleshooting" class="section level4">
+<h4>Troubleshooting</h4>
+<p>You may receive three possible errors at this stag.</p>
+<div id="if-the-timeseries-csv-from-solar-analytics-does-not-contain-the-expected-header." class="section level5">
+<h5>3. If the timeseries csv from solar analytics does not contain the expected header.</h5>
+<pre class="r"><code>timeseries_path_name &lt;- &quot;BDInterface/tests/testthat/data/simple_timeseries_unknown_header.csv&quot;
+site_details_path_name &lt;- &quot;BDInterface/tests/testthat/data/simple_site_details.csv&quot;
+circuit_details_path_name &lt;- &quot;BDInterface/tests/testthat/data/simple_circuit_details.csv&quot;
+db_two &lt;- DBInterface$new()
+db_two$connect_to_new_database(&quot;example_database_two.db&quot;)
+db_two$build_database(timeseries = timeseries_path_name,
+                  circuit_details = circuit_details_path_name,
+                  site_details = site_details_path_name)</code></pre>
+<pre><code>## Error in db_two$build_database(timeseries = timeseries_path_name, circuit_details = circuit_details_path_name, : The provided time series file should have the columns ts, c_id, d e, v and f, 
+## or known aliases of these columns. 
+## 
+## The columns ts, c_id, d, e, voltage, f where found instead.
+## 
+## Please overide the column alaises in the database interface and try again.</code></pre>
+<p>This is fixed by overiding the default timeseries columns, in this case the 'v' column is givem the alias 'voltage'.</p>
+<pre class="r"><code>db_two$default_timeseries_column_aliases &lt;- list(ts='_ts', time_stamp='_ts', c_id='_c_id', voltage='_v', 
+                                                 f='_f', e='_e', d='_d')</code></pre>
+<p>Then the build procedure needs to be rerun.</p>
+<pre class="r"><code>db_two$build_database(timeseries = timeseries_path_name,
+                  circuit_details = circuit_details_path_name,
+                  site_details = site_details_path_name)</code></pre>
+</div>
+<div id="if-the-circuit-details-csv-from-solar-analytics-does-not-contain-the-expected-header." class="section level5">
+<h5>2. If the circuit details csv from solar analytics does not contain the expected header.</h5>
+<pre class="r"><code>timeseries_path_name &lt;- &quot;BDInterface/tests/testthat/data/simple_timeseries.csv&quot;
+site_details_path_name &lt;- &quot;BDInterface/tests/testthat/data/simple_site_details.csv&quot;
+circuit_details_path_name &lt;- &quot;BDInterface/tests/testthat/data/simple_circuit_details_unknown_header.csv&quot;
+db_two &lt;- DBInterface$new()
+db_two$connect_to_new_database(&quot;example_database_two.db&quot;)
+db_two$build_database(timeseries = timeseries_path_name,
+                  circuit_details = circuit_details_path_name,
+                  site_details = site_details_path_name)</code></pre>
+<pre><code>## Error in db_two$build_database(timeseries = timeseries_path_name, circuit_details = circuit_details_path_name, : The provided circuit details file should have the columns c_id, site_id, con_type
+##                  and polarity. Please check this file and try again.</code></pre>
+<p>This is fixed by editing the circuit details file directly.</p>
+</div>
+<div id="if-the-site-details-csv-from-solar-analytics-does-not-contain-the-expected-header." class="section level5">
+<h5>3. If the site details csv from solar analytics does not contain the expected header.</h5>
+<pre class="r"><code>timeseries_path_name &lt;- &quot;BDInterface/tests/testthat/data/simple_timeseries.csv&quot;
+site_details_path_name &lt;- &quot;BDInterface/tests/testthat/data/simple_site_details_unknown_header.csv&quot;
+circuit_details_path_name &lt;- &quot;BDInterface/tests/testthat/data/simple_circuit_details.csv&quot;
+db_two &lt;- DBInterface$new()
+db_two$connect_to_new_database(&quot;example_database_two.db&quot;)
+db_two$build_database(timeseries = timeseries_path_name,
+                  circuit_details = circuit_details_path_name,
+                  site_details = site_details_path_name)</code></pre>
+<pre><code>## Error in db_two$build_database(timeseries = timeseries_path_name, circuit_details = circuit_details_path_name, : The provided site details file should have the columns site_id, s_postcode, s_state,
+##                 ac, dc, manufacturer, model and pv_installation_year_month. The ac column should be in
+##                 kW and the the dc in W. Please check this file and try again.</code></pre>
+<p>This is fixed by editing the site details file directly and my require adjusting the ac and dc capacity units.</p>
+</div>
+</div>
+</div>
+<div id="cleaning-the-database" class="section level3">
+<h3>Cleaning the database</h3>
+<p>This step attempts to fill in missing sample duration values and correct errors in the ciruit and site details data.</p>
+<p>Before running data cleaning postcode lattiude and longditude data needs to be added to the database, this is for calculating sunrise and sunset times that are used for validating if a pofile is from a PV system.</p>
+<pre class="r"><code>db$add_postcode_lon_lat_to_database(&quot;BDInterface/tests/testthat/data/postcode_lon_lat.csv&quot;)</code></pre>
+<p>Then the data cleaning loop can be run.</p>
+<pre class="r"><code>db$run_data_cleaning_loop()</code></pre>
+<p>Now new cleaned data sets should be avaible through the interface, the methods for accessing them are explained <a href="#data-available-post-cleaing">here</a>.</p>
+</div>
+<div id="setting-up-a-database-for-use-with-the-disturbance-analysis-tool" class="section level3">
+<h3>Setting up a database for use with the disturbance analysis tool</h3>
+<p>The disturbance analysis tool currently requires data cleaning to be performed. An example script for building the database ready for use by the tool is as follows. On data sets of 1 GB from solar analytics this takes aproximately 40 min to run.</p>
+<pre class="r"><code>timeseries_path_name &lt;- &quot;BDInterface/tests/testthat/data/simple_timeseries.csv&quot;
+site_details_path_name &lt;- &quot;BDInterface/tests/testthat/data/simple_site_details.csv&quot;
+circuit_details_path_name &lt;- &quot;BDInterface/tests/testthat/data/simple_circuit_details.csv&quot;
+db &lt;- DBInterface$new()
+db$connect_to_new_database(&quot;example_database.db&quot;)
+db$build_database(timeseries = timeseries_path_name,
+                  circuit_details = circuit_details_path_name,
+                  site_details = site_details_path_name)
+db$add_postcode_lon_lat_to_database(&quot;BDInterface/tests/testthat/data/postcode_lon_lat.csv&quot;)
+db$run_data_cleaning_loop()</code></pre>
+</div>
+<div id="accessing-data" class="section level3">
+<h3>Accessing data</h3>
+<div id="data-available-before-cleaning" class="section level4">
+<h4>Data available before cleaning</h4>
+<ul>
+<li>Get the <strong>complete set of time series data</strong> in a dataframe</li>
+</ul>
+<pre class="r"><code>db$get_time_series_data()</code></pre>
+<pre><code>##                     ts c_id d   e   v  f
+## 1  2018-01-01 00:00:05    1 5 100 200 50
+## 2  2018-01-01 00:00:10    1 5 100 200 50
+## 3  2018-01-01 00:00:15    1 5 100 200 50
+## 4  2018-01-01 00:00:20    1 5 100 200 50
+## 5  2018-01-01 00:00:25    1 5 100 200 50
+## 6  2018-01-01 00:00:30    1 5 100 200 50
+## 7  2018-01-01 00:00:35    1 5 100 200 50
+## 8  2018-01-01 00:00:40    1 5 100 200 50
+## 9  2018-01-01 00:00:05    2 5 101 250 51
+## 10 2018-01-01 00:00:10    2 5 101 250 51
+## 11 2018-01-01 00:00:15    2 5 101 250 51
+## 12 2018-01-01 00:00:20    2 5 101 250 51
+## 13 2018-01-01 00:00:25    2 5 101 250 51
+## 14 2018-01-01 00:00:30    2 5 101 250 51
+## 15 2018-01-01 00:00:35    2 5 101 250 51
+## 16 2018-01-01 00:00:40    2 5 101 250 51</code></pre>
+<ul>
+<li>Get a <strong>single circuit's time series data</strong> in a dataframe, this is preferable to loading all time series data and then filter because selection is done before loading the data into memory.</li>
+</ul>
+<pre class="r"><code>c_id &lt;- c(1)
+circuits_to_load &lt;- data.frame(c_id)
+db$get_time_series_data_by_c_id(c_ids = circuits_to_load)</code></pre>
+<pre><code>##                    ts c_id d   e   v  f
+## 1 2018-01-01 00:00:05    1 5 100 200 50
+## 2 2018-01-01 00:00:10    1 5 100 200 50
+## 3 2018-01-01 00:00:15    1 5 100 200 50
+## 4 2018-01-01 00:00:20    1 5 100 200 50
+## 5 2018-01-01 00:00:25    1 5 100 200 50
+## 6 2018-01-01 00:00:30    1 5 100 200 50
+## 7 2018-01-01 00:00:35    1 5 100 200 50
+## 8 2018-01-01 00:00:40    1 5 100 200 50</code></pre>
+<ul>
+<li>Get <strong>time series data by state, duration and time</strong>, this is preferable to loading all time series data and then filter because selection is done before loading the data into memory.</li>
+</ul>
+<pre class="r"><code>db$get_filtered_time_series_data(state = 'NSW', duration = 5, start_time = '2018-01-01 00:00:20', 
+                                 end_time = '2018-01-01 00:00:30')</code></pre>
+<pre><code>##                    ts c_id d   e   v  f
+## 1 2018-01-01 00:00:20    1 5 100 200 50
+## 2 2018-01-01 00:00:25    1 5 100 200 50
+## 3 2018-01-01 00:00:30    1 5 100 200 50</code></pre>
+<ul>
+<li>Get <strong>raw circuit details</strong>.</li>
+</ul>
+<pre class="r"><code>db$get_circuit_details_raw()</code></pre>
+<pre><code>##   c_id site_id    con_type polarity manual_compliance
+## 1    1       3 pv_site_net        1           Not set
+## 2    2       4 pv_site_net        1           Not set</code></pre>
+<ul>
+<li>Get <strong>raw site details</strong>.</li>
+</ul>
+<pre class="r"><code>db$get_site_details_raw()</code></pre>
+<pre><code>##   site_id s_postcode s_state ac    dc manufacturer model
+## 1       3       2034     NSW 10 15000            A    A1
+## 2       3       2035     NSW 20 15000            A    A1
+## 3       4       6000      SA 11 12000            B    B1
+##   pv_installation_year_month
+## 1                    2015-01
+## 2                    2015-02
+## 3                    2017-01</code></pre>
+</div>
+<div id="data-available-post-cleaing" class="section level4">
+<h4>Data available post cleaing</h4>
+<p>After running the data cleaning loop additional outputs are available from the data base interface.</p>
+<ul>
+<li>Get <strong>cleaned circuit details</strong>.</li>
+</ul>
+<pre class="r"><code>db$get_circuit_details_cleaned()</code></pre>
+<pre><code>##   c_id site_id    con_type polarity manual_compliance
+## 1    1       3 pv_site_net        1           Not set
+## 2    2       4 pv_site_net        1           Not set</code></pre>
+<ul>
+<li>Get <strong>circuit details cleaning report</strong>.</li>
+</ul>
+<pre class="r"><code>db$get_circuit_details_cleaning_report()</code></pre>
+<pre><code>##   c_id site_id    con_type polarity  sunrise   sunset min_power max_power
+## 1    1       3 pv_site_net        1 03:48:22 20:10:29    0.0200    0.0200
+## 2    2       4 pv_site_net        1 06:15:06 22:26:59    0.0202    0.0202
+##   frac_day old_con_type con_type_changed polarity_changed manual_compliance
+## 1        1  pv_site_net                0                0           Not set
+## 2        1  pv_site_net                0                0           Not set</code></pre>
+<ul>
+<li>Get <strong>site details cleaning report</strong>.</li>
+</ul>
+<pre class="r"><code>db$get_site_details_cleaning_report()</code></pre>
+<pre><code>##   site_id s_postcode s_state pv_installation_year_month ac    dc ac_old dc_old
+## 1       3       2034     NSW                    2015-01 15 15000     30  30000
+## 2       4       6000      SA                    2017-01 11 12000     11  12000
+##    ac_dc_ratio manufacturer model rows_grouped max_power_kW change_ac change_dc
+## 1 0.0010000000          A A A1 A1            2       0.0200         1         1
+## 2 0.0009166667            B    B1            1       0.0202         0         0</code></pre>
+</div>
 </div>
 </div>
 

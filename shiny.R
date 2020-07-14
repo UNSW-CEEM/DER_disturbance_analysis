@@ -35,7 +35,7 @@ source("documentation.R")
 source("ideal_response_functions.R")
 source("create_report_files.R")
 source("create_report_tables.R")
-source("DBInterface/R/interface.R")
+source("BDInterface/R/interface.R")
 
 ui <- fluidPage(
   tags$head(
@@ -51,7 +51,7 @@ ui <- fluidPage(
         sidebarPanel(id = "side_panel",
           h4("File selection"),
           textInput("database_name", "SQLite database file",
-                    value = "C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/DBInterface/tests/20180825.db"
+                    value = "C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/BDInterface/tests/20180825.db"
           ),
           fluidRow(
             div(style="display:inline-block", shinyFilesButton("choose_database", "Choose File", 
@@ -452,10 +452,13 @@ server <- function(input,output,session){
       v$site_details <- site_categorisation(v$site_details)
       v$site_details <- size_grouping(v$site_details)
       v$circuit_details <- bind_rows(v$circuit_details_raw, circuit_details_clean)
-  
 
+
+      start_time <- format(as.POSIXct(load_start_time()), tz='GMT')
+      end_time <- format(as.POSIXct(load_end_time()), tz='GMT')
       time_series_data <- v$db$get_filtered_time_series_data(state = region_to_load(), duration = duration(), 
-                                                             start_time = load_start_time(), end_time = load_end_time())
+                                                             start_time = start_time, end_time = end_time)
+      time_series_data <- mutate(time_series_data, ts = fastPOSIXct(ts, tz="Australia/Brisbane"))
 
       v$combined_data <- inner_join(time_series_data, v$circuit_details, by = "c_id")
       v$combined_data <- inner_join( v$combined_data, v$site_details, by = c("site_id", "clean"))
@@ -694,6 +697,7 @@ server <- function(input,output,session){
       combined_data_f <- setnames(combined_data_f, c("Event_Normalised_Power_kW"), c("Site_Event_Normalised_Power_kW"))
       combined_data_f <- setnames(combined_data_f, c("Time"), c("ts"))
       if(dim(ideal_response_to_plot)[1]>0){
+        browser()
         ideal_response_downsampled <- down_sample_1s(ideal_response_to_plot, duration(), min(combined_data_f$ts))
         v$ideal_response_downsampled <- ideal_response_downsampled
         combined_data_f <- 

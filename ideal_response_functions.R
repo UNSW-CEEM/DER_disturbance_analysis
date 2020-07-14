@@ -49,9 +49,9 @@ norm_p_over_frequency <- function(f){
 
 down_sample_1s <- function(ideal_response_1_s, duration, offset){
   ideal_response_1_s <- thicken(ideal_response_1_s, paste(duration,'s'), colname='time_group', rounding='up',
-                                start_val=min(ideal_response_1_s$ts) - as.numeric(duration))
+                                start_val=offset - as.numeric(duration))
   ideal_response_1_s <- thicken(ideal_response_1_s, paste(duration,'s'), colname='time_group2', rounding='down', 
-                                by='ts', start_val=min(ideal_response_1_s$ts) - as.numeric(duration))
+                                by='ts', start_val=offset - as.numeric(duration))
   ideal_response_1_s[ideal_response_1_s$ts==ideal_response_1_s$time_group2,]$time_group <- 
     ideal_response_1_s[ideal_response_1_s$ts==ideal_response_1_s$time_group2,]$time_group2
   ideal_response_1_s <- filter(
@@ -119,7 +119,7 @@ calc_error_metric_and_compliance_2 <- function(combined_data, ideal_response_dow
   end_buffer <- max(ideal_response$ts) - end_buffer
   end_buffer_responding <- min(ideal_response$ts) + end_buffer_responding
   disconnecting_threshold <- disconnecting_threshold
-  
+  browser()
   # First pass compliance
   ideal_response_downsampled <- filter(ideal_response_downsampled, time_group >= start_buffer_t)
   ideal_response_downsampled <- filter(ideal_response_downsampled, time_group <= end_buffer)
