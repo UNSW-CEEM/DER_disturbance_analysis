@@ -44,3 +44,14 @@ dp$build_database(timeseries=timeseries_path_name,
                   site_details=site_details_path_name)
 ```
 
+Now these data sets should be avaible through the interface, the command for accessing them are explained 
+[here](#### Data available before cleaning).
+
+
+
+### Accessing data
+
+#### Data available before cleaning
+
+#### Data available post cleaing
+
