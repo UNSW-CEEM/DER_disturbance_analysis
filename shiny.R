@@ -433,7 +433,7 @@ server <- function(input,output,session){
   # This is the event that runs when the "Load data" button on the GUI is
   # Clicked. 
   observeEvent(input$load_data, {
-
+      id <- showNotification("Loading data", duration = 1000)
       site_details_raw <- v$db$get_site_details_raw()
       site_details_raw <- process_raw_site_details(site_details_raw)
       site_details_raw <- mutate(site_details_raw, clean = 'raw')
@@ -453,9 +453,8 @@ server <- function(input,output,session){
       v$site_details <- size_grouping(v$site_details)
       v$circuit_details <- bind_rows(v$circuit_details_raw, circuit_details_clean)
 
-
-      start_time <- format(as.POSIXct(load_start_time()), tz='GMT')
-      end_time <- format(as.POSIXct(load_end_time()), tz='GMT')
+      start_time <- format(as.POSIXct(load_start_time(), tz="Australia/Brisbane"), tz='GMT')
+      end_time <- format(as.POSIXct(load_end_time(), tz="Australia/Brisbane"), tz='GMT')
       time_series_data <- v$db$get_filtered_time_series_data(state = region_to_load(), duration = duration(), 
                                                              start_time = start_time, end_time = end_time)
       time_series_data <- mutate(time_series_data, ts = fastPOSIXct(ts, tz="Australia/Brisbane"))
@@ -479,6 +478,7 @@ server <- function(input,output,session){
       output$circuit_details_editor <- renderDT(isolate(v$circuit_details_for_editing), selection='single', 
                                                 rownames=FALSE, editable=TRUE)
       v$proxy_circuit_details_editor <- dataTableProxy('circuit_details_editor')
+      removeNotification(id)
 
 
       # Load in the install data from CSV.
@@ -558,16 +558,16 @@ server <- function(input,output,session){
         checkboxGroupButtons(inputId="responses", 
                              label=strong("Select Responses:"),
                              choices=list("1 Ride Through", "2 Curtail", "3 Drop to Zero", "4 Disconnect","5 Off at t0", 
-                                          "6 Not enough data", "Undefined", "NA"),
+                                          "6 Not enough data", "Undefined", NA),
                              selected=list("1 Ride Through", "2 Curtail", "3 Drop to Zero", "4 Disconnect",
-                                           "5 Off at t0", "6 Not enough data", "Undefined", "NA"),
+                                           "5 Off at t0", "6 Not enough data", "Undefined", NA),
                              justified=TRUE, status="primary", individual=TRUE,
                              checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")))
       })
       output$zones <- renderUI({
         checkboxGroupButtons(inputId="zones", label=strong("Zones"), 
-                             choices=list("1 Zone", "2 Zone", "3 Zone", "Undefined", "NA"),
-                             selected=list("1 Zone", "2 Zone", "3 Zone", "Undefined", "NA"), 
+                             choices=list("1 Zone", "2 Zone", "3 Zone", "Undefined", NA),
+                             selected=list("1 Zone", "2 Zone", "3 Zone", "Undefined", NA), 
                              justified=TRUE, status="primary", individual=TRUE,
                              checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")))
       })
@@ -575,10 +575,10 @@ server <- function(input,output,session){
         checkboxGroupButtons(inputId="compliance", label=strong("Compliance"), 
                              choices=list("Compliant", "Non-compliant Responding", 
                                           "Non-compliant", "Disconnect/Drop to Zero",
-                                          "Off at t0", "Not enough data", "Undefined", "NA"),
+                                          "Off at t0", "Not enough data", "Undefined", NA),
                              selected=list("Compliant", "Non-compliant Responding", 
                                            "Non-compliant", "Disconnect/Drop to Zero",
-                                           "Off at t0", "Not enough data", "Undefined", "NA"), 
+                                           "Off at t0", "Not enough data", "Undefined", NA), 
                              justified=TRUE, status="primary", individual=TRUE,
                              checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")))
       })  
@@ -643,8 +643,6 @@ server <- function(input,output,session){
       ideal_response_to_plot <- data.frame()
     }
     v$ideal_response_to_plot <- ideal_response_to_plot
-    
-    
 
     combined_data_f <- filter(v$combined_data, clean %in% clean())
     combined_data_f <- filter(combined_data_f, sum_ac<=100)
@@ -660,12 +658,14 @@ server <- function(input,output,session){
     if (length(circuits()) > 0) {combined_data_f <- filter(combined_data_f, c_id %in% circuits())}
     if(length(combined_data_f$ts) > 0){
       combined_data_f <- categorise_response(combined_data_f, pre_event_interval(), window_length())
+      combined_data_f <- mutate(combined_data_f,  response_category=ifelse(response_category %in% c(NA), "NA", response_category))
       combined_data_f <- filter(combined_data_f, response_category %in% responses())
     }
     # Filter data by user selected time window
     if(length(combined_data_f$ts) > 0){
       combined_data_f <- get_distance_from_event(combined_data_f, v$postcode_data, event_latitude(), event_longitude())
       combined_data_f <- get_zones(combined_data_f, zone_one_radius(), zone_two_radius(), zone_three_radius())
+      combined_data_f <- mutate(combined_data_f,  zone=ifelse(zone %in% c(NA), "NA", zone))
       if (length(zones()) < 3) { combined_data_f <- filter(combined_data_f, zone %in% zones())}
     }
     
@@ -708,6 +708,7 @@ server <- function(input,output,session){
                                              end_buffer(),
                                              end_buffer_responding(),
                                              disconnecting_threshold())
+        combined_data_f <- mutate(combined_data_f,  compliance_status=ifelse(compliance_status %in% c(NA), "NA", compliance_status))
       } else {
         combined_data_f <- mutate(combined_data_f, compliance_status="Undefined")  
       }
@@ -752,7 +753,6 @@ server <- function(input,output,session){
         v$circuit_summary <- select(v$circuit_summary, site_id, c_id, s_state, s_postcode, Standard_Version, Grouping, 
                                     sum_ac, clean, manufacturer, model, response_category, zone, distance, lat, lon,
                                     con_type, first_ac, polarity, compliance_status, manual_compliance)
-        
         # Combine data sets that have the same grouping so they can be saved in a single file
         if (no_grouping){
           et <- pre_event_interval()
@@ -1222,6 +1222,7 @@ server <- function(input,output,session){
     value = info$value
     v$site_details_for_editing[i, j] <<- DT::coerceValue(value, v$site_details_for_editing[i, j])
     replaceData(v$proxy_site_details_editor, v$site_details_for_editing, resetPaging=FALSE, rownames=FALSE)  # important
+    v$db$update_site_details_cleaned(v$site_details_for_editing)
   })
   
   # Allow user to edit circuit details in data cleaning tab
@@ -1233,6 +1234,7 @@ server <- function(input,output,session){
     value = info$value
     v$circuit_details_for_editing[i, j] <<- DT::coerceValue(value, v$circuit_details_for_editing[i, j])
     replaceData(v$proxy_circuit_details_editor, v$circuit_details_for_editing, resetPaging=FALSE, rownames=FALSE) # important
+    v$db$update_circuit_details_cleaned(v$circuit_details_for_editing)
   })
 }
 

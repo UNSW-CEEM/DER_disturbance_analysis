@@ -184,15 +184,6 @@ summary {
 </div>
 
 
-<div id="table-of-contents" class="section level2">
-<h2>Table of Contents</h2>
-<ol style="list-style-type: decimal">
-<li><a href="#creating-a-sqlite-database-from-solar-analytics-data">Creating a sqlite database from solar analytics data</a></li>
-</ol>
-<ol start="14" style="list-style-type: lower-alpha">
-<li><a href="#data-available-post-cleaing">Data available post cleaing</a></li>
-</ol>
-</div>
 <div id="using-the-database-interface" class="section level2">
 <h2>Using the database interface</h2>
 <p>To use the database interface we need to source the file containing it.</p>
@@ -207,14 +198,14 @@ circuit_details_path_name &lt;- &quot;BDInterface/tests/testthat/data/simple_cir
 <pre class="r"><code>db &lt;- DBInterface$new()
 
 db$connect_to_new_database(&quot;example_database.db&quot;)</code></pre>
-<p>Add the solar analytics data to the new database.</p>
+<p>Add the solar analytics data to the new database, for 6 GB of raw solar analytics time series data this takes aproximately 20 min.</p>
 <pre class="r"><code>db$build_database(timeseries = timeseries_path_name,
                   circuit_details = circuit_details_path_name,
                   site_details = site_details_path_name)</code></pre>
 <p>Now these data sets should be avaible through the interface, the methods for accessing them are explained <a href="#data-available-before-cleaning">here</a>.</p>
 <div id="troubleshooting" class="section level4">
 <h4>Troubleshooting</h4>
-<p>You may receive three possible errors at this stag.</p>
+<p>You may receive three possible errors at this stage.</p>
 <div id="if-the-timeseries-csv-from-solar-analytics-does-not-contain-the-expected-header." class="section level5">
 <h5>3. If the timeseries csv from solar analytics does not contain the expected header.</h5>
 <pre class="r"><code>timeseries_path_name &lt;- &quot;BDInterface/tests/testthat/data/simple_timeseries_unknown_header.csv&quot;
@@ -225,13 +216,13 @@ db_two$connect_to_new_database(&quot;example_database_two.db&quot;)
 db_two$build_database(timeseries = timeseries_path_name,
                   circuit_details = circuit_details_path_name,
                   site_details = site_details_path_name)</code></pre>
-<pre><code>## Error in db_two$build_database(timeseries = timeseries_path_name, circuit_details = circuit_details_path_name, : The provided time series file should have the columns ts, c_id, d e, v and f, 
-## or known aliases of these columns. 
-## 
-## The columns ts, c_id, d, e, voltage, f where found instead.
-## 
-## Please overide the column alaises in the database interface and try again.</code></pre>
-<p>This is fixed by overiding the default timeseries columns, in this case the 'v' column is givem the alias 'voltage'.</p>
+<pre><code>## Error in self$get_time_series_build_query(timeseries): The provided time series file should have the columns ts, c_id, d e, v and f, 
+##           or known aliases of these columns. 
+##           
+##           The columns ts, c_id, d, e, voltage, f where found instead.
+##           
+##           Please overide the column alaises in the database interface and try again.</code></pre>
+<p>This is fixed by overiding the default timeseries columns, in this case the 'v' column is given the alias 'voltage'.</p>
 <pre class="r"><code>db_two$default_timeseries_column_aliases &lt;- list(ts='_ts', time_stamp='_ts', c_id='_c_id', voltage='_v', 
                                                  f='_f', e='_e', d='_d')</code></pre>
 <p>Then the build procedure needs to be rerun.</p>
@@ -249,8 +240,8 @@ db_two$connect_to_new_database(&quot;example_database_two.db&quot;)
 db_two$build_database(timeseries = timeseries_path_name,
                   circuit_details = circuit_details_path_name,
                   site_details = site_details_path_name)</code></pre>
-<pre><code>## Error in db_two$build_database(timeseries = timeseries_path_name, circuit_details = circuit_details_path_name, : The provided circuit details file should have the columns c_id, site_id, con_type
-##                  and polarity. Please check this file and try again.</code></pre>
+<pre><code>## Error in self$get_circuit_details_build_query(circuit_details): The provided circuit details file should have the columns c_id, site_id, con_type
+##                and polarity. Please check this file and try again.</code></pre>
 <p>This is fixed by editing the circuit details file directly.</p>
 </div>
 <div id="if-the-site-details-csv-from-solar-analytics-does-not-contain-the-expected-header." class="section level5">
@@ -263,25 +254,26 @@ db_two$connect_to_new_database(&quot;example_database_two.db&quot;)
 db_two$build_database(timeseries = timeseries_path_name,
                   circuit_details = circuit_details_path_name,
                   site_details = site_details_path_name)</code></pre>
-<pre><code>## Error in db_two$build_database(timeseries = timeseries_path_name, circuit_details = circuit_details_path_name, : The provided site details file should have the columns site_id, s_postcode, s_state,
-##                 ac, dc, manufacturer, model and pv_installation_year_month. The ac column should be in
-##                 kW and the the dc in W. Please check this file and try again.</code></pre>
-<p>This is fixed by editing the site details file directly and my require adjusting the ac and dc capacity units.</p>
+<pre><code>## Error in self$get_site_details_build_query(site_details): The provided site details file should have the columns site_id, s_postcode, s_state,
+##                ac, dc, manufacturer, model and pv_installation_year_month. The ac column should be in
+##                kW and the the dc in W. Please check this file and try again.</code></pre>
+<p>This is fixed by editing the site details file directly and may require adjusting the ac and dc capacity units.</p>
 </div>
 </div>
 </div>
 <div id="cleaning-the-database" class="section level3">
 <h3>Cleaning the database</h3>
 <p>This step attempts to fill in missing sample duration values and correct errors in the ciruit and site details data.</p>
-<p>Before running data cleaning postcode lattiude and longditude data needs to be added to the database, this is for calculating sunrise and sunset times that are used for validating if a pofile is from a PV system.</p>
+<p>Before running data cleaning the postcode lattiude and longditude data needs to be added to the database, this is for calculating sunrise and sunset times that are used for validating if a pofile is from a PV system.</p>
 <pre class="r"><code>db$add_postcode_lon_lat_to_database(&quot;BDInterface/tests/testthat/data/postcode_lon_lat.csv&quot;)</code></pre>
 <p>Then the data cleaning loop can be run.</p>
 <pre class="r"><code>db$run_data_cleaning_loop()</code></pre>
+<pre><code>## [1] &quot;Done cleaning batch 1&quot;</code></pre>
 <p>Now new cleaned data sets should be avaible through the interface, the methods for accessing them are explained <a href="#data-available-post-cleaing">here</a>.</p>
 </div>
 <div id="setting-up-a-database-for-use-with-the-disturbance-analysis-tool" class="section level3">
 <h3>Setting up a database for use with the disturbance analysis tool</h3>
-<p>The disturbance analysis tool currently requires data cleaning to be performed. An example script for building the database ready for use by the tool is as follows. On data sets of 1 GB from solar analytics this takes aproximately 40 min to run.</p>
+<p>The disturbance analysis tool currently requires data cleaning to be performed. An example script for building the database ready for use by the tool is as follows. On data sets of 6 GB from solar analytics this takes aproximately 1 hr to clean. min to run.</p>
 <pre class="r"><code>timeseries_path_name &lt;- &quot;BDInterface/tests/testthat/data/simple_timeseries.csv&quot;
 site_details_path_name &lt;- &quot;BDInterface/tests/testthat/data/simple_site_details.csv&quot;
 circuit_details_path_name &lt;- &quot;BDInterface/tests/testthat/data/simple_circuit_details.csv&quot;
@@ -292,6 +284,7 @@ db$build_database(timeseries = timeseries_path_name,
                   site_details = site_details_path_name)
 db$add_postcode_lon_lat_to_database(&quot;BDInterface/tests/testthat/data/postcode_lon_lat.csv&quot;)
 db$run_data_cleaning_loop()</code></pre>
+<pre><code>## [1] &quot;Done cleaning batch 1&quot;</code></pre>
 </div>
 <div id="accessing-data" class="section level3">
 <h3>Accessing data</h3>

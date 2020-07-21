@@ -9,10 +9,6 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Table of Contents
-1. [Creating a sqlite database from solar analytics data](#creating-a-sqlite-database-from-solar-analytics-data)
-n. [Data available post cleaing](#data-available-post-cleaing)
-
 ## Using the database interface
 
 To use the database interface we need to source the file containing it.

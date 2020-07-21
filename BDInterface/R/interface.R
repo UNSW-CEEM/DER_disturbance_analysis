@@ -16,7 +16,8 @@ setwd(wd)
 DBInterface <- R6::R6Class("DBInterface",
   public = list(
     db_path_name = NULL,
-    default_timeseries_column_aliases = list(ts='_ts', time_stamp='_ts', c_id='_c_id', v='_v', f='_f', e='_e', d='_d'),
+    default_timeseries_column_aliases = list(ts='_ts', time_stamp='_ts', c_id='_c_id', v='_v', f='_f', e='_e', d='_d', 
+                                             p='_p'),
     connect_to_new_database = function(db_path_name){
       con <- RSQLite::dbConnect(RSQLite::SQLite(), db_path_name)
       RSQLite::dbDisconnect(con)
@@ -177,11 +178,11 @@ DBInterface <- R6::R6Class("DBInterface",
         self$update_timeseries_table_in_database(updated_records)
         time_series <- mutate(time_series, ts=time)
    
-        
         time_series <- self$add_meta_data_to_time_series(time_series, circuit_details)
         time_series <- self$perform_power_calculations(time_series)
         
-        site_details_cleaned_chunk <- site_details_data_cleaning_two(time_series, sites_in_chunk)
+        pv_time_series <- filter(time_series, con_type %in% c("pv_site_net", "pv_site", "pv_inverter_net", "pv_inverter"))
+        site_details_cleaned_chunk <- site_details_data_cleaning_two(pv_time_series, sites_in_chunk)
         site_details_cleaned <- bind_rows(site_details_cleaned, site_details_cleaned_chunk)
         
         details_to_add <- select(site_details_cleaned_chunk,  site_id, s_postcode, ac)
