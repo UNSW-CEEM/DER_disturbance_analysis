@@ -7,10 +7,10 @@ load_test_file <- function(path_name){
   return(data)
 }
 
-timeseries <- "testthat/data/smoke_timeseries.csv"
-site_details_path_name <- "testthat/data/smoke_site_details.csv"
-circuit_details_path_name <- "testthat/data/smoke_circuit_details.csv"
-circuit_details_path_name_clean <- "testthat/data/smoke_circuit_details_cleaned.csv"
+timeseries <- "testthat/data/simple_timeseries.csv"
+site_details_path_name <- "testthat/data/simple_site_details.csv"
+circuit_details_path_name <- "testthat/data/simple_circuit_details.csv"
+circuit_details_path_name_clean <- "testthat/data/simple_circuit_details_cleaned.csv"
 
 expected_timeseries <- load_test_file(timeseries)
 expected_site_details <- load_test_file(site_details_path_name)
@@ -21,7 +21,7 @@ expected_circuit_details_cleaned <- mutate(expected_circuit_details_cleaned, man
 
 # Create the DataProcessor and test creating the database.
 if (file.exists("test.db")) {file.remove("test.db")}
-dp <- DataProcessor$new()
+dp <- DBInterface$new()
 dp$connect_to_new_database("test.db")
 dp$build_database(timeseries = timeseries,
                   circuit_details = circuit_details_path_name,

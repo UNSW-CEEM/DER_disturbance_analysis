@@ -697,7 +697,6 @@ server <- function(input,output,session){
       combined_data_f <- setnames(combined_data_f, c("Event_Normalised_Power_kW"), c("Site_Event_Normalised_Power_kW"))
       combined_data_f <- setnames(combined_data_f, c("Time"), c("ts"))
       if(dim(ideal_response_to_plot)[1]>0){
-        browser()
         ideal_response_downsampled <- down_sample_1s(ideal_response_to_plot, duration(), min(combined_data_f$ts))
         v$ideal_response_downsampled <- ideal_response_downsampled
         combined_data_f <- 

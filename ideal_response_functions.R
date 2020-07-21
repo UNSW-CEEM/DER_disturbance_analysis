@@ -119,7 +119,6 @@ calc_error_metric_and_compliance_2 <- function(combined_data, ideal_response_dow
   end_buffer <- max(ideal_response$ts) - end_buffer
   end_buffer_responding <- min(ideal_response$ts) + end_buffer_responding
   disconnecting_threshold <- disconnecting_threshold
-  browser()
   # First pass compliance
   ideal_response_downsampled <- filter(ideal_response_downsampled, time_group >= start_buffer_t)
   ideal_response_downsampled <- filter(ideal_response_downsampled, time_group <= end_buffer)

@@ -39,7 +39,7 @@ db <- DBInterface$new()
 db$connect_to_new_database("example_database.db")
 ```
 
-Add the solar analytics data to the new database.
+Add the solar analytics data to the new database, for 6 GB of raw solar analytics time series data this takes aproximately 20 min.
 
 ```{r, warning=FALSE}
 db$build_database(timeseries = timeseries_path_name,
@@ -52,7 +52,7 @@ Now these data sets should be avaible through the interface, the methods for acc
 
 #### Troubleshooting
 
-You may receive three possible errors at this stag.
+You may receive three possible errors at this stage.
 
 ##### 3. If the timeseries csv from solar analytics does not contain the expected header.
 
@@ -66,7 +66,7 @@ db_two$build_database(timeseries = timeseries_path_name,
                   circuit_details = circuit_details_path_name,
                   site_details = site_details_path_name)
 ```
-This is fixed by overiding the default timeseries columns, in this case the 'v' column is givem the alias 'voltage'.
+This is fixed by overiding the default timeseries columns, in this case the 'v' column is given the alias 'voltage'.
 
 ```{r}
 db_two$default_timeseries_column_aliases <- list(ts='_ts', time_stamp='_ts', c_id='_c_id', voltage='_v', 
@@ -107,15 +107,14 @@ db_two$build_database(timeseries = timeseries_path_name,
                   circuit_details = circuit_details_path_name,
                   site_details = site_details_path_name)
 ```
-This is fixed by editing the site details file directly and my require adjusting the ac and dc capacity units.
+This is fixed by editing the site details file directly and may require adjusting the ac and dc capacity units.
 
 
 ### Cleaning the database
 
 This step attempts to fill in missing sample duration values and correct errors in the ciruit and site details data.
 
-Before running data cleaning postcode lattiude and longditude data needs to be added to the database, this is for 
-calculating sunrise and sunset times that are used for validating if a pofile is from a PV system.
+Before running data cleaning the postcode lattiude and longditude data needs to be added to the database, this is for calculating sunrise and sunset times that are used for validating if a pofile is from a PV system.
 ```{r, warning=FALSE, message=FALSE}
 db$add_postcode_lon_lat_to_database("BDInterface/tests/testthat/data/postcode_lon_lat.csv")
 ```
@@ -128,7 +127,7 @@ Now new cleaned data sets should be avaible through the interface, the methods f
 
 ### Setting up a database for use with the disturbance analysis tool
 The disturbance analysis tool currently requires data cleaning to be performed. An example script for building the
-database ready for use by the tool is as follows. On data sets of 1 GB from solar analytics this takes aproximately 40 
+database ready for use by the tool is as follows. On data sets of 6 GB from solar analytics this takes aproximately 1 hr to clean. 
 min to run. 
 ```{r, warning=FALSE, message=FALSE}
 timeseries_path_name <- "BDInterface/tests/testthat/data/simple_timeseries.csv"

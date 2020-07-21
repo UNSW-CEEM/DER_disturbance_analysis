@@ -26,6 +26,11 @@ DBInterface <- R6::R6Class("DBInterface",
       self$db_path_name = db_path_name
     },
     build_database = function(timeseries, circuit_details, site_details) {
+      
+      time_series_build_query <- self$get_time_series_build_query(timeseries)
+      circuit_details_build_query <- self$get_circuit_details_build_query(circuit_details)
+      site_details_build_query <- self$get_site_details_build_query(site_details)
+      
       con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)
       
       RSQLite::dbExecute(con, "DROP TABLE IF EXISTS timeseries")
@@ -39,32 +44,7 @@ DBInterface <- R6::R6Class("DBInterface",
                          f REAL,
                          PRIMARY KEY (ts, c_id))")
       
-      column_names <- names(read.csv(timeseries, nrows=3, header = TRUE))
-      query <- "REPLACE INTO timeseries 
-                SELECT _ts as ts, _c_id as c_id, _d as d, _e as e, _v as v,
-                       _f as f from file"
-      
-      for (name in column_names){
-        if (name %in% names(self$default_timeseries_column_aliases)){
-          query <- gsub(self$default_timeseries_column_aliases[[name]], name, query)
-        } else {
-          error_message <- "The provided time series file should have the columns ts, c_id, d e, v and f, 
-or known aliases of these columns. 
-
-The columns _cols_ where found instead.
-
-Please overide the column alaises in the database interface and try again."
-          
-          error_message <- gsub('_cols_', paste(column_names, collapse=', '), error_message)
-          
-          RSQLite::dbDisconnect(con)
-          
-          stop(error_message)
-        }
-      }
-      
-
-      sqldf::read.csv.sql(timeseries, sql = query, dbname = self$db_path_name, eol = '\n')
+      sqldf::read.csv.sql(timeseries, sql = time_series_build_query, dbname = self$db_path_name, eol = '\n')
       
       self$drop_repeated_headers()
 
@@ -75,26 +55,9 @@ Please overide the column alaises in the database interface and try again."
                          site_id INT,
                          con_type TEXT,
                          polarity REAL)")
-      
-      column_names <- names(read.csv(circuit_details, nrows=3, header = TRUE))
-      
-      column_aliases <- list(c_id='_c_id', site_id='_site_id', 
-                             con_type='_con_type', polarity='_polarity')
+    
 
-      query <- "REPLACE INTO circuit_details_raw  
-                SELECT _c_id as c_id, _site_id as site_id, _con_type as con_type,
-                       _polarity as polarity from file"
-      
-      for (name in column_names){
-        if (name %in% names(column_aliases)){
-          query <- gsub(column_aliases[[name]], name, query)
-        } else {
-          stop("The provided circuit details file should have the columns c_id, site_id, con_type
-                 and polarity. Please check this file and try again.")
-        }
-      }
-
-      sqldf::read.csv.sql(circuit_details, sql = query, dbname = self$db_path_name, eol = '\n')
+      sqldf::read.csv.sql(circuit_details, sql = circuit_details_build_query, dbname = self$db_path_name, eol = '\n')
       
       RSQLite::dbExecute(con, "ALTER TABLE circuit_details_raw ADD manual_compliance TEXT DEFAULT 'Not set'")
       
@@ -104,33 +67,80 @@ Please overide the column alaises in the database interface and try again."
                          site_id INT, s_postcode INT, s_state TEXT, ac REAL, dc REAL, manufacturer TEXT, model TEXT,
                          pv_installation_year_month TEXT)")
       
+      site_details <- read.csv(file = site_details, header = TRUE, stringsAsFactors = FALSE)
+      sqldf::read.csv.sql(sql = site_details_build_query, dbname = self$db_path_name)
+      
+      RSQLite::dbDisconnect(con)
+    },
+    get_time_series_build_query = function(timeseries){
+      column_names <- names(read.csv(timeseries, nrows=3, header = TRUE))
+      
+      query <- "REPLACE INTO timeseries 
+      SELECT _ts as ts, _c_id as c_id, _d as d, _e as e, _v as v,
+      _f as f from file"
+      
+      for (name in column_names){
+        if (name %in% names(self$default_timeseries_column_aliases)){
+          query <- gsub(self$default_timeseries_column_aliases[[name]], name, query)
+        } else {
+          error_message <- "The provided time series file should have the columns ts, c_id, d e, v and f, 
+          or known aliases of these columns. 
+          
+          The columns _cols_ where found instead.
+          
+          Please overide the column alaises in the database interface and try again."
+          
+          error_message <- gsub('_cols_', paste(column_names, collapse=', '), error_message)
+          
+          stop(error_message)
+        }
+      }
+      return(query)
+    },
+    get_circuit_details_build_query = function(circuit_details){
+      column_names <- names(read.csv(circuit_details, nrows=3, header = TRUE))
+      
+      column_aliases <- list(c_id = '_c_id', site_id = '_site_id', 
+                             con_type = '_con_type', polarity = '_polarity')
+      
+      query <- "REPLACE INTO circuit_details_raw  
+      SELECT _c_id as c_id, _site_id as site_id, _con_type as con_type,
+      _polarity as polarity from file"
+      
+      for (name in column_names){
+        if (name %in% names(column_aliases)){
+          query <- gsub(column_aliases[[name]], name, query)
+        } else {
+          stop("The provided circuit details file should have the columns c_id, site_id, con_type
+               and polarity. Please check this file and try again.")
+        }
+      }
+      return(query)
+    },
+    get_site_details_build_query = function(site_details){
       column_names <- names(read.csv(site_details, nrows=3, header = TRUE))
       
       column_aliases <- list(site_id='_site_id', s_state='_s_state', ac='_ac',
                              dc='_dc', manufacturer='_manufacturer',
                              model='_model', s_postcode='_s_postcode',
                              pv_installation_year_month='_pv_installation_year_month')
-
+      
       query <- "REPLACE INTO site_details_raw 
-                SELECT _site_id as site_id, _s_postcode as s_postcode, _s_state as s_state, 
-                       _ac as ac, _dc as dc, _manufacturer as manufacturer,
-                       _model as model, _pv_installation_year_month as
-                       pv_installation_year_month from site_details"
+      SELECT _site_id as site_id, _s_postcode as s_postcode, _s_state as s_state, 
+      _ac as ac, _dc as dc, _manufacturer as manufacturer,
+      _model as model, _pv_installation_year_month as
+      pv_installation_year_month from site_details"
       
       for (name in column_names){
         if (name %in% names(column_aliases)){
           query <- gsub(column_aliases[[name]], name, query)
         } else {
           stop("The provided site details file should have the columns site_id, s_postcode, s_state,
-                ac, dc, manufacturer, model and pv_installation_year_month. The ac column should be in
-                kW and the the dc in W. Please check this file and try again.")
+               ac, dc, manufacturer, model and pv_installation_year_month. The ac column should be in
+               kW and the the dc in W. Please check this file and try again.")
         }
       }
-
-      site_details <- read.csv(file = site_details, header = TRUE, stringsAsFactors = FALSE)
-      sqldf::read.csv.sql(sql = query, dbname = self$db_path_name)
-      
-      RSQLite::dbDisconnect(con)
+      return(query)
     },
     drop_repeated_headers = function(){
       con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)
@@ -180,6 +190,7 @@ Please overide the column alaises in the database interface and try again."
         circuit_details_cleaned_chunk <- clean_connection_types(time_series, circuits, postcode_data)
         circuit_details_cleaned <- bind_rows(circuit_details_cleaned, circuit_details_cleaned_chunk)
 
+        print(paste0("Done cleaning batch ", iteration_number))
 
         # Setup for next iteration.
         iteration_number <- iteration_number + 1
@@ -188,7 +199,7 @@ Please overide the column alaises in the database interface and try again."
         sites_in_chunk <- self$fiter_dataframe_by_start_and_end_index(site_details, start_chunk_index, end_chunk_index)
         circuits <- filter(circuit_details, site_id %in% sites_in_chunk$site_id)
         if (start_chunk_index > length_ids){circuits <- ids[0:0,,drop=FALSE]}
-        
+  
       }
       
       self$create_site_details_cleaned_table()
