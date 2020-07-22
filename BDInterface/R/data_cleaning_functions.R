@@ -14,9 +14,7 @@ group_site_details_to_one_row_per_site <- function(site_details){
   processed_site_details <- site_details %>%
     summarise(s_state=first(s_state), 
               pv_installation_year_month=first(pv_installation_year_month),
-              #sum_ac=sum(ac), sum_dc=sum(dc),
-             ##CHANGES MADE AS TOTAL SITE AC SEEMS TO BE THE TOTAL SITE VALUES AS THEY ARE ALL THE SAME REGARDLESS OF INVERTER
-              sum_ac=mean(ac), sum_dc=mean(dc),
+              sum_ac=sum(ac), sum_dc=sum(dc),
               sum_ac_old=sum(ac_old), sum_dc_old=sum(dc_old),
               ac_dc_ratio=mean(ac_dc_ratio),
               manufacturer=paste(manufacturer, collapse=' '),
