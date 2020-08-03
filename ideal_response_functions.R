@@ -112,12 +112,13 @@ calc_threshold_error <- function(ideal_response_downsampled){
 }
 
 calc_error_metric_and_compliance_2 <- function(combined_data, ideal_response_downsampled, ideal_response,
-                                               threshold, start_buffer, end_buffer, end_buffer_responding, disconnecting_threshold){
+                                               threshold, start_buffer, end_buffer, end_buffer_responding, 
+                                               disconnecting_threshold){
+  
   start_buffer_t <- min(ideal_response$ts) + start_buffer
   end_buffer <- max(ideal_response$ts) - end_buffer
   end_buffer_responding <- min(ideal_response$ts) + end_buffer_responding
   disconnecting_threshold <- disconnecting_threshold
-  
   # First pass compliance
   ideal_response_downsampled <- filter(ideal_response_downsampled, time_group >= start_buffer_t)
   ideal_response_downsampled <- filter(ideal_response_downsampled, time_group <= end_buffer)

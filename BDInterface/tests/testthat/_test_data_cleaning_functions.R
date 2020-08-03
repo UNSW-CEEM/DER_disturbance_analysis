@@ -1,26 +1,5 @@
 context("Testing the data cleaning functions functions")
-##RSHINY APP
-library (shiny)
-library(shinyTime)
-library(shinyWidgets)
-library(shinyalert)
-library(plotly)
-library(feather)
-library(lubridate)
-library(dplyr)
-library(tidyr)
-library(data.table)
-library(shinycssloaders)
-library(shinyFiles)
-library(shinyjs)
-library(stringr)
-library(fasttime)
-library(DT)
-library(suncalc)
-library(ggmap)
-library(measurements)
-library(assertthat)
-source("data_cleaning_functions.R")
+
 
 test_that("Test calculation of sunrise and sunset times",{
   # Test input data
@@ -42,11 +21,11 @@ test_that("Test calculation of sunrise and sunset times",{
   # Call processing function
   out = calc_sunrise_sunset_bounds(postcode_data, date1)
   # Test the answer matches the expected answer
-  expect_equal(select(out, postcode, lon, lat, date, sunrise, sunset), expected_out, tolerance=0.01)
+  expect_equal(select(out, postcode, lon, lat, date, sunrise, sunset), expected_out, tolerance = 0.01)
 })
 
 test_that("Test the calculation of summary values for circuit info cleaning" ,{
-  input <- "C:/Users/user/Documents/GitHub/DER_disturbance_analysis/auto_test_data/test_cleaning_data.csv"
+  input <- "data/test_cleaning_data.csv"
   input <- read.csv(file=input, header=TRUE, stringsAsFactors = FALSE)
   input$dis_sunrise <- "2018-08-25 06:00:00"
   input$dis_sunset <- "2018-08-25 18:00:00"
@@ -54,7 +33,7 @@ test_that("Test the calculation of summary values for circuit info cleaning" ,{
   input$sunset <- fastPOSIXct("2018-08-25 18:00:00")
   input <- input %>%  mutate(ts = fastPOSIXct(ts))
   out <- clac_output_summary_values(input)
-  expected_output <- "C:/Users/user/Documents/GitHub/DER_disturbance_analysis/auto_test_data/test_out_c_id_cleaning.csv"
+  expected_output <- "data/test_out_c_id_cleaning.csv"
   expected_output <- read.csv(file=expected_output, header=TRUE, stringsAsFactors = FALSE)
   out <- out[order(out$c_id),]
   rownames(out) <- NULL

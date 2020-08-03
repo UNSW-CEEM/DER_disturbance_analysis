@@ -122,8 +122,8 @@ vector_groupby_cumulative_distance <- function(data, grouping_cols){
 vector_groupby_system <- function(data, grouping_cols){
   grouping_cols <- grouping_cols[!grouping_cols %in% c("site_id", "c_id")]
   series_cols <- grouping_cols
-  if ("cleaned" %in% data$clean){
-    data = filter(data, clean=="cleaned")
+  if ("clean" %in% data$clean){
+    data = filter(data, clean=="clean")
   } else {
     data = filter(data, clean=="raw")
   }

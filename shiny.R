@@ -35,6 +35,7 @@ source("documentation.R")
 source("ideal_response_functions.R")
 source("create_report_files.R")
 source("create_report_tables.R")
+source("BDInterface/R/interface.R")
 
 ui <- fluidPage(
   tags$head(
@@ -45,50 +46,34 @@ ui <- fluidPage(
   titlePanel("PV System Disturbance Analysis"),
   # Input Bar
   tabsetPanel(
-    tabPanel("Main", fluid=TRUE,
+    tabPanel("Main", fluid = TRUE,
       sidebarLayout(
-        sidebarPanel(id= "side_panel",
+        sidebarPanel(id = "side_panel",
           h4("File selection"),
-          textInput("time_series", "Time series file",
-                    value="C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/data/20200131/20200131_data_SA.feather"
+          textInput("database_name", "SQLite database file",
+                    value = "C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/BDInterface/tests/20180825.db"
           ),
-          shinyFilesButton("choose_ts", "Choose File", 
-                      "Select timeseries data file ...", multiple=FALSE
-          ),
-          HTML("<br><br>"),
-          textInput("circuit_details", "Circuit details file",
-                    value="C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/data/20200131/20200131_circuit_details_nem.csv"
-                    ),
-
-          shinyFilesButton("choose_c", "Choose File", "Select circuit details data file ...", multiple=FALSE
-          ),
-          HTML("<br><br>"),
-          textInput("site_details", "Site details file", 
-                    value="C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/data/20200131/20200131_site_details_nem.csv"
-          ),
-          shinyFilesButton("choose_site", "Choose File", "Select site details data file ...", multiple=FALSE),
+          fluidRow(
+            div(style="display:inline-block", shinyFilesButton("choose_database", "Choose File", 
+                                                               "Select database file ...", multiple = FALSE)),
+            div(style="display:inline-block", actionButton("connect_to_database", "Connect"))),
+          tags$hr(),
+          uiOutput("load_date"),
+          uiOutput("load_time_start"),
+          uiOutput("load_time_end"),
+          radioButtons("region_to_load", label = strong("Regions"), 
+                       choices = list("QLD","NSW", "VIC", "SA", "TAS"), selected = "SA", inline = TRUE),
+          uiOutput("duration"),
           HTML("<br><br>"),
           textInput("frequency_data", "Frequency data file", 
-                    value="C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/data/20200131/20200131_Frequency data for analysis.csv"
+                    value = "C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/data/2018-08-25/frequency_data_sa_2018_08_25.csv"
           ),
-          shinyFilesButton("choose_frequency_data", "Choose File", "Select fequency data file ...", multiple=FALSE),
+          shinyFilesButton("choose_frequency_data", "Choose File", "Select fequency data file ...", multiple = FALSE),
           HTML("<br><br>"),
-          radioButtons("region_to_load", label=strong("Regions"), choices = list("All","QLD","NSW", "VIC", "SA", "TAS"), 
-                                                    selected = "All", inline = TRUE),
-          HTML("<br><br>"),
-          uiOutput("duration"),
-          materialSwitch(inputId="perform_clean", label=strong("Perform Clean"), status="primary", right=TRUE),
-          materialSwitch(inputId="keep_raw", label=strong("Keep pre-cleaned data"), status="primary", right=FALSE),
           actionButton("load_data", "Load data"),
-          tags$hr(),
-          h4("Time Filter"),
-          uiOutput("dateWidget"),
-          uiOutput("time_start"),
-          uiOutput("time_end"),
           tags$hr(),
           h4("Category Filter"),
           uiOutput("cleaned"),
-          uiOutput("region"),
           uiOutput("StdVersion"),
           uiOutput("size_groupings"),
           uiOutput("responses"),
@@ -166,20 +151,19 @@ ui <- fluidPage(
     tabPanel("Data Cleaning", fluid=TRUE, 
       mainPanel(
         plotlyOutput("site_plot"),
-        h4("Editing the tables below changes the data used in the analysis on 
-           the main tab, however plots need to be updated for the changes to
-           take affect."),
+        h4("Editing the tables below changes the connected database, to use these changes in the analysis data must
+           be reloaded on the main tab."),
         h4("Cleaned site data (select to view trace)"),
         DTOutput('site_details_editor'),
         h4("Cleaned Circuit data (select to view trace)"),
-        DTOutput('circuit_details_editor'),
-        HTML("<br><br>"),
-        uiOutput("save_cleaned_data")
+        DTOutput('circuit_details_editor')
       )
     ),
     tabPanel("Manual compliance", fluid=TRUE, 
      mainPanel(
        plotlyOutput("compliance_plot"),
+       h4("Editing the compliance value changes the connected database, to use these changes in the analysis data must
+           be reloaded on the main tab."),
        uiOutput("compliance_cleaned_or_raw"),
        uiOutput("compliance_circuits"),
        uiOutput("set_c_id_compliance"),
@@ -217,10 +201,6 @@ ui <- fluidPage(
 
 reset_sidebar <- function(input, output, session, stringsAsFactors) {
   output$cleaned <- renderUI({})
-  output$dateWidget <- renderUI({})
-  output$time_start <- renderUI({})
-  output$time_end <- renderUI({})
-  output$region <- renderUI({})
   output$postcodes <- renderUI({})
   output$manufacturers <- renderUI({})
   output$models <- renderUI({})
@@ -278,16 +258,21 @@ reset_data_cleaning_tab <- function(input, output, session, stringsAsFactors) {
   output$circuit_details_editor <- renderDT({})
   output$site_details_editor <- renderDT({})
   output$site_plot <- renderPlotly({})
-  output$save_cleaned_data <- renderUI({})
 }
 
 server <- function(input,output,session){
   # Create radio button dyamically so label can be updated
-  output$duration <- renderUI({radioButtons("duration", label=strong("Sampled duration (seconds), select one. 
-                                            Note durations are calculated based on most frequently occuring time between  
-                                            measurements for each c_id."), choices = list("5","30","60"), 
+  output$duration <- renderUI({radioButtons("duration", label=strong("Sampled duration (seconds), select one."), 
+                                            choices = list("5","30","60"), 
                                             selected = "60", inline = TRUE)})
   # Hide these inputs by default, they are shown once data is loaded.
+  hide("frequency_data")
+  hide("choose_frequency_data")
+  hide("region_to_load")
+  hide("duration")
+  hide("perform_clean")
+  hide("keep_raw")
+  hide("load_data")
   hide("Std_Agg_Indiv")
   hide("raw_upscale")
   hide("pst_agg")
@@ -300,12 +285,9 @@ server <- function(input,output,session){
   hide("compliance_agg")
   options(DT.options = list(pageLength = 3))
   # Get input from GUI
-  time_series_file <- reactive({input$time_series})
-  circuit_details_file <- reactive({input$circuit_details})
-  site_details_file <- reactive({input$site_details})
+  database_name <- reactive({input$database_name})
   frequency_data_file <- reactive({input$frequency_data})
   region_to_load <- reactive({input$region_to_load})
-  region <- reactive({input$region})
   duration <- reactive({input$duration})
   standards <- reactive({input$StdVersion})
   responses <- reactive({input$responses})
@@ -333,6 +315,16 @@ server <- function(input,output,session){
   circuit_agg <- reactive({input$circuit_agg})
   zone_agg <- reactive({input$zone_agg})
   compliance_agg <- reactive({input$compliance_agg})
+  load_start_time <- reactive({
+    date_as_str <- as.character(input$load_date[1])
+    time_as_str <- substr(input$load_time_start, 12,19)
+    start_time_as_str <- paste(date_as_str, time_as_str)
+  })
+  load_end_time <- reactive({
+    date_as_str <- as.character(input$load_date[2])
+    time_as_str <- substr(input$load_time_end, 12,19)
+    end_time_as_str <- paste(date_as_str, time_as_str)
+  })
   start_time <- reactive({
     date_as_str <- as.character(input$date[1])
     time_as_str <- substr(input$time_start, 12,19)
@@ -387,7 +379,7 @@ server <- function(input,output,session){
                       circuit_details = data.frame(),
                       circuit_details_for_editing = data.frame(),
                       site_details_raw = data.frame(),
-                      site_details_cleaned = data.frame(),
+                      site_details_for_editing = data.frame(),
                       proxy_site_details_editor = 1,
                       proxy_circuit_details_editor = 1,
                       combined_data_after_clean = data.frame(),
@@ -404,119 +396,91 @@ server <- function(input,output,session){
                       circuit_summary = data.frame()
                       )
   
+  observeEvent(input$connect_to_database, {
+    v$db <- DBInterface$new()
+    v$db$connect_to_existing_database(database_name())
+    
+    min_timestamp <- v$db$get_min_timestamp()
+    max_timestamp <- v$db$get_max_timestamp()
+    
+    output$load_time_start <- renderUI({
+      timeInput("load_time_start", label = strong('Enter start time'), 
+                value = min_timestamp)
+    })
+    output$load_time_end <- renderUI({
+      timeInput("load_time_end", label = strong('Enter end time'), 
+                value = max_timestamp)
+    })
+    
+    output$load_date <- renderUI({
+      dateRangeInput("load_date", label = strong('Date range (yyyy-mm-dd):'),
+                     start = strftime(min_timestamp, "%Y-%m-%d"),
+                     end = strftime(max_timestamp, format="%Y-%m-%d"),
+                     min = strftime(min_timestamp, format="%Y-%m-%d"),
+                     max = strftime(max_timestamp, format="%Y-%m-%d"),
+                     startview="year")
+    })
+    
+    shinyjs::show("frequency_data")
+    shinyjs::show("choose_frequency_data")
+    shinyjs::show("region_to_load")
+    shinyjs::show("duration")
+    shinyjs::show("load_data")
+    
+    
+  })
+  
   # This is the event that runs when the "Load data" button on the GUI is
   # Clicked. 
   observeEvent(input$load_data, {
-    # Users may enter invalid file paths or attempt to load data that creates
-    # an error or warning during the data table combing process. The "tryCatch"
-    # function catches these, aborts the loading process and reports the error 
-    # to the users. Importantly this prevent the app from crashing.
-    #result = tryCatch({
-      # Load data from storage.
-      # Load site details data.
-      if (str_sub(site_details_file(), start=-7)=="feather"){
-        # If a feather file is used it is assumed the data is pre-processed.
-        # Hence the data is not passed to the raw data processor.
-        id <- showNotification("Loading site details from csv", duration=1000)
-        v$site_details <- read_feather(site_details_file())
-        removeNotification(id)
-      }else{
-        id <- showNotification("Loading site details from csv", duration=1000)
-        sd_data <- read.csv(file=site_details_file(), header=TRUE, stringsAsFactors = FALSE)
-        if ('State' %in% colnames(sd_data)) {sd_data <- setnames(sd_data, c("State"), c("s_state"))}
-        if ('ac_rating_w'%in% colnames(sd_data)) {sd_data <- mutate(sd_data, ac_rating_w = ac_rating_w/1000)}
-        if ('ac_rating_w'%in% colnames(sd_data)) {sd_data <- setnames(sd_data, c("ac_rating_w"), c("ac"))}
-        if ('ac_cap_w'%in% colnames(sd_data)) {sd_data <- mutate(sd_data, ac_cap_w = ac_cap_w/1000)}
-        if ('ac_cap_w'%in% colnames(sd_data)) {sd_data <- setnames(sd_data, c("ac_cap_w"), c("ac"))}
-        if ('dc_cap_w' %in% colnames(sd_data)) {sd_data <- mutate(sd_data, dc_cap_w = dc_cap_w/1000)}
-        if ('dc_cap_w' %in% colnames(sd_data)) {sd_data <- setnames(sd_data, c("dc_cap_w"), c("dc"))}
-        if ('AC.Rating.kW.' %in% colnames(sd_data)) {sd_data <- setnames(sd_data, c("AC.Rating.kW."), c("ac"))}
-        if ('DC.Rating.kW.' %in% colnames(sd_data)) {sd_data <- mutate(sd_data, DC.Rating.kW.=DC.Rating.kW.*1000)}
-        if ('DC.Rating.kW.' %in% colnames(sd_data)) {sd_data <- setnames(sd_data, c("DC.Rating.kW."), c("dc"))}
-        if ('inverter_manufacturer' %in% colnames(sd_data)) {
-          sd_data <- setnames(sd_data, c("inverter_manufacturer"), c("manufacturer"))
-        }
-        if ('inverter_model' %in% colnames(sd_data)) {sd_data <- setnames(sd_data, c("inverter_model"), c("model"))}
-        v$site_details_raw <- sd_data
-        v$site_details_raw <- v$site_details_raw %>% mutate(site_id = as.character(site_id))
-        # Older site details provided the day of installation not just the month. We 
-        # change the name of the column to match the new format which is just by 
-        # month but keep the original info regarding the date.
-        if("pv_install_date" %in% colnames(v$site_details_raw)){
-          v$site_details_raw <- setnames(v$site_details_raw, c("pv_install_date"),
-                                         c("pv_installation_year_month"))
-        }
-        removeNotification(id)
-        id <- showNotification("Formatting site details and creating feather cache file", duration=1000)
-        # Data from CSV is assumed to need processing.
-        v$site_details <- process_raw_site_details(v$site_details_raw)
-        # Automatically create a cache of the processed data as a feather file.
-        # Allows for much faster data loading for subsequent anaylsis.
-        file_no_type = str_sub(site_details_file(), end=-4)
-        file_type_feather = paste(file_no_type, "feather", sep="")
-        write_feather(v$site_details, file_type_feather)
-        removeNotification(id)
-      }
+      id <- showNotification("Loading data", duration = 1000)
+      site_details_raw <- v$db$get_site_details_raw()
+      site_details_raw <- process_raw_site_details(site_details_raw)
+      site_details_raw <- mutate(site_details_raw, clean = 'raw')
       
-      # Filter the site details file if All is not selected, this means only the data cleaning for the region selected is peformed.
-      if (region_to_load() != 'All'){
-        v$site_details <- filter(v$site_details, s_state==region_to_load())
-      }
+      site_details_clean <- v$db$get_site_details_cleaned()
+      site_details_clean <- process_raw_site_details(site_details_clean)
+      site_details_clean <- mutate(site_details_clean, clean = 'clean')
+      
+      circuit_details_raw <- v$db$get_circuit_details_raw()
+      v$circuit_details_raw <- mutate(circuit_details_raw, clean = 'raw')
+      
+      circuit_details_clean <- v$db$get_circuit_details_cleaned()
+      circuit_details_clean <- mutate(circuit_details_clean, clean = 'clean')
+      
+      v$site_details <- bind_rows(site_details_raw, site_details_clean)
+      v$site_details <- site_categorisation(v$site_details)
+      v$site_details <- size_grouping(v$site_details)
+      v$circuit_details <- bind_rows(v$circuit_details_raw, circuit_details_clean)
+
+      start_time <- format(as.POSIXct(load_start_time(), tz="Australia/Brisbane"), tz='GMT')
+      end_time <- format(as.POSIXct(load_end_time(), tz="Australia/Brisbane"), tz='GMT')
+      time_series_data <- v$db$get_filtered_time_series_data(state = region_to_load(), duration = duration(), 
+                                                             start_time = start_time, end_time = end_time)
+      time_series_data <- mutate(time_series_data, ts = fastPOSIXct(ts, tz="Australia/Brisbane"))
+
+      v$combined_data <- inner_join(time_series_data, v$circuit_details, by = "c_id")
+      v$combined_data <- inner_join( v$combined_data, v$site_details, by = c("site_id", "clean"))
+      
+      v$combined_data <- perform_power_calculations(v$combined_data)
       
       
-      # The circuit details file requires no processing and is small so always 
-      # load from CSV.
-      id <- showNotification("Loading circuit details from csv", duration=1000)
-      v$circuit_details <- read.csv(file=circuit_details_file(), header=TRUE, stringsAsFactors = FALSE)
-      v$circuit_details <- select(v$circuit_details, c_id, site_id, con_type, polarity)
-      v$circuit_details <- v$circuit_details %>% mutate(site_id = as.character(site_id))
-      v$circuit_details <- v$circuit_details %>% mutate(c_id = as.character(c_id))
-      v$circuit_details <- filter(v$circuit_details, site_id %in% v$site_details$site_id)
-      site_types <- c("pv_site_net", "pv_site", "pv_inverter_net", "pv_inverter")
-      v$circuit_details <- filter(v$circuit_details, con_type %in% site_types)
+      v$site_details_for_editing <- v$db$get_site_details_cleaning_report()
+      v$site_details_for_editing <- filter(v$site_details_for_editing, s_state == region_to_load())
+      v$circuit_details_for_editing <- v$db$get_circuit_details_cleaning_report()
+      v$circuit_details_for_editing <- filter(v$circuit_details_for_editing, site_id %in% v$site_details_for_editing$site_id)
+      
+     
+      
+      output$site_details_editor <- renderDT(isolate(v$site_details_for_editing), selection='single', rownames=FALSE, 
+                                             editable=TRUE)
+      v$proxy_site_details_editor <- dataTableProxy('site_details_editor')
+      output$circuit_details_editor <- renderDT(isolate(v$circuit_details_for_editing), selection='single', 
+                                                rownames=FALSE, editable=TRUE)
+      v$proxy_circuit_details_editor <- dataTableProxy('circuit_details_editor')
       removeNotification(id)
-    
-      duration_options <- c("5", "30", "60")
-      if (str_sub(time_series_file(), start=-7)=="feather"){
-        # If a feather file is used it is assumed the data is pre-processed.
-        # Hence the data is not passed to the raw data processor.
-        id <- showNotification("Loading timeseries data from feather", duration=1000)
-        ts_data <- read_feather(time_series_file())
-        duration_sample_sizes <- get_duration_sample_counts(ts_data, duration_options)
-        gc()
-        ts_data <- filter(ts_data, d==duration())
-        ts_data <- inner_join(ts_data, select(v$circuit_details, c_id), by="c_id")
-        removeNotification(id)
-      }else{
-        id <- showNotification("Loading timeseries data from csv", duration=1000)
-        cd_data <- v$circuit_details
-        ts_data <- read.csv.sql(file = time_series_file(), 
-                                sql="select * from file where c_id in (select c_id from cd_data)", eol = "\n")
-        # Data from CSV is assumed to need processing.
-        if ('utc_tstamp' %in% colnames(ts_data)) {ts_data <- setnames(ts_data, c("utc_tstamp"), c("ts"))}
-        if ('t_stamp' %in% colnames(ts_data)) {ts_data <- setnames(ts_data, c("t_stamp"), c("ts"))}
-        if ('voltage' %in% colnames(ts_data)) {ts_data <- setnames(ts_data, c("voltage"), c("v"))}
-        if ('vrms' %in% colnames(ts_data)) {ts_data <- setnames(ts_data, c("vrms"), c("v"))}
-        if ('voltage_max' %in% colnames(ts_data)) {ts_data <- setnames(ts_data, c("voltage_max"), c("v"))}
-        if ('frequency' %in% colnames(ts_data)) {ts_data <- setnames(ts_data, c("frequency"), c("f"))}
-        if ('energy' %in% colnames(ts_data)) {ts_data <- setnames(ts_data, c("energy"), c("e"))}
-        if ('duration' %in% colnames(ts_data)) {ts_data <- setnames(ts_data, c("duration"), c("d"))}
-        ts_data <- ts_data %>% distinct(c_id, ts, .keep_all=TRUE)
-        ts_data <- mutate(ts_data, c_id = as.character(c_id))
-        removeNotification(id)
-        id <- showNotification("Formatting timeseries data and 
-                                creating feather cache file", duration=1000)
-        ts_data <- process_raw_time_series_data(ts_data)
-        # Automatically create a cache of the processed data as a feather file.
-        # Allows for much faster data loading for subsequent anaylsis.
-        file_no_type = str_sub(time_series_file(), end=-5)
-        file_type_feather = paste(file_no_type, '_', region_to_load(), ".feather", sep="")
-        gc()
-        write_feather(ts_data, file_type_feather)
-        duration_sample_sizes <- get_duration_sample_counts(ts_data, duration_options)
-        ts_data <- filter(ts_data, d==duration())
-        removeNotification(id)
-      }
+
+
       # Load in the install data from CSV.
       id <- showNotification("Load CER capacity data", duration=1000)
       intall_data_file <- "cumulative_capacity_and_number.csv"
@@ -528,16 +492,6 @@ server <- function(input,output,session){
       postcode_data <- read.csv(file=postcode_data_file, header=TRUE, stringsAsFactors = FALSE)
       v$postcode_data <- process_postcode_data(postcode_data)
       removeNotification(id)
-      
-      # Combine the data needed to perform data cleaning.
-      id <- showNotification("Combining data tables", duration=1000)
-      v$circuit_details <- mutate(v$circuit_details, c_id=as.character(c_id))
-      circuit_details_for_cleaning <- select(v$circuit_details, c_id, site_id,
-                                             con_type, polarity)
-      ts_data <- inner_join(ts_data, circuit_details_for_cleaning, by="c_id")
-      site_details_for_cleaning <- select(v$site_details, site_id, s_postcode, first_ac)
-      ts_data <- inner_join(ts_data, site_details_for_cleaning, by="site_id")
-      ts_data <- perform_power_calculations(ts_data)
 
       removeNotification(id)
       
@@ -549,90 +503,17 @@ server <- function(input,output,session){
         v$frequency_data <- data.frame()
       }
       
-      if (perform_clean()){
-        id <- showNotification("Cleaning data", duration=1000)
-        # Clean site details data
-        site_details_cleaned <- site_details_data_cleaning(ts_data, v$site_details_raw)
-        v$site_details_cleaned <- site_details_cleaned[order(site_details_cleaned$site_id),]
-        # Clean circuit details file
-        
-        v$circuit_details_for_editing <- clean_connection_types(
-          select(ts_data, ts, c_id, e, power_kW, s_postcode, con_type, polarity, first_ac), 
-                 v$circuit_details, v$postcode_data)
-        # Display data cleaning output in data cleaning tab
-        output$site_details_editor <- renderDT(isolate(v$site_details_cleaned), selection='single', rownames=FALSE, 
-                                               editable=TRUE)
-        v$proxy_site_details_editor <- dataTableProxy('site_details_editor')
-        output$circuit_details_editor <- renderDT(isolate(v$circuit_details_for_editing), selection='single', 
-                                                  rownames=FALSE, editable=TRUE)
-        v$proxy_circuit_details_editor <- dataTableProxy('circuit_details_editor')
-        
-        # Add cleaned data to display data for main tab
-        output$save_cleaned_data <- renderUI({actionButton("save_cleaned_data", "Save cleaned data")})
-        show("save_cleaned_data")
-        removeNotification(id)
-      } else {
-        # Don't let the user crash the tool by trying to save data that doesn't exist
-        hide("save_cleaned_data")
-      }
-      gc()
-      v$combined_data <- select(ts_data, ts, c_id, e, v, f, d, power_kW)
-      gc()
-      remove(ts_data)
-      gc()
-      
       # Get offset filter options and label
       v$combined_data <- get_time_offsets(v$combined_data)
       v$unique_offsets <- get_time_series_unique_offsets(v$combined_data)
       sample_counts <- get_offset_sample_counts(v$combined_data, v$unique_offsets)
       unique_offsets_filter_label <- make_offset_filter_label(sample_counts, v$unique_offsets)
-      #Update duration selection button
-      base_label <- "Sampled duration (seconds), select one. Note durations are calculated based on most frequently 
-                     occuring time between  measurements for each c_id. Sample sizes in last data set loaded 
-                     (including all connection types) are "
-      duration_label <- paste(base_label, "5:n=", duration_sample_sizes[1], ' ', 
-                              "30:n=", duration_sample_sizes[2], ' ',
-                              "60:n=", duration_sample_sizes[3], '.', sep='')
-      output$duration <- renderUI({radioButtons("duration", label=strong(duration_label), 
-                                                choices = list("5","30","60"), 
-                                                selected = duration(), inline = TRUE)})
+      
       
       # Filtering option widgets are rendered after the data is loaded, this is 
       # because they are only usable once there is data to filter. Additionally
       # The data loaded can then be used to create the appropraite options for 
       # filtering.
-      if(perform_clean()){
-        output$cleaned <- renderUI({
-          checkboxGroupButtons(inputId="cleaned", label=strong("Data processing:"), choices=list("cleaned", "raw"),
-                               selected=list("cleaned"), justified=TRUE, status="primary", individual=TRUE,
-                               checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")))
-        })
-      } else {
-        output$cleaned <- renderUI({
-          checkboxGroupButtons(inputId="cleaned", label=strong("Data processing:"), choices=list("cleaned", "raw"),
-                               selected=list("raw"), justified=TRUE, status="primary", individual=TRUE,
-                               checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")))
-        })
-        
-      }
-
-      output$dateWidget <- renderUI({
-        dateRangeInput("date", label=strong('Date range (yyyy-mm-dd):'),
-                       start=strftime(floor_date(get_mode(v$combined_data$ts), "day"), format="%Y-%m-%d"),
-                       end=strftime(floor_date(get_mode(v$combined_data$ts), "day"), format="%Y-%m-%d"),
-                       min=strftime(floor_date(min(v$combined_data$ts), "day"), format="%Y-%m-%d"),
-                       max=strftime(floor_date(max(v$combined_data$ts), "day"), format="%Y-%m-%d"), 
-                       startview="year")
-        })
-      output$time_start <- renderUI({
-        timeInput("time_start", label=strong('Enter start time'), value=as.POSIXct("18:00:00",format="%H:%M:%S"))
-        })
-      output$time_end <- renderUI({
-        timeInput("time_end", label=strong('Enter end time'), value=as.POSIXct("19:00:00",format="%H:%M:%S"))
-        })
-      output$region <- renderUI({
-        selectInput(inputId="region", label=strong("Region"), choices=unique(v$site_details$s_state))
-        })
       output$postcodes <- renderUI({
         selectizeInput("postcodes", label=strong("Select postcodes"), choices = sort(unique(v$site_details$s_postcode)), 
                       multiple=TRUE)  
@@ -658,6 +539,13 @@ server <- function(input,output,session){
                              justified=TRUE, status="primary", individual=TRUE,
                              checkIcon=list(yes=icon("ok", lib="glyphicon"),no=icon("remove", lib="glyphicon")))
       })
+      output$cleaned <- renderUI({
+        checkboxGroupButtons(inputId="cleaned", 
+                             label=strong("Data sets"), choices=list("clean", "raw"),
+                             selected=list("clean"),
+                             justified=TRUE, status="primary", individual=TRUE,
+                             checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")))
+      })
       output$StdVersion <- renderUI({
         checkboxGroupButtons(inputId="StdVersion", 
                              label=strong("AS47777 Version:"), choices=list("AS4777.3:2005", "Transition", 
@@ -670,16 +558,16 @@ server <- function(input,output,session){
         checkboxGroupButtons(inputId="responses", 
                              label=strong("Select Responses:"),
                              choices=list("1 Ride Through", "2 Curtail", "3 Drop to Zero", "4 Disconnect","5 Off at t0", 
-                                          "6 Not enough data", "Undefined", "NA"),
+                                          "6 Not enough data", "Undefined", NA),
                              selected=list("1 Ride Through", "2 Curtail", "3 Drop to Zero", "4 Disconnect",
-                                           "5 Off at t0", "6 Not enough data", "Undefined", "NA"),
+                                           "5 Off at t0", "6 Not enough data", "Undefined", NA),
                              justified=TRUE, status="primary", individual=TRUE,
                              checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")))
       })
       output$zones <- renderUI({
         checkboxGroupButtons(inputId="zones", label=strong("Zones"), 
-                             choices=list("1 Zone", "2 Zone", "3 Zone", "Undefined", "NA"),
-                             selected=list("1 Zone", "2 Zone", "3 Zone", "Undefined", "NA"), 
+                             choices=list("1 Zone", "2 Zone", "3 Zone", "Undefined", NA),
+                             selected=list("1 Zone", "2 Zone", "3 Zone", "Undefined", NA), 
                              justified=TRUE, status="primary", individual=TRUE,
                              checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")))
       })
@@ -687,10 +575,10 @@ server <- function(input,output,session){
         checkboxGroupButtons(inputId="compliance", label=strong("Compliance"), 
                              choices=list("Compliant", "Non-compliant Responding", 
                                           "Non-compliant", "Disconnect/Drop to Zero",
-                                          "Off at t0", "Not enough data", "Undefined", "NA"),
+                                          "Off at t0", "Not enough data", "Undefined", NA),
                              selected=list("Compliant", "Non-compliant Responding", 
                                            "Non-compliant", "Disconnect/Drop to Zero",
-                                           "Off at t0", "Not enough data", "Undefined", "NA"), 
+                                           "Off at t0", "Not enough data", "Undefined", NA), 
                              justified=TRUE, status="primary", individual=TRUE,
                              checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")))
       })  
@@ -715,12 +603,8 @@ server <- function(input,output,session){
       })
       output$pre_event_interval <- renderUI({
         timeInput("pre_event_interval", label=strong('Pre-event time interval (Needs to match exactly to data timestamp)'), 
-                  value = as.POSIXct("18:05:55",format="%H:%M:%S"))
+                  value = as.POSIXct("13:11:55",format="%H:%M:%S"))
       })
-      # output$event_time <- renderUI({
-      #   timeInput("event_time", label=strong('Time of maximum pv response (Needs to match exactly to data timestamp)'), 
-      #             value = as.POSIXct("18:11:55",format="%H:%M:%S"))
-      # })
       output$window_length <- renderUI({
         numericInput("window_length", label=strong('Set window length (min),
                                                    Only data in this window is used for response analysis.'), value=5, min = 1, max = 100, step = 1)
@@ -743,20 +627,6 @@ server <- function(input,output,session){
       output$update_plots <- renderUI({
         actionButton("update_plots", "Update plots")
       })
-    #}, warning = function(war) {
-    #  shinyalert("Opps", paste("",war))
-    #  reset_sidebar(input, output, session)
-    #  reset_chart_area(input, output, session)
-    #  reset_data_cleaning_tab(input, output, session)
-    #}, error = function(err) {
-    #  shinyalert("Opps", paste("",err))
-    #  reset_sidebar(input, output, session)
-    #  reset_chart_area(input, output, session)
-    #  reset_data_cleaning_tab(input, output, session)
-    #}, finally = {
-    #  reset_chart_area(input, output, session)
-    #  removeNotification(id)
-    #})
   })
 
   # Create plots when update plots button is clicked.
@@ -765,72 +635,22 @@ server <- function(input,output,session){
     
     # Get ideal response.
     if(dim(v$frequency_data)[1]>0){
-      temp_f_data <- select(v$frequency_data, ts, region()) 
-      temp_f_data <- setnames(temp_f_data, c(region()), c("f"))
+      temp_f_data <- select(v$frequency_data, ts, region_to_load()) 
+      temp_f_data <- setnames(temp_f_data, c(region_to_load()), c("f"))
       temp_f_data <- mutate(temp_f_data, f=as.numeric(f))
       ideal_response_to_plot <- ideal_response(temp_f_data)
     } else {
       ideal_response_to_plot <- data.frame()
     }
     v$ideal_response_to_plot <- ideal_response_to_plot
-    
-    
-    # Filter to just the time window being plotted/analyised. 
-    combined_data_f <- filter(v$combined_data, ts>=start_time() & ts<= end_time())
-    
-    # Data frame for after adding meta data.
-    combined_data_f2 <- data.frame()
-    
-    # If the raw data is needed for analysis then combine time series data and
-    # raw meta data.
-    if ('raw' %in% clean()){
-      combined_data_raw <- combine_data_tables(
-        select(combined_data_f, ts, c_id, e, v, f, d, time_offset),  
-        select(v$circuit_details, c_id, site_id, con_type, polarity),
-        v$site_details)
-      combined_data_raw <- combined_data_raw %>% mutate(clean="raw")
-      combined_data_raw <- select(combined_data_raw, c_id, ts, v, f, d, site_id,
-                                  e, con_type, s_state, s_postcode, 
-                                  Standard_Version, Grouping, polarity, first_ac,
-                                  power_kW, clean, manufacturer, model, sum_ac, 
-                                  time_offset)
-      combined_data_f2 <- bind_rows(combined_data_f2, combined_data_raw)
-      remove(combined_data_raw)
-    }
-    
-    
-    # If the cleaned data is needed for analysis then combine time series data
-    # and cleaned meta data.
-    if (perform_clean() & 'cleaned' %in% clean()){
-    site_details_cleaned_processed <- process_raw_site_details(v$site_details_cleaned)
-      combined_data_clean <- combine_data_tables(
-        select(combined_data_f, ts, c_id, e, v, f, d, time_offset),  
-        select(v$circuit_details_for_editing, c_id, site_id, con_type, polarity),
-        site_details_cleaned_processed)
-      combined_data_clean <- combined_data_clean %>% mutate(clean="cleaned")
-      combined_data_clean <- select(combined_data_clean, c_id, ts, v, f, d, 
-                                    site_id, e, con_type, s_state, s_postcode, 
-                                    Standard_Version, Grouping, polarity, 
-                                    first_ac, power_kW, clean, manufacturer, model, 
-                                    sum_ac, time_offset)
-      combined_data_f2 <- bind_rows(combined_data_f2, combined_data_clean)
-      remove(combined_data_clean)
-    }
-    
-    combined_data_f <- combined_data_f2
-    gc()
-  
-    
-    # Set default manual cleaning value.
-    combined_data_f <- mutate(combined_data_f, manual_compliance = 'Not set')
 
-    # Perform meta data filtering.    
+    combined_data_f <- filter(v$combined_data, clean %in% clean())
     combined_data_f <- filter(combined_data_f, sum_ac<=100)
-    gc()
-    combined_data_f <- filter(combined_data_f, s_state==region())
-    if (length(clean()) < 2) {combined_data_f <- filter(combined_data_f, clean %in% clean())}
-    if (length(size_groupings()) < 2) {combined_data_f <- filter(combined_data_f, Grouping %in% size_groupings())}
-    if (length(standards()) < 3) {combined_data_f <- filter(combined_data_f, Standard_Version %in% standards())}
+    site_types <- c("pv_site_net", "pv_site", "pv_inverter_net", "pv_inverter")
+    combined_data_f <- filter(combined_data_f, con_type %in% site_types)
+    combined_data_f <- filter(combined_data_f, clean %in% clean())
+    combined_data_f <- filter(combined_data_f, Grouping %in% size_groupings())
+    combined_data_f <- filter(combined_data_f, Standard_Version %in% standards())
     if (length(postcodes()) > 0) {combined_data_f <- filter(combined_data_f, s_postcode %in% postcodes())}
     if (length(manufacturers()) > 0) {combined_data_f <- filter(combined_data_f, manufacturer %in% manufacturers())}
     if (length(models()) > 0) {combined_data_f <- filter(combined_data_f, model %in% models())}
@@ -838,12 +658,14 @@ server <- function(input,output,session){
     if (length(circuits()) > 0) {combined_data_f <- filter(combined_data_f, c_id %in% circuits())}
     if(length(combined_data_f$ts) > 0){
       combined_data_f <- categorise_response(combined_data_f, pre_event_interval(), window_length())
-      if (length(responses()) < 6) {combined_data_f <- filter(combined_data_f, response_category %in% responses())}
+      combined_data_f <- mutate(combined_data_f,  response_category=ifelse(response_category %in% c(NA), "NA", response_category))
+      combined_data_f <- filter(combined_data_f, response_category %in% responses())
     }
     # Filter data by user selected time window
     if(length(combined_data_f$ts) > 0){
       combined_data_f <- get_distance_from_event(combined_data_f, v$postcode_data, event_latitude(), event_longitude())
       combined_data_f <- get_zones(combined_data_f, zone_one_radius(), zone_two_radius(), zone_three_radius())
+      combined_data_f <- mutate(combined_data_f,  zone=ifelse(zone %in% c(NA), "NA", zone))
       if (length(zones()) < 3) { combined_data_f <- filter(combined_data_f, zone %in% zones())}
     }
     
@@ -886,6 +708,7 @@ server <- function(input,output,session){
                                              end_buffer(),
                                              end_buffer_responding(),
                                              disconnecting_threshold())
+        combined_data_f <- mutate(combined_data_f,  compliance_status=ifelse(compliance_status %in% c(NA), "NA", compliance_status))
       } else {
         combined_data_f <- mutate(combined_data_f, compliance_status="Undefined")  
       }
@@ -930,7 +753,6 @@ server <- function(input,output,session){
         v$circuit_summary <- select(v$circuit_summary, site_id, c_id, s_state, s_postcode, Standard_Version, Grouping, 
                                     sum_ac, clean, manufacturer, model, response_category, zone, distance, lat, lon,
                                     con_type, first_ac, polarity, compliance_status, manual_compliance)
-        
         # Combine data sets that have the same grouping so they can be saved in a single file
         if (no_grouping){
           et <- pre_event_interval()
@@ -1058,7 +880,7 @@ server <- function(input,output,session){
           output$compliance_cleaned_or_raw <- 
             renderUI({radioButtons("compliance_cleaned_or_raw", 
                                    label=strong("Choose data set"), 
-                                   choices = list("cleaned","raw"), 
+                                   choices = list("clean","raw"), 
                                    selected = v$combined_data_f$clean[1], 
                                    inline = TRUE)})
           
@@ -1095,13 +917,13 @@ server <- function(input,output,session){
     } else {
       output$compliance_cleaned_or_raw <- renderUI({radioButtons("compliance_cleaned_or_raw", 
                                                                  label=strong("Choose data set"), 
-                                                                 choices = list("cleaned","raw"), 
+                                                                 choices = list("clean","raw"), 
                                                                  selected = v$combined_data_f$clean[1], 
                                                                  inline = TRUE)})
     }
   })
   
-  # Change site displayed in manual compliance tab.
+
   observeEvent(input$compliance_circuits, {
     if (compliance_circuits() %in% v$c_id_vector){
       v$compliance_counter <- match(c(compliance_circuits()), v$c_id_vector)
@@ -1116,8 +938,17 @@ server <- function(input,output,session){
                                                                                   "Non-compliant Responding", "Disconnect", 
                                                                                   "Unsure"), 
                                                                    selected = data_to_view$manual_compliance[1], inline = TRUE)})
-      updateRadioButtons(session, "set_c_id_compliance", 
-                         selected = data_to_view$manual_compliance[1])
+      if (compliance_cleaned_or_raw() == 'clean'){
+        circuit_data <- filter(v$circuit_details_for_editing, c_id==compliance_circuits())
+        updateRadioButtons(session, "set_c_id_compliance", 
+                           selected = circuit_data$manual_compliance[1])
+      } else {
+        circuit_data <- filter(v$circuit_details_raw, c_id==compliance_circuits())
+        updateRadioButtons(session, "set_c_id_compliance", 
+                           selected = circuit_data$manual_compliance[1])
+        
+      }
+
       data_to_view <- mutate(data_to_view, Time=ts)
       if(dim(v$ideal_response_to_plot)[1]>0){
         output$compliance_plot <- renderPlotly({
@@ -1141,19 +972,21 @@ server <- function(input,output,session){
   
   observeEvent(input$set_c_id_compliance, {
     current_c_id <- v$c_id_vector[[v$compliance_counter]]
-    v$combined_data <- mutate(v$combined_data, 
-                              manual_compliance=
-                                ifelse((c_id==current_c_id) & 
-                                         (clean==compliance_cleaned_or_raw()),
-                                       set_c_id_compliance(),
-                                       manual_compliance))
-    v$combined_data_f <- mutate(v$combined_data_f, 
+    if (compliance_cleaned_or_raw() == "clean"){
+      v$circuit_details_for_editing <- mutate(v$circuit_details_for_editing, 
                                 manual_compliance=
-                                  ifelse((c_id==current_c_id) & 
-                                           (clean==compliance_cleaned_or_raw()),
+                                  ifelse((c_id==current_c_id),
                                          set_c_id_compliance(),
                                          manual_compliance))
-    
+      v$db$update_circuit_details_cleaned(v$circuit_details_for_editing)
+    } else {
+      v$circuit_details_raw <- mutate(v$circuit_details_raw, 
+                                  manual_compliance=
+                                    ifelse((c_id==current_c_id),
+                                           set_c_id_compliance(),
+                                           manual_compliance))
+      v$db$update_circuit_details_raw(v$circuit_details_raw)
+    }
   })
   
   observeEvent(input$get_next_c_id,{
@@ -1262,52 +1095,7 @@ server <- function(input,output,session){
       write.csv(v$ideal_response_downsampled, as.character(fileinfo$datapath), row.names=FALSE)
     }
   })
-  
-  # observeEvent(input$save_report, {
-  #   volumes <- c(home=getwd())
-  #   shinyDirChoose(input, "save_report", roots=volumes, session=session)
-  #   datapath <- parseDirPath(volumes, input$save_report)
-  #   if(length(datapath) > 0){
-  #     id <- showNotification("Creating report", duration=1000)
-  #     create_files(v$agg_power, v$combined_data_f, pre_event_interval(), 
-  #                  event_time(), datapath, zone_one_radius(), zone_two_radius(), 
-  #                  zone_three_radius())
-  #     variables <- c('time_series_file', 'circuit_details_file', 'site_details_file', 'frequency_data_file', 'region',
-  #                    'duration', 'standards', 'responses', 'postcodes', 'manufacturers', 'models', 'sites', 'circuits', 
-  #                    'zones', 'compliance', 'offsets', 'size_groupings', 'clean', 'raw_upscale', 'pst_agg', 
-  #                    'grouping_agg', 'response_agg', 'manufacturer_agg', 'perform_clean', 'model_agg', 'circuit_agg', 
-  #                    'zone_agg', 'compliance_agg', 'start_time', 'end_time', 'pre_event_interval', 
-  #                    'agg_on_standard', 'window_length', 'event_latitude', 'event_longitude', 'zone_one_radius', 
-  #                    'zone_two_radius', 'zone_three_radius')
-  #     values <- c(time_series_file(), circuit_details_file(), site_details_file(), frequency_data_file(), 
-  #                 if(is.null(region())){''}else{region()},
-  #                 if(is.null(duration())){''}else{duration()}, paste(standards(), collapse='; '), paste(responses(), collapse='; '), 
-  #                 paste(postcodes(), collapse='; '), 
-  #                 paste(manufacturers(), '; '), 
-  #                 paste(models(), collapse='; '), paste(sites(), collapse='; '), paste(circuits(), collapse='; '), 
-  #                 paste(zones(), collapse='; '),  paste(compliance(), collapse='; '), paste(offsets(), collapse='; '), 
-  #                 paste(size_groupings(), collapse='; '),
-  #                 paste(clean(), collapse='; '), raw_upscale(), pst_agg(), 
-  #                 grouping_agg(), response_agg(), manufacturer_agg(), perform_clean(), model_agg(), circuit_agg(), 
-  #                 zone_agg(), compliance_agg(), 
-  #                 if(length(start_time())==0){''}else{as.character(start_time())}, 
-  #                 if(length(end_time())==0){''}else{as.character(end_time())}, 
-  #                 if(length(pre_event_interval())==0){''}else{as.character(pre_event_interval())},
-  #                 agg_on_standard(), 
-  #                 if(is.null(window_length())){''}else{window_length()}, 
-  #                 if(is.null(event_latitude())){''}else{event_latitude()}, 
-  #                 if(is.null(event_longitude())){''}else{event_longitude()}, 
-  #                 if(is.null(zone_one_radius())){''}else{zone_one_radius()}, 
-  #                 if(is.null(zone_two_radius())){''}else{zone_two_radius()}, 
-  #                 if(is.null(zone_three_radius())){''}else{zone_three_radius()})
-  #     meta_data = data.frame(variables, values, stringsAsFactors = FALSE)
-  #     write.csv(meta_data, paste0(datapath, '_meta_data.csv'), row.names=FALSE)
-  #     write.csv(v$circuit_summary, paste0(datapath, '_circ_sum.csv'), row.names=FALSE)
-  #     removeNotification(id)
-  #   }
-  # 
-  # })
-  
+
   # Save data from aggregate pv power plot
   observeEvent(input$batch_save, {
     variables <- c('time_series_file', 'circuit_details_file', 'site_details_file', 'frequency_data_file', 'region',
@@ -1319,7 +1107,7 @@ server <- function(input,output,session){
                    'zone_two_radius', 'zone_three_radius', 'compliance_threshold', 'start_buffer', 'end_buffer',
                    'end_buffer_responding', 'disconnecting_threshold')
    values <- c(time_series_file(), circuit_details_file(), site_details_file(), frequency_data_file(), 
-                   if(is.null(region())){''}else{region()},
+                   if(is.null(region_to_load())){''}else{region_to_load()},
                    if(is.null(duration())){''}else{duration()}, paste(standards(), collapse='; '), paste(responses(), collapse='; '), 
                    paste(postcodes(), collapse='; '), 
                    paste(manufacturers(), '; '), 
@@ -1365,25 +1153,9 @@ server <- function(input,output,session){
   # Time series file selection pop up.
   observe({
     volumes <- c(home=getwd())
-    shinyFileChoose(input, "choose_ts", roots=volumes, session=session)
-    fileinfo <- parseFilePaths(volumes, input$choose_ts)
-    if (nrow(fileinfo) > 0) {updateTextInput(session, "time_series", value=as.character(fileinfo$datapath))}
-  })
-  
-  # Circuit details file selection pop up.
-  observe({
-    volumes <- c(home=getwd())
-    shinyFileChoose(input, "choose_c", roots=volumes, session=session)
-    fileinfo <- parseFilePaths(volumes, input$choose_c)
-    if (nrow(fileinfo) > 0) {updateTextInput(session, "circuit_details", value=as.character(fileinfo$datapath))}
-  })
-  
-  # Site details file selection pop up.
-  observe({
-    volumes <- c(home=getwd())
-    shinyFileChoose(input, "choose_site", roots=volumes, session=session)
-    fileinfo <- parseFilePaths(volumes, input$choose_site)
-    if (nrow(fileinfo) > 0) {updateTextInput(session, "site_details", value=as.character(fileinfo$datapath))}
+    shinyFileChoose(input, "choose_database", roots=volumes, session=session)
+    fileinfo <- parseFilePaths(volumes, input$choose_database)
+    if (nrow(fileinfo) > 0) {updateTextInput(session, "database_name", value=as.character(fileinfo$datapath))}
   })
   
   # frequency file selection pop up.
@@ -1422,7 +1194,7 @@ server <- function(input,output,session){
     if (length(input$circuit_details_editor_rows_selected==1)) {
       c_id_to_plot <- v$circuit_details_for_editing$c_id[input$circuit_details_editor_rows_selected]
       data_to_view <- filter(v$combined_data, c_id==c_id_to_plot)
-      output$site_plot <- renderPlotly({plot_ly(data_to_view, x=~ts, y=~power_kW, type="scatter")})
+      output$site_plot <- renderPlotly({plot_ly(data_to_view, x=~ts, y=~power_kW, type="scattergl")})
     }
     
   })
@@ -1431,27 +1203,15 @@ server <- function(input,output,session){
   observeEvent(input$site_details_editor_rows_selected, {
     v$proxy_circuit_details_editor %>% selectRows(NULL)
     if (length(input$site_details_editor_rows_selected==1)) {
-      site_id_to_plot <- v$site_details_cleaned$site_id[input$site_details_editor_rows_selected]
+      site_id_to_plot <- v$site_details_for_editing$site_id[input$site_details_editor_rows_selected]
       circuits <- filter(v$circuit_details_for_editing, site_id==site_id_to_plot)
       circuits <- unique(circuits$c_id)
       data_to_view <- filter(v$combined_data, c_id %in% circuits)
-      output$site_plot <- renderPlotly({plot_ly(data_to_view, x=~ts, y=~power_kW, color=~c_id, type="scatter")})
+      data_to_view <- mutate(data_to_view, c_id=as.character(c_id))
+      output$site_plot <- renderPlotly({plot_ly(data_to_view, x=~ts, y=~power_kW, color=~c_id, type="scattergl")})
     }
   })
   
-  # Save data cleaning tables to csv, also override data currently used as "cleaned" in tool.
-  observeEvent(input$save_cleaned_data, {
-    # Save cleaned data to csv
-    id <- showNotification("Saving cleaned files", duration=1000)
-    file_no_type = str_sub(site_details_file(), end=-5)
-    new_file_name = paste(file_no_type, "_cleaned.csv", sep="")
-    v$site_details_cleaned <- v$site_details_cleaned %>% mutate(site_id=as.character(site_id))
-    write.csv(v$site_details_cleaned, new_file_name)
-    file_no_type = str_sub(circuit_details_file(), end=-5)
-    new_file_name = paste(file_no_type, "_cleaned.csv", sep="")
-    write.csv(v$circuit_details_for_editing, new_file_name)
-    removeNotification(id)
-  })
   
   # Allow user to edit site details in data cleaning tab
   observeEvent(input$site_details_editor_cell_edit, {
@@ -1460,8 +1220,9 @@ server <- function(input,output,session){
     i = info$row
     j = info$col + 1
     value = info$value
-    v$site_details_cleaned[i, j] <<- DT::coerceValue(value, v$site_details_cleaned[i, j])
-    replaceData(v$proxy_site_details_editor, v$site_details_cleaned, resetPaging=FALSE, rownames=FALSE)  # important
+    v$site_details_for_editing[i, j] <<- DT::coerceValue(value, v$site_details_for_editing[i, j])
+    replaceData(v$proxy_site_details_editor, v$site_details_for_editing, resetPaging=FALSE, rownames=FALSE)  # important
+    v$db$update_site_details_cleaned(v$site_details_for_editing)
   })
   
   # Allow user to edit circuit details in data cleaning tab
@@ -1473,6 +1234,7 @@ server <- function(input,output,session){
     value = info$value
     v$circuit_details_for_editing[i, j] <<- DT::coerceValue(value, v$circuit_details_for_editing[i, j])
     replaceData(v$proxy_circuit_details_editor, v$circuit_details_for_editing, resetPaging=FALSE, rownames=FALSE) # important
+    v$db$update_circuit_details_cleaned(v$circuit_details_for_editing)
   })
 }
 
