@@ -60,7 +60,9 @@ DBInterface <- R6::R6Class("DBInterface",
 
       sqldf::read.csv.sql(circuit_details, sql = circuit_details_build_query, dbname = self$db_path_name, eol = '\n')
       
-      RSQLite::dbExecute(con, "ALTER TABLE circuit_details_raw ADD manual_compliance TEXT DEFAULT 'Not set'")
+      RSQLite::dbExecute(con, "ALTER TABLE circuit_details_raw ADD manual_droop_compliance TEXT DEFAULT 'Not set'")
+      
+      RSQLite::dbExecute(con, "ALTER TABLE circuit_details_raw ADD manual_reconnect_compliance TEXT DEFAULT 'Not set'")
       
       RSQLite::dbExecute(con, "DROP TABLE IF EXISTS site_details_raw")
       
@@ -227,7 +229,9 @@ DBInterface <- R6::R6Class("DBInterface",
       return(site_details_cleaned)
     },
     get_circuit_details_cleaned = function(){
-      circuit_details_cleaned <- sqldf::read.csv.sql(sql = "select c_id, site_id, con_type, polarity, manual_compliance
+      circuit_details_cleaned <- sqldf::read.csv.sql(sql = "select c_id, site_id, con_type, polarity, 
+                                                                   manual_droop_compliance, 
+                                                                   manual_reconnect_compliance
                                                               from circuit_details_cleaned", 
                                                   dbname = self$db_path_name)
       return(circuit_details_cleaned)
@@ -360,26 +364,30 @@ DBInterface <- R6::R6Class("DBInterface",
       RSQLite::dbExecute(con, "CREATE TABLE circuit_details_cleaned(
                          c_id INT PRIMARY KEY, site_id INT, con_type TEXT, polarity INT, sunrise TEXT, sunset TEXT, 
                          min_power REAL, max_power REAL, frac_day REAL, old_con_type TEXT,
-                         con_type_changed INT, polarity_changed INT, manual_compliance TEXT)")
+                         con_type_changed INT, polarity_changed INT, manual_droop_compliance TEXT, 
+                         manual_reconnect_compliance TEXT)")
       RSQLite::dbDisconnect(con)
     },
     insert_circuit_details_cleaned = function(circuit_details){
       query <- "INSERT INTO circuit_details_cleaned
                             SELECT c_id, site_id, con_type, polarity, sunrise, sunset, min_power, max_power, frac_day, 
-                                   old_con_type, con_type_changed, polarity_changed, manual_compliance
+                                   old_con_type, con_type_changed, polarity_changed, manual_droop_compliance, 
+                                   manual_reconnect_compliance
                               FROM circuit_details"
       sqldf::read.csv.sql(sql = query, dbname = self$db_path_name)
     },
     update_circuit_details_cleaned = function(circuit_details){
       query <- "REPLACE INTO circuit_details_cleaned
                             SELECT c_id, site_id, con_type, polarity, sunrise, sunset, min_power, max_power, frac_day, 
-                                   old_con_type, con_type_changed, polarity_changed, manual_compliance
+                                   old_con_type, con_type_changed, polarity_changed, manual_droop_compliance, 
+                                   manual_reconnect_compliance
                               FROM circuit_details"
       sqldf::read.csv.sql(sql = query, dbname = self$db_path_name)
     },
     update_circuit_details_raw = function(circuit_details){
       query <- "REPLACE INTO circuit_details_raw
-                            SELECT c_id,  site_id,  con_type, polarity, manual_compliance
+                            SELECT c_id, site_id,  con_type, polarity, manual_droop_compliance, 
+                                   manual_reconnect_compliance
                               FROM circuit_details"
       sqldf::read.csv.sql(sql = query, dbname = self$db_path_name)
     },

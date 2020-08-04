@@ -36,6 +36,7 @@ source("ideal_response_functions.R")
 source("create_report_files.R")
 source("create_report_tables.R")
 source("BDInterface/R/interface.R")
+source("reconnect_compliance/R/specified_reconnect_profile.R")
 
 ui <- fluidPage(
   tags$head(
@@ -51,7 +52,7 @@ ui <- fluidPage(
         sidebarPanel(id = "side_panel",
           h4("File selection"),
           textInput("database_name", "SQLite database file",
-                    value = "C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/BDInterface/tests/20180825.db"
+                    value = "C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/BDInterface/tests/20191126.db"
           ),
           fluidRow(
             div(style="display:inline-block", shinyFilesButton("choose_database", "Choose File", 
@@ -66,7 +67,7 @@ ui <- fluidPage(
           uiOutput("duration"),
           HTML("<br><br>"),
           textInput("frequency_data", "Frequency data file", 
-                    value = "C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/data/2018-08-25/frequency_data_sa_2018_08_25.csv"
+                    value = ""
           ),
           shinyFilesButton("choose_frequency_data", "Choose File", "Select fequency data file ...", multiple = FALSE),
           HTML("<br><br>"),
@@ -164,6 +165,7 @@ ui <- fluidPage(
        plotlyOutput("compliance_plot"),
        h4("Editing the compliance value changes the connected database, to use these changes in the analysis data must
            be reloaded on the main tab."),
+       uiOutput("manual_compliance_type"),
        uiOutput("compliance_cleaned_or_raw"),
        uiOutput("compliance_circuits"),
        uiOutput("set_c_id_compliance"),
@@ -292,6 +294,7 @@ server <- function(input,output,session){
   standards <- reactive({input$StdVersion})
   responses <- reactive({input$responses})
   postcodes <- reactive({input$postcodes})
+  manual_compliance_type <- reactive({input$manual_compliance_type})
   compliance_circuits <- reactive({input$compliance_circuits})
   compliance_cleaned_or_raw <- reactive({input$compliance_cleaned_or_raw})
   set_c_id_compliance <- reactive({input$set_c_id_compliance})
@@ -603,7 +606,7 @@ server <- function(input,output,session){
       })
       output$pre_event_interval <- renderUI({
         timeInput("pre_event_interval", label=strong('Pre-event time interval (Needs to match exactly to data timestamp)'), 
-                  value = as.POSIXct("13:11:55",format="%H:%M:%S"))
+                  value = as.POSIXct("12:13:55",format="%H:%M:%S"))
       })
       output$window_length <- renderUI({
         numericInput("window_length", label=strong('Set window length (min),
@@ -682,7 +685,7 @@ server <- function(input,output,session){
     }
     
     # Calc event normalised power
-    event_powers <- filter(combined_data_f, ts==pre_event_interval())
+    event_powers <- filter(combined_data_f, ts == pre_event_interval())
     event_powers <- mutate(event_powers, event_power=power_kW)
     event_powers <- select(event_powers, c_id, clean, event_power)
     combined_data_f <- left_join(combined_data_f, event_powers, by=c("c_id", "clean"))
@@ -735,7 +738,8 @@ server <- function(input,output,session){
       v$combined_data_f <- select(combined_data_f, ts, site_id, c_id, power_kW, c_id_norm_power, v, f, s_state, s_postcode, 
                                   Standard_Version, Grouping, sum_ac, clean, manufacturer, model,
                                   site_performance_factor, response_category, zone, distance, lat, lon, e, con_type,
-                                  first_ac, polarity, compliance_status, manual_compliance)
+                                  first_ac, polarity, compliance_status, manual_droop_compliance, 
+                                  manual_reconnect_compliance)
       # Create copy of filtered data to use in upscaling
       combined_data_f2 <- combined_data_f
         if(raw_upscale()){combined_data_f2 <- upscale(combined_data_f2, v$install_data)}
@@ -752,7 +756,8 @@ server <- function(input,output,session){
         v$circuit_summary <- distinct(combined_data_f, c_id, .keep_all=TRUE)
         v$circuit_summary <- select(v$circuit_summary, site_id, c_id, s_state, s_postcode, Standard_Version, Grouping, 
                                     sum_ac, clean, manufacturer, model, response_category, zone, distance, lat, lon,
-                                    con_type, first_ac, polarity, compliance_status, manual_compliance)
+                                    con_type, first_ac, polarity, compliance_status, manual_droop_compliance, 
+                                    manual_reconnect_compliance)
         # Combine data sets that have the same grouping so they can be saved in a single file
         if (no_grouping){
           et <- pre_event_interval()
@@ -884,6 +889,9 @@ server <- function(input,output,session){
                                    selected = v$combined_data_f$clean[1], 
                                    inline = TRUE)})
           
+          v$reconnection_profile <- create_reconnection_profile(pre_event_interval(), ramp_length_minutes = 6,
+                                                                time_step_seconds = as.numeric(duration()))
+          
           removeNotification(id)
           
       } else {
@@ -921,70 +929,118 @@ server <- function(input,output,session){
                                                                  selected = v$combined_data_f$clean[1], 
                                                                  inline = TRUE)})
     }
+    
+    output$manual_compliance_type <- renderUI({radioButtons("manual_compliance_type", 
+                                                            label = strong("Compliance types"), 
+                                                            choices = list("Over frequency","Reconnection"), 
+                                                            selected = "Over frequency", inline = TRUE)})
+    
   })
-  
 
-  observeEvent(input$compliance_circuits, {
+  observeEvent(c(input$compliance_circuits, input$manual_compliance_type), {
     if (compliance_circuits() %in% v$c_id_vector){
       v$compliance_counter <- match(c(compliance_circuits()), v$c_id_vector)
       message <- paste0("Select circuit (now viewing circuit ", v$compliance_counter, ' of ', length(v$c_id_vector) ,")")
       circuit_to_view <- v$c_id_vector[[v$compliance_counter]]
-      output$compliance_circuits <- isolate(renderUI({selectizeInput("compliance_circuits", label=strong(message), choices=as.list(v$c_id_vector), 
-                                                          multiple=FALSE, selected=circuit_to_view)}))
+      output$compliance_circuits <- isolate(renderUI({selectizeInput("compliance_circuits", label=strong(message), 
+                                                                     choices=as.list(v$c_id_vector), 
+                                                                     multiple=FALSE, selected=circuit_to_view)}))
       data_to_view <- filter(filter(v$combined_data_f, clean==compliance_cleaned_or_raw()), c_id==compliance_circuits())
-      output$set_c_id_compliance <- renderUI({radioButtons("set_c_id_compliance", 
-                                                                   label=strong("Compliance"), 
-                                                                   choices = list("Not set","Compliant","Non-compliant", 
-                                                                                  "Non-compliant Responding", "Disconnect", 
-                                                                                  "Unsure"), 
-                                                                   selected = data_to_view$manual_compliance[1], inline = TRUE)})
+      
+      if (manual_compliance_type() == "Over frequency"){
+        
+        output$set_c_id_compliance <- renderUI({radioButtons("set_c_id_compliance", label = strong("Compliance"), 
+                                                              choices = list("Not set","Compliant","Non-compliant", 
+                                                                             "Non-compliant Responding", "Disconnect", 
+                                                                             "Unsure"), 
+                                                             selected = data_to_view$manual_compliance[1], inline = TRUE)})
+      } else {
+        
+        output$set_c_id_compliance <- renderUI({radioButtons("set_c_id_compliance", label = strong("Compliance"), 
+                                                             choices = list("Not set","Compliant","Too Fast", 
+                                                                            "Too Slow", "Unsure"), 
+                                                             selected = data_to_view$manual_compliance[1], inline = TRUE)})
+        
+      }
+      
       if (compliance_cleaned_or_raw() == 'clean'){
-        circuit_data <- filter(v$circuit_details_for_editing, c_id==compliance_circuits())
+        circuit_data <- filter(v$circuit_details_for_editing, c_id == compliance_circuits())
         updateRadioButtons(session, "set_c_id_compliance", 
                            selected = circuit_data$manual_compliance[1])
       } else {
-        circuit_data <- filter(v$circuit_details_raw, c_id==compliance_circuits())
+        circuit_data <- filter(v$circuit_details_raw, c_id == compliance_circuits())
         updateRadioButtons(session, "set_c_id_compliance", 
                            selected = circuit_data$manual_compliance[1])
         
       }
 
       data_to_view <- mutate(data_to_view, Time=ts)
-      if(dim(v$ideal_response_to_plot)[1]>0){
-        output$compliance_plot <- renderPlotly({
-          plot_ly(data_to_view, x=~Time, y=~c_id_norm_power, type="scatter") %>% 
-            add_trace(x=v$ideal_response_to_plot$ts, y=v$ideal_response_to_plot$norm_power, name='Ideal Response', 
-                      mode='markers', inherit=FALSE) %>%
-            add_trace(x=v$ideal_response_downsampled$time_group, y=v$ideal_response_downsampled$norm_power, 
-                      name='Ideal Response Downsampled', mode='markers', inherit=FALSE) %>%
-            layout(yaxis=list(title="Circuit power \n normalised to value of pre-event interval"))
-        })
+      if (manual_compliance_type() == "Over frequency"){
+        
+        if(dim(v$ideal_response_to_plot)[1]>0){
+          output$compliance_plot <- renderPlotly({
+            plot_ly(data_to_view, x=~Time, y=~c_id_norm_power, type="scatter") %>% 
+              add_trace(x=v$ideal_response_to_plot$ts, y=v$ideal_response_to_plot$norm_power, name='Ideal Response', 
+                        mode='markers', inherit=FALSE) %>%
+              add_trace(x=v$ideal_response_downsampled$time_group, y=v$ideal_response_downsampled$norm_power, 
+                        name='Ideal Response Downsampled', mode='markers', inherit=FALSE) %>%
+              layout(yaxis=list(title="Circuit power \n normalised to value of pre-event interval"))
+          })
+        } else {
+          output$compliance_plot <- renderPlotly({
+            plot_ly(data_to_view, x=~Time, y=~c_id_norm_power, type="scatter") %>% 
+              layout(yaxis=list(title="Circuit power \n normalised to value of pre-event interval"))
+          })
+        }
+        
       } else {
+        
         output$compliance_plot <- renderPlotly({
           plot_ly(data_to_view, x=~Time, y=~c_id_norm_power, type="scatter") %>% 
+            add_trace(x=v$reconnection_profile$ts, y=v$reconnection_profile$norm_power, name='Ideal Response', 
+                      mode='markers', inherit=FALSE) %>%
             layout(yaxis=list(title="Circuit power \n normalised to value of pre-event interval"))
         })
+        
       }
+
     } else {
-      shinyalert("Wow", "That site id does not exist.")
+      shinyalert("Wow", "That circuit id does not exist.")
     }
   })
   
   observeEvent(input$set_c_id_compliance, {
     current_c_id <- v$c_id_vector[[v$compliance_counter]]
     if (compliance_cleaned_or_raw() == "clean"){
-      v$circuit_details_for_editing <- mutate(v$circuit_details_for_editing, 
-                                manual_compliance=
-                                  ifelse((c_id==current_c_id),
-                                         set_c_id_compliance(),
-                                         manual_compliance))
-      v$db$update_circuit_details_cleaned(v$circuit_details_for_editing)
-    } else {
-      v$circuit_details_raw <- mutate(v$circuit_details_raw, 
-                                  manual_compliance=
+      if (manual_compliance_type() == "Over frequency"){
+        v$circuit_details_for_editing <- mutate(v$circuit_details_for_editing, 
+                                  manual_droop_compliance=
                                     ifelse((c_id==current_c_id),
                                            set_c_id_compliance(),
-                                           manual_compliance))
+                                           manual_droop_compliance))
+      } else {
+        v$circuit_details_for_editing <- mutate(v$circuit_details_for_editing, 
+                                                manual_reconnect_compliance=
+                                                  ifelse((c_id==current_c_id),
+                                                         set_c_id_compliance(),
+                                                         manual_reconnect_compliance))
+        
+      }
+      v$db$update_circuit_details_cleaned(v$circuit_details_for_editing)
+    } else {
+      if (manual_compliance_type() == "Over frequency"){
+        v$circuit_details_raw <- mutate(v$circuit_details_raw, 
+                                    manual_droop_compliance=
+                                      ifelse((c_id==current_c_id),
+                                             set_c_id_compliance(),
+                                             manual_droop_compliance))
+      } else {
+        v$circuit_details_raw <- mutate(v$circuit_details_raw, 
+                                        manual_reconnect_compliance=
+                                          ifelse((c_id==current_c_id),
+                                                 set_c_id_compliance(),
+                                                 manual_reconnect_compliance))
+      }
       v$db$update_circuit_details_raw(v$circuit_details_raw)
     }
   })
