@@ -37,6 +37,8 @@ source("create_report_files.R")
 source("create_report_tables.R")
 source("BDInterface/R/interface.R")
 source("reconnect_compliance/R/specified_reconnect_profile.R")
+source("reconnect_compliance/R/calculate_reconnection_times.R")
+source("reconnect_compliance/R/categorise_reconnection_compliance.R")
 
 ui <- fluidPage(
   tags$head(
@@ -486,7 +488,7 @@ server <- function(input,output,session){
 
       # Load in the install data from CSV.
       id <- showNotification("Load CER capacity data", duration=1000)
-      intall_data_file <- "cumulative_capacity_and_number.csv"
+      intall_data_file <- "cumulative_capacity_and_number_20200811_ready_for_tool_v2.csv"
       install_data <- read.csv(file=intall_data_file, header=TRUE, stringsAsFactors = FALSE)
       v$install_data <- process_install_data(install_data)
       
@@ -716,6 +718,20 @@ server <- function(input,output,session){
         combined_data_f <- mutate(combined_data_f, compliance_status="Undefined")  
       }
       if (length(compliance()) < 8) {combined_data_f <- filter(combined_data_f, compliance_status %in% compliance())}
+      
+      # Set reconnection compliance values.
+      reconnection_times <- calculate_reconnection_times(select(combined_data_f, ts, c_id, c_id_norm_power), 
+                                                         event_time = pre_event_interval(), 
+                                                         disconnect_threshold = disconnecting_threshold(), 
+                                                         reconnect_threshold = 0.95)
+      combined_data_f <- inner_join(combined_data_f, reconnection_times, by = 'c_id')
+      reconnection_times <- group_by(combined_data_f, c_id)
+      reconnection_times <- summarise(reconnection_times, response_category = first(response_category),
+                                      reconnection_time = first(reconnection_time))
+      reconnection_categories <- categorise_reconnection_compliance(reconnection_times, 
+                                                                    compliance_threshold_minutes = 4)
+      combined_data_f <- inner_join(combined_data_f, reconnection_categories, by = 'c_id')
+      
       removeNotification(id2)
     }
     
@@ -738,8 +754,8 @@ server <- function(input,output,session){
       v$combined_data_f <- select(combined_data_f, ts, site_id, c_id, power_kW, c_id_norm_power, v, f, s_state, s_postcode, 
                                   Standard_Version, Grouping, sum_ac, clean, manufacturer, model,
                                   site_performance_factor, response_category, zone, distance, lat, lon, e, con_type,
-                                  first_ac, polarity, compliance_status, manual_droop_compliance, 
-                                  manual_reconnect_compliance)
+                                  first_ac, polarity, compliance_status, reconnection_compliance_status, 
+                                  manual_droop_compliance, manual_reconnect_compliance, reconnection_time)
       # Create copy of filtered data to use in upscaling
       combined_data_f2 <- combined_data_f
         if(raw_upscale()){combined_data_f2 <- upscale(combined_data_f2, v$install_data)}
@@ -756,8 +772,8 @@ server <- function(input,output,session){
         v$circuit_summary <- distinct(combined_data_f, c_id, .keep_all=TRUE)
         v$circuit_summary <- select(v$circuit_summary, site_id, c_id, s_state, s_postcode, Standard_Version, Grouping, 
                                     sum_ac, clean, manufacturer, model, response_category, zone, distance, lat, lon,
-                                    con_type, first_ac, polarity, compliance_status, manual_droop_compliance, 
-                                    manual_reconnect_compliance)
+                                    con_type, first_ac, polarity, compliance_status, reconnection_compliance_status, 
+                                    manual_droop_compliance, manual_reconnect_compliance, reconnection_time)
         # Combine data sets that have the same grouping so they can be saved in a single file
         if (no_grouping){
           et <- pre_event_interval()
@@ -953,26 +969,38 @@ server <- function(input,output,session){
                                                               choices = list("Not set","Compliant","Non-compliant", 
                                                                              "Non-compliant Responding", "Disconnect", 
                                                                              "Unsure"), 
-                                                             selected = data_to_view$manual_compliance[1], inline = TRUE)})
+                                                             selected = data_to_view$manual_droop_compliance[1], inline = TRUE)})
+        if (compliance_cleaned_or_raw() == 'clean'){
+          circuit_data <- filter(v$circuit_details_for_editing, c_id == compliance_circuits())
+          updateRadioButtons(session, "set_c_id_compliance", 
+                             selected = circuit_data$manual_droop_compliance[1])
+        } else {
+          circuit_data <- filter(v$circuit_details_raw, c_id == compliance_circuits())
+          updateRadioButtons(session, "set_c_id_compliance", 
+                             selected = circuit_data$manual_droop_compliance[1])
+          
+        }
+        
       } else {
         
         output$set_c_id_compliance <- renderUI({radioButtons("set_c_id_compliance", label = strong("Compliance"), 
                                                              choices = list("Not set","Compliant","Too Fast", 
                                                                             "Too Slow", "Unsure"), 
-                                                             selected = data_to_view$manual_compliance[1], inline = TRUE)})
+                                                             selected = data_to_view$manual_reconnect_compliance[1], inline = TRUE)})
+        
+        if (compliance_cleaned_or_raw() == 'clean'){
+          circuit_data <- filter(v$circuit_details_for_editing, c_id == compliance_circuits())
+          updateRadioButtons(session, "set_c_id_compliance", 
+                             selected = circuit_data$manual_reconnect_compliance[1])
+        } else {
+          circuit_data <- filter(v$circuit_details_raw, c_id == compliance_circuits())
+          updateRadioButtons(session, "set_c_id_compliance", 
+                             selected = circuit_data$manual_reconnect_compliance[1])
+          
+        }
         
       }
       
-      if (compliance_cleaned_or_raw() == 'clean'){
-        circuit_data <- filter(v$circuit_details_for_editing, c_id == compliance_circuits())
-        updateRadioButtons(session, "set_c_id_compliance", 
-                           selected = circuit_data$manual_compliance[1])
-      } else {
-        circuit_data <- filter(v$circuit_details_raw, c_id == compliance_circuits())
-        updateRadioButtons(session, "set_c_id_compliance", 
-                           selected = circuit_data$manual_compliance[1])
-        
-      }
 
       data_to_view <- mutate(data_to_view, Time=ts)
       if (manual_compliance_type() == "Over frequency"){
