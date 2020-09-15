@@ -45,5 +45,6 @@ testthat::test_that("Calculating reconnection times works",{
   
   calculated_reconnection_times <- calculate_reconnection_times(normalised_power, event_time, 
                                                                 disconnect_threshold = 0.05, reconnect_threshold = 0.95)
+  
   testthat::expect_equal(calculated_reconnection_times, expected_reconnection_times, tolerance = 1e-4)
 })

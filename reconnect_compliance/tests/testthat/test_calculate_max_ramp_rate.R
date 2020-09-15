@@ -48,6 +48,6 @@ testthat::test_that("Calculating reconnection max ramp rate works",{
   
   calculated_reconnection_times <- calculate_max_reconnection_ramp_rate(normalised_power, event_time, 
                                                                 disconnect_threshold = 0.05, reconnect_threshold = 0.95)
-  browser()
+
   testthat::expect_equal(calculated_reconnection_times, expected_reconnection_times, tolerance = 1e-4)
 })
