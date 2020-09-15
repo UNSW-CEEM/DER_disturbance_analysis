@@ -12,14 +12,14 @@ testthat::test_that("1 minute ramp up profile, 60 sec duration",{
   event_time <- as.POSIXct("2018-01-01 00:00:00", tz = "Australia/Brisbane")
   
   expected_profile_first_3 <- "                 ts, norm_power
-                               2018-01-01 00:01:00, 0.00000000
-                               2018-01-01 00:01:01, 0.01666667
-                               2018-01-01 00:01:02, 0.03333333"
+                               2018-01-01 00:02:00, 0.00000000
+                               2018-01-01 00:02:01, 0.01666667
+                               2018-01-01 00:02:02, 0.03333333"
   
   expected_profile_last_3 <- "                  ts, norm_power
-                               2018-01-01 00:01:58, 0.9666667
-                               2018-01-01 00:01:59, 0.9833333
-                               2018-01-01 00:02:00, 1.0000000"
+                               2018-01-01 00:02:58, 0.9666667
+                               2018-01-01 00:02:59, 0.9833333
+                               2018-01-01 00:03:00, 1.0000000"
   
   expected_profile_first_3 <- load_test_file(expected_profile_first_3)
   expected_profile_first_3 <- dplyr::mutate(expected_profile_first_3, ts = as.POSIXct(ts, tz = "Australia/Brisbane"))
