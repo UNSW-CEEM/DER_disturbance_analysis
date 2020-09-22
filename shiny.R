@@ -183,21 +183,42 @@ ui <- fluidPage(
     tabPanel("Settings", fluid=TRUE, 
              sidebarLayout(
                sidebarPanel(id="side_panel",
+                            h3("Droop response compliance settings"),
                             numericInput("compliance_threshold", 
-                                         label=strong('Compliance threshold'), 
-                                         value=0.5, max=1, min=0),
+                                         label = strong('Compliance threshold'), 
+                                         value = 0.5, max=1, min=0),
                             numericInput("start_buffer", 
-                                         label=strong('Start buffer, allowed time to reach compliance threshold, in seconds.'), 
-                                         value=60),
+                                         label = strong('Start buffer, allowed time to reach compliance threshold, in seconds.'), 
+                                         value = 60),
                             numericInput("end_buffer", 
-                                         label=strong('End buffer, allowed time for system ending response early, in seconds.'), 
-                                         value=60),
+                                         label = strong('End buffer, allowed time for system ending response early, in seconds.'), 
+                                         value = 60),
                             numericInput("end_buffer_responding", 
-                                         label=strong('Response time, window length for systems to be considered Non Compliant Responding, in seconds.'), 
-                                         value=120),
+                                         label = strong('Response time, window length for systems to be considered Non Compliant Responding, in seconds.'), 
+                                         value = 120),
+                            h3("Reconnection compliance settings"),
+                            numericInput("reconnection_threshold", 
+                                         label = strong('The level at which a circuit is considered to have reconnected.'), 
+                                         value = 0.95, max=1, min=0),
+                            numericInput("max_norm_output_threshold ", 
+                                         label = strong('Max normalised output threshold, if a circuits power goes above 
+                                                       this level then the pre-event power is considered to be a
+                                                       significant under estimate of its capacity and the circuit will not be 
+                                                       reported as non compliant.'), 
+                                         value = 1.1, min=0),
+                            numericInput("reconnection_time_threshold_for_compliance ", 
+                                         label = strong('Reconnection time threshold for compliance '), value = 4),
+                            numericInput("Reconnection time threshold for non compliance ", 
+                                         label = strong('Reconnection time threshold for non compliance'), value = 3),
+                            numericInput("ramp_rate_threshold_for_compliance ", 
+                                         label = strong('Ramp rate threshold for compliance'), value = 0.3),
+                            numericInput("ramp_rate_threshold_for_non_compliance", 
+                                         label = strong('Ramp rate threshold for non compliance'), value = 0.5),
+                            h3("Misc settings"),
                             numericInput("disconnecting_threshold", 
-                                         label=strong('Disconnecting threshold, level below which the ideal response allows disconnecting systems to be considered compliant.'), 
-                                         value=0.05, max=1, min=0)
+                                         label = strong('Disconnecting threshold, level below which circuit is considered to
+                                                      have disconnected.'), 
+                                         value = 0.05, max = 1, min = 0)
                             ),
                mainPanel()
                )
@@ -726,7 +747,7 @@ server <- function(input,output,session){
                                                              max_norm_output_threshold = 1.1, 
                                                              reconnection_time_threshold_for_compliance = 4,
                                                              reconnection_time_threshold_for_non_compliance = 3,
-                                                             ramp_rate_threshold_for_compliance = 0.25,
+                                                             ramp_rate_threshold_for_compliance = 0.3,
                                                              ramp_rate_threshold_for_non_compliance = 0.5)
       combined_data_f <- left_join(combined_data_f, reconnection_categories, by = 'c_id')
       removeNotification(id2)

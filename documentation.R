@@ -36,7 +36,7 @@ documentation_panel <- function(){
             tags$li('The "Undefined" zone is assigned to circuits outside the outer radius of zone 3'),
             tags$li('The "NA" zone is assigned to circuits with no location data, i.e. no postcode')),
     div('Note circuit locations are based on the centroid of their site\'s postcode.'),
-    h4('Compliance status category definition'),
+    h4('Droop response compliance status category definition'),
     div('Compliance status is assigned on a circuit basis according to the following definitions. The categories Disconnect, 
          Off at t0 and not enough data are taken from the output of the response catergorisation algo.'),
     tags$ul(tags$li('"Compliant" A fast and sustained reduction in output. The system reduces power by at least  
@@ -60,6 +60,20 @@ documentation_panel <- function(){
             tags$li('"Undefined" is the default category for sites that do not fall into one of the above categories, 
                     sites should only fall into this category if there is no Ideal Response for the given frequency 
                     data set.')),
+    h4('Reconnection compliance status category definition'),
+    div('A compliance status is assigned on a circuit basis according to the following steps.'),
+    tags$ol(tags$li('The first resource limited interval is defined as the first interval during the reconnection period 
+                    where the ramp rate drops by 10 % absolute'),
+            tags$li('Max reconnection ramp rate calculated as the max ramp rate before the first resource limited interval'),
+            tags$li('Reconnection time calculated as the time between the last interval less than 0.05 (normalised to 
+                     pre-event interval) and the first interval greater 0.95.'),
+            tags$li('Categorised as compliant if compliant reconnection time > 4 min and max ramp rate less than 30 %'),
+            tags$li('Catergorised as non compliant if reconnection time < 3 min or max ramp rate greater than 50 %'),
+            tags$li('Catergorised as unsure if not compliant or non complaint'),
+            tags$li('Catergorised as unsure if non compliant but max normalised power greater than 1.1'),
+            tags$li('Catergorised as NA if the circuit does not disconnect/drop to zero during the user specified event 
+                     window, or the algorithm fails to calculate reconnection time or ramp rate, this may occur because 
+                     the circuit does not fully reconnect (0.95 threshold) or because it disconnects twice.')),
     h3('Further methodology notes on a chart basis'),
     h4('Aggregate power chart'),
     div('By default this chart shows the aggregate power on a basis determined by the grouping
@@ -121,16 +135,17 @@ documentation_panel <- function(){
         this table if the grouping varaible Circuits is selected then the number of circuts by site is displayed.'),
     h3('Data processing and cleaning'),
     h4('Determination of timeseries duration'),
-    div('The duration (or frequency) of the timseries data for each circuit is calculated independently. This is done
-        by finding the time step between each record in the circuit\'s timeseries data. Then the mode and min of the 
-        set of time steps is found, where the mode time step is equal to the min time step, the circuit is assigned this time step 
-        as its nominal duration, otherwise is assigned a duration of NA and will be filtered out of the data used by the
-        tool.'),
+    div('The duration (or frequency) of the timseries data is given for each circuit and interval in the raw time
+         series data from solar analytics, this should be one of the three values 5, 30 or 60 seconds. However,
+         sometimes this data is missing or has an unexpected value, for those intervals if the actual time elapsed 
+         between the interval and the previous data point for the circuit is 5 seconds, then duration for that 
+         interval is replaced with 5 seconds, otherwise it is left unchanged and consequently will be filter out from
+         the analysis set.'),
     h4('Determination of timeseries offset'),
     div('The timeseries offset for each circuit is calculated independently. This is done by finding the set of seconds
         that a circuit reports on, i.e. for a circuit with a duration 60 s this may just be 55, or for a circuit with a 
         duration of 5 s this maybe 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 55. The timeseries offset is taken as the 
-        minumim from this set that occurs atleast 100 times in the data set. If no offset occurs atleast 100 times than
+        minumim from this set that occurs atleast 10 times in the data set. If no offset occurs atleast 10 times than
         the offset is defined as NA. By default the tool shows just the dominate time offset group but this behaviour
         can be ajusted by the user.'),
     h4('Data cleaning tab overview'),
