@@ -56,7 +56,7 @@ get_time_offsets <- function(time_series_data){
   offsets <- mutate(time_series_data, time_offset=format(ts, "%S"))
   offsets <- group_by(offsets, c_id, time_offset)
   offsets <- summarise(offsets, time_offset_count=length(time_offset))
-  offsets <- filter(offsets, time_offset_count>=100)
+  offsets <- filter(offsets, time_offset_count>=10)
   offsets <- group_by(offsets, c_id)
   offsets <- summarise(offsets, time_offset=min(as.numeric(time_offset)))
   time_series_data <- left_join(time_series_data, offsets, by='c_id')
@@ -112,7 +112,6 @@ assert_circuit_details_assumptions <- function(data){
 process_raw_site_details <- function(site_details){
   site_details <- filter(site_details, !is.na(ac) & ac != "")
   assert_raw_site_details_assumptions(site_details)
-  site_details <- mutate(site_details, s_postcode = as.character(s_postcode))
   # The data can contain duplicate site ids, these need to be sumarised so there
   # is one row per site id. AC power is summed so sites with more than 100kW 
   # can be filtered out of the data set. The first ac value is taken as a sample
@@ -212,7 +211,7 @@ size_grouping <- function(site_details){
 
 process_postcode_data <-function(postcode_data){
   assert_postcode_data_assumptions(postcode_data)
-  postcode_data <- mutate(postcode_data, postcode = as.character(postcode))
+  postcode_data <- mutate(postcode_data, postcode = as.integer(postcode))
   postcode_data <- filter(postcode_data, !is.na(lat) & !is.na(lon))
   return(postcode_data)
 }
