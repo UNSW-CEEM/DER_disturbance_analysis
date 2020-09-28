@@ -199,21 +199,23 @@ ui <- fluidPage(
                             h3("Reconnection compliance settings"),
                             numericInput("reconnection_threshold", 
                                          label = strong('The level at which a circuit is considered to have reconnected.'), 
-                                         value = 0.95, max=1, min=0),
-                            numericInput("max_norm_output_threshold ", 
+                                         value = 0.95, max = 1, min = 0),
+                            numericInput("max_norm_output_threshold", 
                                          label = strong('Max normalised output threshold, if a circuits power goes above 
                                                        this level then the pre-event power is considered to be a
                                                        significant under estimate of its capacity and the circuit will not be 
                                                        reported as non compliant.'), 
-                                         value = 1.1, min=0),
-                            numericInput("reconnection_time_threshold_for_compliance ", 
-                                         label = strong('Reconnection time threshold for compliance '), value = 4),
-                            numericInput("Reconnection time threshold for non compliance ", 
-                                         label = strong('Reconnection time threshold for non compliance'), value = 3),
-                            numericInput("ramp_rate_threshold_for_compliance ", 
-                                         label = strong('Ramp rate threshold for compliance'), value = 0.3),
+                                         value = 1.1, min = 0, max = 2),
+                            numericInput("reconnection_time_threshold_for_compliance", 
+                                         label = strong('Reconnection time threshold for compliance, in minutes.'), value = 4),
+                            numericInput("reconnection_time_threshold_for_non_compliance", 
+                                         label = strong('Reconnection time threshold for non compliance, in minutes.'), value = 3),
+                            numericInput("ramp_rate_threshold_for_compliance", 
+                                         label = strong('Ramp rate threshold for compliance, in pct/min'), value = 0.3),
                             numericInput("ramp_rate_threshold_for_non_compliance", 
-                                         label = strong('Ramp rate threshold for non compliance'), value = 0.5),
+                                         label = strong('Ramp rate threshold for non compliance, in pct/min'), value = 0.5),
+                            numericInput("ramp_rate_change_resource_limit_threshold", 
+                                         label = strong('Ramp rate change threshold for detecting resource limitation, in pct/min'), value = -0.1),
                             h3("Misc settings"),
                             numericInput("disconnecting_threshold", 
                                          label = strong('Disconnecting threshold, level below which circuit is considered to
@@ -396,6 +398,13 @@ server <- function(input,output,session){
   start_buffer <- reactive({input$start_buffer})
   end_buffer <- reactive({input$end_buffer})
   end_buffer_responding <- reactive({input$end_buffer_responding})
+  reconnection_threshold <- reactive({input$reconnection_threshold})
+  max_norm_output_threshold <- reactive({input$max_norm_output_threshold})
+  reconnection_time_threshold_for_compliance <- reactive({input$reconnection_time_threshold_for_compliance})
+  reconnection_time_threshold_for_non_compliance <- reactive({input$reconnection_time_threshold_for_non_compliance})
+  ramp_rate_threshold_for_compliance <- reactive({input$ramp_rate_threshold_for_compliance})
+  ramp_rate_threshold_for_non_compliance <- reactive({input$ramp_rate_threshold_for_non_compliance})
+  ramp_rate_change_resource_limit_threshold <- reactive({input$ramp_rate_change_resource_limit_threshold})
   disconnecting_threshold <- reactive({input$disconnecting_threshold})
   
   
@@ -744,11 +753,18 @@ server <- function(input,output,session){
       # Set reconnection compliance values.
       reconnection_categories <- create_reconnection_summary(combined_data_f, pre_event_interval(),
                                                              disconnecting_threshold(),
-                                                             max_norm_output_threshold = 1.1, 
-                                                             reconnection_time_threshold_for_compliance = 4,
-                                                             reconnection_time_threshold_for_non_compliance = 3,
-                                                             ramp_rate_threshold_for_compliance = 0.3,
-                                                             ramp_rate_threshold_for_non_compliance = 0.5)
+                                                             reconnect_threshold = reconnection_threshold(),
+                                                             max_norm_output_threshold = max_norm_output_threshold(), 
+                                                             reconnection_time_threshold_for_compliance = 
+                                                               reconnection_time_threshold_for_compliance(),
+                                                             reconnection_time_threshold_for_non_compliance = 
+                                                               reconnection_time_threshold_for_non_compliance(),
+                                                             ramp_rate_threshold_for_compliance = 
+                                                               ramp_rate_threshold_for_compliance(),
+                                                             ramp_rate_threshold_for_non_compliance = 
+                                                               ramp_rate_threshold_for_non_compliance(),
+                                                             ramp_rate_change_resource_limit_threshold = 
+                                                               ramp_rate_change_resource_limit_threshold())
       combined_data_f <- left_join(combined_data_f, reconnection_categories, by = 'c_id')
       removeNotification(id2)
     }
