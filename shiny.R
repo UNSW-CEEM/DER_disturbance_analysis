@@ -56,6 +56,13 @@ ui <- fluidPage(
     tabPanel("Main", fluid = TRUE,
       sidebarLayout(
         sidebarPanel(id = "side_panel",
+          h4("Settings input file selection"),
+          textInput("settings_file", "Select JSON file for loading inputs (optional).",
+                    value = "C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/test_inputs.json"
+          ),
+          actionButton("load_settings", "Load settings file"),
+          shinySaveButton("save_settings", "Save settings file", "Save file as ...", filetype=list('json')),
+          tags$hr(),
           h4("File selection"),
           textInput("database_name", "SQLite database file",
                     value = "C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/BDInterface/tests/20191126.db"
@@ -1212,6 +1219,19 @@ server <- function(input,output,session){
     fileinfo <- parseSavePath(volumes, input$save_ideal_response_downsampled)
     if (nrow(fileinfo) > 0) {
       write.csv(v$ideal_response_downsampled, as.character(fileinfo$datapath), row.names=FALSE)
+    }
+  })
+  
+  observeEvent(input$save_settings, {
+    settings <- vector(mode='list')
+    settings$data_base_file <- database_name()
+    settings_as_json <- toJSON(settings, indent = 1)
+    
+    volumes <- c(home=getwd())
+    shinyFileSave(input, "save_settings", roots=volumes, session=session)
+    fileinfo <- parseSavePath(volumes, input$save_settings)
+    if (nrow(fileinfo) > 0) {
+      write(settings_as_json, as.character(fileinfo$datapath))
     }
   })
 
