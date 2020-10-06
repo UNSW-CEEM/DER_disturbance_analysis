@@ -38,12 +38,18 @@ create_reconnection_summary <- function(combined_data_f, pre_event_interval,
                                     max_norm_power = max(c_id_norm_power))
   reconnection_summary <- inner_join(reconnection_summary, reconnection_times, by = 'c_id')
   reconnection_summary <- inner_join(reconnection_summary, max_ramp_rates, by = 'c_id')
-  reconnection_categories <- categorise_reconnection_compliance(reconnection_summary,  
-                                                                max_norm_output_threshold, 
-                                                                reconnection_time_threshold_for_compliance,
-                                                                reconnection_time_threshold_for_non_compliance,
-                                                                ramp_rate_threshold_for_compliance,
-                                                                ramp_rate_threshold_for_non_compliance)
+  if (dim(reconnection_summary)[1] == 0) {
+    reconnection_categories <- data.frame(matrix(ncol = 2, nrow = 0))
+    names <- c("c_id", "reconnection_compliance_status")
+    colnames(reconnection_categories) <- names
+  } else {
+    reconnection_categories <- categorise_reconnection_compliance(reconnection_summary,  
+                                                                  max_norm_output_threshold, 
+                                                                  reconnection_time_threshold_for_compliance,
+                                                                  reconnection_time_threshold_for_non_compliance,
+                                                                  ramp_rate_threshold_for_compliance,
+                                                                  ramp_rate_threshold_for_non_compliance)
+  }
   reconnection_categories <- inner_join(reconnection_categories, select(reconnection_summary, c_id, reconnection_time,
                                                                         max_reconnection_ramp_rate, max_norm_power), 
                                         by = 'c_id')

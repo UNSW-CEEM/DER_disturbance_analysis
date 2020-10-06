@@ -24,6 +24,7 @@ library(swfscMisc)
 library(padr)
 library(sqldf)
 library(gridExtra)
+library(rjson)
 source("data_manipulation_functions.R")
 source("aggregate_functions.R")
 source("upscale_function.R")
@@ -58,10 +59,9 @@ ui <- fluidPage(
         sidebarPanel(id = "side_panel",
           h4("Settings input file selection"),
           textInput("settings_file", "Select JSON file for loading inputs (optional).",
-                    value = "C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/test_inputs.json"
+                    value = "C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/test.json"
           ),
-          actionButton("load_settings", "Load settings file"),
-          shinySaveButton("save_settings", "Save settings file", "Save file as ...", filetype=list('json')),
+          shinyFilesButton("load_settings", "Choose File", "Select settings file ...", multiple = FALSE),
           tags$hr(),
           h4("File selection"),
           textInput("database_name", "SQLite database file",
@@ -70,6 +70,7 @@ ui <- fluidPage(
           fluidRow(
             div(style="display:inline-block", shinyFilesButton("choose_database", "Choose File", 
                                                                "Select database file ...", multiple = FALSE)),
+            div(style="display:inline-block", actionButton("load_file_from_settings", "Load from settings file")),
             div(style="display:inline-block", actionButton("connect_to_database", "Connect"))),
           tags$hr(),
           uiOutput("load_date"),
@@ -84,6 +85,7 @@ ui <- fluidPage(
           ),
           shinyFilesButton("choose_frequency_data", "Choose File", "Select fequency data file ...", multiple = FALSE),
           HTML("<br><br>"),
+          actionButton("load_first_filter_settings", "Load from settings file"),
           actionButton("load_data", "Load data"),
           tags$hr(),
           h4("Category Filter"),
@@ -117,7 +119,6 @@ ui <- fluidPage(
           h4("Event information"),
           uiOutput("event_date"),
           uiOutput("pre_event_interval"),
-          #uiOutput("event_time"),
           uiOutput("window_length"),
           uiOutput("event_latitude"),
           uiOutput("event_longitude"),
@@ -125,7 +126,9 @@ ui <- fluidPage(
           uiOutput("zone_two_radius"),
           uiOutput("zone_three_radius"),
           tags$hr(),
-          uiOutput("update_plots")
+          uiOutput("update_plots"),
+          actionButton("load_second_filter_settings", "Load from settings file"),
+          shinySaveButton("save_settings", "Save settings file", "Save file as ...", filetype=list('json'))
         ),
         #Output
         mainPanel(
@@ -227,7 +230,8 @@ ui <- fluidPage(
                             numericInput("disconnecting_threshold", 
                                          label = strong('Disconnecting threshold, level below which circuit is considered to
                                                       have disconnected.'), 
-                                         value = 0.05, max = 1, min = 0)
+                                         value = 0.05, max = 1, min = 0),
+                            actionButton("load_backend_settings", "Load from settings file")
                             ),
                mainPanel()
                )
@@ -260,8 +264,9 @@ reset_sidebar <- function(input, output, session, stringsAsFactors) {
   shinyjs::hide("circuit_agg")
   shinyjs::hide("zone_agg")
   shinyjs::hide("compliance_agg")
+  shinyjs::hide("save_settings")
+  shinyjs::hide("load_second_filter_settings")
   output$event_date <- renderUI({})
-  #output$event_time <- renderUI({})
   output$pre_event_interval <- renderUI({})
   output$window_length <- renderUI({})
   output$event_latitude <- renderUI({})
@@ -308,6 +313,7 @@ server <- function(input,output,session){
   hide("choose_frequency_data")
   hide("region_to_load")
   hide("duration")
+  hide("load_first_filter_settings")
   hide("perform_clean")
   hide("keep_raw")
   hide("load_data")
@@ -321,8 +327,11 @@ server <- function(input,output,session){
   hide("circuit_agg")
   hide("zone_agg")
   hide("compliance_agg")
+  hide("save_settings")
+  hide("load_second_filter_settings")
   options(DT.options = list(pageLength = 3))
   # Get input from GUI
+  settings_file <- reactive({input$settings_file})
   database_name <- reactive({input$database_name})
   frequency_data_file <- reactive({input$frequency_data})
   region_to_load <- reactive({input$region_to_load})
@@ -378,13 +387,6 @@ server <- function(input,output,session){
     end_date_time <- strptime(end_time_as_str, format="%Y-%m-%d %H:%M:%S", tz="Australia/Brisbane")
     end_date_time
   })
-  # event_time <- reactive({
-  #   date_as_str <- as.character(input$event_date)
-  #   time_as_str <- substr(input$event_time, 12, 19)
-  #   date_time_as_str <- paste(date_as_str, time_as_str)
-  #   event_date_time <- strptime(date_time_as_str, format="%Y-%m-%d %H:%M:%S", tz="Australia/Brisbane")
-  #   event_date_time
-  # })
   pre_event_interval <- reactive({
     date_as_str <- as.character(input$event_date)
     time_as_str <- substr(input$pre_event_interval, 12, 19)
@@ -472,6 +474,7 @@ server <- function(input,output,session){
     shinyjs::show("region_to_load")
     shinyjs::show("duration")
     shinyjs::show("load_data")
+    shinyjs::show("load_first_filter_settings")
     
     
   })
@@ -643,6 +646,8 @@ server <- function(input,output,session){
       shinyjs::show("circuit_agg")
       shinyjs::show("zone_agg")
       shinyjs::show("compliance_agg")
+      shinyjs::show("save_settings")
+      shinyjs::show("load_second_filter_settings")
       output$event_date <- renderUI({
         dateInput("event_date", label=strong('Event date (yyyy-mm-dd):'), 
                   value=strftime(floor_date(get_mode(v$combined_data$ts), "day"), format="%Y-%m-%d"), startview="year")
@@ -1222,11 +1227,70 @@ server <- function(input,output,session){
     }
   })
   
-  observeEvent(input$save_settings, {
+  get_current_settings <-function(){
     settings <- vector(mode='list')
-    settings$data_base_file <- database_name()
+    
+    settings$database_name <- database_name()
+    
+    settings$region_to_load <- region_to_load()
+    settings$duration <- duration()
+    settings$load_start_time <- load_start_time()
+    settings$load_end_time <- load_end_time()
+    settings$frequency_data_file <- frequency_data_file()
+    
+    settings$cleaned <- clean()
+    settings$standards <- standards()
+    settings$responses <- responses()
+    settings$postcodes <- postcodes()
+    settings$manufactures <- manufacturers()
+    settings$models <- models()
+    settings$sites <- sites()
+    settings$circuits <- circuits()
+    settings$zones <- zones()
+    settings$compliance <- compliance()
+    settings$offsets <- offsets()
+    settings$size_groupings <- size_groupings()
+    
+    settings$agg_on_standard <- agg_on_standard()
+    settings$pst_agg <- pst_agg()
+    settings$grouping_agg <- grouping_agg()
+    settings$response_agg <- response_agg()
+    settings$manufacturer_agg <- manufacturer_agg()
+    settings$model_agg <- model_agg()
+    settings$circuit_agg <- circuit_agg()
+    settings$zone_agg <- zone_agg()
+    settings$compliance_agg <- compliance_agg()
+    
+    settings$raw_upscale <- raw_upscale()
+    
+    settings$pre_event_interval <- as.character(pre_event_interval())
+    settings$window_length <- window_length()
+    settings$event_latitude <- event_latitude()
+    settings$event_longitude <- event_longitude()
+    settings$zone_one_radius <- zone_one_radius()
+    settings$zone_two_radius <- zone_two_radius()
+    settings$zone_three_radius <- zone_three_radius()
+    
+    settings$compliance_threshold <- compliance_threshold()
+    settings$start_buffer <- start_buffer()
+    settings$end_buffer <- end_buffer()
+    settings$end_buffer_responding <- end_buffer_responding()
+    settings$reconnection_threshold <- reconnection_threshold()
+    settings$max_norm_output_threshold <- max_norm_output_threshold()
+    settings$reconnection_time_threshold_for_compliance <- reconnection_time_threshold_for_compliance()
+    settings$reconnection_time_threshold_for_non_compliance <- reconnection_time_threshold_for_non_compliance()
+    settings$ramp_rate_threshold_for_compliance <- ramp_rate_threshold_for_compliance()
+    settings$ramp_rate_threshold_for_non_compliance <- ramp_rate_threshold_for_non_compliance()
+    settings$ramp_rate_change_resource_limit_threshold <- ramp_rate_change_resource_limit_threshold()
+    settings$disconnecting_threshold <- disconnecting_threshold()
+    
     settings_as_json <- toJSON(settings, indent = 1)
     
+    return(settings_as_json)
+  }
+  
+  observeEvent(input$save_settings, {
+    settings_as_json <- get_current_settings()
     volumes <- c(home=getwd())
     shinyFileSave(input, "save_settings", roots=volumes, session=session)
     fileinfo <- parseSavePath(volumes, input$save_settings)
@@ -1234,42 +1298,106 @@ server <- function(input,output,session){
       write(settings_as_json, as.character(fileinfo$datapath))
     }
   })
+  
+  load_settings <- function(){
+    settings <- NA
+    tryCatch(
+      {
+        settings <- fromJSON(file = settings_file())
+      },
+      error = function(cond){
+        shinyalert("Opps", "Something went wrong loading the settings, please see the console for more details.")
+      }
+    )
+    return(settings)
+  }
+  
+  observeEvent(input$load_file_from_settings, {
+    settings <- load_settings()
+    if (!is.na(settings)){updateTextInput(session, "database_name", value = settings$database_name)}
+  })
+  
+  observeEvent(input$load_first_filter_settings, {
+    settings <- load_settings()
+    if (!is.na(settings)){
+      updateDateRangeInput(session, "load_date", start = strftime(settings$load_start_time, format="%Y-%m-%d"))
+      updateDateRangeInput(session, "load_date", end = strftime(settings$load_end_time, format="%Y-%m-%d"))
+      updateTimeInput(session, "load_time_start", value = settings$load_start_time)
+      updateTimeInput(session, "load_time_end", value = settings$load_end_time)
+      updateRadioButtons(session, "duration", selected = settings$duration)
+      updateRadioButtons(session, "region_to_load", selected = settings$region_to_load)
+      updateTextInput(session, "frequency_data", value = settings$frequency_data_file)
+    }
+  })
+  
+  observeEvent(input$load_second_filter_settings, {
+    settings <- load_settings()
+    if (!is.na(settings)){
+      updateCheckboxGroupButtons(session, "cleaned", selected = settings$cleaned)
+      updateCheckboxGroupButtons(session, "standards", selected = settings$standards)
+      updateCheckboxGroupButtons(session, "responses", selected = settings$responses)
+      updateCheckboxGroupButtons(session, "zones", selected = settings$zones)
+      updateCheckboxGroupButtons(session, "compliance", selected = settings$compliance)
+      updateCheckboxGroupButtons(session, "offsets", selected = settings$offsets)
+      updateCheckboxGroupButtons(session, "size_grouping", selected = settings$size_grouping)
+      updateSelectizeInput(session, "postcodes", selected = settings$postcodes)
+      updateSelectizeInput(session, "manufacturers", selected = settings$manufactures)
+      updateSelectizeInput(session, "models", selected = settings$models)
+      updateSelectizeInput(session, "sites", selected = settings$sites)
+      updateSelectizeInput(session, "circuits", selected = settings$circuits)
+      
+      updateMaterialSwitch(session, "size_grouping", value = settings$agg_on_standard)
+      updateMaterialSwitch(session, "pst_agg", value = settings$pst_agg)
+      updateMaterialSwitch(session, "grouping_agg", value = settings$grouping_agg)
+      updateMaterialSwitch(session, "response_agg", value = settings$response_agg)
+      updateMaterialSwitch(session, "manufacturer_agg", value = settings$manufacturer_agg)
+      updateMaterialSwitch(session, "model_agg", value = settings$model_agg)
+      updateMaterialSwitch(session, "circuit_agg", value = settings$circuit_agg)
+      updateMaterialSwitch(session, "zone_agg", value = settings$zone_agg)
+      updateMaterialSwitch(session, "compliance_agg", value = settings$compliance_agg)
+      
+      updateMaterialSwitch(session, "raw_upscale", value = settings$raw_upscale)
+      
+      updateDateInput(session, "event_date", value = strftime(settings$pre_event_interval, format = "%Y-%m-%d"))
+      updateTimeInput(session, "pre_event_interval", value = settings$pre_event_interval)
+      updateNumericInput(session, "window_length", value = settings$window_length)
+      updateNumericInput(session, "event_latitude", value = settings$event_latitude)
+      updateNumericInput(session, "event_longitude", value = settings$event_longitude)
+      updateNumericInput(session, "zone_one_radius", value = settings$zone_one_radius)
+      updateNumericInput(session, "zone_two_radius", value = settings$zone_two_radius)
+      updateNumericInput(session, "zone_three_radius", value = settings$zone_three_radius)
+    }
+  
+  })
+  
+  observeEvent(input$load_backend_settings, {
+    settings <- load_settings()
+    if (!is.na(settings)){
+      updateNumericInput(session, "compliance_threshold", value = settings$compliance_threshold)
+      updateNumericInput(session, "start_buffer", value = settings$start_buffer)
+      updateNumericInput(session, "end_buffer", value = settings$end_buffer)
+      updateNumericInput(session, "end_buffer_responding", value = settings$end_buffer_responding)
+      updateNumericInput(session, "reconnection_threshold", value = settings$reconnection_threshold)
+      updateNumericInput(session, "max_norm_output_threshold", value = settings$max_norm_output_threshold)
+      updateNumericInput(session, "reconnection_time_threshold_for_compliance", value = settings$reconnection_time_threshold_for_compliance)
+      updateNumericInput(session, "reconnection_time_threshold_for_non_compliance", value = settings$reconnection_time_threshold_for_non_compliance)
+      updateNumericInput(session, "ramp_rate_threshold_for_compliance", value = settings$ramp_rate_threshold_for_compliance)
+      updateNumericInput(session, "ramp_rate_threshold_for_non_compliance", value = settings$ramp_rate_threshold_for_non_compliance)
+      updateNumericInput(session, "ramp_rate_change_resource_limit_threshold", value = settings$ramp_rate_change_resource_limit_threshold)
+      updateNumericInput(session, "disconnecting_threshold", value = settings$disconnecting_threshold)
+    }
+  })
+  
+  observe({
+    volumes <- c(home=getwd())
+    shinyFileChoose(input, "load_settings", roots=volumes, session=session)
+    fileinfo <- parseFilePaths(volumes, input$load_settings)
+    if (nrow(fileinfo) > 0) {updateTextInput(session, "settings_file", value=as.character(fileinfo$datapath))}
+  })
 
   # Save data from aggregate pv power plot
   observeEvent(input$batch_save, {
-    variables <- c('time_series_file', 'circuit_details_file', 'site_details_file', 'frequency_data_file', 'region',
-                   'duration', 'standards', 'responses', 'postcodes', 'manufacturers', 'models', 'sites', 'circuits', 
-                   'zones', 'compliance', 'offsets', 'size_groupings', 'clean', 'raw_upscale', 'pst_agg', 
-                   'grouping_agg', 'response_agg', 'manufacturer_agg', 'perform_clean', 'model_agg', 'circuit_agg', 
-                   'zone_agg', 'compliance_agg', 'start_time', 'end_time', 'pre_event_interval', 
-                   'agg_on_standard', 'window_length', 'event_latitude', 'event_longitude', 'zone_one_radius', 
-                   'zone_two_radius', 'zone_three_radius', 'compliance_threshold', 'start_buffer', 'end_buffer',
-                   'end_buffer_responding', 'disconnecting_threshold')
-   values <- c(time_series_file(), circuit_details_file(), site_details_file(), frequency_data_file(), 
-                   if(is.null(region_to_load())){''}else{region_to_load()},
-                   if(is.null(duration())){''}else{duration()}, paste(standards(), collapse='; '), paste(responses(), collapse='; '), 
-                   paste(postcodes(), collapse='; '), 
-                   paste(manufacturers(), '; '), 
-                   paste(models(), collapse='; '), paste(sites(), collapse='; '), paste(circuits(), collapse='; '), 
-                   paste(zones(), collapse='; '),  paste(compliance(), collapse='; '), paste(offsets(), collapse='; '), 
-                   paste(size_groupings(), collapse='; '),
-                   paste(clean(), collapse='; '), raw_upscale(), pst_agg(), 
-                   grouping_agg(), response_agg(), manufacturer_agg(), perform_clean(), model_agg(), circuit_agg(), 
-                   zone_agg(), compliance_agg(), 
-                   if(length(start_time())==0){''}else{as.character(start_time())}, 
-                   if(length(end_time())==0){''}else{as.character(end_time())}, 
-                   if(length(pre_event_interval())==0){''}else{as.character(pre_event_interval())},
-                   agg_on_standard(), 
-                   if(is.null(window_length())){''}else{window_length()}, 
-                   if(is.null(event_latitude())){''}else{event_latitude()}, 
-                   if(is.null(event_longitude())){''}else{event_longitude()}, 
-                   if(is.null(zone_one_radius())){''}else{zone_one_radius()}, 
-                   if(is.null(zone_two_radius())){''}else{zone_two_radius()}, 
-                   if(is.null(zone_three_radius())){''}else{zone_three_radius()},
-                   compliance_threshold(), start_buffer(), end_buffer(),
-                   end_buffer_responding(), disconnecting_threshold())
-   
-    meta_data = data.frame(variables, values, stringsAsFactors = FALSE)
+    meta_data <- get_current_settings()
     volumes <- getVolumes()
     shinyFileSave(input, "batch_save", roots=volumes, session=session)
     fileinfo <- parseSavePath(volumes, input$batch_save)
@@ -1283,7 +1411,7 @@ server <- function(input,output,session){
       write.csv(v$response_count, paste0(datapath, '_response_count.csv'), row.names=FALSE)
       write.csv(v$zone_count, paste0(datapath, '_zone_count.csv'), row.names=FALSE)
       write.csv(v$distance_response, paste0(datapath, '_distance_response.csv'), row.names=FALSE)
-      write.csv(meta_data, paste0(datapath, '_meta_data.csv'), row.names=FALSE)
+      write(meta_data, paste0(datapath, '_meta_data.json'))
       removeNotification(id)
     }
   })
