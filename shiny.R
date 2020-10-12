@@ -103,7 +103,7 @@ ui <- fluidPage(
           uiOutput("offsets"),
           tags$hr(),
           h4("Grouping Categories"),
-          materialSwitch("Std_Agg_Indiv", label=strong("AS4777:"), status="primary", value=TRUE),
+          materialSwitch("standard_agg", label=strong("AS4777:"), status="primary", value=TRUE),
           materialSwitch("grouping_agg", label=strong("Size Grouping:"), status="primary", value=TRUE),
           materialSwitch("response_agg", label=strong("Response Grouping:"), status="primary", value=FALSE),
           materialSwitch("pst_agg", label=strong("Postcodes:"), status="primary", value=FALSE),
@@ -254,7 +254,7 @@ reset_sidebar <- function(input, output, session, stringsAsFactors) {
   output$zones <- renderUI({})
   output$compliance <- renderUI({})  
   output$offsets <- renderUI({}) 
-  shinyjs::hide("Std_Agg_Indiv")
+  shinyjs::hide("standard_agg")
   shinyjs::hide("raw_upscale")
   shinyjs::hide("pst_agg")
   shinyjs::hide("grouping_agg")
@@ -317,7 +317,7 @@ server <- function(input,output,session){
   hide("perform_clean")
   hide("keep_raw")
   hide("load_data")
-  hide("Std_Agg_Indiv")
+  hide("standard_agg")
   hide("raw_upscale")
   hide("pst_agg")
   hide("grouping_agg")
@@ -394,7 +394,7 @@ server <- function(input,output,session){
     pre_event_interval_date_time <- strptime(date_time_as_str, format="%Y-%m-%d %H:%M:%S", tz="Australia/Brisbane")
     pre_event_interval_date_time
   })
-  agg_on_standard <- reactive({input$Std_Agg_Indiv})
+  agg_on_standard <- reactive({input$standard_agg})
   window_length <- reactive({input$window_length})
   event_latitude <- reactive({input$event_latitude})
   event_longitude <- reactive({input$event_longitude})
@@ -581,7 +581,7 @@ server <- function(input,output,session){
         selectizeInput("circuits", label=strong("Select Circuits"), choices = sort(unique(v$circuit_details$c_id)), 
                        multiple=TRUE)  
       })
-      shinyjs::show("Std_Agg_Indiv")
+      shinyjs::show("standard_agg")
       output$size_groupings <- renderUI({
         checkboxGroupButtons(inputId="size_groupings", label=strong("Size Groupings"),
                              choices=list("30-100kW", "<30 kW"), selected=list("30-100kW", "<30 kW"),
@@ -1239,7 +1239,7 @@ server <- function(input,output,session){
     settings$frequency_data_file <- frequency_data_file()
     
     settings$cleaned <- clean()
-    settings$standards <- standards()
+    settings$StdVersion <- standards()
     settings$responses <- responses()
     settings$postcodes <- postcodes()
     settings$manufactures <- manufacturers()
@@ -1251,7 +1251,7 @@ server <- function(input,output,session){
     settings$offsets <- offsets()
     settings$size_groupings <- size_groupings()
     
-    settings$agg_on_standard <- agg_on_standard()
+    settings$standard_agg <- agg_on_standard()
     settings$pst_agg <- pst_agg()
     settings$grouping_agg <- grouping_agg()
     settings$response_agg <- response_agg()
@@ -1334,19 +1334,19 @@ server <- function(input,output,session){
     settings <- load_settings()
     if (!is.na(settings)){
       updateCheckboxGroupButtons(session, "cleaned", selected = settings$cleaned)
-      updateCheckboxGroupButtons(session, "standards", selected = settings$standards)
+      updateCheckboxGroupButtons(session, "StdVersion", selected = settings$standards)
       updateCheckboxGroupButtons(session, "responses", selected = settings$responses)
       updateCheckboxGroupButtons(session, "zones", selected = settings$zones)
       updateCheckboxGroupButtons(session, "compliance", selected = settings$compliance)
       updateCheckboxGroupButtons(session, "offsets", selected = settings$offsets)
-      updateCheckboxGroupButtons(session, "size_grouping", selected = settings$size_grouping)
+      updateCheckboxGroupButtons(session, "size_groupings", selected = settings$size_grouping)
       updateSelectizeInput(session, "postcodes", selected = settings$postcodes)
       updateSelectizeInput(session, "manufacturers", selected = settings$manufactures)
       updateSelectizeInput(session, "models", selected = settings$models)
       updateSelectizeInput(session, "sites", selected = settings$sites)
       updateSelectizeInput(session, "circuits", selected = settings$circuits)
       
-      updateMaterialSwitch(session, "size_grouping", value = settings$agg_on_standard)
+      updateMaterialSwitch(session, "standard_agg", value = settings$agg_on_standard)
       updateMaterialSwitch(session, "pst_agg", value = settings$pst_agg)
       updateMaterialSwitch(session, "grouping_agg", value = settings$grouping_agg)
       updateMaterialSwitch(session, "response_agg", value = settings$response_agg)
