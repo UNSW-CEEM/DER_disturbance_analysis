@@ -763,10 +763,12 @@ server <- function(input,output,session){
       if (length(compliance()) < 8) {combined_data_f <- filter(combined_data_f, compliance_status %in% compliance())}
       
       # Set reconnection compliance values.
+      max_power <- group_by(combined_data_f, c_id, clean) %>% summarise(max_power = max(power_kW))
+      combined_data_f <- left_join(combined_data_f, max_power, by=c("c_id", "clean"))
+      combined_data_f <- mutate(combined_data_f, c_id_daily_norm_power=power_kW/max_power)
       reconnection_categories <- create_reconnection_summary(combined_data_f, pre_event_interval(),
                                                              disconnecting_threshold(),
                                                              reconnect_threshold = reconnection_threshold(),
-                                                             max_norm_output_threshold = max_norm_output_threshold(), 
                                                              reconnection_time_threshold_for_compliance = 
                                                                reconnection_time_threshold_for_compliance(),
                                                              reconnection_time_threshold_for_non_compliance = 
@@ -801,7 +803,7 @@ server <- function(input,output,session){
                                   site_performance_factor, response_category, zone, distance, lat, lon, e, con_type,
                                   first_ac, polarity, compliance_status, reconnection_compliance_status, 
                                   manual_droop_compliance, manual_reconnect_compliance, reconnection_time, 
-                                  max_reconnection_ramp_rate, max_norm_power)
+                                  max_reconnection_ramp_rate)
       # Create copy of filtered data to use in upscaling
       combined_data_f2 <- combined_data_f
         if(raw_upscale()){combined_data_f2 <- upscale(combined_data_f2, v$install_data)}
@@ -820,7 +822,7 @@ server <- function(input,output,session){
                                     sum_ac, clean, manufacturer, model, response_category, zone, distance, lat, lon,
                                     con_type, first_ac, polarity, compliance_status, reconnection_compliance_status, 
                                     manual_droop_compliance, manual_reconnect_compliance, reconnection_time, 
-                                    max_reconnection_ramp_rate, max_norm_power)
+                                    max_reconnection_ramp_rate)
         # Combine data sets that have the same grouping so they can be saved in a single file
         if (no_grouping){
           et <- pre_event_interval()
