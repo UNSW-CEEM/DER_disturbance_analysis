@@ -454,37 +454,45 @@ server <- function(input,output,session){
   
   observeEvent(input$connect_to_database, {
     v$db <- DBInterface$new()
-    v$db$connect_to_existing_database(database_name())
     
-    min_timestamp <- v$db$get_min_timestamp()
-    max_timestamp <- v$db$get_max_timestamp()
-    
-    output$load_time_start <- renderUI({
-      timeInput("load_time_start", label = strong('Enter start time'), 
-                value = min_timestamp)
-    })
-    output$load_time_end <- renderUI({
-      timeInput("load_time_end", label = strong('Enter end time'), 
-                value = max_timestamp)
+    good_connection = FALSE
+    tryCatch({
+      v$db$connect_to_existing_database(database_name())
+      good_connection = TRUE
+      },
+      error =  function(cond) {
+        shinyalert("An error occured while connecting to the database.", cond$message)
     })
     
-    output$load_date <- renderUI({
-      dateRangeInput("load_date", label = strong('Date range (yyyy-mm-dd):'),
-                     start = strftime(min_timestamp, format = "%Y-%m-%d"),
-                     end = strftime(min_timestamp, format = "%Y-%m-%d"),
-                     min = strftime(min_timestamp, format = "%Y-%m-%d"),
-                     max = strftime(max_timestamp, format = "%Y-%m-%d"),
-                     startview = "year")
-    })
-    
-    shinyjs::show("frequency_data")
-    shinyjs::show("choose_frequency_data")
-    shinyjs::show("region_to_load")
-    shinyjs::show("duration")
-    shinyjs::show("load_data")
-    shinyjs::show("load_first_filter_settings")
-    
-    
+    if (good_connection) {
+      min_timestamp <- v$db$get_min_timestamp()
+      max_timestamp <- v$db$get_max_timestamp()
+      
+      output$load_time_start <- renderUI({
+        timeInput("load_time_start", label = strong('Enter start time'), 
+                  value = min_timestamp)
+      })
+      output$load_time_end <- renderUI({
+        timeInput("load_time_end", label = strong('Enter end time'), 
+                  value = max_timestamp)
+      })
+      
+      output$load_date <- renderUI({
+        dateRangeInput("load_date", label = strong('Date range (yyyy-mm-dd):'),
+                       start = strftime(min_timestamp, format = "%Y-%m-%d"),
+                       end = strftime(min_timestamp, format = "%Y-%m-%d"),
+                       min = strftime(min_timestamp, format = "%Y-%m-%d"),
+                       max = strftime(max_timestamp, format = "%Y-%m-%d"),
+                       startview = "year")
+      })
+      
+      shinyjs::show("frequency_data")
+      shinyjs::show("choose_frequency_data")
+      shinyjs::show("region_to_load")
+      shinyjs::show("duration")
+      shinyjs::show("load_data")
+      shinyjs::show("load_first_filter_settings")
+    }
   })
   
   # This is the event that runs when the "Load data" button on the GUI is
@@ -740,6 +748,13 @@ server <- function(input,output,session){
     end_time <- as.POSIXct(load_end_time(), tz = "Australia/Brisbane")
     
     # check pre-event interval is on the selected time offset
+    data_at_set_pre_event_interval = filter(v$combined_data, ts == pre_event_interval())
+    if (dim(data_at_set_pre_event_interval)[1] == 0) {
+      long_error_message <- c("The pre-event time interval does not match any time step in the time series data.")
+      long_error_message <- paste(long_error_message, collapse = '')
+      shinyalert("Error in pre-event time interval", long_error_message)
+      error_check_passed = FALSE
+    }
     
     # check pre-event interval is inside the time window loaded
     if ((pre_event_interval() < start_time) | (pre_event_interval() > end_time)) {
@@ -749,8 +764,7 @@ server <- function(input,output,session){
       error_check_passed = FALSE
     }
     
-    # check window length does not extend outside time window loaded
-    browser()
+    # check window length does not extend outside time window loaded.
     if ((pre_event_interval() + window_length() * 60) > end_time) {
       long_error_message <- c("The event window length must be within the time window of loaded data.")
       long_error_message <- paste(long_error_message, collapse = '')
