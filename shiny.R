@@ -1,5 +1,5 @@
 ##RSHINY APP
-library (shiny)
+library(shiny)
 library(shinyTime)
 library(shinyWidgets)
 library(shinyalert)
