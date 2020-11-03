@@ -550,6 +550,14 @@ server <- function(input,output,session){
       shinyalert("Error loading install data", long_error_message)
       error_check_passed = FALSE
     }
+    time_series_data <- v$db$get_filtered_time_series_data(state = region_to_load(), duration = duration(), 
+                                                           start_time = start_time, end_time = end_time)
+    if (dim(time_series_data)[1] == 0){
+      long_error_message <- c("The region and duration selected resulted in an empty dataset, please try another selection")
+      long_error_message <- paste(long_error_message, collapse = '')
+      shinyalert("Error loading timeseries data", long_error_message)
+      error_check_passed = FALSE
+    }
 
       if (error_check_passed){
         id <- showNotification("Loading data", duration = 1000)
@@ -572,8 +580,6 @@ server <- function(input,output,session){
         v$site_details <- size_grouping(v$site_details)
         v$circuit_details <- bind_rows(v$circuit_details_raw, circuit_details_clean)
   
-        time_series_data <- v$db$get_filtered_time_series_data(state = region_to_load(), duration = duration(), 
-                                                               start_time = start_time, end_time = end_time)
         time_series_data <- mutate(time_series_data, ts = fastPOSIXct(ts, tz="Australia/Brisbane"))
   
         v$combined_data <- inner_join(time_series_data, v$circuit_details, by = "c_id")
