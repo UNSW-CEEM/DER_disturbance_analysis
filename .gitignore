@@ -58,6 +58,7 @@ data/*
 .idea/vcs.xml
 auto_test_data/*
 data/*
+renv/*
 
 #pycharm
 .idea/*
