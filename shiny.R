@@ -541,6 +541,15 @@ server <- function(input,output,session){
         error_check_passed = FALSE
       }
     }
+    
+    install_data_file <- "cumulative_capacity_and_number_20200811_ready_for_tool_v2.csv"
+    if (!file.exists(install_data_file)){
+      long_error_message <- c("The required file cumulative_capacity_and_number_20200811_ready_for_tool_v2.csv could ",
+                              "not be found. Please add it to the main project directory.")
+      long_error_message <- paste(long_error_message, collapse = '')
+      shinyalert("Error loading install data", long_error_message)
+      error_check_passed = FALSE
+    }
 
       if (error_check_passed){
         id <- showNotification("Loading data", duration = 1000)
@@ -590,9 +599,8 @@ server <- function(input,output,session){
   
   
         # Load in the install data from CSV.
-        id <- showNotification("Load CER capacity data", duration=1000)
-        intall_data_file <- "cumulative_capacity_and_number_20200811_ready_for_tool_v2.csv"
-        install_data <- read.csv(file=intall_data_file, header=TRUE, stringsAsFactors = FALSE)
+        id <- showNotification("Load CER capacity data", duration = 1000)
+        install_data <- read.csv(file = install_data_file, header = TRUE, stringsAsFactors = FALSE)
         v$install_data <- process_install_data(install_data)
         
         # Load postcode lat and long data
