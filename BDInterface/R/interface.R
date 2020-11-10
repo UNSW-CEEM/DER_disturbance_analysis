@@ -202,7 +202,11 @@ DBInterface <- R6::R6Class("DBInterface",
     },
     drop_repeated_headers = function(){
       con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)
-      RSQLite::dbExecute(con, "DELETE FROM timeseries where ts=='ts'")
+      start_query <- "DELETE FROM timeseries where ts in ('"
+      header_values <- paste(names(self$default_timeseries_column_aliases), collapse="','")
+      end_query <- "')"
+      query <- paste0(start_query, header_values, end_query)
+      RSQLite::dbExecute(con, query)
       RSQLite::dbDisconnect(con)
     },
     check_ids_match_between_datasets = function(){
@@ -211,9 +215,9 @@ DBInterface <- R6::R6Class("DBInterface",
       c_ids_in_circuit_details <- RSQLite::dbGetQuery(con, "SELECT DISTINCT c_id FROM circuit_details_raw")
       site_ids_in_circuit_details <- RSQLite::dbGetQuery(con, "SELECT DISTINCT site_id FROM circuit_details_raw")
       site_ids_in_site_details <- RSQLite::dbGetQuery(con, "SELECT DISTINCT site_id FROM site_details_raw")
-      c_ids_intersection <- intersect(c_ids_in_timeseries, c_ids_in_circuit_details)
-      site_ids_intersection <- intersect(site_ids_in_circuit_details, site_ids_in_site_details)
-      if (length(c_ids_intersection$c_id) < 10) {
+      c_ids_intersection <- intersect(c_ids_in_timeseries$c_id, c_ids_in_circuit_details$c_id)
+      site_ids_intersection <- intersect(site_ids_in_circuit_details$site_id, site_ids_in_site_details$site_id)
+      if (length(c_ids_intersection) < 10) {
         RSQLite::dbExecute(con, "DROP TABLE IF EXISTS timeseries")
         RSQLite::dbExecute(con, "DROP TABLE IF EXISTS circuit_details_raw")
         RSQLite::dbExecute(con, "DROP TABLE IF EXISTS site_details_raw")
@@ -222,7 +226,7 @@ DBInterface <- R6::R6Class("DBInterface",
               Please check files from matching event data sets are being used. To disable this check, use
               check_dataset_ids_match=FALSE.")
       }
-      if (length(site_ids_intersection$site_id) < 10) {
+      if (length(site_ids_intersection) < 10) {
         RSQLite::dbExecute(con, "DROP TABLE IF EXISTS timeseries")
         RSQLite::dbExecute(con, "DROP TABLE IF EXISTS circuit_details_raw")
         RSQLite::dbExecute(con, "DROP TABLE IF EXISTS site_details_raw")
