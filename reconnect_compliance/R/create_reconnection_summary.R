@@ -14,6 +14,7 @@ create_reconnection_summary <- function(combined_data_f, pre_event_interval,
                                                      event_time = pre_event_interval, 
                                                      disconnect_threshold = disconnecting_threshold, 
                                                      reconnect_threshold = reconnect_threshold)
+  
   combined_data_f <- inner_join(combined_data_f, reconnection_times, by = 'c_id')
   ramp_rates <- calculate_ramp_rates(combined_data_f)
   reconnection_start_times <- find_last_distconnected_intervals(post_event_response, 
@@ -34,6 +35,7 @@ create_reconnection_summary <- function(combined_data_f, pre_event_interval,
   reconnection_summary <- summarise(reconnection_summary, response_category = first(response_category))
   reconnection_summary <- inner_join(reconnection_summary, reconnection_times, by = 'c_id')
   reconnection_summary <- inner_join(reconnection_summary, max_ramp_rates, by = 'c_id')
+  
   if (dim(reconnection_summary)[1] == 0) {
     reconnection_categories <- data.frame(matrix(ncol = 2, nrow = 0))
     names <- c("c_id", "reconnection_compliance_status")
@@ -45,6 +47,7 @@ create_reconnection_summary <- function(combined_data_f, pre_event_interval,
                                                                   ramp_rate_threshold_for_compliance,
                                                                   ramp_rate_threshold_for_non_compliance)
   }
+  
   reconnection_categories <- inner_join(reconnection_categories, select(reconnection_summary, c_id, reconnection_time,
                                                                         max_reconnection_ramp_rate), 
                                         by = 'c_id')

@@ -441,7 +441,8 @@ server <- function(input,output,session){
                       distance_response = data.frame(),
                       frequency_data = data.frame(),
                       unique_offsets = c(),
-                      circuit_summary = data.frame()
+                      circuit_summary = data.frame(),
+                      trigger_update_manual_compliance_tab = FALSE
                       )
   
   observeEvent(input$connect_to_database, {
@@ -803,7 +804,7 @@ server <- function(input,output,session){
                                   site_performance_factor, response_category, zone, distance, lat, lon, e, con_type,
                                   first_ac, polarity, compliance_status, reconnection_compliance_status, 
                                   manual_droop_compliance, manual_reconnect_compliance, reconnection_time, 
-                                  max_reconnection_ramp_rate)
+                                  max_reconnection_ramp_rate, c_id_daily_norm_power)
       # Create copy of filtered data to use in upscaling
       combined_data_f2 <- combined_data_f
         if(raw_upscale()){combined_data_f2 <- upscale(combined_data_f2, v$install_data)}
@@ -957,6 +958,10 @@ server <- function(input,output,session){
           v$reconnection_profile <- create_reconnection_profile(pre_event_interval(), ramp_length_minutes = 6,
                                                                 time_step_seconds = as.numeric(duration()))
           
+          Sys.sleep(1.0)
+          
+          v$trigger_update_manual_compliance_tab <- isolate(!v$trigger_update_manual_compliance_tab)
+          
           removeNotification(id)
           
       } else {
@@ -973,7 +978,8 @@ server <- function(input,output,session){
     }
   })
   
-  observeEvent(input$compliance_cleaned_or_raw, {
+  observeEvent(v$trigger_update_manual_compliance_tab, {
+                 
     if(compliance_cleaned_or_raw() %in% v$combined_data_f$clean){
       # Setting up manual compliance tab.
       circuit_options <- filter(v$combined_data_f, clean==compliance_cleaned_or_raw())
@@ -1073,10 +1079,10 @@ server <- function(input,output,session){
       } else {
         
         output$compliance_plot <- renderPlotly({
-          plot_ly(data_to_view, x=~Time, y=~c_id_norm_power, type="scatter") %>% 
+          plot_ly(data_to_view, x=~Time, y=~c_id_daily_norm_power, type="scatter") %>% 
             add_trace(x=v$reconnection_profile$ts, y=v$reconnection_profile$norm_power, name='Ideal Response', 
                       mode='markers', inherit=FALSE) %>%
-            layout(yaxis=list(title="Circuit power \n normalised to value of pre-event interval"))
+            layout(yaxis=list(title="Circuit power \n normalised to max circuit power"))
         })
         
       }
