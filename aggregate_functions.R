@@ -18,7 +18,7 @@ vector_groupby_power <- function(data, grouping_cols){
   series_cols <- grouping_cols
   grouping_cols <- c("ts", series_cols)
   data <- group_by(data, .dots=grouping_cols)
-  data <- summarise(data , Power_kW=sum(power_kW))
+  data <- summarise(data , Power_kW=sum(power_kW, na.rm = TRUE))
   data$series <- do.call(paste, c(data[series_cols], sep = "-" ))
   data <- setnames(data, c("ts", "Power_kW"), c("Time", "Power_kW"))
   data <- as.data.frame(data)
@@ -29,7 +29,7 @@ vector_groupby_f_and_v <- function(data, grouping_cols){
   series_cols <- grouping_cols
   grouping_cols <- c("ts", series_cols)
   data <- group_by(data, .dots=grouping_cols)
-  data <- summarise(data, Frequency=mean(f), Voltage=mean(v))
+  data <- summarise(data, Frequency=mean(f, na.rm = TRUE), Voltage=mean(v, na.rm = TRUE))
   data$series <- do.call(paste, c(data[series_cols], sep = "-" ))
   data <- setnames(data, c("ts"), c("Time"))
   data <- as.data.frame(data)
@@ -40,7 +40,7 @@ vector_groupby_norm_power <- function(data, grouping_cols){
   series_cols <- grouping_cols
   grouping_cols <- c("ts", series_cols)
   data <- group_by(data, .dots=grouping_cols)
-  data <- summarise(data , c_id_norm_power=mean(c_id_norm_power))
+  data <- summarise(data , c_id_norm_power=mean(c_id_norm_power, na.rm = TRUE))
   data$series <- do.call(paste, c(data[series_cols], sep = "-" ))
   data <- setnames(data, c("ts"), c("Time"))
   data <- as.data.frame(data)
