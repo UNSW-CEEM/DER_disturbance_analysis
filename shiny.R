@@ -962,11 +962,6 @@ server <- function(input,output,session){
           v$reconnection_profile <- create_reconnection_profile(pre_event_interval(), ramp_length_minutes = 6,
                                                                 time_step_seconds = as.numeric(duration()))
           
-          
-          
-          shinyjs::delay(5000, 
-                         {v$trigger_update_manual_compliance_tab <- isolate(!v$trigger_update_manual_compliance_tab)})
-          
           removeNotification(id)
           
       } else {
