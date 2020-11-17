@@ -74,3 +74,4 @@ cumulative_capacity_and_number_20200811_raw_from_sql_v2.csv
 cumulative_capacity_and_number_20200811_ready_for_tool.csv
 cumulative_capacity_and_number_20200811_ready_for_tool_v2.csv
 *.json
+.Rproj.user
