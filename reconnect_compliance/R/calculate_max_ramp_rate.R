@@ -3,11 +3,11 @@ calculate_max_reconnection_ramp_rate <- function(normalised_power_profiles, even
                                          reconnect_threshold){
   normalised_power_profiles <- filter(normalised_power_profiles, ts > event_time)
   
-  distconnected_intervals <- filter(normalised_power_profiles, c_id_daily_norm_power < disconnect_threshold)
+  distconnected_intervals <- filter(normalised_power_profiles, c_id_daily_norm_power < disconnect_threshold * pre_event_norm_power)
   last_disconnected_interval <- group_by(distconnected_intervals, c_id)
   last_disconnected_interval <- summarise(last_disconnected_interval, pre_reconnection_time = max(ts))
   
-  connected_intervals <- filter(normalised_power_profiles, c_id_daily_norm_power > reconnect_threshold)
+  connected_intervals <- filter(normalised_power_profiles, c_id_daily_norm_power > reconnect_threshold * pre_event_norm_power)
   first_fully_connected_interval <- group_by(connected_intervals, c_id)
   first_fully_connected_interval <- summarise(first_fully_connected_interval, fully_connected_time = min(ts))
   

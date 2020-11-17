@@ -6,8 +6,8 @@ create_reconnection_summary <- function(combined_data_f, pre_event_interval,
                                         ramp_rate_threshold_for_compliance,
                                         ramp_rate_threshold_for_non_compliance,
                                         ramp_rate_change_resource_limit_threshold){
-  
-  post_event_response <- select(combined_data_f, ts, c_id, c_id_daily_norm_power)
+
+  post_event_response <- select(combined_data_f, ts, c_id, c_id_daily_norm_power, pre_event_norm_power)
   post_event_response <- filter(post_event_response, ts > pre_event_interval)
   
   reconnection_times <- calculate_reconnection_times(post_event_response, 
@@ -32,7 +32,8 @@ create_reconnection_summary <- function(combined_data_f, pre_event_interval,
                                                          disconnect_threshold = disconnecting_threshold, 
                                                          reconnect_threshold = reconnect_threshold)
   reconnection_summary <- group_by(combined_data_f, c_id)
-  reconnection_summary <- summarise(reconnection_summary, response_category = first(response_category))
+  reconnection_summary <- summarise(reconnection_summary, response_category = first(response_category),
+                                    pre_event_daily_norm_power = first(pre_event_norm_power))
   reconnection_summary <- inner_join(reconnection_summary, reconnection_times, by = 'c_id')
   reconnection_summary <- inner_join(reconnection_summary, max_ramp_rates, by = 'c_id')
   
@@ -49,7 +50,8 @@ create_reconnection_summary <- function(combined_data_f, pre_event_interval,
   }
   
   reconnection_categories <- inner_join(reconnection_categories, select(reconnection_summary, c_id, reconnection_time,
-                                                                        max_reconnection_ramp_rate), 
+                                                                        max_reconnection_ramp_rate, 
+                                                                        pre_event_daily_norm_power), 
                                         by = 'c_id')
   return(reconnection_categories)
 }

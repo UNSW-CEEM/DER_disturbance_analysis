@@ -767,6 +767,10 @@ server <- function(input,output,session){
       max_power <- group_by(combined_data_f, c_id, clean) %>% summarise(max_power = max(power_kW))
       combined_data_f <- left_join(combined_data_f, max_power, by=c("c_id", "clean"))
       combined_data_f <- mutate(combined_data_f, c_id_daily_norm_power=power_kW/max_power)
+      pre_event_daily_norm_power <- filter(combined_data_f, ts == pre_event_interval())
+      pre_event_daily_norm_power <- mutate(pre_event_daily_norm_power, pre_event_norm_power = c_id_daily_norm_power)
+      pre_event_daily_norm_power <- select(pre_event_daily_norm_power, clean, c_id, pre_event_norm_power)
+      combined_data_f <- inner_join(combined_data_f, pre_event_daily_norm_power, by=c("c_id", "clean"))
       reconnection_categories <- create_reconnection_summary(combined_data_f, pre_event_interval(),
                                                              disconnecting_threshold(),
                                                              reconnect_threshold = reconnection_threshold(),
@@ -804,7 +808,7 @@ server <- function(input,output,session){
                                   site_performance_factor, response_category, zone, distance, lat, lon, e, con_type,
                                   first_ac, polarity, compliance_status, reconnection_compliance_status, 
                                   manual_droop_compliance, manual_reconnect_compliance, reconnection_time, 
-                                  max_reconnection_ramp_rate, c_id_daily_norm_power)
+                                  max_reconnection_ramp_rate, c_id_daily_norm_power, pre_event_daily_norm_power)
       # Create copy of filtered data to use in upscaling
       combined_data_f2 <- combined_data_f
         if(raw_upscale()){combined_data_f2 <- upscale(combined_data_f2, v$install_data)}
@@ -958,9 +962,10 @@ server <- function(input,output,session){
           v$reconnection_profile <- create_reconnection_profile(pre_event_interval(), ramp_length_minutes = 6,
                                                                 time_step_seconds = as.numeric(duration()))
           
-          Sys.sleep(1.0)
           
-          v$trigger_update_manual_compliance_tab <- isolate(!v$trigger_update_manual_compliance_tab)
+          
+          shinyjs::delay(5000, 
+                         {v$trigger_update_manual_compliance_tab <- isolate(!v$trigger_update_manual_compliance_tab)})
           
           removeNotification(id)
           
@@ -978,11 +983,11 @@ server <- function(input,output,session){
     }
   })
   
-  observeEvent(v$trigger_update_manual_compliance_tab, {
+  observeEvent(input$compliance_cleaned_or_raw, {
                  
-    if(compliance_cleaned_or_raw() %in% v$combined_data_f$clean){
+    if(compliance_cleaned_or_raw() %in% v$combined_data_f$clean) {
       # Setting up manual compliance tab.
-      circuit_options <- filter(v$combined_data_f, clean==compliance_cleaned_or_raw())
+      circuit_options <- filter(v$combined_data_f, clean == compliance_cleaned_or_raw())
       set.seed(002)
       v$c_id_vector <- sample(unique(circuit_options$c_id))
       set.seed(NULL)
