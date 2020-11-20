@@ -399,11 +399,11 @@ DBInterface <- R6::R6Class("DBInterface",
       return(time_series)
     },
     replace_duration_value_with_calced_interval = function(time_series){
-      time_series <- dplyr::mutate(time_series, d=ifelse(d_change, 5, d))
+      time_series <- dplyr::mutate(time_series, d=ifelse(d_change, interval, d))
       return(time_series)
     },
     flag_duration_for_updating_if_value_non_standard_and_calced_interval_is_5s = function(time_series){
-      time_series <- dplyr::mutate(time_series, d_change=ifelse((interval %in% 5) & (!d %in% c(5, 30, 60)), TRUE, FALSE))
+      time_series <- dplyr::mutate(time_series, d_change=ifelse((!d %in% c(5, 30, 60)), TRUE, FALSE))
       return(time_series)
     },
     update_timeseries_table_in_database = function(time_series){
