@@ -259,7 +259,6 @@ DBInterface <- R6::R6Class("DBInterface",
       circuit_details_cleaned <- dplyr::data_frame()
       
       while (length(circuits$c_id) > 0){
-
         time_series <- self$get_time_series_data_by_c_id(circuits)
         time_series <- mutate(time_series, time = fastPOSIXct(ts, tz="Australia/Brisbane"))
         time_series <- self$clean_duration_values(time_series)

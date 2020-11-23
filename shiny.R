@@ -499,6 +499,7 @@ server <- function(input,output,session){
   # This is the event that runs when the "Load data" button on the GUI is
   # Clicked. 
   observeEvent(input$load_data, {
+    id <- showNotification("Loading data", duration = 1000)
     error_check_passed = TRUE
     
     # Peform error checking before loading data.
@@ -561,7 +562,6 @@ server <- function(input,output,session){
     }
 
       if (error_check_passed){
-        id <- showNotification("Loading data", duration = 1000)
         site_details_raw <- v$db$get_site_details_raw()
         site_details_raw <- process_raw_site_details(site_details_raw)
         site_details_raw <- mutate(site_details_raw, clean = 'raw')
@@ -593,7 +593,6 @@ server <- function(input,output,session){
         v$site_details_for_editing <- filter(v$site_details_for_editing, s_state == region_to_load())
         v$circuit_details_for_editing <- v$db$get_circuit_details_cleaning_report()
         v$circuit_details_for_editing <- filter(v$circuit_details_for_editing, site_id %in% v$site_details_for_editing$site_id)
-        
        
         
         output$site_details_editor <- renderDT(isolate(v$site_details_for_editing), selection='single', rownames=FALSE, 
@@ -606,7 +605,6 @@ server <- function(input,output,session){
   
   
         # Load in the install data from CSV.
-        id <- showNotification("Load CER capacity data", duration = 1000)
         install_data <- read.csv(file = install_data_file, header = TRUE, stringsAsFactors = FALSE)
         v$install_data <- process_install_data(install_data)
         
@@ -614,9 +612,6 @@ server <- function(input,output,session){
         postcode_data_file <- "PostcodesLatLongQGIS.csv"
         postcode_data <- read.csv(file=postcode_data_file, header=TRUE, stringsAsFactors = FALSE)
         v$postcode_data <- process_postcode_data(postcode_data)
-        removeNotification(id)
-  
-        removeNotification(id)
         
         if(frequency_data_file()!=''){
           v$frequency_data <- read.csv(file=frequency_data_file(), header=TRUE, stringsAsFactors = FALSE)
@@ -754,6 +749,7 @@ server <- function(input,output,session){
           actionButton("update_plots", "Update plots")
         })
       }
+    removeNotification(id)
   })
 
   # Create plots when update plots button is clicked.
