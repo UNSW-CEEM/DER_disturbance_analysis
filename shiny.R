@@ -909,7 +909,7 @@ server <- function(input,output,session){
                                     site_performance_factor, response_category, zone, distance, lat, lon, e, con_type,
                                     first_ac, polarity, compliance_status, reconnection_compliance_status, 
                                     manual_droop_compliance, manual_reconnect_compliance, reconnection_time, 
-                                    max_reconnection_ramp_rate)
+                                    max_reconnection_ramp_rate, c_id_daily_norm_power)
         # Create copy of filtered data to use in upscaling
         combined_data_f2 <- combined_data_f
           if(raw_upscale()){combined_data_f2 <- upscale(combined_data_f2, v$install_data)}
