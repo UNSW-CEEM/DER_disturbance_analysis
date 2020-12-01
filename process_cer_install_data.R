@@ -1,10 +1,10 @@
 library(data.table)
 
-intall_data_file <- "GitHub/DER_disturbance_analysis/cumulative_capacity_and_number_20200811_raw_from_sql_v2.csv"
+intall_data_file <- "pv_installed.csv"
 install_data <- read.csv(file=intall_data_file, header=TRUE, stringsAsFactors = FALSE)
 
-start_date =min(install_data$index)
-end_date =max(install_data$index)
+start_date = min(install_data$index)
+end_date = max(install_data$index)
 date_vector <- seq(as.Date(start_date), as.Date(end_date), by="days")
 
 type_table <- data.table(
@@ -32,7 +32,7 @@ combined <- as.data.frame(install_data[date_table, roll = T ])
 
 combined[is.na(combined)] <- 0
 
-write.csv(combined, "GitHub/DER_disturbance_analysis/cumulative_capacity_and_number_20200811_ready_for_tool_v2.csv", row.names=FALSE)
+write.csv(combined, "pv_installed_formatted.csv", row.names=FALSE)
 
 #intall_data_file <- "GitHub/DER_disturbance_analysis/cumulative_capacity_and_number_20200218_new.csv"
 #install_data <- read.csv(file=intall_data_file, header=TRUE, stringsAsFactors = FALSE)

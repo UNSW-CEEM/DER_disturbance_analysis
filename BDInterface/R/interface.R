@@ -9,6 +9,7 @@ library(suncalc)
 wd <- getwd()
 setwd(dirname(parent.frame(2)$ofile))
 source("data_cleaning_functions.R")
+source("get_free_disk_space.R")
 setwd(wd)
 
 
@@ -23,11 +24,61 @@ DBInterface <- R6::R6Class("DBInterface",
       RSQLite::dbDisconnect(con)
       self$db_path_name = db_path_name
     },
-    connect_to_existing_database = function(db_path_name){
+    connect_to_existing_database = function(db_path_name, check_tables_have_expected_columns=TRUE){
       self$db_path_name = db_path_name
+      if (check_tables_have_expected_columns) {
+        self$check_tables_have_expected_columns()
+      }
     },
-    build_database = function(timeseries, circuit_details, site_details) {
+    check_tables_have_expected_columns = function() {
+      self$check_table_has_expected_columns('timeseries', c("ts", "c_id", "d", "e", "f", "v"))
+      self$check_table_has_expected_columns('circuit_details_raw', c("c_id", "site_id", "con_type", "polarity", 
+                                                                     "manual_droop_compliance", 
+                                                                     "manual_reconnect_compliance"))
+      self$check_table_has_expected_columns('circuit_details_cleaned', c("c_id", "site_id", "con_type", "polarity", 
+                                                                         "sunrise", "sunset", "min_power", "max_power", 
+                                                                         "frac_day", "old_con_type", "con_type_changed", 
+                                                                         "polarity_changed", "manual_droop_compliance", 
+                                                                         "manual_reconnect_compliance"))
+      self$check_table_has_expected_columns('site_details_raw', c("site_id", "s_postcode", "s_state", "ac", "dc", 
+                                                                  "manufacturer", "model", 
+                                                                  "pv_installation_year_month"))
+      self$check_table_has_expected_columns('site_details_cleaned', c("site_id", "s_postcode", "s_state", 
+                                                                      "pv_installation_year_month", "ac", "dc", 
+                                                                      "ac_old", "dc_old", "ac_dc_ratio", "manufacturer", 
+                                                                      "model", "rows_grouped", "max_power_kW", 
+                                                                      "change_ac", "change_dc"))
+      self$check_table_has_expected_columns('postcode_lon_lat', c("postcode", "lon", "lat"))
       
+    },
+    check_table_has_expected_columns = function(table, expected_columns){
+      con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)
+      if (RSQLite::dbExistsTable(con, table)) {
+        table <- sqldf::read.csv.sql(sql = paste0("select * from ", table,  " limit 1"), dbname = self$db_path_name)
+        table_column_names <- sort(names(table))
+        expected_columns <- sort(expected_columns)
+        if (!identical(table_column_names, expected_columns)) {
+          RSQLite::dbDisconnect(con)
+          stop(paste0("Connection to database aborted, the tables in specified database did not have the expected columns. ",
+                "This is probably becuase the database was created with a different (probably older) version of the ",
+                "database interface tool. Try re-creating the database with the current version to resolve this issue."))
+        }
+        RSQLite::dbDisconnect(con)
+      }
+    },
+    build_database = function(timeseries, circuit_details, site_details, check_disk_space=TRUE, 
+                              check_dataset_ids_match=TRUE) {
+      
+      free_space_gigabytes <- get_free_disk_space_in_working_directory()
+      time_series_size_gigabytes <- file.size(timeseries) / 1073741824
+      extimated_database_size <- time_series_size_gigabytes * 2.5
+      if (check_disk_space & (free_space_gigabytes - extimated_database_size) < 10.0) {
+        stop("It is estimated that building the database will leave disk with less 
+              than 10.0 GB of free space, build aborted as a precaution. This assumes
+              the database is being built on the same disk as the working directory.
+              To resolve this error please create more free space on the disk and rerun
+              the build method or rerun the method with check_disk_space=False.")
+      }
       time_series_build_query <- self$get_time_series_build_query(timeseries)
       circuit_details_build_query <- self$get_circuit_details_build_query(circuit_details)
       site_details_build_query <- self$get_site_details_build_query(site_details)
@@ -72,6 +123,10 @@ DBInterface <- R6::R6Class("DBInterface",
       
       site_details <- read.csv(file = site_details, header = TRUE, stringsAsFactors = FALSE)
       sqldf::read.csv.sql(sql = site_details_build_query, dbname = self$db_path_name)
+      
+      if (check_dataset_ids_match) {
+        self$check_ids_match_between_datasets()
+      }
       
       RSQLite::dbDisconnect(con)
     },
@@ -147,7 +202,39 @@ DBInterface <- R6::R6Class("DBInterface",
     },
     drop_repeated_headers = function(){
       con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)
-      RSQLite::dbExecute(con, "DELETE FROM timeseries where ts=='ts'")
+      start_query <- "DELETE FROM timeseries where ts in ('"
+      header_values <- paste(names(self$default_timeseries_column_aliases), collapse="','")
+      end_query <- "')"
+      query <- paste0(start_query, header_values, end_query)
+      RSQLite::dbExecute(con, query)
+      RSQLite::dbDisconnect(con)
+    },
+    check_ids_match_between_datasets = function(){
+      con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)
+      c_ids_in_timeseries <- RSQLite::dbGetQuery(con, "SELECT DISTINCT c_id FROM timeseries")
+      c_ids_in_circuit_details <- RSQLite::dbGetQuery(con, "SELECT DISTINCT c_id FROM circuit_details_raw")
+      site_ids_in_circuit_details <- RSQLite::dbGetQuery(con, "SELECT DISTINCT site_id FROM circuit_details_raw")
+      site_ids_in_site_details <- RSQLite::dbGetQuery(con, "SELECT DISTINCT site_id FROM site_details_raw")
+      c_ids_intersection <- intersect(c_ids_in_timeseries$c_id, c_ids_in_circuit_details$c_id)
+      site_ids_intersection <- intersect(site_ids_in_circuit_details$site_id, site_ids_in_site_details$site_id)
+      if (length(c_ids_intersection) < 10) {
+        RSQLite::dbExecute(con, "DROP TABLE IF EXISTS timeseries")
+        RSQLite::dbExecute(con, "DROP TABLE IF EXISTS circuit_details_raw")
+        RSQLite::dbExecute(con, "DROP TABLE IF EXISTS site_details_raw")
+        RSQLite::dbDisconnect(con)
+        stop("Database build aborted because fewer than 10 ids match between the timeseries and circuit details files.
+              Please check files from matching event data sets are being used. To disable this check, use
+              check_dataset_ids_match=FALSE.")
+      }
+      if (length(site_ids_intersection) < 10) {
+        RSQLite::dbExecute(con, "DROP TABLE IF EXISTS timeseries")
+        RSQLite::dbExecute(con, "DROP TABLE IF EXISTS circuit_details_raw")
+        RSQLite::dbExecute(con, "DROP TABLE IF EXISTS site_details_raw")
+        RSQLite::dbDisconnect(con)
+        stop("Database build aborted because fewer than 10 ids match between the site details and circuit details files.
+              Please check files from matching event data sets are being used. To disable this check, use
+              check_dataset_ids_match=FALSE.")
+      }
       RSQLite::dbDisconnect(con)
     },
     run_data_cleaning_loop = function(max_chunk_size=500){
@@ -172,8 +259,8 @@ DBInterface <- R6::R6Class("DBInterface",
       circuit_details_cleaned <- dplyr::data_frame()
       
       while (length(circuits$c_id) > 0){
-
         time_series <- self$get_time_series_data_by_c_id(circuits)
+        time_series <- mutate(time_series, d = as.numeric(d))
         time_series <- mutate(time_series, time = fastPOSIXct(ts, tz="Australia/Brisbane"))
         time_series <- self$clean_duration_values(time_series)
         updated_records <- self$filter_out_unchanged_records(time_series)
@@ -312,11 +399,11 @@ DBInterface <- R6::R6Class("DBInterface",
       return(time_series)
     },
     replace_duration_value_with_calced_interval = function(time_series){
-      time_series <- dplyr::mutate(time_series, d=ifelse(d_change, 5, d))
+      time_series <- dplyr::mutate(time_series, d=ifelse(d_change, interval, d))
       return(time_series)
     },
     flag_duration_for_updating_if_value_non_standard_and_calced_interval_is_5s = function(time_series){
-      time_series <- dplyr::mutate(time_series, d_change=ifelse((interval %in% 5) & (!d %in% c(5, 30, 60)), TRUE, FALSE))
+      time_series <- dplyr::mutate(time_series, d_change=ifelse((!d %in% c(5, 30, 60)), TRUE, FALSE))
       return(time_series)
     },
     update_timeseries_table_in_database = function(time_series){

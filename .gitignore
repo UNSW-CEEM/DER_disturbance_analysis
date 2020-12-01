@@ -58,6 +58,7 @@ data/*
 .idea/vcs.xml
 auto_test_data/*
 data/*
+renv/*
 
 #pycharm
 .idea/*
@@ -74,6 +75,8 @@ cumulative_capacity_and_number_20200811_ready_for_tool.csv
 cumulative_capacity_and_number_20200811_ready_for_tool_v2.csv
 *.json
 renv/*
+.Rproj.user
 cer_cumulative_capacity_and_number.csv
-cer_cumulative_capacity_and_number_old.csv
 pv_installed.csv
+pv_installed_formatted.csv
+cer_cumulative_capacity_and_number_old.csv

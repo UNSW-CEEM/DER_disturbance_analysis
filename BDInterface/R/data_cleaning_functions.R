@@ -1,9 +1,9 @@
 calc_max_kw_per_site <- function(performance_data){
   performance_data <- group_by(performance_data, ts, site_id)
-  performance_data <- summarise(performance_data , power_kW=sum(power_kW))
+  performance_data <- summarise(performance_data , power_kW=sum(power_kW, na.rm = TRUE))
   performance_data <- as.data.frame(performance_data)
   performance_data <- group_by(performance_data, site_id)  
-  site_max_power <- summarise(performance_data , max_power_kW=max(power_kW))
+  site_max_power <- summarise(performance_data , max_power_kW=max(power_kW, na.rm = TRUE))
   site_max_power <- as.data.frame(site_max_power)
   site_max_power <- site_max_power[,c("site_id", "max_power_kW")]
   return(site_max_power)
@@ -135,7 +135,8 @@ clac_output_summary_values <- function(combined_data){
                              energy_night=sum(abs(e[daylight!=1]))/1000/(60*60),
                              con_type=first(con_type), sunrise=first(dis_sunrise), 
                              sunset=first(dis_sunset), ac=first(ac),
-                             min_power=min(power_kW), max_power=max(power_kW), polarity=first(polarity))
+                             min_power=min(power_kW, na.rm = TRUE), max_power=max(power_kW, na.rm = TRUE), 
+                             polarity=first(polarity))
   combined_data <- as.data.frame(combined_data)
   combined_data <- mutate(combined_data, energy_day=ifelse(is.na(energy_day), 0.0, energy_day))
   combined_data <- mutate(combined_data, energy_night=ifelse(is.na(energy_night), 0.0, energy_night))
