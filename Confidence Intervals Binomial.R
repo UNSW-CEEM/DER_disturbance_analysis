@@ -1,7 +1,7 @@
-ConfidenceInterval <- function(x,n,confidence){
+ConfidenceInterval <- function(x,n,confidence = 0.95){
   #x is number of disconnections observed
   #n is the number of inverters in the sample
-  #confidence is the level of desired confidence (eg 0.95)
+  #confidence is the level of desired confidence (set to 0.95 by default)
   
   ### While loop to narrow in on the value of the true number of disconnections that would 
   #lead to our observation of x or below to be less than half our margin of confidence error.
@@ -12,7 +12,7 @@ ConfidenceInterval <- function(x,n,confidence){
   
   ErrorMargin <- 0.001
   
-  #Start our first gues as the centre of the confidence interval
+  #Start our first guess as the centre of the confidence interval
   
   CurrentGuessLeft <- x/n
   CurrentGuessRight <- x/n
@@ -42,9 +42,9 @@ ConfidenceInterval <- function(x,n,confidence){
       DoneFlagLeft <- 1
     }
     
-    if(qbinom((1-confidence)/2,n,CurrentGuessRight) <= x)
+    if(qbinom((1-confidence)/2,n,CurrentGuessRight) <= x && CurrentGuessRight!=1)
     {
-      CurrentGuessRight <- CurrentGuessRight + ErrorMargin
+      CurrentGuessRight <- min(1,CurrentGuessRight + ErrorMargin)
     }
     else
     {

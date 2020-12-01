@@ -44,6 +44,7 @@ source("reconnect_compliance/R/categorise_reconnection_compliance.R")
 source("reconnect_compliance/R/calculate_ramp_rates.R")
 source("reconnect_compliance/R/find_first_resource_limited_interval.R")
 source("reconnect_compliance/R/create_reconnection_summary.R")
+source("Confidence Intervals Binomial.R")
 
 ui <- fluidPage(
   tags$head(
@@ -119,6 +120,9 @@ ui <- fluidPage(
           materialSwitch("compliance_agg", label=strong("Compliance:"), status="primary", value=FALSE),
           tags$hr(),
           h4("Additional Processing"),
+          radioButtons("confidence_category", label = strong("Grouping category to calculate confidence interval for, 
+                                                              must be a Grouping Category"), 
+                       choices = list("none", "response_category", "compliance_status"), selected = "none", inline = TRUE),
           materialSwitch(inputId="raw_upscale", label=strong("Upscaled Data"), status="primary", right=FALSE),
           tags$hr(),
           h4("Event information"),
@@ -272,6 +276,7 @@ reset_sidebar <- function(input, output, session, stringsAsFactors) {
   shinyjs::hide("compliance_agg")
   shinyjs::hide("save_settings")
   shinyjs::hide("load_second_filter_settings")
+  shinyjs::hide("confidence_category")
   output$event_date <- renderUI({})
   output$pre_event_interval <- renderUI({})
   output$window_length <- renderUI({})
@@ -336,6 +341,7 @@ server <- function(input,output,session){
   hide("save_settings")
   hide("load_second_filter_settings")
   hide("norm_power_filter_off_at_t0")
+  hide("confidence_category")
   options(DT.options = list(pageLength = 3))
   # Get input from GUI
   settings_file <- reactive({input$settings_file})
@@ -409,6 +415,7 @@ server <- function(input,output,session){
   zone_two_radius <- reactive({input$zone_two_radius})
   zone_three_radius <- reactive({input$zone_three_radius})
   norm_power_filter_off_at_t0 <- reactive({input$norm_power_filter_off_at_t0})
+  confidence_category <- reactive({input$confidence_category})
   
   # Values from settings tab
   compliance_threshold <- reactive({input$compliance_threshold})
@@ -718,6 +725,7 @@ server <- function(input,output,session){
         shinyjs::show("save_settings")
         shinyjs::show("load_second_filter_settings")
         shinyjs::show("norm_power_filter_off_at_t0")
+        shinyjs::show("confidence_category")
         output$event_date <- renderUI({
           dateInput("event_date", label=strong('Event date (yyyy-mm-dd):'), 
                     value=strftime(floor_date(get_mode(v$combined_data$ts), "day"), format="%Y-%m-%d"), startview="year")
@@ -895,8 +903,21 @@ server <- function(input,output,session){
                                           grouping_agg=grouping_agg(), manufacturer_agg=manufacturer_agg(), 
                                           model_agg=model_agg(), circuit_agg(), response_agg(), zone_agg(),
                                           compliance_agg())
-      if(length(combined_data_f$ts) > 0){
+      if (length(combined_data_f$ts) > 0) {
         v$sample_count_table <- vector_groupby_count(combined_data_f, grouping_cols)
+        if (confidence_category() %in% grouping_cols) {
+          population_groups <- grouping_cols[confidence_category() != grouping_cols]
+          population_count_table <- vector_groupby_count(combined_data_f, population_groups)
+          population_count_table <- dplyr::rename(population_count_table, sub_population_size=sample_count)
+          v$sample_count_table <- left_join(population_count_table, v$sample_count_table, by=population_groups)
+          v$sample_count_table$percentage <- v$sample_count_table$sample_count / v$sample_count_table$sub_population_size
+          v$sample_count_table$percentage <- round(v$sample_count_table$percentage, digits = 4)
+          result <- mapply(ConfidenceInterval, v$sample_count_table$sample_count, 
+                           v$sample_count_table$sub_population_size, 0.95)
+          v$sample_count_table$lower <- round(result[1,], digits = 4)
+          v$sample_count_table$upper <- round(result[2,], digits = 4)
+          v$sample_count_table$width <- v$sample_count_table$upper - v$sample_count_table$lower
+        }
       }
       # Procced to  aggregation and plotting only if there is less than 1000 data series to plot, else stop and notify the
       # user.
@@ -976,7 +997,16 @@ server <- function(input,output,session){
             output$save_ideal_response_downsampled <- renderUI({
               shinySaveButton("save_ideal_response_downsampled", "Save downsampled response", "Choose directory for report files ...")
             })
-            output$sample_count_table <- renderDataTable({v$sample_count_table})
+          
+            if ("width" %in% names(v$sample_count_table)) {
+              sample_count_table <- datatable(v$sample_count_table) %>% formatStyle(
+                "width",  background = styleColorBar(c(0, 1), 'red'))
+            } else {
+              sample_count_table <- v$sample_count_table
+            }
+            
+            output$sample_count_table <- renderDataTable({sample_count_table})
+
             output$save_sample_count <- renderUI({shinySaveButton("save_sample_count", "Save data", "Save file as ...", 
                                                                   filetype=list(xlsx="csv"))
             })
