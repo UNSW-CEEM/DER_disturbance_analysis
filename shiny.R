@@ -150,8 +150,6 @@ ui <- fluidPage(
           HTML("<br>"),
           uiOutput("batch_save"),
           HTML("<br>"),
-          uiOutput("save_report"),
-          HTML("<br>"),
           uiOutput("save_ideal_response"),
           HTML("<br>"),
           uiOutput("save_ideal_response_downsampled"),
@@ -910,13 +908,13 @@ server <- function(input,output,session){
           population_count_table <- vector_groupby_count(combined_data_f, population_groups)
           population_count_table <- dplyr::rename(population_count_table, sub_population_size=sample_count)
           v$sample_count_table <- left_join(population_count_table, v$sample_count_table, by=population_groups)
-          v$sample_count_table$percentage <- v$sample_count_table$sample_count / v$sample_count_table$sub_population_size
-          v$sample_count_table$percentage <- round(v$sample_count_table$percentage, digits = 4)
+          v$sample_count_table$percentage_of_sub_pop <- v$sample_count_table$sample_count / v$sample_count_table$sub_population_size
+          v$sample_count_table$percentage_of_sub_pop <- round(v$sample_count_table$percentage_of_sub_pop, digits = 4)
           result <- mapply(ConfidenceInterval, v$sample_count_table$sample_count, 
                            v$sample_count_table$sub_population_size, 0.95)
-          v$sample_count_table$lower <- round(result[1,], digits = 4)
-          v$sample_count_table$upper <- round(result[2,], digits = 4)
-          v$sample_count_table$width <- v$sample_count_table$upper - v$sample_count_table$lower
+          v$sample_count_table$lower_95_CI <- round(result[1,], digits = 4)
+          v$sample_count_table$upper_95_CI <- round(result[2,], digits = 4)
+          v$sample_count_table$width <- v$sample_count_table$upper_95_CI - v$sample_count_table$lower_95_CI
         }
       }
       # Procced to  aggregation and plotting only if there is less than 1000 data series to plot, else stop and notify the
@@ -987,9 +985,6 @@ server <- function(input,output,session){
   
             output$batch_save <- renderUI({
               shinySaveButton("batch_save", "Batch save", "Save file as ...", filetype=list(xlsx="csv"))
-            })
-            output$save_report <- renderUI({
-              shinyDirButton("save_report", "Save report", "Choose directory for report files ...")
             })
             output$save_ideal_response <- renderUI({
               shinySaveButton("save_ideal_response", "Save response", "Choose directory for report files ...")
@@ -1549,13 +1544,8 @@ server <- function(input,output,session){
     if (nrow(fileinfo) > 0) {
       id <- showNotification("Doing batch save", duration=1000)
       datapath <- strsplit(fileinfo$datapath, '[.]')[[1]][1]
-      write.csv(v$agg_power, paste0(datapath, '_agg_power.csv'), row.names=FALSE)
       write.csv(v$combined_data_f, paste0(datapath, '_underlying.csv'), row.names=FALSE)
       write.csv(v$circuit_summary, paste0(datapath, '_circ_sum.csv'), row.names=FALSE)
-      write.csv(v$sample_count_table, paste0(datapath, '_sample.csv'), row.names=FALSE)
-      write.csv(v$response_count, paste0(datapath, '_response_count.csv'), row.names=FALSE)
-      write.csv(v$zone_count, paste0(datapath, '_zone_count.csv'), row.names=FALSE)
-      write.csv(v$distance_response, paste0(datapath, '_distance_response.csv'), row.names=FALSE)
       write(meta_data, paste0(datapath, '_meta_data.json'))
       removeNotification(id)
     }
