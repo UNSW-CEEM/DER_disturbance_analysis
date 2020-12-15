@@ -78,7 +78,7 @@ ui <- fluidPage(
           uiOutput("load_time_start"),
           uiOutput("load_time_end"),
           radioButtons("region_to_load", label = strong("Regions"), 
-                       choices = list("QLD","NSW", "VIC", "SA", "TAS"), selected = "SA", inline = TRUE),
+                       choices = list("QLD","NSW", "VIC", "SA", "TAS", "WA"), selected = "SA", inline = TRUE),
           uiOutput("duration"),
           HTML("<br><br>"),
           textInput("frequency_data", "Frequency data file", 
@@ -96,6 +96,7 @@ ui <- fluidPage(
           uiOutput("responses"),
           uiOutput("zones"),
           uiOutput("compliance"),
+          uiOutput("reconnection_compliance"),
           uiOutput("postcodes"),
           uiOutput("manufacturers"),
           uiOutput("models"),
@@ -118,11 +119,12 @@ ui <- fluidPage(
           materialSwitch("circuit_agg", label=strong("Circuits:"), status="primary", value=FALSE),
           materialSwitch("zone_agg", label=strong("Zones:"), status="primary", value=FALSE),
           materialSwitch("compliance_agg", label=strong("Compliance:"), status="primary", value=FALSE),
+          materialSwitch("reconnection_compliance_agg", label=strong("Reconnection Compliance:"), status="primary", value=FALSE),
           tags$hr(),
           h4("Additional Processing"),
           radioButtons("confidence_category", label = strong("Grouping category to calculate confidence interval for, 
                                                               must be a Grouping Category"), 
-                       choices = list("none", "response_category", "compliance_status"), selected = "none", inline = TRUE),
+                       choices = list("none", "response_category", "compliance_status", "reconnection_compliance_status"), selected = "none", inline = TRUE),
           materialSwitch(inputId="raw_upscale", label=strong("Upscaled Data"), status="primary", right=FALSE),
           tags$hr(),
           h4("Event information"),
@@ -259,7 +261,8 @@ reset_sidebar <- function(input, output, session, stringsAsFactors) {
   output$StdVersion <- renderUI({})
   output$responses <- renderUI({})
   output$zones <- renderUI({})
-  output$compliance <- renderUI({})  
+  output$compliance <- renderUI({}) 
+  output$reconnection_compliance <- renderUI({}) 
   output$offsets <- renderUI({})
   shinyjs::hide("norm_power_filter_off_at_t0")
   shinyjs::hide("standard_agg")
@@ -272,6 +275,7 @@ reset_sidebar <- function(input, output, session, stringsAsFactors) {
   shinyjs::hide("circuit_agg")
   shinyjs::hide("zone_agg")
   shinyjs::hide("compliance_agg")
+  shinyjs::hide("reconnection_compliance_agg")
   shinyjs::hide("save_settings")
   shinyjs::hide("load_second_filter_settings")
   shinyjs::hide("confidence_category")
@@ -336,6 +340,7 @@ server <- function(input,output,session){
   hide("circuit_agg")
   hide("zone_agg")
   hide("compliance_agg")
+  hide("reconnection_compliance_agg")
   hide("save_settings")
   hide("load_second_filter_settings")
   hide("norm_power_filter_off_at_t0")
@@ -360,6 +365,7 @@ server <- function(input,output,session){
   circuits <- reactive({input$circuits})
   zones <- reactive({input$zones})
   compliance <- reactive({input$compliance})
+  reconnection_compliance <- reactive({input$reconnection_compliance})
   offsets <- reactive({input$offsets})
   size_groupings <- reactive({input$size_groupings})
   clean <- reactive({input$cleaned})
@@ -374,6 +380,7 @@ server <- function(input,output,session){
   circuit_agg <- reactive({input$circuit_agg})
   zone_agg <- reactive({input$zone_agg})
   compliance_agg <- reactive({input$compliance_agg})
+  reconnection_compliance_agg <- reactive({input$reconnection_compliance_agg})
   load_start_time <- reactive({
     date_as_str <- as.character(input$load_date[1])
     time_as_str <- substr(input$load_time_start, 12,19)
@@ -704,7 +711,16 @@ server <- function(input,output,session){
                                              "Off at t0", "Not enough data", "Undefined", NA), 
                                justified=TRUE, status="primary", individual=TRUE,
                                checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")))
-        })  
+        })
+        output$reconnection_compliance <- renderUI({
+          checkboxGroupButtons(inputId="reconnection_compliance", label=strong("Reconnection Compliance"), 
+                               choices=list("Compliant", "Non Compliant", 
+                                            "Unsure", "Cannot be set", NA),
+                               selected=list("Compliant", "Non Compliant", 
+                                             "Unsure", "Cannot be set", NA),
+                               justified=TRUE, status="primary", individual=TRUE,
+                               checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")))
+        })
         output$offsets <- renderUI({
           checkboxGroupButtons(inputId="offsets", label=unique_offsets_filter_label, 
                                choices=v$unique_offsets, selected=c(v$unique_offsets[which.max(sample_counts)]) ,
@@ -720,6 +736,7 @@ server <- function(input,output,session){
         shinyjs::show("circuit_agg")
         shinyjs::show("zone_agg")
         shinyjs::show("compliance_agg")
+        shinyjs::show("reconnection_compliance_agg")
         shinyjs::show("save_settings")
         shinyjs::show("load_second_filter_settings")
         shinyjs::show("norm_power_filter_off_at_t0")
@@ -832,7 +849,7 @@ server <- function(input,output,session){
     
       # Decide if the settings mean no grouping is being performed.
       if (agg_on_standard()==FALSE & pst_agg()==FALSE & grouping_agg()==FALSE & manufacturer_agg()==FALSE & 
-          model_agg()==FALSE & zone_agg()==FALSE & circuit_agg()==TRUE & compliance_agg()==TRUE){
+          model_agg()==FALSE & zone_agg()==FALSE & circuit_agg()==TRUE & compliance_agg()==TRUE & reconnection_compliance_agg()){
         no_grouping=TRUE
       } else {
         no_grouping=FALSE
@@ -878,7 +895,8 @@ server <- function(input,output,session){
         pre_event_daily_norm_power <- mutate(pre_event_daily_norm_power, pre_event_norm_power = c_id_daily_norm_power)
         pre_event_daily_norm_power <- select(pre_event_daily_norm_power, clean, c_id, pre_event_norm_power)
         combined_data_f <- inner_join(combined_data_f, pre_event_daily_norm_power, by=c("c_id", "clean"))
-        reconnection_categories <- create_reconnection_summary(combined_data_f, pre_event_interval(),
+        event_window_data <- filter(combined_data_f, ts >= pre_event_interval() & ts <= pre_event_interval() + 60 * window_length())
+        reconnection_categories <- create_reconnection_summary(event_window_data, pre_event_interval(),
                                                                disconnecting_threshold(),
                                                                reconnect_threshold = reconnection_threshold(),
                                                                reconnection_time_threshold_for_compliance = 
@@ -900,7 +918,7 @@ server <- function(input,output,session){
       grouping_cols <- find_grouping_cols(agg_on_standard=agg_on_standard(), pst_agg=pst_agg(), 
                                           grouping_agg=grouping_agg(), manufacturer_agg=manufacturer_agg(), 
                                           model_agg=model_agg(), circuit_agg(), response_agg(), zone_agg(),
-                                          compliance_agg())
+                                          compliance_agg(), reconnection_compliance_agg())
       if (length(combined_data_f$ts) > 0) {
         v$sample_count_table <- vector_groupby_count(combined_data_f, grouping_cols)
         if (confidence_category() %in% grouping_cols) {
@@ -1388,6 +1406,7 @@ server <- function(input,output,session){
     settings$circuits <- circuits()
     settings$zones <- zones()
     settings$compliance <- compliance()
+    settings$reconnection_compliance <- reconnection_compliance()
     settings$offsets <- offsets()
     settings$size_groupings <- size_groupings()
     
@@ -1399,7 +1418,7 @@ server <- function(input,output,session){
     settings$model_agg <- model_agg()
     settings$circuit_agg <- circuit_agg()
     settings$zone_agg <- zone_agg()
-    settings$compliance_agg <- compliance_agg()
+    settings$reconnection_compliance_agg <- reconnection_compliance_agg()
     
     settings$raw_upscale <- raw_upscale()
     
@@ -1478,6 +1497,9 @@ server <- function(input,output,session){
       updateCheckboxGroupButtons(session, "responses", selected = settings$responses)
       updateCheckboxGroupButtons(session, "zones", selected = settings$zones)
       updateCheckboxGroupButtons(session, "compliance", selected = settings$compliance)
+      if ("reconnection_compliance" %in% names(settings)) {
+        updateCheckboxGroupButtons(session, "reconnection_compliance", selected = settings$reconnection_compliance)
+      }
       updateCheckboxGroupButtons(session, "offsets", selected = settings$offsets)
       updateCheckboxGroupButtons(session, "size_groupings", selected = settings$size_grouping)
       updateSelectizeInput(session, "postcodes", selected = settings$postcodes)
@@ -1495,6 +1517,9 @@ server <- function(input,output,session){
       updateMaterialSwitch(session, "circuit_agg", value = settings$circuit_agg)
       updateMaterialSwitch(session, "zone_agg", value = settings$zone_agg)
       updateMaterialSwitch(session, "compliance_agg", value = settings$compliance_agg)
+      if ("reconnection_compliance_agg" %in% names(settings)) {
+        updateMaterialSwitch(session, "reconnection_compliance_agg", value = settings$reconnection_compliance_agg)
+      }
       
       updateMaterialSwitch(session, "raw_upscale", value = settings$raw_upscale)
       
@@ -1571,7 +1596,7 @@ server <- function(input,output,session){
   # Inforce mutual exclusivity of Aggregation settings
   observe({
     if(manufacturer_agg() | model_agg() | pst_agg() | circuit_agg() | circuit_agg() | response_agg() | zone_agg()
-       | compliance_agg() | grouping_agg()){
+       | compliance_agg() | reconnection_compliance_agg() | grouping_agg()){
       updateMaterialSwitch(session=session, "raw_upscale", value = FALSE)
     }
   })
@@ -1585,6 +1610,7 @@ server <- function(input,output,session){
       updateMaterialSwitch(session=session, "circuit_agg", value = FALSE)
       updateMaterialSwitch(session=session, "zone_agg", value = FALSE)
       updateMaterialSwitch(session=session, "compliance_agg", value = FALSE)
+      updateMaterialSwitch(session=session, "reconnection_compliance_agg", value = FALSE)
       updateMaterialSwitch(session=session, "response_agg", value = FALSE)
       updateMaterialSwitch(session=session, "grouping_agg", value = FALSE)
     }

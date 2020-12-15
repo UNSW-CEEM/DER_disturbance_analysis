@@ -23,7 +23,7 @@ catergorise_row <- function(response_category,
       }
     }
   } else {
-    category <- "NA"
+    category <- NA
   }
   return(category)
 }

@@ -69,16 +69,16 @@ DBInterface <- R6::R6Class("DBInterface",
     build_database = function(timeseries, circuit_details, site_details, check_disk_space=TRUE, 
                               check_dataset_ids_match=TRUE) {
       
-      free_space_gigabytes <- get_free_disk_space_in_working_directory()
-      time_series_size_gigabytes <- file.size(timeseries) / 1073741824
-      extimated_database_size <- time_series_size_gigabytes * 2.5
-      if (check_disk_space & (free_space_gigabytes - extimated_database_size) < 10.0) {
-        stop("It is estimated that building the database will leave disk with less 
-              than 10.0 GB of free space, build aborted as a precaution. This assumes
-              the database is being built on the same disk as the working directory.
-              To resolve this error please create more free space on the disk and rerun
-              the build method or rerun the method with check_disk_space=False.")
-      }
+      #free_space_gigabytes <- get_free_disk_space_in_working_directory()
+      #time_series_size_gigabytes <- file.size(timeseries) / 1073741824
+      #extimated_database_size <- time_series_size_gigabytes * 2.5
+      #if (check_disk_space & (free_space_gigabytes - extimated_database_size) < 10.0) {
+      #  stop("It is estimated that building the database will leave disk with less 
+      #        than 10.0 GB of free space, build aborted as a precaution. This assumes
+      #        the database is being built on the same disk as the working directory.
+      #        To resolve this error please create more free space on the disk and rerun
+      #        the build method or rerun the method with check_disk_space=False.")
+      #}
       time_series_build_query <- self$get_time_series_build_query(timeseries)
       circuit_details_build_query <- self$get_circuit_details_build_query(circuit_details)
       site_details_build_query <- self$get_site_details_build_query(site_details)
