@@ -596,7 +596,7 @@ server <- function(input,output,session){
         time_series_data <- mutate(time_series_data, ts = fastPOSIXct(ts, tz="Australia/Brisbane"))
   
         v$combined_data <- inner_join(time_series_data, v$circuit_details, by = "c_id")
-        v$combined_data <- inner_join( v$combined_data, v$site_details, by = c("site_id", "clean"))
+        v$combined_data <- inner_join(v$combined_data, v$site_details, by = c("site_id", "clean"))
         
         v$combined_data <- perform_power_calculations(v$combined_data)
         
@@ -820,9 +820,9 @@ server <- function(input,output,session){
       v$ideal_response_to_plot <- ideal_response_to_plot
   
       combined_data_f <- filter(v$combined_data, clean %in% clean())
-      combined_data_f <- filter(combined_data_f, sum_ac<=100)
-      site_types <- c("pv_site_net", "pv_site", "pv_inverter_net", "pv_inverter")
-      combined_data_f <- filter(combined_data_f, con_type %in% site_types)
+      #combined_data_f <- filter(combined_data_f, sum_ac<=100)
+      #site_types <- c("pv_site_net", "pv_site", "pv_inverter_net", "pv_inverter")
+      #combined_data_f <- filter(combined_data_f, con_type %in% site_types)
       combined_data_f <- filter(combined_data_f, clean %in% clean())
       combined_data_f <- filter(combined_data_f, Grouping %in% size_groupings())
       combined_data_f <- filter(combined_data_f, Standard_Version %in% standards())
@@ -894,7 +894,7 @@ server <- function(input,output,session){
         pre_event_daily_norm_power <- filter(combined_data_f, ts == pre_event_interval())
         pre_event_daily_norm_power <- mutate(pre_event_daily_norm_power, pre_event_norm_power = c_id_daily_norm_power)
         pre_event_daily_norm_power <- select(pre_event_daily_norm_power, clean, c_id, pre_event_norm_power)
-        combined_data_f <- inner_join(combined_data_f, pre_event_daily_norm_power, by=c("c_id", "clean"))
+        combined_data_f <- left_join(combined_data_f, pre_event_daily_norm_power, by=c("c_id", "clean"))
         event_window_data <- filter(combined_data_f, ts >= pre_event_interval() & ts <= pre_event_interval() + 60 * window_length())
         reconnection_categories <- create_reconnection_summary(event_window_data, pre_event_interval(),
                                                                disconnecting_threshold(),

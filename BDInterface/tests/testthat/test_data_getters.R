@@ -29,7 +29,8 @@ dp <- DBInterface$new()
 dp$connect_to_new_database("test.db")
 dp$build_database(timeseries = timeseries_path_name,
                   circuit_details = circuit_details_path_name,
-                  site_details = site_details_path_name)
+                  site_details = site_details_path_name,
+                  check_dataset_ids_match=FALSE)
 
 
 testthat::test_that("Test get_min_timestamp",{
