@@ -35,12 +35,13 @@ db <- DBInterface$new()
 db$connect_to_new_database("example_database.db")
 ```
 
-Add the solar analytics data to the new database, for 6 GB of raw solar analytics time series data this takes aproximately 20 min.
+Add the solar analytics data to the new database, for 6 GB of raw solar analytics time series data this takes aproximately 20 min. For the examples in this document we use the extra setting check_dataset_ids_match=FALSE. This would check that at least 10 circuit and site ids match between the datasets provided, but the check will not pass for the small datasets used here.
 
 ```{r, warning=FALSE}
 db$build_database(timeseries = timeseries_path_name,
                   circuit_details = circuit_details_path_name,
-                  site_details = site_details_path_name)
+                  site_details = site_details_path_name,
+                  check_dataset_ids_match = FALSE)
 ```
 
 Now these data sets should be avaible through the interface, the methods for accessing them are explained 
@@ -60,7 +61,8 @@ db_two <- DBInterface$new()
 db_two$connect_to_new_database("example_database_two.db")
 db_two$build_database(timeseries = timeseries_path_name,
                   circuit_details = circuit_details_path_name,
-                  site_details = site_details_path_name)
+                  site_details = site_details_path_name, 
+                  check_dataset_ids_match = FALSE)
 ```
 This is fixed by overiding the default timeseries columns, in this case the 'v' column is given the alias 'voltage'.
 
@@ -74,7 +76,8 @@ Then the build procedure needs to be rerun.
 ```{r, warning=FALSE}
 db_two$build_database(timeseries = timeseries_path_name,
                   circuit_details = circuit_details_path_name,
-                  site_details = site_details_path_name)
+                  site_details = site_details_path_name,
+                  check_dataset_ids_match = FALSE)
 ```
 
 ##### 2. If the circuit details csv from solar analytics does not contain the expected header. 
@@ -87,7 +90,8 @@ db_two <- DBInterface$new()
 db_two$connect_to_new_database("example_database_two.db")
 db_two$build_database(timeseries = timeseries_path_name,
                   circuit_details = circuit_details_path_name,
-                  site_details = site_details_path_name)
+                  site_details = site_details_path_name,
+                  check_dataset_ids_match = FALSE)
 ```
 This is fixed by editing the circuit details file directly.
 
@@ -101,7 +105,8 @@ db_two <- DBInterface$new()
 db_two$connect_to_new_database("example_database_two.db")
 db_two$build_database(timeseries = timeseries_path_name,
                   circuit_details = circuit_details_path_name,
-                  site_details = site_details_path_name)
+                  site_details = site_details_path_name,
+                  check_dataset_ids_match = FALSE)
 ```
 This is fixed by editing the site details file directly and may require adjusting the ac and dc capacity units.
 
@@ -110,9 +115,11 @@ This is fixed by editing the site details file directly and may require adjustin
 
 This step attempts to fill in missing sample duration values and correct errors in the ciruit and site details data.
 
-Before running data cleaning the postcode lattiude and longditude data needs to be added to the database, this is for calculating sunrise and sunset times that are used for validating if a pofile is from a PV system.
+Before running data cleaning the postcode lattiude and longditude data needs to be added to the database, this is for calculating sunrise and sunset times that are used for validating if a pofile is from a PV system. Data mapping the manufacturer
+names provided by solar analytic to a consistent set of unique manufacture names also needs to be provided.
 ```{r, warning=FALSE, message=FALSE}
 db$add_postcode_lon_lat_to_database("BDInterface/tests/testthat/data/postcode_lon_lat.csv")
+db$add_manufacturer_mapping_table("manufacturer_mapping.csv")
 ```
 Then the data cleaning loop can be run.
 ```{r, warning=FALSE, message=FALSE}
@@ -133,8 +140,10 @@ db <- DBInterface$new()
 db$connect_to_new_database("example_database.db")
 db$build_database(timeseries = timeseries_path_name,
                   circuit_details = circuit_details_path_name,
-                  site_details = site_details_path_name)
+                  site_details = site_details_path_name,
+                  check_dataset_ids_match = FALSE)
 db$add_postcode_lon_lat_to_database("BDInterface/tests/testthat/data/postcode_lon_lat.csv")
+db$add_manufacturer_mapping_table("manufacturer_mapping.csv")
 db$run_data_cleaning_loop()
 ```
 

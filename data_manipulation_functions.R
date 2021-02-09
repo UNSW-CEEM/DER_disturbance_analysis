@@ -127,6 +127,18 @@ process_raw_site_details <- function(site_details){
   processed_site_details <- as.data.frame(processed_site_details)
   return(processed_site_details)}
 
+sum_manufacturers <- function(manufacturers){
+  unique_manufactuerers <- unique(manufacturers)
+  if (anyNA(unique_manufactuerers)) {
+    manufacturer <- 'NA'
+  } else if (length(unique_manufactuerers) > 1) {
+    manufacturer <- 'Mixed' 
+  } else {
+    manufacturer <- unique_manufactuerers[1]
+  }
+  return(manufacturer)
+}
+
 assert_raw_site_details_assumptions <- function(site_details){
   # Check in coming site data for conformance to data processing assumptions
   # We assume that only possible s_state values are NSW, QLD, VIC, TAS, SA, WA, NT, ACT

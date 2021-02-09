@@ -9,6 +9,18 @@ calc_max_kw_per_site <- function(performance_data){
   return(site_max_power)
 }
 
+sum_manufacturers <- function(manufacturers){
+  unique_manufactuerers <- unique(manufacturers)
+  if (anyNA(unique_manufactuerers)) {
+    manufacturer <- 'NA'
+  } else if (length(unique_manufactuerers) > 1) {
+    manufacturer <- 'Mixed' 
+  } else {
+    manufacturer <- unique_manufactuerers[1]
+  }
+  return(manufacturer)
+}
+
 group_site_details_to_one_row_per_site <- function(site_details){
   site_details <- site_details %>% group_by(site_id)
   processed_site_details <- site_details %>%
@@ -17,7 +29,7 @@ group_site_details_to_one_row_per_site <- function(site_details){
               sum_ac=sum(ac), sum_dc=sum(dc),
               sum_ac_old=sum(ac_old), sum_dc_old=sum(dc_old),
               ac_dc_ratio=mean(ac_dc_ratio),
-              manufacturer=paste(manufacturer, collapse=' '),
+              manufacturer= sum_manufacturers(manufacturer),
               model=paste(model, collapse=' '), s_postcode=first(s_postcode),
               rows_grouped=length(ac))
   processed_site_details <- as.data.frame(processed_site_details)

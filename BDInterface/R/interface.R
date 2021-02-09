@@ -244,6 +244,11 @@ DBInterface <- R6::R6Class("DBInterface",
       circuit_details <- self$get_circuit_details_raw()
       site_details <- self$get_site_details_raw()
       postcode_data <- self$get_postcode_lon_lat()
+      manufacturer_mapping <- self$get_manufacturer_mapping()
+      
+      site_details <- left_join(site_details, manufacturer_mapping, by = c('manufacturer' = 'sa'))
+      site_details <- mutate(site_details, manufacturer = aemo)
+      site_details <- site_details[, !(colnames(site_details) %in% c("sa","aemo"))]
       
       site_details <- site_details_data_cleaning_one(site_details)
 
@@ -369,6 +374,10 @@ DBInterface <- R6::R6Class("DBInterface",
       postcodes <- sqldf::read.csv.sql(sql = "select * from postcode_lon_lat", dbname = self$db_path_name)
       return(postcodes)
     },
+    get_manufacturer_mapping = function(){
+      postcodes <- sqldf::read.csv.sql(sql = "select * from manufacturer_mapping", dbname = self$db_path_name)
+      return(postcodes)
+    },
     calc_start_chunk_index = function(iteration_number, max_chunk_size){
       start_chunk_index <- (iteration_number - 1) * max_chunk_size + 1
       return(start_chunk_index)
@@ -491,6 +500,21 @@ DBInterface <- R6::R6Class("DBInterface",
     insert_postcode_lon_lat_cleaned = function(file_path_name){
       postcode_lon_lat_df <- read.csv(file = file_path_name, header = TRUE, stringsAsFactors = FALSE)
       query <- "REPLACE INTO postcode_lon_lat SELECT * FROM postcode_lon_lat_df"
+      invisible(sqldf::read.csv.sql(sql = query, dbname = self$db_path_name)) # stops an empty df being prinited.
+    },
+    add_manufacturer_mapping_table = function(file_path_name){
+      self$create_manufacturer_mapping_table()
+      self$insert_manufacturer_mapping(file_path_name)
+    },
+    create_manufacturer_mapping_table = function(){
+      con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)
+      RSQLite::dbExecute(con, "DROP TABLE IF EXISTS manufacturer_mapping")
+      RSQLite::dbExecute(con, "CREATE TABLE manufacturer_mapping(sa TEXT PRIMARY KEY, aemo TEXT)")
+      RSQLite::dbDisconnect(con)
+    },
+    insert_manufacturer_mapping = function(file_path_name){
+      manufacturer_mapping_df <- read.csv(file = file_path_name, header = TRUE, stringsAsFactors = FALSE)
+      query <- "REPLACE INTO manufacturer_mapping SELECT * FROM manufacturer_mapping_df"
       invisible(sqldf::read.csv.sql(sql = query, dbname = self$db_path_name)) # stops an empty df being prinited.
     },
     get_min_timestamp = function(){
