@@ -10,11 +10,11 @@ load_test_file <- function(path_name){
 
 
 testthat::test_that("Building works when no column aliases are required.",{
-  
+
   timeseries_path_name <- "data/simple_timeseries.csv"
   site_details_path_name <- "data/simple_site_details.csv"
   circuit_details_path_name <- "data/simple_circuit_details.csv"
-  
+
   # We expect the output of loading via the database to be the same as if we
   # just read straight from csv.
   expected_timeseries <- load_test_file(timeseries_path_name)
@@ -22,7 +22,7 @@ testthat::test_that("Building works when no column aliases are required.",{
   expected_circuit_details <- load_test_file(circuit_details_path_name)
   expected_circuit_details <- mutate(expected_circuit_details, manual_droop_compliance = 'Not set')
   expected_circuit_details <- mutate(expected_circuit_details, manual_reconnect_compliance = 'Not set')
-  
+
   # Create the DBInterface and test creating the database.
   if (file.exists("test.db")) {file.remove("test.db")}
   dp <- DBInterface$new()
@@ -31,18 +31,18 @@ testthat::test_that("Building works when no column aliases are required.",{
                     circuit_details = circuit_details_path_name,
                     site_details = site_details_path_name,
                     check_dataset_ids_match=FALSE)
-  
+
   output_timeseries <- dp$get_time_series_data()
   output_site_details <- dp$get_site_details_raw()
   output_circuit_details <- dp$get_circuit_details_raw()
-  
+
   testthat::expect_equal(output_timeseries, expected_timeseries)
   testthat::expect_equal(output_site_details, expected_site_details)
   testthat::expect_equal(output_circuit_details, expected_circuit_details)
 })
 
 testthat::test_that("Building works when there are duplicates in ts data.",{
-  
+
   timeseries_duplicates_path_name <- "data/timeseries_with_duplicates.csv"
   timeseries_no_duplicates_path_name <- "data/simple_timeseries.csv"
   site_details_path_name <- "data/simple_site_details.csv"
@@ -53,7 +53,7 @@ testthat::test_that("Building works when there are duplicates in ts data.",{
   expected_circuit_details <- load_test_file(circuit_details_path_name)
   expected_circuit_details <- mutate(expected_circuit_details, manual_droop_compliance = 'Not set')
   expected_circuit_details <- mutate(expected_circuit_details, manual_reconnect_compliance = 'Not set')
-  
+
   # Create the DBInterface and test creating the database.
   if (file.exists("test.db")) {file.remove("test.db")}
   dp <- DBInterface$new()
@@ -66,7 +66,7 @@ testthat::test_that("Building works when there are duplicates in ts data.",{
   output_timeseries <- dp$get_time_series_data()
   output_site_details <- dp$get_site_details_raw()
   output_circuit_details <- dp$get_circuit_details_raw()
-  
+
   testthat::expect_equal(output_timeseries, expected_timeseries)
   testthat::expect_equal(output_site_details, expected_site_details)
   testthat::expect_equal(output_circuit_details, expected_circuit_details)
@@ -78,13 +78,13 @@ testthat::test_that("Building works when there are extra headers in the ts data.
   timeseries_no_extra_header <- "data/simple_timeseries.csv"
   site_details_path_name <- "data/simple_site_details.csv"
   circuit_details_path_name <- "data/simple_circuit_details.csv"
-  
+
   expected_timeseries <- load_test_file(timeseries_no_extra_header)
   expected_site_details <- load_test_file(site_details_path_name)
   expected_circuit_details <- load_test_file(circuit_details_path_name)
   expected_circuit_details <- mutate(expected_circuit_details, manual_droop_compliance = 'Not set')
   expected_circuit_details <- mutate(expected_circuit_details, manual_reconnect_compliance = 'Not set')
-  
+
   # Create the DBInterface and test creating the database.
   if (file.exists("test.db")) {file.remove("test.db")}
   dp <- DBInterface$new()
@@ -93,13 +93,13 @@ testthat::test_that("Building works when there are extra headers in the ts data.
                     circuit_details = circuit_details_path_name,
                     site_details = site_details_path_name,
                     check_dataset_ids_match=FALSE)
-  
+
   dp$drop_repeated_headers()
-  
+
   output_timeseries <- dp$get_time_series_data()
   output_site_details <- dp$get_site_details_raw()
   output_circuit_details <- dp$get_circuit_details_raw()
-  
+
   testthat::expect_equal(output_timeseries, expected_timeseries)
   testthat::expect_equal(output_site_details, expected_site_details)
   testthat::expect_equal(output_circuit_details, expected_circuit_details)
@@ -137,8 +137,6 @@ testthat::test_that("test data cleaning works, with batch size
   output_site_details <- dp$get_site_details_raw()
   output_site_details_cleaned <- dp$get_site_details_cleaning_report()
   output_circuit_details <- dp$get_circuit_details_raw()
-  
-  browser()
   
   testthat::expect_equal(output_timeseries, expected_timeseries)
   testthat::expect_equal(output_site_details, expected_site_details)
