@@ -79,7 +79,7 @@ testthat::test_that("impose_sample_size_threshold",{
   input <- load_test_file(input)
   expected_output <- load_test_file(expected_output)
   output <- impose_sample_size_threshold(input, sample_threshold = 30)
-  expected_output <- mutate(expected_output, sample_size=as.numeric(sample_size))
+  expected_output <- mutate(expected_output, sample_size = as.numeric(sample_size))
   testthat::expect_equal(output, expected_output, tolerance = 1e-4)
 })
 
@@ -90,12 +90,28 @@ testthat::test_that("calc_confidence_intervals_for_disconnections",{
                            y,        Other,              5,           6,           21,  0.8333333
                            z,            x,              0,          30,           12,          0"
   
-  expected_output <- "Standard_Version, manufacturer, disconnections, sample_size, cer_capacity, proportion,     lower,     upper, lower_error, upper_error
-                           y,                  Other,              5,           6,           21,  0.8333333, 0.3583333, 0.9963333,       0.475,       0.163
-                           z,                      x,              0,          30,           12,          0,       0.0, 0.1160000,         0.0,   0.1160000"
+  expected_output <- "Standard_Version, manufacturer, disconnections, sample_size, cer_capacity, proportion, lower_bound, upper_bound
+                                     y,        Other,              5,           6,           21,  0.8333333,   0.3583333,   0.9963333
+                                     z,            x,              0,          30,           12,          0,         0.0,   0.1160000"
   
   input <- load_test_file(input)
   expected_output <- load_test_file(expected_output)
   output <- calc_confidence_intervals_for_disconnections(input)
+  testthat::expect_equal(output, expected_output, tolerance = 1e-4)
+})
+
+testthat::test_that("calc_upscale_mw_loss",{
+  
+  input <- "Standard_Version, manufacturer, disconnections, sample_size, cer_capacity, proportion, lower_bound, upper_bound
+                           y,        Other,              5,           6,           21,  0.8333333,   0.3583333,    0.996333  
+                           z,            x,              0,          30,           12,          0,         0.0,   0.1160000"
+  
+  expected_output <- "Standard_Version, manufacturer, disconnections, sample_size, cer_capacity, proportion, lower_bound, upper_bound, predicted_mw_loss, lower_bound_mw_loss, upper_bound_mw_loss
+                                     y,        Other,              5,           6,           21,  0.8333333,   0.3583333,   0.9963333,              17.5,            7.524999,              20.923
+                                     z,            x,              0,          30,           12,          0,         0.0,   0.1160000,               0.0,                 0.0,               1.392"            
+  
+  input <- load_test_file(input)
+  expected_output <- load_test_file(expected_output)
+  output <- calc_upscale_mw_loss(input)
   testthat::expect_equal(output, expected_output, tolerance = 1e-4)
 })

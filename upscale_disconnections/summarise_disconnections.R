@@ -1,4 +1,4 @@
-group_disconnections_by_manufacturer <- function(circuit_summary, cer_manufacturer_data, sample_threshold){
+group_disconnections_by_manufacturer <- function(circuit_summary){
   
   # Don't count circuits without a well defined response type.
   bad_categories <- c("6 Not enough data", "Undefined")
@@ -51,10 +51,26 @@ impose_sample_size_threshold <- function(disconnection_summary, sample_threshold
 calc_confidence_intervals_for_disconnections <- function(disconnection_summary){
   result <- mapply(ConfidenceInterval, disconnection_summary$disconnections, 
                    disconnection_summary$sample_size, 0.95)
-  disconnection_summary$lower <- result[1,]
-  disconnection_summary$upper <- result[2,]
-  disconnection_summary <- mutate(disconnection_summary, lower_error = proportion - lower, 
-                                  upper_error = upper - proportion)
+  disconnection_summary$lower_bound <- result[1,]
+  disconnection_summary$upper_bound <- result[2,]
+  return(disconnection_summary)
+}
+
+calc_upscale_mw_loss <- function(disconnection_summary){
+  disconnection_summary <- mutate(disconnection_summary, 
+                                  predicted_mw_loss = proportion * cer_capacity,
+                                  lower_bound_mw_loss = lower_bound * cer_capacity,
+                                  upper_bound_mw_loss = upper_bound * cer_capacity)
+  return(disconnection_summary)
+}
+
+get_manufactures_in_solar_analytics_but_not_cer <- function(disconnection_summary){
+  disconnection_summary <- filter(disconnection_summary, is.na(cer_capacity))
+  return(disconnection_summary)
+}
+
+get_manufactures_in_cer_but_not_solar_analytics <- function(disconnection_summary){
+  disconnection_summary <- filter(disconnection_summary, is.na(sample_size))
   return(disconnection_summary)
 }
 

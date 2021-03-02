@@ -45,6 +45,3 @@ combined <- select(combined, index, State, manufacturer, Capacity, Number)
 combined[is.na(combined)] <- 0
 
 write.csv(combined, "pv_installed_by_manufacturer_formatted.csv", row.names=FALSE)
-
-#intall_data_file <- "GitHub/DER_disturbance_analysis/cumulative_capacity_and_number_20200218_new.csv"
-#install_data <- read.csv(file=intall_data_file, header=TRUE, stringsAsFactors = FALSE)

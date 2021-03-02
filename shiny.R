@@ -44,6 +44,8 @@ source("reconnect_compliance/R/calculate_ramp_rates.R")
 source("reconnect_compliance/R/find_first_resource_limited_interval.R")
 source("reconnect_compliance/R/create_reconnection_summary.R")
 source("Confidence Intervals Binomial.R")
+source("upscale_disconnections/summarise_disconnections.R")
+source("process_cer_data/calc_installed_capacity_by_standard_and_manufacturer.R")
 
 ui <- fluidPage(
   tags$head(
@@ -65,7 +67,7 @@ ui <- fluidPage(
           tags$hr(),
           h4("File selection"),
           textInput("database_name", "SQLite database file",
-                    value = "C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/BDInterface/tests/20191126.db"
+                    value = "C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/data/20201203/20201203.db"
           ),
           fluidRow(
             div(style="display:inline-block", shinyFilesButton("choose_database", "Choose File", 
@@ -77,7 +79,7 @@ ui <- fluidPage(
           uiOutput("load_time_start"),
           uiOutput("load_time_end"),
           radioButtons("region_to_load", label = strong("Regions"), 
-                       choices = list("QLD","NSW", "VIC", "SA", "TAS", "WA"), selected = "SA", inline = TRUE),
+                       choices = list("QLD","NSW", "VIC", "SA", "TAS", "WA"), selected = "TAS", inline = TRUE),
           uiOutput("duration"),
           HTML("<br><br>"),
           textInput("frequency_data", "Frequency data file", 
@@ -154,6 +156,8 @@ ui <- fluidPage(
           uiOutput("save_ideal_response"),
           HTML("<br>"),
           uiOutput("save_ideal_response_downsampled"),
+          HTML("<br><br>"),
+          uiOutput("save_manufacturer_disconnection_summary"),
           HTML("<br><br>"),
           plotlyOutput(outputId="NormPower"),
           plotlyOutput(outputId="Frequency"),
@@ -571,6 +575,14 @@ server <- function(input,output,session){
       shinyalert("Error loading timeseries data", long_error_message)
       error_check_passed = FALSE
     }
+    cer_manufacturer_data <- "pv_installed_by_manufacturer_formatted.csv"
+    if (!file.exists(cer_manufacturer_data)){
+      long_error_message <- c("The required file cer_manufacturer_data could ",
+                              "not be found. Please add it to the main project directory.")
+      long_error_message <- paste(long_error_message, collapse = '')
+      shinyalert("Error loading manufacturer install data", long_error_message)
+      error_check_passed = FALSE
+    }
 
       if (error_check_passed){
         site_details_raw <- v$db$get_site_details_raw()
@@ -618,6 +630,9 @@ server <- function(input,output,session){
         # Load in the install data from CSV.
         install_data <- read.csv(file = install_data_file, header = TRUE, stringsAsFactors = FALSE)
         v$install_data <- process_install_data(install_data)
+        
+        manufacturer_install_data <- read.csv(file = cer_manufacturer_data, header = TRUE, stringsAsFactors = FALSE)
+        v$manufacturer_install_data <- calc_installed_capacity_by_standard_and_manufacturer(manufacturer_install_data)
         
         # Load postcode lat and long data
         postcode_data_file <- "PostcodesLatLongQGIS.csv"
@@ -860,6 +875,7 @@ server <- function(input,output,session){
       event_powers <- select(event_powers, c_id, clean, event_power)
       combined_data_f <- left_join(combined_data_f, event_powers, by=c("c_id", "clean"))
       combined_data_f <- mutate(combined_data_f, c_id_norm_power=power_kW/event_power)
+      
       if(length(combined_data_f$ts) > 0){
         # Calaculate the site peformance factors.
         id2 <- showNotification("Calculating site performance factors", duration=1000)
@@ -910,15 +926,16 @@ server <- function(input,output,session){
                                                                  ramp_rate_change_resource_limit_threshold())
         combined_data_f <- left_join(combined_data_f, reconnection_categories, by = 'c_id')
         removeNotification(id2)
-      }
       
       
-      # Count samples in each data series to be displayed
-      grouping_cols <- find_grouping_cols(agg_on_standard=agg_on_standard(), pst_agg=pst_agg(), 
-                                          grouping_agg=grouping_agg(), manufacturer_agg=manufacturer_agg(), 
-                                          model_agg=model_agg(), circuit_agg(), response_agg(), zone_agg(),
-                                          compliance_agg(), reconnection_compliance_agg())
-      if (length(combined_data_f$ts) > 0) {
+        # Count samples in each data series to be displayed
+        grouping_cols <- find_grouping_cols(agg_on_standard=agg_on_standard(), pst_agg=pst_agg(), 
+                                            grouping_agg=grouping_agg(), manufacturer_agg=manufacturer_agg(), 
+                                            model_agg=model_agg(), circuit_agg=circuit_agg(), response_agg=response_agg(), 
+                                            zone_agg=zone_agg(), compliance_agg=compliance_agg(), 
+                                            reconnection_compliance_agg=reconnection_compliance_agg())
+      
+
         v$sample_count_table <- vector_groupby_count(combined_data_f, grouping_cols)
         if (confidence_category() %in% grouping_cols) {
           population_groups <- grouping_cols[confidence_category() != grouping_cols]
@@ -933,6 +950,7 @@ server <- function(input,output,session){
           v$sample_count_table$upper_95_CI <- round(result[2,], digits = 4)
           v$sample_count_table$width <- v$sample_count_table$upper_95_CI - v$sample_count_table$lower_95_CI
         }
+        
       }
       # Procced to  aggregation and plotting only if there is less than 1000 data series to plot, else stop and notify the
       # user.
@@ -970,6 +988,39 @@ server <- function(input,output,session){
                                       con_type, first_ac, polarity, compliance_status, reconnection_compliance_status, 
                                       manual_droop_compliance, manual_reconnect_compliance, reconnection_time, 
                                       max_reconnection_ramp_rate)
+          
+          # Summarise and upscale disconnections on a manufacturer basis.
+          browser()
+          disconnection_summary <- group_disconnections_by_manufacturer(v$circuit_summary)
+          disconnection_summary <- join_solar_analytics_and_cer_manufacturer_data(disconnection_summary, v$manufacturer_install_data)
+          manufacters_missing_from_cer <- get_manufactures_in_solar_analytics_but_not_cer(disconnection_summary)
+          manufacters_missing_from_solar_analytics <- get_manufactures_in_cer_but_not_solar_analytics(disconnection_summary)
+          disconnection_summary <- impose_sample_size_threshold(disconnection_summary, sample_threshold = 30)
+          disconnection_summary <- calc_confidence_intervals_for_disconnections(disconnection_summary)
+          v$disconnection_summary <- calc_upscale_mw_loss(disconnection_summary)
+          
+          write.csv(manufacters_missing_from_cer, "manufacters_missing_from_cer.csv", row.names=FALSE)
+          write.csv(manufacters_missing_from_solar_analytics, "manufacters_missing_from_solar_analytics.csv", row.names=FALSE)
+          
+          if(len(manufacters_missing_from_cer$manufacturers)){
+            long_error_message <- c("Some manufacturers present in the solar analytics data could not be",
+                                    "matched to the cer data set. A list of these has been svaed in the",
+                                    "file manufacters_missing_from_cer.csv. You may want to review the 
+                                    mapping used in processing the solar analytics data.")
+            long_error_message <- paste(long_error_message, collapse = '')
+            shinyalert("Manufacturers missing from CER data", long_error_message)
+          }
+          
+          if(len(manufacters_missing_from_solar_analytics$manufacturers)){
+            long_error_message <- c("Some manufacturers present in the CER data could not be",
+                                    "matched to the solar analytics data set. A list of these has been svaed in the",
+                                    "file manufacters_missing_from_solar_analytics.csv. You may wish to review the", 
+                                    "file to check the number and names of missing manufacturers.")
+            long_error_message <- paste(long_error_message, collapse = '')
+            shinyalert("Manufacturers missing from Solar Analytics data", long_error_message)
+          }
+          
+          
           # Combine data sets that have the same grouping so they can be saved in a single file
           if (no_grouping){
             et <- pre_event_interval()
@@ -1007,9 +1058,15 @@ server <- function(input,output,session){
               shinySaveButton("save_ideal_response", "Save response", "Choose directory for report files ...")
             })
             output$save_ideal_response_downsampled <- renderUI({
-              shinySaveButton("save_ideal_response_downsampled", "Save downsampled response", "Choose directory for report files ...")
+              shinySaveButton("save_ideal_response_downsampled", "Save downsampled response", 
+                              "Choose directory for report files ...")
+            })
+            output$save_manufacturer_disconnection_summary <- renderUI({
+              shinySaveButton("save_manufacturer_disconnection_summary", "Save manufacturer disconnection summary", 
+                              "Choose directory for report files ...")
             })
           
+        
             if ("width" %in% names(v$sample_count_table)) {
               sample_count_table <- datatable(v$sample_count_table) %>% formatStyle(
                 "width",  background = styleColorBar(c(0, 1), 'red'))
@@ -1383,6 +1440,17 @@ server <- function(input,output,session){
       write.csv(v$ideal_response_downsampled, as.character(fileinfo$datapath), row.names=FALSE)
     }
   })
+  
+  
+  observeEvent(input$save_manufacturer_disconnection_summary,{
+    volumes <- c(home=getwd())
+    shinyFileSave(input, "save_manufacturer_disconnection_summary", roots=volumes, session=session)
+    fileinfo <- parseSavePath(volumes, input$save_manufacturer_disconnection_summary)
+    if (nrow(fileinfo) > 0) {
+      write.csv(v$disconnection_summary, as.character(fileinfo$datapath), row.names=FALSE)
+    }
+  })
+  
   
   get_current_settings <-function(){
     settings <- vector(mode='list')
