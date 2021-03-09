@@ -21,19 +21,21 @@ get_number_of_disconnections <- function(response_categories){
 join_solar_analytics_and_cer_manufacturer_data <- function(circuit_summary, cer_manufacturer_data){
   circuit_summary <- merge(circuit_summary, cer_manufacturer_data, by = c('Standard_Version', 'manufacturer'), 
                            all = TRUE)
-  circuit_summary <- mutate(circuit_summary, manufacturer = ifelse(is.na(capacity), 'Other', manufacturer))
-  circuit_summary <- mutate(circuit_summary, manufacturer = ifelse(is.na(disconnections), 'Other', manufacturer))
   circuit_summary <- rename(circuit_summary, cer_capacity = capacity)
   return(circuit_summary)
 }
   
 impose_sample_size_threshold <- function(disconnection_summary, sample_threshold){
+  
+  circuit_summary <- mutate(disconnection_summary, sample_threshold, manufacturer = ifelse(is.na(cer_capacity), 'Other', manufacturer))
+  circuit_summary <- mutate(disconnection_summary, sample_threshold, manufacturer = ifelse(is.na(disconnections), 'Other', manufacturer))
+  
   # Create an Other group for manufacturers with a small sample size.
   disconnection_summary <- mutate(disconnection_summary, sample_size = ifelse(is.na(sample_size), 0, sample_size))
   disconnection_summary <- mutate(disconnection_summary, 
                                   manufacturer = ifelse(sample_size < sample_threshold | 
                                                           manufacturer == "Unknown" | 
-                                                          manufacturer == "Multiple", 
+                                                          manufacturer == "Mixed", 
                                                         "Other", manufacturer)
                                   )
   # Recalculate disconnection count and sample size. 
@@ -49,11 +51,21 @@ impose_sample_size_threshold <- function(disconnection_summary, sample_threshold
 }
 
 calc_confidence_intervals_for_disconnections <- function(disconnection_summary){
-  result <- mapply(ConfidenceInterval, disconnection_summary$disconnections, 
+  result <- mapply(CI_wrapper, disconnection_summary$disconnections, 
                    disconnection_summary$sample_size, 0.95)
   disconnection_summary$lower_bound <- result[1,]
   disconnection_summary$upper_bound <- result[2,]
   return(disconnection_summary)
+}
+
+CI_wrapper <- function(count, sample_size, ci){
+  if (sample_size > 0) {
+    result <- ConfidenceInterval(count, sample_size, ci)
+  } else {
+    result <- c(NA, NA)
+  }
+  
+  return(result)
 }
 
 calc_upscale_mw_loss <- function(disconnection_summary){
@@ -72,6 +84,25 @@ get_manufactures_in_solar_analytics_but_not_cer <- function(disconnection_summar
 get_manufactures_in_cer_but_not_solar_analytics <- function(disconnection_summary){
   disconnection_summary <- filter(disconnection_summary, is.na(sample_size))
   return(disconnection_summary)
+}
+
+get_manufacturer_capacitys <- function(manufacturer_install_data, date, region){
+  manufacturer_install_data <- filter(manufacturer_install_data, s_state == region)
+  manufacturer_install_data <- manufacturer_install_data[order(manufacturer_install_data$date), ]
+  manufacturer_install_data <- filter(manufacturer_install_data, date <= date)
+  manufacturer_install_data <- group_by(manufacturer_install_data, Standard_Version, manufacturer,  s_state)
+  manufacturer_install_data <- summarise(manufacturer_install_data, capacity = last(standard_capacity))
+  manufacturer_install_data <- as.data.frame(manufacturer_install_data)
+  return(manufacturer_install_data)
+}
+
+upscale_disconnections <- function(manufacturer_level_summary){
+  upscaled_disconnections <- group_by(manufacturer_level_summary, Standard_Version)
+  upscaled_disconnections <- summarise(upscaled_disconnections,
+                                       lower_bound = sum(lower_bound_mw_loss)/sum(cer_capacity),
+                                       disconnections = sum(predicted_mw_loss)/sum(cer_capacity),
+                                       uppper_bound = sum(upper_bound_mw_loss)/sum(cer_capacity))
+  return(upscaled_disconnections)
 }
 
 

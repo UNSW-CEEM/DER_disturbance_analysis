@@ -156,8 +156,10 @@ ui <- fluidPage(
           uiOutput("save_ideal_response"),
           HTML("<br>"),
           uiOutput("save_ideal_response_downsampled"),
-          HTML("<br><br>"),
+          HTML("<br>"),
           uiOutput("save_manufacturer_disconnection_summary"),
+          HTML("<br>"),
+          uiOutput("save_upscaled_disconnection_summary"),
           HTML("<br><br>"),
           plotlyOutput(outputId="NormPower"),
           plotlyOutput(outputId="Frequency"),
@@ -243,6 +245,8 @@ ui <- fluidPage(
                                          label = strong('Disconnecting threshold, level below which circuit is considered to
                                                       have disconnected.'), 
                                          value = 0.05, max = 1, min = 0),
+                            materialSwitch("exclude_solar_edge", label = strong("Exclude solar edge from reconnection summary."), 
+                                           status = "primary", value = TRUE),
                             actionButton("load_backend_settings", "Load from settings file")
                             ),
                mainPanel()
@@ -438,6 +442,7 @@ server <- function(input,output,session){
   ramp_rate_threshold_for_non_compliance <- reactive({input$ramp_rate_threshold_for_non_compliance})
   ramp_rate_change_resource_limit_threshold <- reactive({input$ramp_rate_change_resource_limit_threshold})
   disconnecting_threshold <- reactive({input$disconnecting_threshold})
+  exclude_solar_edge <- reactive({input$exclude_solar_edge})
   
   
   # Store the main data table in a reactive value so it is accessable outside 
@@ -575,7 +580,7 @@ server <- function(input,output,session){
       shinyalert("Error loading timeseries data", long_error_message)
       error_check_passed = FALSE
     }
-    cer_manufacturer_data <- "pv_installed_by_manufacturer_formatted.csv"
+    cer_manufacturer_data <- "cer_cumulative_capacity_and_number_by_manufacturer.csv"
     if (!file.exists(cer_manufacturer_data)){
       long_error_message <- c("The required file cer_manufacturer_data could ",
                               "not be found. Please add it to the main project directory.")
@@ -605,6 +610,8 @@ server <- function(input,output,session){
         v$circuit_details <- bind_rows(v$circuit_details_raw, circuit_details_clean)
   
         time_series_data <- mutate(time_series_data, ts = fastPOSIXct(ts, tz="Australia/Brisbane"))
+        time_series_data <- mutate(time_series_data, v = as.numeric(v))
+        time_series_data <- mutate(time_series_data, f = as.numeric(f))
   
         v$combined_data <- inner_join(time_series_data, v$circuit_details, by = "c_id")
         v$combined_data <- inner_join( v$combined_data, v$site_details, by = c("site_id", "clean"))
@@ -990,19 +997,26 @@ server <- function(input,output,session){
                                       max_reconnection_ramp_rate)
           
           # Summarise and upscale disconnections on a manufacturer basis.
-          browser()
-          disconnection_summary <- group_disconnections_by_manufacturer(v$circuit_summary)
-          disconnection_summary <- join_solar_analytics_and_cer_manufacturer_data(disconnection_summary, v$manufacturer_install_data)
+          if (exclude_solar_edge()){
+            circuits_to_summarise <- filter(v$circuit_summary, manufacturer != "SolarEdge")
+          } else {
+            circuits_to_summarise <- v$circuit_summary
+          }
+          disconnection_summary <- group_disconnections_by_manufacturer(circuits_to_summarise)
+          manufacturer_capacitys <- get_manufacturer_capacitys(v$manufacturer_install_data, load_start_time(), 
+                                                               region_to_load())
+          disconnection_summary <- join_solar_analytics_and_cer_manufacturer_data(disconnection_summary,
+                                                                                  manufacturer_capacitys)
           manufacters_missing_from_cer <- get_manufactures_in_solar_analytics_but_not_cer(disconnection_summary)
           manufacters_missing_from_solar_analytics <- get_manufactures_in_cer_but_not_solar_analytics(disconnection_summary)
           disconnection_summary <- impose_sample_size_threshold(disconnection_summary, sample_threshold = 30)
           disconnection_summary <- calc_confidence_intervals_for_disconnections(disconnection_summary)
           v$disconnection_summary <- calc_upscale_mw_loss(disconnection_summary)
-          
+          v$upscaled_disconnections <- upscale_disconnections(v$disconnection_summary)
           write.csv(manufacters_missing_from_cer, "manufacters_missing_from_cer.csv", row.names=FALSE)
           write.csv(manufacters_missing_from_solar_analytics, "manufacters_missing_from_solar_analytics.csv", row.names=FALSE)
           
-          if(len(manufacters_missing_from_cer$manufacturers)){
+          if(length(manufacters_missing_from_cer$manufacturer) > 0) {
             long_error_message <- c("Some manufacturers present in the solar analytics data could not be",
                                     "matched to the cer data set. A list of these has been svaed in the",
                                     "file manufacters_missing_from_cer.csv. You may want to review the 
@@ -1011,7 +1025,7 @@ server <- function(input,output,session){
             shinyalert("Manufacturers missing from CER data", long_error_message)
           }
           
-          if(len(manufacters_missing_from_solar_analytics$manufacturers)){
+          if(length(manufacters_missing_from_solar_analytics$manufacturer) > 0) {
             long_error_message <- c("Some manufacturers present in the CER data could not be",
                                     "matched to the solar analytics data set. A list of these has been svaed in the",
                                     "file manufacters_missing_from_solar_analytics.csv. You may wish to review the", 
@@ -1063,6 +1077,10 @@ server <- function(input,output,session){
             })
             output$save_manufacturer_disconnection_summary <- renderUI({
               shinySaveButton("save_manufacturer_disconnection_summary", "Save manufacturer disconnection summary", 
+                              "Choose directory for report files ...")
+            })
+            output$save_upscaled_disconnection_summary <- renderUI({
+              shinySaveButton("save_upscaled_disconnection_summary", "Save upscaled disconnection summary", 
                               "Choose directory for report files ...")
             })
           
@@ -1451,6 +1469,15 @@ server <- function(input,output,session){
     }
   })
   
+  observeEvent(input$save_upscaled_disconnection_summary,{
+    volumes <- c(home=getwd())
+    shinyFileSave(input, "save_upscaled_disconnection_summary", roots=volumes, session=session)
+    fileinfo <- parseSavePath(volumes, input$save_upscaled_disconnection_summary)
+    if (nrow(fileinfo) > 0) {
+      write.csv(v$upscaled_disconnections, as.character(fileinfo$datapath), row.names=FALSE)
+    }
+  })
+  
   
   get_current_settings <-function(){
     settings <- vector(mode='list')
@@ -1509,6 +1536,7 @@ server <- function(input,output,session){
     settings$ramp_rate_threshold_for_non_compliance <- ramp_rate_threshold_for_non_compliance()
     settings$ramp_rate_change_resource_limit_threshold <- ramp_rate_change_resource_limit_threshold()
     settings$disconnecting_threshold <- disconnecting_threshold()
+    settings$exclude_solar_edge <- exclude_solar_edge()
     
     settings_as_json <- toJSON(settings, indent = 1)
     
@@ -1617,6 +1645,7 @@ server <- function(input,output,session){
       updateNumericInput(session, "ramp_rate_threshold_for_non_compliance", value = settings$ramp_rate_threshold_for_non_compliance)
       updateNumericInput(session, "ramp_rate_change_resource_limit_threshold", value = settings$ramp_rate_change_resource_limit_threshold)
       updateNumericInput(session, "disconnecting_threshold", value = settings$disconnecting_threshold)
+      updateMaterialSwitch(session, "exclude_solar_edge", value = settings$exclude_solar_edge)
     }
   })
   

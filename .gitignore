@@ -81,3 +81,6 @@ pv_installed.csv
 pv_installed_formatted.csv
 cer_cumulative_capacity_and_number_old.csv
 pv_installed_by_manufacturer_formatted.csv
+cer_cumulative_capacity_and_number_by_manufacturer.csv
+manufacters_missing_from_cer.csv
+manufacters_missing_from_solar_analytics.csv

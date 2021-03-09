@@ -6,7 +6,6 @@ create_reconnection_summary <- function(combined_data_f, pre_event_interval,
                                         ramp_rate_threshold_for_compliance,
                                         ramp_rate_threshold_for_non_compliance,
                                         ramp_rate_change_resource_limit_threshold){
-
   post_event_response <- select(combined_data_f, ts, c_id, c_id_daily_norm_power, pre_event_norm_power)
   post_event_response <- filter(post_event_response, ts > pre_event_interval)
   
