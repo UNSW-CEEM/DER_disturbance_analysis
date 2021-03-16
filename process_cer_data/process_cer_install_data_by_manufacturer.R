@@ -1,7 +1,7 @@
 library(data.table)
 library(dplyr)
 
-intall_data_file <- "C:/Users/NGorman/Documents/cer_installs_by_manufacturer.csv"
+intall_data_file <- "C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/cer_cumulative_capacity_and_number_by_manufacturer_filter_off_grid.csv"
 install_data <- read.csv(file=intall_data_file, header=TRUE, stringsAsFactors = FALSE)
 
 start_date = min(install_data$index)
@@ -44,4 +44,4 @@ combined <- select(combined, index, State, manufacturer, Capacity, Number)
 
 combined[is.na(combined)] <- 0
 
-write.csv(combined, "pv_installed_by_manufacturer_formatted.csv", row.names=FALSE)
+write.csv(combined, "cer_cumulative_capacity_and_number_by_manufacturer_filter_off_grid_formatted.csv", row.names=FALSE)

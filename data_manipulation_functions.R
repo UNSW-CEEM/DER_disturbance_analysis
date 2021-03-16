@@ -132,7 +132,7 @@ sum_manufacturers <- function(manufacturers){
   if (anyNA(unique_manufactuerers)) {
     manufacturer <- 'NA'
   } else if (length(unique_manufactuerers) > 1) {
-    manufacturer <- 'Mixed' 
+    manufacturer <- 'Multiple' 
   } else {
     manufacturer <- unique_manufactuerers[1]
   }

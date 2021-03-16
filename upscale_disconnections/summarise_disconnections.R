@@ -26,7 +26,6 @@ join_solar_analytics_and_cer_manufacturer_data <- function(circuit_summary, cer_
 }
   
 impose_sample_size_threshold <- function(disconnection_summary, sample_threshold){
-  
   circuit_summary <- mutate(disconnection_summary, sample_threshold, manufacturer = ifelse(is.na(cer_capacity), 'Other', manufacturer))
   circuit_summary <- mutate(disconnection_summary, sample_threshold, manufacturer = ifelse(is.na(disconnections), 'Other', manufacturer))
   
@@ -35,6 +34,7 @@ impose_sample_size_threshold <- function(disconnection_summary, sample_threshold
   disconnection_summary <- mutate(disconnection_summary, 
                                   manufacturer = ifelse(sample_size < sample_threshold | 
                                                           manufacturer == "Unknown" | 
+                                                          manufacturer == "Multiple" |
                                                           manufacturer == "Mixed", 
                                                         "Other", manufacturer)
                                   )
@@ -86,10 +86,10 @@ get_manufactures_in_cer_but_not_solar_analytics <- function(disconnection_summar
   return(disconnection_summary)
 }
 
-get_manufacturer_capacitys <- function(manufacturer_install_data, date, region){
+get_manufacturer_capacitys <- function(manufacturer_install_data, event_date, region){
   manufacturer_install_data <- filter(manufacturer_install_data, s_state == region)
   manufacturer_install_data <- manufacturer_install_data[order(manufacturer_install_data$date), ]
-  manufacturer_install_data <- filter(manufacturer_install_data, date <= date)
+  manufacturer_install_data <- filter(manufacturer_install_data, date <= event_date)
   manufacturer_install_data <- group_by(manufacturer_install_data, Standard_Version, manufacturer,  s_state)
   manufacturer_install_data <- summarise(manufacturer_install_data, capacity = last(standard_capacity))
   manufacturer_install_data <- as.data.frame(manufacturer_install_data)

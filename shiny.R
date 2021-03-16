@@ -246,7 +246,7 @@ ui <- fluidPage(
                                                       have disconnected.'), 
                                          value = 0.05, max = 1, min = 0),
                             materialSwitch("exclude_solar_edge", label = strong("Exclude solar edge from reconnection summary."), 
-                                           status = "primary", value = TRUE),
+                                           status = "primary", value = FALSE),
                             actionButton("load_backend_settings", "Load from settings file")
                             ),
                mainPanel()
@@ -580,7 +580,7 @@ server <- function(input,output,session){
       shinyalert("Error loading timeseries data", long_error_message)
       error_check_passed = FALSE
     }
-    cer_manufacturer_data <- "cer_cumulative_capacity_and_number_by_manufacturer.csv"
+    cer_manufacturer_data <- "cer_cumulative_capacity_and_number_by_manufacturer_filter_off_grid_formatted.csv"
     if (!file.exists(cer_manufacturer_data)){
       long_error_message <- c("The required file cer_manufacturer_data could ",
                               "not be found. Please add it to the main project directory.")
@@ -999,11 +999,13 @@ server <- function(input,output,session){
           # Summarise and upscale disconnections on a manufacturer basis.
           if (exclude_solar_edge()){
             circuits_to_summarise <- filter(v$circuit_summary, manufacturer != "SolarEdge")
+            manufacturer_install_data <- filter(v$manufacturer_install_data, manufacturer != "SolarEdge")
           } else {
             circuits_to_summarise <- v$circuit_summary
+            manufacturer_install_data <- v$manufacturer_install_data
           }
           disconnection_summary <- group_disconnections_by_manufacturer(circuits_to_summarise)
-          manufacturer_capacitys <- get_manufacturer_capacitys(v$manufacturer_install_data, load_start_time(), 
+          manufacturer_capacitys <- get_manufacturer_capacitys(manufacturer_install_data, load_start_time(), 
                                                                region_to_load())
           disconnection_summary <- join_solar_analytics_and_cer_manufacturer_data(disconnection_summary,
                                                                                   manufacturer_capacitys)
