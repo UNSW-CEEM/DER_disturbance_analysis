@@ -68,11 +68,11 @@ CI_wrapper <- function(count, sample_size, ci){
   return(result)
 }
 
-calc_upscale_mw_loss <- function(disconnection_summary){
+calc_upscale_kw_loss <- function(disconnection_summary){
   disconnection_summary <- mutate(disconnection_summary, 
-                                  predicted_mw_loss = proportion * cer_capacity,
-                                  lower_bound_mw_loss = lower_bound * cer_capacity,
-                                  upper_bound_mw_loss = upper_bound * cer_capacity)
+                                  predicted_kw_loss = proportion * cer_capacity,
+                                  lower_bound_kw_loss = lower_bound * cer_capacity,
+                                  upper_bound_kw_loss = upper_bound * cer_capacity)
   return(disconnection_summary)
 }
 
@@ -99,9 +99,15 @@ get_manufacturer_capacitys <- function(manufacturer_install_data, event_date, re
 upscale_disconnections <- function(manufacturer_level_summary){
   upscaled_disconnections <- group_by(manufacturer_level_summary, Standard_Version)
   upscaled_disconnections <- summarise(upscaled_disconnections,
-                                       lower_bound = sum(lower_bound_mw_loss)/sum(cer_capacity),
-                                       disconnections = sum(predicted_mw_loss)/sum(cer_capacity),
-                                       uppper_bound = sum(upper_bound_mw_loss)/sum(cer_capacity))
+                                       sample_size = sum(sample_size),
+                                       unscaled_disconnections = sum(disconnections) / sum(sample_size),
+                                       cer_capacity = sum(cer_capacity),
+                                       lower_bound_kw_loss = sum(lower_bound_kw_loss),
+                                       predicted_kw_loss = sum(predicted_kw_loss),
+                                       upper_bound_kw_loss = sum(upper_bound_kw_loss),                         
+                                       lower_bound = sum(lower_bound_kw_loss)/sum(cer_capacity),
+                                       disconnections = sum(predicted_kw_loss)/sum(cer_capacity),
+                                       uppper_bound = sum(upper_bound_kw_loss)/sum(cer_capacity))
   return(upscaled_disconnections)
 }
 

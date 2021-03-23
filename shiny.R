@@ -580,7 +580,7 @@ server <- function(input,output,session){
       shinyalert("Error loading timeseries data", long_error_message)
       error_check_passed = FALSE
     }
-    cer_manufacturer_data <- "cer_cumulative_capacity_and_number_by_manufacturer_filter_off_grid_formatted.csv"
+    cer_manufacturer_data <- "cer_cumulative_capacity_and_number_by_manufacturer.csv"
     if (!file.exists(cer_manufacturer_data)){
       long_error_message <- c("The required file cer_manufacturer_data could ",
                               "not be found. Please add it to the main project directory.")
@@ -1013,25 +1013,25 @@ server <- function(input,output,session){
           manufacters_missing_from_solar_analytics <- get_manufactures_in_cer_but_not_solar_analytics(disconnection_summary)
           disconnection_summary <- impose_sample_size_threshold(disconnection_summary, sample_threshold = 30)
           disconnection_summary <- calc_confidence_intervals_for_disconnections(disconnection_summary)
-          v$disconnection_summary <- calc_upscale_mw_loss(disconnection_summary)
+          v$disconnection_summary <- calc_upscale_kw_loss(disconnection_summary)
           v$upscaled_disconnections <- upscale_disconnections(v$disconnection_summary)
           write.csv(manufacters_missing_from_cer, "manufacters_missing_from_cer.csv", row.names=FALSE)
           write.csv(manufacters_missing_from_solar_analytics, "manufacters_missing_from_solar_analytics.csv", row.names=FALSE)
           
           if(length(manufacters_missing_from_cer$manufacturer) > 0) {
-            long_error_message <- c("Some manufacturers present in the solar analytics data could not be",
-                                    "matched to the cer data set. A list of these has been svaed in the",
-                                    "file manufacters_missing_from_cer.csv. You may want to review the 
-                                    mapping used in processing the solar analytics data.")
+            long_error_message <- c("Some manufacturers present in the solar analytics data could not be ",
+                                    "matched to the cer data set. A list of these has been saved in the ",
+                                    "file manufacters_missing_from_cer.csv. You may want to review the ", 
+                                    "mapping used in processing the solar analytics data.")
             long_error_message <- paste(long_error_message, collapse = '')
             shinyalert("Manufacturers missing from CER data", long_error_message)
           }
           
           if(length(manufacters_missing_from_solar_analytics$manufacturer) > 0) {
-            long_error_message <- c("Some manufacturers present in the CER data could not be",
-                                    "matched to the solar analytics data set. A list of these has been svaed in the",
-                                    "file manufacters_missing_from_solar_analytics.csv. You may wish to review the", 
-                                    "file to check the number and names of missing manufacturers.")
+            long_error_message <- c("Some manufacturers present in the CER data could not be ",
+                                    "matched to the solar analytics data set. A list of these has been svaed in the ",
+                                    "file manufacters_missing_from_solar_analytics.csv. You may wish to review the ", 
+                                    "file to check the number and names of missing manufacturers. ")
             long_error_message <- paste(long_error_message, collapse = '')
             shinyalert("Manufacturers missing from Solar Analytics data", long_error_message)
           }
@@ -1071,19 +1071,20 @@ server <- function(input,output,session){
               shinySaveButton("batch_save", "Batch save", "Save file as ...", filetype=list(xlsx="csv"))
             })
             output$save_ideal_response <- renderUI({
-              shinySaveButton("save_ideal_response", "Save response", "Choose directory for report files ...")
+              shinySaveButton("save_ideal_response", "Save response", "Choose directory for report files ...", 
+                              filetype=list(xlsx="csv"))
             })
             output$save_ideal_response_downsampled <- renderUI({
               shinySaveButton("save_ideal_response_downsampled", "Save downsampled response", 
-                              "Choose directory for report files ...")
+                              "Choose directory for report files ...", filetype=list(xlsx="csv"))
             })
             output$save_manufacturer_disconnection_summary <- renderUI({
               shinySaveButton("save_manufacturer_disconnection_summary", "Save manufacturer disconnection summary", 
-                              "Choose directory for report files ...")
+                              "Choose directory for report files ...", filetype=list(xlsx="csv"))
             })
             output$save_upscaled_disconnection_summary <- renderUI({
               shinySaveButton("save_upscaled_disconnection_summary", "Save upscaled disconnection summary", 
-                              "Choose directory for report files ...")
+                              "Choose directory for report files ...", filetype=list(xlsx="csv"))
             })
           
         
