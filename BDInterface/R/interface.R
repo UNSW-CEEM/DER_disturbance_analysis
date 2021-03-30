@@ -31,7 +31,7 @@ DBInterface <- R6::R6Class("DBInterface",
       }
     },
     check_tables_have_expected_columns = function() {
-      self$check_table_has_expected_columns('timeseries', c("ts", "c_id", "d", "e", "f", "v"))
+      self$check_table_has_expected_columns('timeseries', c("ts", "c_id", "d", "d_key", "e", "f", "v"))
       self$check_table_has_expected_columns('circuit_details_raw', c("c_id", "site_id", "con_type", "polarity", 
                                                                      "manual_droop_compliance", 
                                                                      "manual_reconnect_compliance"))
@@ -421,7 +421,6 @@ DBInterface <- R6::R6Class("DBInterface",
       return(df)
     },
     clean_duration_values = function(time_series){
-      browser()
       time_series <- filter(time_series, (!d %in% c(30, 60)))
       time_series <- self$calc_interval_between_measurements(time_series)
       time_series <- self$flag_duration_for_updating_if_value_non_standard_and_calced_interval_is_5s(time_series)

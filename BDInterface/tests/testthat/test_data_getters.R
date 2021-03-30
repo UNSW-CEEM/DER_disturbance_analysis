@@ -33,6 +33,7 @@ dp$build_database(timeseries = timeseries_path_name,
                   check_dataset_ids_match = FALSE)
 
 dp$add_postcode_lon_lat_to_database("data/postcode_lon_lat.csv")
+dp$add_manufacturer_mapping_table("data/manufacturer_mapping.csv")
 dp$run_data_cleaning_loop(max_chunk_size = 10)
 
 
@@ -77,6 +78,7 @@ dp$build_database(timeseries = timeseries_path_name,
                   check_dataset_ids_match = FALSE)
 
 dp$add_postcode_lon_lat_to_database("data/postcode_lon_lat.csv")
+dp$add_manufacturer_mapping_table("data/manufacturer_mapping.csv")
 dp$run_data_cleaning_loop(max_chunk_size = 10)
 
 testthat::test_that("Test get_max_circuit_powers complex case",{

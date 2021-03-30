@@ -1,3 +1,3 @@
 site_id,s_postcode,s_state,sum_ac,first_ac,manufacturer,model,pv_installation_year_month
-3,2034,NSW,30,10,A A,A1 A1,2015-01
-4,6000,SA,11,11,B,B1,2017-01
+3,2034,NSW,30,10,ABB,A1 A1,2015-01
+4,6000,SA,11,11,SMA,B1,2017-01

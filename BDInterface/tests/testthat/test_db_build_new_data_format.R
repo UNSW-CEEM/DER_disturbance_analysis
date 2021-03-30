@@ -66,6 +66,7 @@ testthat::test_that("Building works when there are null duration values",{
                     check_dataset_ids_match=FALSE)
   
   dp$add_postcode_lon_lat_to_database("data/postcode_lon_lat.csv")
+  dp$add_manufacturer_mapping_table("data/manufacturer_mapping.csv")
   dp$run_data_cleaning_loop(max_chunk_size = 1)
   
   output_timeseries <- dp$get_time_series_data()
