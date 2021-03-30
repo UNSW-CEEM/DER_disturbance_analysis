@@ -137,7 +137,7 @@ DBInterface <- R6::R6Class("DBInterface",
       column_names <- names(read.csv(timeseries, nrows=3, header = TRUE))
       
       query <- "REPLACE INTO timeseries 
-      SELECT _ts as ts, _c_id as c_id, cast(IFNULL(_d, 0) as integer) as d_key, _e as e, _v as v,
+      SELECT _ts as ts, cast(_c_id as integer) as c_id, cast(IFNULL(_d, 0) as integer) as d_key, _e as e, _v as v,
       _f as f from file"
       
       for (name in column_names){
@@ -165,7 +165,7 @@ DBInterface <- R6::R6Class("DBInterface",
                              con_type = '_con_type', polarity = '_polarity')
       
       query <- "REPLACE INTO circuit_details_raw  
-      SELECT _c_id as c_id, _site_id as site_id, _con_type as con_type,
+      SELECT cast(_c_id as integer) as c_id, cast(_site_id as integer) as site_id, _con_type as con_type,
       _polarity as polarity from file"
       
       for (name in column_names){
@@ -187,7 +187,7 @@ DBInterface <- R6::R6Class("DBInterface",
                              pv_installation_year_month='_pv_installation_year_month')
       
       query <- "REPLACE INTO site_details_raw 
-      SELECT _site_id as site_id, _s_postcode as s_postcode, _s_state as s_state, 
+      SELECT cast(_site_id as integer) as site_id, cast(_s_postcode as integer) as s_postcode, _s_state as s_state, 
       _ac as ac, _dc as dc, _manufacturer as manufacturer,
       _model as model, _pv_installation_year_month as
       pv_installation_year_month from site_details"
@@ -388,7 +388,7 @@ DBInterface <- R6::R6Class("DBInterface",
                         inner join
                      (select c_id, polarity from circuit_details_cleaned) b
                     on a.c_id == b.c_id) c
-                group by c_id; 
+                group by c.c_id; 
                "
 
       max_power <- sqldf::read.csv.sql(sql = query , dbname = self$db_path_name)
@@ -412,6 +412,8 @@ DBInterface <- R6::R6Class("DBInterface",
       return(df)
     },
     clean_duration_values = function(time_series){
+      browser()
+      time_series <- filter(time_series, (!d %in% c(30, 60)))
       time_series <- self$calc_interval_between_measurements(time_series)
       time_series <- self$flag_duration_for_updating_if_value_non_standard_and_calced_interval_is_5s(time_series)
       time_series <- self$replace_duration_value_with_calced_interval(time_series)
@@ -432,7 +434,7 @@ DBInterface <- R6::R6Class("DBInterface",
       return(time_series)
     },
     flag_duration_for_updating_if_value_non_standard_and_calced_interval_is_5s = function(time_series){
-      time_series <- dplyr::mutate(time_series, d_change=ifelse((!d %in% c(5, 30, 60)), TRUE, FALSE))
+      time_series <- dplyr::mutate(time_series, d_change=ifelse((!d %in% c(5, 30, 60) & (interval == 5)), TRUE, FALSE))
       return(time_series)
     },
     update_timeseries_table_in_database = function(time_series){

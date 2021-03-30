@@ -140,7 +140,7 @@ testthat::test_that("test data cleaning works, with batch size
   
   testthat::expect_equal(output_timeseries, expected_timeseries)
   testthat::expect_equal(output_site_details, expected_site_details)
-  testthat::expect_equal(output_site_details_cleaned, expected_site_details_cleaned)
+  testthat::expect_equal(output_site_details_cleaned, expected_site_details_cleaned, tolerance = 1e-6)
   testthat::expect_equal(output_circuit_details, expected_circuit_details)
 })
 
@@ -180,7 +180,7 @@ testthat::test_that("test calculating duration values works, with batch size
 
   testthat::expect_equal(output_timeseries, expected_timeseries)
   testthat::expect_equal(output_site_details, expected_site_details)
-  testthat::expect_equal(output_site_details_cleaned, expected_site_details_cleaned)
+  testthat::expect_equal(output_site_details_cleaned, expected_site_details_cleaned, tolerance = 1e-6)
   testthat::expect_equal(output_circuit_details, expected_circuit_details)
 })
 
@@ -219,7 +219,7 @@ testthat::test_that("test calculating duration values works, with batch size
   
   testthat::expect_equal(output_timeseries, expected_timeseries)
   testthat::expect_equal(output_site_details, expected_site_details)
-  testthat::expect_equal(output_site_details_cleaned, expected_site_details_cleaned)
+  testthat::expect_equal(output_site_details_cleaned, expected_site_details_cleaned, tolerance = 1e-6)
   testthat::expect_equal(output_circuit_details, expected_circuit_details)
 })
 
@@ -260,7 +260,7 @@ testthat::test_that("test calculating duration values works, with batch size
   
   testthat::expect_equal(output_timeseries, expected_timeseries)
   testthat::expect_equal(output_site_details, expected_site_details)
-  testthat::expect_equal(output_site_details_cleaned, expected_site_details_cleaned)
+  testthat::expect_equal(output_site_details_cleaned, expected_site_details_cleaned, tolerance = 1e-6)
   testthat::expect_equal(output_circuit_details, expected_circuit_details)
   
 })
