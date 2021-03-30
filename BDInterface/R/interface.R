@@ -90,15 +90,18 @@ DBInterface <- R6::R6Class("DBInterface",
       RSQLite::dbExecute(con, "CREATE TABLE timeseries(
                          ts TEXT,
                          c_id INT,
-                         d INT,
+                         d_key INT,
                          e REAL,
                          v REAL,
                          f REAL,
-                         PRIMARY KEY (ts, c_id))")
+                         PRIMARY KEY (ts, c_id, d_key))")
       
       sqldf::read.csv.sql(timeseries, sql = time_series_build_query, dbname = self$db_path_name, eol = '\n')
       
       self$drop_repeated_headers()
+      
+      RSQLite::dbExecute(con, "ALTER TABLE timeseries ADD d INT DEFAULT 0")
+      RSQLite::dbExecute(con, "UPDATE timeseries SET d = d_key")
 
       RSQLite::dbExecute(con, "DROP TABLE IF EXISTS circuit_details_raw")
       
@@ -134,7 +137,7 @@ DBInterface <- R6::R6Class("DBInterface",
       column_names <- names(read.csv(timeseries, nrows=3, header = TRUE))
       
       query <- "REPLACE INTO timeseries 
-      SELECT _ts as ts, _c_id as c_id, _d as d, _e as e, _v as v,
+      SELECT _ts as ts, cast(_c_id as integer) as c_id, cast(IFNULL(_d, 0) as integer) as d_key, _e as e, _v as v,
       _f as f from file"
       
       for (name in column_names){
@@ -162,7 +165,7 @@ DBInterface <- R6::R6Class("DBInterface",
                              con_type = '_con_type', polarity = '_polarity')
       
       query <- "REPLACE INTO circuit_details_raw  
-      SELECT _c_id as c_id, _site_id as site_id, _con_type as con_type,
+      SELECT cast(_c_id as integer) as c_id, cast(_site_id as integer) as site_id, _con_type as con_type,
       _polarity as polarity from file"
       
       for (name in column_names){
@@ -184,7 +187,7 @@ DBInterface <- R6::R6Class("DBInterface",
                              pv_installation_year_month='_pv_installation_year_month')
       
       query <- "REPLACE INTO site_details_raw 
-      SELECT _site_id as site_id, _s_postcode as s_postcode, _s_state as s_state, 
+      SELECT cast(_site_id as integer) as site_id, cast(_s_postcode as integer) as s_postcode, _s_state as s_state, 
       _ac as ac, _dc as dc, _manufacturer as manufacturer,
       _model as model, _pv_installation_year_month as
       pv_installation_year_month from site_details"
@@ -264,7 +267,7 @@ DBInterface <- R6::R6Class("DBInterface",
       circuit_details_cleaned <- dplyr::data_frame()
       
       while (length(circuits$c_id) > 0){
-        time_series <- self$get_time_series_data_by_c_id(circuits)
+        time_series <- self$get_time_series_data_by_c_id_full_row(circuits)
         time_series <- mutate(time_series, d = as.numeric(d))
         time_series <- mutate(time_series, time = fastPOSIXct(ts, tz="Australia/Brisbane"))
         time_series <- self$clean_duration_values(time_series)
@@ -345,13 +348,22 @@ DBInterface <- R6::R6Class("DBInterface",
     },
     get_time_series_data_by_c_id = function(c_ids){
       time_series <- sqldf::read.csv.sql(
-        sql = "select * from timeseries where c_id in (select c_id from c_ids)", dbname = self$db_path_name)
+        sql = "select ts, c_id, d, e, v, f from timeseries where c_id in (select c_id from c_ids)", dbname = self$db_path_name)
+      return(time_series)
+    },
+    get_time_series_data_by_c_id_full_row = function(c_ids){
+      time_series <- sqldf::read.csv.sql(
+        sql = "select ts, c_id, d_key, d, e, v, f from timeseries where c_id in (select c_id from c_ids)", dbname = self$db_path_name)
       return(time_series)
     },
     get_time_series_data = function(){
-      time_series <- sqldf::read.csv.sql(sql = "select * from timeseries", dbname = self$db_path_name)
+      time_series <- sqldf::read.csv.sql(sql = "select ts, c_id, d, e, v, f from timeseries", dbname = self$db_path_name)
       time_series <- time_series[with(time_series, order(c_id, ts)), ]
       rownames(time_series) <- NULL
+      return(time_series)
+    },
+    get_time_series_data_all = function(){
+      time_series <- sqldf::read.csv.sql(sql = "select ts, c_id, d_key, d, e, v, f from timeseries", dbname = self$db_path_name)
       return(time_series)
     },
     get_filtered_time_series_data = function(state, duration, start_time, end_time){
@@ -359,7 +371,7 @@ DBInterface <- R6::R6Class("DBInterface",
       site_details = self$get_site_details_raw()
       site_in_state = filter(site_details, s_state==state)
       circuit_in_state = filter(circuit_details, site_id %in% site_in_state$site_id)
-      query <- "select * from timeseries 
+      query <- "select ts, c_id, d, e, v, f from timeseries 
                         where c_id in (select c_id from circuit_in_state)
                         and d = duration
                         and ts >= 'start_time'
@@ -369,6 +381,23 @@ DBInterface <- R6::R6Class("DBInterface",
       query <- gsub('end_time', end_time, query)
       time_series <- sqldf::read.csv.sql(sql = query , dbname = self$db_path_name)
       return(time_series)
+    },
+    get_max_circuit_powers = function(state){
+      circuit_details = self$get_circuit_details_raw()
+      site_details = self$get_site_details_raw()
+      site_in_state = filter(site_details, s_state==state)
+      circuit_in_state = filter(circuit_details, site_id %in% site_in_state$site_id)
+      query <- "select c.c_id as c_id, max(c.e * c.polarity / (c.d * 1000)) as max_power from
+                    ((select c_id, d, e from timeseries 
+                            where c_id in (select c_id from circuit_in_state)) a
+                        inner join
+                     (select c_id, polarity from circuit_details_cleaned) b
+                    on a.c_id == b.c_id) c
+                group by c.c_id; 
+               "
+
+      max_power <- sqldf::read.csv.sql(sql = query , dbname = self$db_path_name)
+      return(max_power)
     },
     get_postcode_lon_lat = function(){
       postcodes <- sqldf::read.csv.sql(sql = "select * from postcode_lon_lat", dbname = self$db_path_name)
@@ -392,6 +421,8 @@ DBInterface <- R6::R6Class("DBInterface",
       return(df)
     },
     clean_duration_values = function(time_series){
+      browser()
+      time_series <- filter(time_series, (!d %in% c(30, 60)))
       time_series <- self$calc_interval_between_measurements(time_series)
       time_series <- self$flag_duration_for_updating_if_value_non_standard_and_calced_interval_is_5s(time_series)
       time_series <- self$replace_duration_value_with_calced_interval(time_series)
@@ -404,7 +435,7 @@ DBInterface <- R6::R6Class("DBInterface",
     },
     filter_out_unchanged_records = function(time_series){
       time_series <- dplyr::filter(time_series, d_change)
-      time_series <- select(time_series, ts, c_id, d, e, v, f)
+      time_series <- select(time_series, ts, c_id, d_key, d, e, v, f)
       return(time_series)
     },
     replace_duration_value_with_calced_interval = function(time_series){
@@ -412,12 +443,12 @@ DBInterface <- R6::R6Class("DBInterface",
       return(time_series)
     },
     flag_duration_for_updating_if_value_non_standard_and_calced_interval_is_5s = function(time_series){
-      time_series <- dplyr::mutate(time_series, d_change=ifelse((!d %in% c(5, 30, 60)), TRUE, FALSE))
+      time_series <- dplyr::mutate(time_series, d_change=ifelse((!d %in% c(5, 30, 60) & (interval == 5)), TRUE, FALSE))
       return(time_series)
     },
     update_timeseries_table_in_database = function(time_series){
       sqldf::read.csv.sql(
-        sql = "REPLACE INTO timeseries SELECT ts, c_id, d, e, v, f FROM time_series", 
+        sql = "REPLACE INTO timeseries SELECT ts, c_id, d_key, e, v, f, d FROM time_series", 
         dbname = self$db_path_name)
     },
     perform_power_calculations = function(time_series){
