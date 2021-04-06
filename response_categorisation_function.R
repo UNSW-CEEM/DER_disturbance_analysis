@@ -17,8 +17,7 @@ categorise_by_response <- function(event_window_data, window_length){
     event_power < 0.1, '5 Off at t0', 'Undefined'))
   
   event_window_data <- mutate(event_window_data, 
-                              response_category=ifelse(num_data_points < (60/d)*window_length & 
-                                                         response_category=='Undefined', 
+                              response_category=ifelse(num_data_points < (60/d)*window_length, 
                                                        '6 Not enough data', response_category))
   
   event_window_data <- mutate(event_window_data, 

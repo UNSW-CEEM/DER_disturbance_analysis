@@ -841,9 +841,9 @@ server <- function(input,output,session){
       v$ideal_response_to_plot <- ideal_response_to_plot
   
       combined_data_f <- filter(v$combined_data, clean %in% clean())
-      #combined_data_f <- filter(combined_data_f, sum_ac<=100)
-      #site_types <- c("pv_site_net", "pv_site", "pv_inverter_net", "pv_inverter")
-      #combined_data_f <- filter(combined_data_f, con_type %in% site_types)
+      combined_data_f <- filter(combined_data_f, sum_ac<=100)
+      site_types <- c("pv_site_net", "pv_site", "pv_inverter_net", "pv_inverter")
+      combined_data_f <- filter(combined_data_f, con_type %in% site_types)
       combined_data_f <- filter(combined_data_f, clean %in% clean())
       combined_data_f <- filter(combined_data_f, Grouping %in% size_groupings())
       combined_data_f <- filter(combined_data_f, Standard_Version %in% standards())
