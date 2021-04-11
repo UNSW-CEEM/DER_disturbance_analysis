@@ -270,10 +270,13 @@ DBInterface <- R6::R6Class("DBInterface",
         time_series <- self$get_time_series_data_by_c_id_full_row(circuits)
         time_series <- mutate(time_series, d = as.numeric(d))
         time_series <- mutate(time_series, time = fastPOSIXct(ts, tz="Australia/Brisbane"))
-        time_series <- self$clean_duration_values(time_series)
-        updated_records <- self$filter_out_unchanged_records(time_series)
-        self$update_timeseries_table_in_database(updated_records)
-        time_series <- mutate(time_series, ts=time)
+        time_series_5s_and_unknown_durations <- filter(time_series, (!d %in% c(30, 60)))
+        time_series_30s_and_60s_data <- filter(time_series, (d %in% c(30, 60)))
+        time_series_5s_and_unknown_durations <- self$clean_duration_values(time_series_5s_and_unknown_durations)
+        records_to_update <- self$filter_out_unchanged_records(time_series_5s_and_unknown_durations)
+        self$update_timeseries_table_in_database(records_to_update)
+        time_series <- bind_rows(time_series_30s_and_60s_data, time_series_5s_and_unknown_durations)
+        time_series <- mutate(time_series, ts = time)
    
         time_series <- self$add_meta_data_to_time_series(time_series, circuit_details)
         time_series <- self$perform_power_calculations(time_series)
@@ -287,6 +290,7 @@ DBInterface <- R6::R6Class("DBInterface",
         circuit_details_cleaned_chunk <- clean_connection_types(time_series, circuits, postcode_data)
         circuit_details_cleaned <- bind_rows(circuit_details_cleaned, circuit_details_cleaned_chunk)
 
+        
         print(paste0("Done cleaning batch ", iteration_number))
 
         # Setup for next iteration.
@@ -421,7 +425,6 @@ DBInterface <- R6::R6Class("DBInterface",
       return(df)
     },
     clean_duration_values = function(time_series){
-      time_series <- filter(time_series, (!d %in% c(30, 60)))
       time_series <- self$calc_interval_between_measurements(time_series)
       time_series <- self$flag_duration_for_updating_if_value_non_standard_and_calced_interval_is_5s(time_series)
       time_series <- self$replace_duration_value_with_calced_interval(time_series)
