@@ -989,7 +989,7 @@ server <- function(input,output,session){
           v$zone_count <- vector_groupby_count_zones(combined_data_f, grouping_cols)
           v$distance_response <- vector_groupby_cumulative_distance(combined_data_f, grouping_cols)
           geo_data <- vector_groupby_system(combined_data_f, grouping_cols)
-          v$circuit_summary <- distinct(combined_data_f, c_id, .keep_all=TRUE)
+          v$circuit_summary <- distinct(combined_data_f, c_id, clean, .keep_all=TRUE)
           v$circuit_summary <- select(v$circuit_summary, site_id, c_id, s_state, s_postcode, Standard_Version, Grouping, 
                                       sum_ac, clean, manufacturer, model, response_category, zone, distance, lat, lon,
                                       con_type, first_ac, polarity, compliance_status, reconnection_compliance_status, 
