@@ -388,6 +388,9 @@ server <- function(input,output,session){
   zone_agg <- reactive({input$zone_agg})
   compliance_agg <- reactive({input$compliance_agg})
   reconnection_compliance_agg <- reactive({input$reconnection_compliance_agg})
+  load_date <- reactive({
+    date_as_str <- as.character(input$load_date[1])
+  })
   load_start_time <- reactive({
     date_as_str <- as.character(input$load_date[1])
     time_as_str <- substr(input$load_time_start, 12,19)
@@ -700,8 +703,8 @@ server <- function(input,output,session){
         output$StdVersion <- renderUI({
           checkboxGroupButtons(inputId="StdVersion", 
                                label=strong("AS47777 Version:"), choices=list("AS4777.3:2005", "Transition", 
-                                                                              "AS4777.2:2015"),
-                               selected=list("AS4777.3:2005", "Transition", "AS4777.2:2015"),
+                                                                              "AS4777.2:2015", "AS4777.2:2015 VDRT"),
+                               selected=list("AS4777.3:2005", "Transition", "AS4777.2:2015", "AS4777.2:2015 VDRT"),
                                justified=TRUE, status="primary", individual=TRUE,
                                checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")))
           })
@@ -838,8 +841,8 @@ server <- function(input,output,session){
       } else {
         ideal_response_to_plot <- data.frame()
       }
+
       v$ideal_response_to_plot <- ideal_response_to_plot
-  
       combined_data_f <- filter(v$combined_data, clean %in% clean())
       combined_data_f <- filter(combined_data_f, sum_ac<=100)
       site_types <- c("pv_site_net", "pv_site", "pv_inverter_net", "pv_inverter")
@@ -917,7 +920,7 @@ server <- function(input,output,session){
         pre_event_daily_norm_power <- mutate(pre_event_daily_norm_power, pre_event_norm_power = c_id_daily_norm_power)
         pre_event_daily_norm_power <- select(pre_event_daily_norm_power, clean, c_id, pre_event_norm_power)
         combined_data_f <- left_join(combined_data_f, pre_event_daily_norm_power, by=c("c_id", "clean"))
-        event_window_data <- filter(combined_data_f, ts >= pre_event_interval() & ts <= pre_event_interval() + 60 * window_length())
+        event_window_data <- filter(combined_data_f, ts >= pre_event_interval()) # & ts <= pre_event_interval() + 60 * window_length())
         reconnection_categories <- create_reconnection_summary(event_window_data, pre_event_interval(),
                                                                disconnecting_threshold(),
                                                                reconnect_threshold = reconnection_threshold(),
@@ -1005,7 +1008,7 @@ server <- function(input,output,session){
             manufacturer_install_data <- v$manufacturer_install_data
           }
           disconnection_summary <- group_disconnections_by_manufacturer(circuits_to_summarise)
-          manufacturer_capacitys <- get_manufacturer_capacitys(manufacturer_install_data, load_start_time(), 
+          manufacturer_capacitys <- get_manufacturer_capacitys(manufacturer_install_data, load_date(), 
                                                                region_to_load())
           disconnection_summary <- join_solar_analytics_and_cer_manufacturer_data(disconnection_summary,
                                                                                   manufacturer_capacitys)

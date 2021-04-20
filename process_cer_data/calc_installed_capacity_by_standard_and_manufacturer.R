@@ -1,9 +1,10 @@
 calc_installed_capacity_by_standard_and_manufacturer <- function(install_data){
   # Rename time column and catergorise data based on inverter standards.
   install_data <- mutate(install_data, pv_installation_year_month=index)
+  install_data <- setnames(install_data, c("state"), c("s_state"))
   install_data <- site_categorisation(install_data)
   # Convert column names to same format as time solar analytics data.
-  install_data <- setnames(install_data, c("pv_installation_year_month", "state"), c("date", "s_state"))
+  install_data <- setnames(install_data, c("pv_installation_year_month"), c("date"))
   # For each inverter standard group find the intall capacity when the standard
   # came into force.
   start_date =min(install_data$date)

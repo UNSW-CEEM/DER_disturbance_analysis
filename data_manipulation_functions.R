@@ -171,9 +171,10 @@ process_install_data <- function(install_data){
   assert_install_data_assumptions(install_data)
   # Rename time column and catergorise data based on inverter standards.
   install_data <- mutate(install_data, pv_installation_year_month=index)
+  install_data <- setnames(install_data, c("State"), c("s_state"))
   install_data <- site_categorisation(install_data)
-  # Convert column names to same format as time solar analytics data.
-  install_data <- setnames(install_data, c("pv_installation_year_month", "State"), c("date", "s_state"))
+  # Convert column names to same format as solar analytics data.
+  install_data <- setnames(install_data, c("pv_installation_year_month"), c("date"))
   # For each inverter standard group find the intall capacity when the standard
   # came into force.
   start_date =min(install_data$date)
@@ -258,12 +259,17 @@ site_categorisation <- function(combined_data){
              ifelse(nchar(pv_installation_year_month)==10,
                     pv_installation_year_month, 
                     paste0(pv_installation_year_month, "-28"))) %>% 
-    mutate(pv_installation_year_month=
-             ymd(pv_installation_year_month)) %>% 
-    mutate(Standard_Version= 
-             ifelse(pv_installation_year_month<"2015-10-01", "AS4777.3:2005", 
-                    ifelse(pv_installation_year_month>="2016-11-01", 
-                           "AS4777.2:2015", "Transition")))
+    mutate(pv_installation_year_month = ymd(pv_installation_year_month)) %>% 
+    mutate(Standard_Version=ifelse(pv_installation_year_month < "2015-10-01", "AS4777.3:2005", "")) %>%
+    mutate(Standard_Version=ifelse(pv_installation_year_month >= "2015-10-01" & 
+                                   pv_installation_year_month < "2016-11-01", "Transition", Standard_Version)) %>%
+    mutate(Standard_Version=ifelse(pv_installation_year_month >= "2016-11-01" & s_state != 'SA',
+                                   "AS4777.2:2015", Standard_Version)) %>%
+    mutate(Standard_Version=ifelse(pv_installation_year_month >= "2016-11-01" & 
+                                   pv_installation_year_month < "2020-10-01" & s_state == 'SA',
+                                   "AS4777.2:2015", Standard_Version)) %>%
+    mutate(Standard_Version=ifelse(pv_installation_year_month >= "2020-10-01" & s_state == 'SA',
+                                   "AS4777.2:2015 VDRT", Standard_Version))
   return(combined_data)
 }
 
