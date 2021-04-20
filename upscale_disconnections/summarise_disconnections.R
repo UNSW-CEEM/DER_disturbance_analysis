@@ -35,7 +35,8 @@ impose_sample_size_threshold <- function(disconnection_summary, sample_threshold
                                   manufacturer = ifelse(sample_size < sample_threshold | 
                                                           manufacturer == "Unknown" | 
                                                           manufacturer == "Multiple" |
-                                                          manufacturer == "Mixed", 
+                                                          manufacturer == "Mixed" | 
+                                                          is.na(manufacturer), 
                                                         "Other", manufacturer)
                                   )
   # Recalculate disconnection count and sample size. 

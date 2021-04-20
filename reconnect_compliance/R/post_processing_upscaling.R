@@ -9,7 +9,7 @@ source("process_cer_data/calc_installed_capacity_by_standard_and_manufacturer.R"
 exclude_solar_edge <- FALSE
 region_to_load <- 'SA'
 load_start_time <- '2021-01-24'
-circuit_summary <- read.csv(file = "data/2021-01-24/test_reconnection_compliance.csv", header = TRUE, stringsAsFactors = FALSE)
+circuit_summary <- read.csv(file = "data/2021-01-24/combined_circuits.csv", header = TRUE, stringsAsFactors = FALSE)
 manufacturer_install_data <- read.csv(file = "cer_cumulative_capacity_and_number_by_manufacturer.csv", header = TRUE, stringsAsFactors = FALSE)
 
 manufacturer_install_data <- calc_installed_capacity_by_standard_and_manufacturer(manufacturer_install_data)
@@ -25,6 +25,7 @@ if (exclude_solar_edge){
 disconnection_summary <- group_disconnections_by_manufacturer(circuits_to_summarise)
 manufacturer_capacitys <- get_manufacturer_capacitys(manufacturer_install_data, load_start_time, 
                                                      region_to_load)
+
 disconnection_summary <- join_solar_analytics_and_cer_manufacturer_data(disconnection_summary,
                                                                         manufacturer_capacitys)
 manufacters_missing_from_cer <- get_manufactures_in_solar_analytics_but_not_cer(disconnection_summary)
