@@ -1,9 +1,16 @@
 sa,aemo
+1,Unknown
 ABB,ABB
+Aero-Sharp,Aero-Sharp
+Afore,Afore
+APS,APS
 Aurora,Aurora 
 Bosch Power Tec GmbH,Bosch Power Tec GmbH
+Canadian Solar,Canadian Solar
 CMS Group,CMS
+Conergy,Conergy
 Delta Energy,Delta 
+EKO,EKO
 Enphase,Enphase
 Fronius,Fronius
 Generic Inverter,Unknown
@@ -12,11 +19,19 @@ Greenstar,Greenstar
 Growatt,Growatt
 Huawei,Huawei
 JFY,JFY
+KACO new energy,KACO new energy
+Macsolar,Macsolar
+Omnik,Omnik
 Rewatt,Rewatt
+Samil Power,Samil Power
+Schneider Electric,Schneider Electric
 SMA,SMA
 SOFAR,SOFAR solar 
 SolarEdge,SolarEdge
+SolarMax,SolarMax
 SolaX Power,Solax Power
 Solis,Solis
 Sungrow,Sungrow
+Sunteams,Sunteams
+Xantrex,Xantrex
 Zeversolar,Zeversolar

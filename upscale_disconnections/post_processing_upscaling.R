@@ -7,10 +7,10 @@ source("data_manipulation_functions.R")
 source("upscale_disconnections/summarise_disconnections.R")
 source("process_cer_data/calc_installed_capacity_by_standard_and_manufacturer.R")
 
-exclude_solar_edge <- FALSE
+exclude_solar_edge <- TRUE
 region_to_load <- 'SA'
 load_start_time <- '2021-01-24'
-circuit_summary <- read.csv(file = "data/2021-01-24/combined_circuits.csv", header = TRUE, stringsAsFactors = FALSE)
+circuit_summary <- read.csv(file = "data/2021-01-24/combined_60s_5s.csv", header = TRUE, stringsAsFactors = FALSE)
 manufacturer_install_data <- read.csv(file = "cer_cumulative_capacity_and_number_by_manufacturer.csv", header = TRUE, stringsAsFactors = FALSE)
 
 manufacturer_install_data <- calc_installed_capacity_by_standard_and_manufacturer(manufacturer_install_data)
