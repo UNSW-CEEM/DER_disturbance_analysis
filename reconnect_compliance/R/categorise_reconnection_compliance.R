@@ -9,14 +9,21 @@ catergorise_row <- function(response_category,
                             ramp_rate_threshold_for_non_compliance){
   
   if (response_category %in% c('4 Disconnect', '3 Drop to Zero')){
-    if (is.na(reconnection_time)) {
+    if (is.na(max_reconnection_ramp_rate)) { # is.na(reconnection_time) | 
       category <- 'Cannot be set'
     } else {
-      if(reconnection_time > reconnection_time_threshold_for_compliance * pre_event_daily_norm_power
-                & max_reconnection_ramp_rate < ramp_rate_threshold_for_compliance){
+      # if(reconnection_time > reconnection_time_threshold_for_compliance * pre_event_daily_norm_power
+      #           & max_reconnection_ramp_rate < ramp_rate_threshold_for_compliance){
+      #   category <- 'Compliant'
+      # } else if(reconnection_time < reconnection_time_threshold_for_non_compliance * pre_event_daily_norm_power
+      #           | max_reconnection_ramp_rate > ramp_rate_threshold_for_non_compliance) {
+      #   category <- 'Non Compliant'
+      # } else {
+      #   category <- 'Unsure'
+      # }
+      if(max_reconnection_ramp_rate < ramp_rate_threshold_for_compliance){
         category <- 'Compliant'
-      } else if(reconnection_time < reconnection_time_threshold_for_non_compliance * pre_event_daily_norm_power
-                | max_reconnection_ramp_rate > ramp_rate_threshold_for_non_compliance) {
+      } else if(max_reconnection_ramp_rate > ramp_rate_threshold_for_non_compliance) {
         category <- 'Non Compliant'
       } else {
         category <- 'Unsure'

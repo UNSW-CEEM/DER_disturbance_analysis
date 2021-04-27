@@ -913,8 +913,8 @@ server <- function(input,output,session){
         if (length(compliance()) < 8) {combined_data_f <- filter(combined_data_f, compliance_status %in% compliance())}
         
         # Set reconnection compliance values.
-        max_power <- group_by(combined_data_f, c_id, clean) %>% summarise(max_power = max(power_kW))
-        combined_data_f <- left_join(combined_data_f, max_power, by=c("c_id", "clean"))
+        max_power <- v$db$get_max_circuit_powers(region_to_load())
+        combined_data_f <- left_join(combined_data_f, max_power, by=c("c_id"))
         combined_data_f <- mutate(combined_data_f, c_id_daily_norm_power=power_kW/max_power)
         pre_event_daily_norm_power <- filter(combined_data_f, ts == pre_event_interval())
         pre_event_daily_norm_power <- mutate(pre_event_daily_norm_power, pre_event_norm_power = c_id_daily_norm_power)
@@ -973,7 +973,7 @@ server <- function(input,output,session){
                                     site_performance_factor, response_category, zone, distance, lat, lon, e, con_type,
                                     first_ac, polarity, compliance_status, reconnection_compliance_status, 
                                     manual_droop_compliance, manual_reconnect_compliance, reconnection_time, 
-                                    max_reconnection_ramp_rate, c_id_daily_norm_power)
+                                    max_reconnection_ramp_rate, c_id_daily_norm_power, max_power)
         # Create copy of filtered data to use in upscaling
         combined_data_f2 <- combined_data_f
           if(raw_upscale()){combined_data_f2 <- upscale(combined_data_f2, v$install_data)}
@@ -992,12 +992,12 @@ server <- function(input,output,session){
           v$zone_count <- vector_groupby_count_zones(combined_data_f, grouping_cols)
           v$distance_response <- vector_groupby_cumulative_distance(combined_data_f, grouping_cols)
           geo_data <- vector_groupby_system(combined_data_f, grouping_cols)
-          v$circuit_summary <- distinct(combined_data_f, c_id, clean, .keep_all=TRUE)
+          v$circuit_summary <- distinct(combined_data_f, c_id, clean, .keep_all = TRUE)
           v$circuit_summary <- select(v$circuit_summary, site_id, c_id, s_state, s_postcode, pv_installation_year_month, 
                                       Standard_Version, Grouping, sum_ac, clean, manufacturer, model, response_category, 
                                       zone, distance, lat, lon, con_type, first_ac, polarity, compliance_status, 
                                       reconnection_compliance_status, manual_droop_compliance, manual_reconnect_compliance, 
-                                      reconnection_time, max_reconnection_ramp_rate)
+                                      reconnection_time, max_reconnection_ramp_rate, max_power)
           
           # Summarise and upscale disconnections on a manufacturer basis.
           if (exclude_solar_edge()){

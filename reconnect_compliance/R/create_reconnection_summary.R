@@ -6,7 +6,6 @@ create_reconnection_summary <- function(combined_data_f, pre_event_interval,
                                         ramp_rate_threshold_for_compliance,
                                         ramp_rate_threshold_for_non_compliance,
                                         ramp_rate_change_resource_limit_threshold){
- 
   post_event_response <- select(combined_data_f, ts, c_id, c_id_daily_norm_power, pre_event_norm_power)
   post_event_response <- filter(post_event_response, ts > pre_event_interval)
   
@@ -15,7 +14,6 @@ create_reconnection_summary <- function(combined_data_f, pre_event_interval,
                                                      disconnect_threshold = disconnecting_threshold, 
                                                      reconnect_threshold = reconnect_threshold)
   
-  #combined_data_f <- left_join(combined_data_f, reconnection_times, by = 'c_id')
   ramp_rates <- calculate_ramp_rates(combined_data_f)
   reconnection_start_times <- find_last_distconnected_intervals(post_event_response, 
                                                                 disconnect_threshold = disconnecting_threshold)
@@ -42,9 +40,7 @@ create_reconnection_summary <- function(combined_data_f, pre_event_interval,
     names <- c("c_id", "reconnection_compliance_status")
     colnames(reconnection_categories) <- names
   } else {
-    reconnection_summary_to_catergorise <- filter(reconnection_summary, !is.na(reconnection_time) & 
-                                                    !is.na(max_reconnection_ramp_rate))
-    reconnection_categories <- categorise_reconnection_compliance(reconnection_summary_to_catergorise,
+    reconnection_categories <- categorise_reconnection_compliance(reconnection_summary,
                                                                   reconnection_time_threshold_for_compliance,
                                                                   reconnection_time_threshold_for_non_compliance,
                                                                   ramp_rate_threshold_for_compliance,
