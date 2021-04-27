@@ -1,5 +1,4 @@
 group_disconnections_by_manufacturer <- function(circuit_summary){
-  
   # Don't count circuits without a well defined response type.
   bad_categories <- c("6 Not enough data", "Undefined")
   circuit_summary <- filter(circuit_summary, !(response_category %in% bad_categories | is.na(response_category)))

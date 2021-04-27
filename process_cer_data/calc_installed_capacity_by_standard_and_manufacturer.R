@@ -7,7 +7,7 @@ calc_installed_capacity_by_standard_and_manufacturer <- function(install_data){
   install_data <- setnames(install_data, c("pv_installation_year_month"), c("date"))
   # For each inverter standard group find the intall capacity when the standard
   # came into force.
-  start_date =min(install_data$date)
+  start_date = min(install_data$date)
   installed_start_standard <- group_by(install_data, Standard_Version, manufacturer, s_state)
   installed_start_standard <- summarise(installed_start_standard, 
                                         initial_cap=get_initial_cap(install_data, min(date), first(s_state),

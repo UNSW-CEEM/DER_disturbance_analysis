@@ -3,6 +3,7 @@ library(dplyr)
 library(tidyr)
 library(data.table)
 
+source("data_manipulation_functions.R")
 source("upscale_disconnections/summarise_disconnections.R")
 source("process_cer_data/calc_installed_capacity_by_standard_and_manufacturer.R")
 
@@ -25,7 +26,6 @@ if (exclude_solar_edge){
 disconnection_summary <- group_disconnections_by_manufacturer(circuits_to_summarise)
 manufacturer_capacitys <- get_manufacturer_capacitys(manufacturer_install_data, load_start_time, 
                                                      region_to_load)
-
 disconnection_summary <- join_solar_analytics_and_cer_manufacturer_data(disconnection_summary,
                                                                         manufacturer_capacitys)
 manufacters_missing_from_cer <- get_manufactures_in_solar_analytics_but_not_cer(disconnection_summary)

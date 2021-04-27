@@ -969,7 +969,7 @@ server <- function(input,output,session){
         if(length(combined_data_f$ts) > 0){
         # Copy data for saving
         v$combined_data_f <- select(combined_data_f, ts, site_id, c_id, power_kW, c_id_norm_power, v, f, s_state, s_postcode, 
-                                    Standard_Version, Grouping, sum_ac, clean, manufacturer, model,
+                                    pv_installation_year_month, Standard_Version, Grouping, sum_ac, clean, manufacturer, model,
                                     site_performance_factor, response_category, zone, distance, lat, lon, e, con_type,
                                     first_ac, polarity, compliance_status, reconnection_compliance_status, 
                                     manual_droop_compliance, manual_reconnect_compliance, reconnection_time, 
@@ -993,11 +993,11 @@ server <- function(input,output,session){
           v$distance_response <- vector_groupby_cumulative_distance(combined_data_f, grouping_cols)
           geo_data <- vector_groupby_system(combined_data_f, grouping_cols)
           v$circuit_summary <- distinct(combined_data_f, c_id, clean, .keep_all=TRUE)
-          v$circuit_summary <- select(v$circuit_summary, site_id, c_id, s_state, s_postcode, Standard_Version, Grouping, 
-                                      sum_ac, clean, manufacturer, model, response_category, zone, distance, lat, lon,
-                                      con_type, first_ac, polarity, compliance_status, reconnection_compliance_status, 
-                                      manual_droop_compliance, manual_reconnect_compliance, reconnection_time, 
-                                      max_reconnection_ramp_rate)
+          v$circuit_summary <- select(v$circuit_summary, site_id, c_id, s_state, s_postcode, pv_installation_year_month, 
+                                      Standard_Version, Grouping, sum_ac, clean, manufacturer, model, response_category, 
+                                      zone, distance, lat, lon, con_type, first_ac, polarity, compliance_status, 
+                                      reconnection_compliance_status, manual_droop_compliance, manual_reconnect_compliance, 
+                                      reconnection_time, max_reconnection_ramp_rate)
           
           # Summarise and upscale disconnections on a manufacturer basis.
           if (exclude_solar_edge()){
