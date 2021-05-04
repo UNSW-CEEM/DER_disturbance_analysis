@@ -51,5 +51,8 @@ create_reconnection_summary <- function(combined_data_f, pre_event_interval,
                                                                         max_reconnection_ramp_rate, 
                                                                         pre_event_daily_norm_power), 
                                         by = 'c_id')
+  
+  reconnection_categories <- as.data.frame(as.data.frame(reconnection_categories))
+  
   return(reconnection_categories)
 }

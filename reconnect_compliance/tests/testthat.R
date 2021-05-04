@@ -9,5 +9,3 @@ source("../R/calculate_ramp_rates.R")
 source("../R/find_first_resource_limited_interval.R")
 source("../R/categorise_reconnection_compliance.R")
 test_dir("testthat")
-
-
