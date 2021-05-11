@@ -1,29 +1,16 @@
 
-catergorise_row <- function(response_category, 
-                            reconnection_time,
-                            pre_event_daily_norm_power,
-                            max_reconnection_ramp_rate,
-                            reconnection_time_threshold_for_compliance,
-                            reconnection_time_threshold_for_non_compliance,
-                            ramp_rate_threshold_for_compliance,
-                            ramp_rate_threshold_for_non_compliance){
+catergorise_row <- function(response_category,
+                            ramp_above_threshold,
+                            ramp_threshold_for_compliance,
+                            ramp_threshold_for_non_compliance){
   
   if (response_category %in% c('4 Disconnect', '3 Drop to Zero')){
-    if (is.na(max_reconnection_ramp_rate)) { # is.na(reconnection_time) | 
+    if (is.na(ramp_above_threshold)) {
       category <- 'Cannot be set'
     } else {
-      # if(reconnection_time > reconnection_time_threshold_for_compliance * pre_event_daily_norm_power
-      #           & max_reconnection_ramp_rate < ramp_rate_threshold_for_compliance){
-      #   category <- 'Compliant'
-      # } else if(reconnection_time < reconnection_time_threshold_for_non_compliance * pre_event_daily_norm_power
-      #           | max_reconnection_ramp_rate > ramp_rate_threshold_for_non_compliance) {
-      #   category <- 'Non Compliant'
-      # } else {
-      #   category <- 'Unsure'
-      # }
-      if(max_reconnection_ramp_rate < ramp_rate_threshold_for_compliance){
+      if(ramp_above_threshold < ramp_rate_threshold_for_compliance){
         category <- 'Compliant'
-      } else if(max_reconnection_ramp_rate > ramp_rate_threshold_for_non_compliance) {
+      } else if(ramp_above_threshold > ramp_rate_threshold_for_non_compliance) {
         category <- 'Non Compliant'
       } else {
         category <- 'Unsure'
@@ -35,23 +22,17 @@ catergorise_row <- function(response_category,
   return(category)
 }
 
-categorise_reconnection_compliance <- function(reconnection_times,
-                                               reconnection_time_threshold_for_compliance,
-                                               reconnection_time_threshold_for_non_compliance,
-                                               ramp_rate_threshold_for_compliance,
-                                               ramp_rate_threshold_for_non_compliance){
+categorise_reconnection_compliance <- function(ramping_data,
+                                               ramp_threshold_for_compliance,
+                                               ramp_threshold_for_non_compliance){
   
-  reconnection_times <- rowwise(reconnection_times) %>% mutate(
-    reconnection_compliance_status = catergorise_row(response_category, 
-                                                     reconnection_time,
-                                                     pre_event_daily_norm_power,
-                                                     max_reconnection_ramp_rate,
-                                                     reconnection_time_threshold_for_compliance,
-                                                     reconnection_time_threshold_for_non_compliance,
-                                                     ramp_rate_threshold_for_compliance,
-                                                     ramp_rate_threshold_for_non_compliance))
+  ramping_data <- rowwise(ramping_data) %>% mutate(
+    reconnection_compliance_status = catergorise_row(response_category,
+                                                     ramp_above_threshold,
+                                                     ramp_threshold_for_compliance,
+                                                     ramp_threshold_for_non_compliance))
   
-  reconnection_times <- select(reconnection_times, c_id, reconnection_compliance_status)
-  return(reconnection_times)
+  ramping_data <- select(ramping_data, c_id, reconnection_compliance_status)
+  return(ramping_data)
 }
 
