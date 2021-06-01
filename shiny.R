@@ -233,11 +233,11 @@ ui <- fluidPage(
                             numericInput("reconnection_time_threshold_for_compliance", 
                                          label = strong('Reconnection time threshold for compliance, in minutes.'), value = 4),
                             numericInput("reconnection_time_threshold_for_non_compliance", 
-                                         label = strong('Reconnection time threshold for non compliance, in minutes.'), value = 3),
+                                         label = strong('Reconnection time threshold for non compliance, in minutes.'), value = 0.333),
                             numericInput("ramp_rate_threshold_for_compliance", 
-                                         label = strong('Ramp rate threshold for compliance, in pct/min'), value = 0.3),
+                                         label = strong('Ramp rate threshold for compliance, in pct/min'), value = 0.125),
                             numericInput("ramp_rate_threshold_for_non_compliance", 
-                                         label = strong('Ramp rate threshold for non compliance, in pct/min'), value = 0.5),
+                                         label = strong('Ramp rate threshold for non compliance, in pct/min'), value = 0.25),
                             numericInput("ramp_rate_change_resource_limit_threshold", 
                                          label = strong('Ramp rate change threshold for detecting resource limitation, in pct/min'), value = -0.1),
                             h3("Misc settings"),
@@ -924,13 +924,11 @@ server <- function(input,output,session){
         reconnection_categories <- create_reconnection_summary(event_window_data, pre_event_interval(),
                                                                disconnecting_threshold(),
                                                                reconnect_threshold = reconnection_threshold(),
-                                                               reconnection_time_threshold_for_compliance = 
-                                                                 reconnection_time_threshold_for_compliance(),
-                                                               reconnection_time_threshold_for_non_compliance = 
+                                                               ramp_rate_threshold =
                                                                  reconnection_time_threshold_for_non_compliance(),
-                                                               ramp_rate_threshold_for_compliance = 
+                                                               ramp_threshold_for_compliance = 
                                                                  ramp_rate_threshold_for_compliance(),
-                                                               ramp_rate_threshold_for_non_compliance = 
+                                                               ramp_threshold_for_non_compliance = 
                                                                  ramp_rate_threshold_for_non_compliance(),
                                                                ramp_rate_change_resource_limit_threshold = 
                                                                  ramp_rate_change_resource_limit_threshold())
@@ -973,7 +971,7 @@ server <- function(input,output,session){
                                     site_performance_factor, response_category, zone, distance, lat, lon, e, con_type,
                                     first_ac, polarity, compliance_status, reconnection_compliance_status, 
                                     manual_droop_compliance, manual_reconnect_compliance, reconnection_time, 
-                                    max_reconnection_ramp_rate, c_id_daily_norm_power, max_power)
+                                    ramp_above_threshold, c_id_daily_norm_power, max_power)
         # Create copy of filtered data to use in upscaling
         combined_data_f2 <- combined_data_f
           if(raw_upscale()){combined_data_f2 <- upscale(combined_data_f2, v$install_data)}
@@ -997,7 +995,7 @@ server <- function(input,output,session){
                                       Standard_Version, Grouping, sum_ac, clean, manufacturer, model, response_category, 
                                       zone, distance, lat, lon, con_type, first_ac, polarity, compliance_status, 
                                       reconnection_compliance_status, manual_droop_compliance, manual_reconnect_compliance, 
-                                      reconnection_time, max_reconnection_ramp_rate, max_power)
+                                      reconnection_time, ramp_above_threshold, max_power)
           
           # Summarise and upscale disconnections on a manufacturer basis.
           if (exclude_solar_edge()){

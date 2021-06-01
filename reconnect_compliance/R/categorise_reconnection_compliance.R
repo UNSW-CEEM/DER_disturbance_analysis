@@ -8,9 +8,9 @@ catergorise_row <- function(response_category,
     if (is.na(ramp_above_threshold)) {
       category <- 'Cannot be set'
     } else {
-      if(ramp_above_threshold < ramp_rate_threshold_for_compliance){
+      if(ramp_above_threshold < ramp_threshold_for_compliance){
         category <- 'Compliant'
-      } else if(ramp_above_threshold > ramp_rate_threshold_for_non_compliance) {
+      } else if(ramp_above_threshold > ramp_threshold_for_non_compliance) {
         category <- 'Non Compliant'
       } else {
         category <- 'Unsure'
