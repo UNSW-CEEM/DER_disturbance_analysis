@@ -224,20 +224,12 @@ ui <- fluidPage(
                             numericInput("reconnection_threshold", 
                                          label = strong('The level at which a circuit is considered to have reconnected.'), 
                                          value = 0.95, max = 1, min = 0),
-                            numericInput("max_norm_output_threshold", 
-                                         label = strong('Max normalised output threshold, if a circuits power goes above 
-                                                       this level then the pre-event power is considered to be a
-                                                       significant under estimate of its capacity and the circuit will not be 
-                                                       reported as non compliant.'), 
-                                         value = 1.1, min = 0, max = 2),
-                            numericInput("reconnection_time_threshold_for_compliance", 
-                                         label = strong('Reconnection time threshold for compliance, in minutes.'), value = 4),
-                            numericInput("reconnection_time_threshold_for_non_compliance", 
-                                         label = strong('Reconnection time threshold for non compliance, in minutes.'), value = 0.333),
-                            numericInput("ramp_rate_threshold_for_compliance", 
-                                         label = strong('Ramp rate threshold for compliance, in pct/min'), value = 0.125),
-                            numericInput("ramp_rate_threshold_for_non_compliance", 
-                                         label = strong('Ramp rate threshold for non compliance, in pct/min'), value = 0.25),
+                            numericInput("ramp_rate_threshold", 
+                                         label = strong('Reconnection ramp rate threshold for assessing compliance, in pct/min.'), value = 0.333),
+                            numericInput("total_ramp_threshold_for_compliance", 
+                                         label = strong('Total ramp threshold for compliance, in pct'), value = 0.125),
+                            numericInput("total_ramp_threshold_for_non_compliance", 
+                                         label = strong('Toatl ramp threshold for non compliance, in pct'), value = 0.25),
                             numericInput("ramp_rate_change_resource_limit_threshold", 
                                          label = strong('Ramp rate change threshold for detecting resource limitation, in pct/min'), value = -0.1),
                             h3("Misc settings"),
@@ -438,11 +430,10 @@ server <- function(input,output,session){
   end_buffer <- reactive({input$end_buffer})
   end_buffer_responding <- reactive({input$end_buffer_responding})
   reconnection_threshold <- reactive({input$reconnection_threshold})
-  max_norm_output_threshold <- reactive({input$max_norm_output_threshold})
   reconnection_time_threshold_for_compliance <- reactive({input$reconnection_time_threshold_for_compliance})
-  reconnection_time_threshold_for_non_compliance <- reactive({input$reconnection_time_threshold_for_non_compliance})
-  ramp_rate_threshold_for_compliance <- reactive({input$ramp_rate_threshold_for_compliance})
-  ramp_rate_threshold_for_non_compliance <- reactive({input$ramp_rate_threshold_for_non_compliance})
+  ramp_rate_threshold <- reactive({input$ramp_rate_threshold})
+  total_ramp_threshold_for_compliance <- reactive({input$total_ramp_threshold_for_compliance})
+  total_ramp_threshold_for_non_compliance <- reactive({input$total_ramp_threshold_for_non_compliance})
   ramp_rate_change_resource_limit_threshold <- reactive({input$ramp_rate_change_resource_limit_threshold})
   disconnecting_threshold <- reactive({input$disconnecting_threshold})
   exclude_solar_edge <- reactive({input$exclude_solar_edge})
@@ -924,12 +915,11 @@ server <- function(input,output,session){
         reconnection_categories <- create_reconnection_summary(event_window_data, pre_event_interval(),
                                                                disconnecting_threshold(),
                                                                reconnect_threshold = reconnection_threshold(),
-                                                               ramp_rate_threshold =
-                                                                 reconnection_time_threshold_for_non_compliance(),
+                                                               ramp_rate_threshold = ramp_rate_threshold(),
                                                                ramp_threshold_for_compliance = 
-                                                                 ramp_rate_threshold_for_compliance(),
+                                                                 total_ramp_threshold_for_compliance(),
                                                                ramp_threshold_for_non_compliance = 
-                                                                 ramp_rate_threshold_for_non_compliance(),
+                                                                 total_ramp_threshold_for_non_compliance(),
                                                                ramp_rate_change_resource_limit_threshold = 
                                                                  ramp_rate_change_resource_limit_threshold())
         combined_data_f <- left_join(combined_data_f, reconnection_categories, by = 'c_id')
@@ -1533,11 +1523,10 @@ server <- function(input,output,session){
     settings$end_buffer <- end_buffer()
     settings$end_buffer_responding <- end_buffer_responding()
     settings$reconnection_threshold <- reconnection_threshold()
-    settings$max_norm_output_threshold <- max_norm_output_threshold()
     settings$reconnection_time_threshold_for_compliance <- reconnection_time_threshold_for_compliance()
-    settings$reconnection_time_threshold_for_non_compliance <- reconnection_time_threshold_for_non_compliance()
-    settings$ramp_rate_threshold_for_compliance <- ramp_rate_threshold_for_compliance()
-    settings$ramp_rate_threshold_for_non_compliance <- ramp_rate_threshold_for_non_compliance()
+    settings$ramp_rate_threshold <- ramp_rate_threshold()
+    settings$total_ramp_threshold_for_compliance <- total_ramp_threshold_for_compliance()
+    settings$total_ramp_threshold_for_non_compliance <- total_ramp_threshold_for_non_compliance()
     settings$ramp_rate_change_resource_limit_threshold <- ramp_rate_change_resource_limit_threshold()
     settings$disconnecting_threshold <- disconnecting_threshold()
     settings$exclude_solar_edge <- exclude_solar_edge()
@@ -1642,11 +1631,10 @@ server <- function(input,output,session){
       updateNumericInput(session, "end_buffer", value = settings$end_buffer)
       updateNumericInput(session, "end_buffer_responding", value = settings$end_buffer_responding)
       updateNumericInput(session, "reconnection_threshold", value = settings$reconnection_threshold)
-      updateNumericInput(session, "max_norm_output_threshold", value = settings$max_norm_output_threshold)
       updateNumericInput(session, "reconnection_time_threshold_for_compliance", value = settings$reconnection_time_threshold_for_compliance)
-      updateNumericInput(session, "reconnection_time_threshold_for_non_compliance", value = settings$reconnection_time_threshold_for_non_compliance)
-      updateNumericInput(session, "ramp_rate_threshold_for_compliance", value = settings$ramp_rate_threshold_for_compliance)
-      updateNumericInput(session, "ramp_rate_threshold_for_non_compliance", value = settings$ramp_rate_threshold_for_non_compliance)
+      updateNumericInput(session, "ramp_rate_threshold", value = settings$ramp_rate_threshold)
+      updateNumericInput(session, "total_ramp_threshold_for_compliance", value = settings$total_ramp_threshold_for_compliance)
+      updateNumericInput(session, "total_ramp_threshold_for_non_compliance", value = settings$total_ramp_threshold_for_non_compliance)
       updateNumericInput(session, "ramp_rate_change_resource_limit_threshold", value = settings$ramp_rate_change_resource_limit_threshold)
       updateNumericInput(session, "disconnecting_threshold", value = settings$disconnecting_threshold)
       updateMaterialSwitch(session, "exclude_solar_edge", value = settings$exclude_solar_edge)
