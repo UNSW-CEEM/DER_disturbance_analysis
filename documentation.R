@@ -62,18 +62,15 @@ documentation_panel <- function(){
                     data set.')),
     h4('Reconnection compliance status category definition'),
     div('A compliance status is assigned on a circuit basis according to the following steps.'),
-    tags$ol(tags$li('The first resource limited interval is defined as the first interval during the reconnection period 
+    tags$ol(tags$li('The resource limited interval is defined as the first interval during the reconnection period 
                     where the ramp rate drops by 10 % absolute'),
-            tags$li('Max reconnection ramp rate calculated as the max ramp rate before the first resource limited interval'),
-            tags$li('Reconnection time calculated as the time between the last interval less than 0.05 (normalised to 
-                     pre-event interval) and the first interval greater 0.95.'),
-            tags$li('Categorised as compliant if compliant reconnection time > 4 min and max ramp rate less than 30 %'),
-            tags$li('Catergorised as non compliant if reconnection time < 3 min or max ramp rate greater than 50 %'),
+            tags$li('The total ramp is calculated that occurs faster than the ramp rate threshold (default 33% per min).
+                     Only ramps occuring before the resource limited interval are included.'),
+            tags$li('Categorised as compliant if the total ramp greater than the threshold is less than 12.5% (default).'),
+            tags$li('Categorised as non compliant if the total ramp greater than the threshold greater than 25.0% (default).'),
             tags$li('Catergorised as unsure if not compliant or non complaint'),
-            tags$li('Catergorised as unsure if non compliant but max normalised power greater than 1.1'),
             tags$li('Catergorised as NA if the circuit does not disconnect/drop to zero during the user specified event 
-                     window, or the algorithm fails to calculate reconnection time or ramp rate, this may occur because 
-                     the circuit does not fully reconnect (0.95 threshold) or because it disconnects twice.')),
+                     window.')),
     h3('Further methodology notes on a chart basis'),
     h4('Aggregate power chart'),
     div('By default this chart shows the aggregate power on a basis determined by the grouping
