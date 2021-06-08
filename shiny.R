@@ -558,7 +558,7 @@ server <- function(input,output,session){
       }
     }
     
-    install_data_file <- "cer_cumulative_capacity_and_number.csv"
+    install_data_file <- "inbuilt_data/cer_cumulative_capacity_and_number.csv"
     if (!file.exists(install_data_file)){
       long_error_message <- c("The required file cer_cumulative_capacity_and_number.csv could ",
                               "not be found. Please add it to the main project directory.")
@@ -574,7 +574,7 @@ server <- function(input,output,session){
       shinyalert("Error loading timeseries data", long_error_message)
       error_check_passed = FALSE
     }
-    cer_manufacturer_data <- "cer_cumulative_capacity_and_number_by_manufacturer.csv"
+    cer_manufacturer_data <- "inbuilt_data/cer_cumulative_capacity_and_number_by_manufacturer.csv"
     if (!file.exists(cer_manufacturer_data)){
       long_error_message <- c("The required file cer_manufacturer_data could ",
                               "not be found. Please add it to the main project directory.")
