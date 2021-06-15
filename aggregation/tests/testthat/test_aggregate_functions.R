@@ -1,27 +1,3 @@
-##RSHINY APP
-library (shiny)
-library(shinyTime)
-library(shinyWidgets)
-library(shinyalert)
-library(plotly)
-library(feather)
-library(lubridate)
-library(dplyr)
-library(tidyr)
-library(data.table)
-library(shinycssloaders)
-library(shinyFiles)
-library(shinyjs)
-library(stringr)
-library(fasttime)
-library(DT)
-library(suncalc)
-library(ggmap)
-library(measurements)
-library(assertthat)
-library(testthat)
-source("aggregate_functions.R")
-
 context("Testing the DER event analysis aggregation functions")
 
 
