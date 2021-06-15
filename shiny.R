@@ -24,17 +24,15 @@ library(padr)
 library(sqldf)
 library(gridExtra)
 library(rjson)
-source("data_manipulation_functions.R")
-source("aggregate_functions.R")
-source("upscale_function.R")
-source("data_cleaning_functions.R")
-source("normalised_power_function.R")
-source("response_categorisation_function.R")
-source("distance_from_event.R")
-source("documentation.R")
-source("ideal_response_functions.R")
-source("create_report_files.R")
-source("create_report_tables.R")
+
+source("process_input_data/process_input_data_functions.R")
+source("aggregation/aggregate_functions.R")
+source("upscaling/upscale_function.R")
+source("normalised_power/normalised_power_function.R")
+source("response_categorisation/response_categorisation_function.R")
+source("location_analysis/distance_from_event.R")
+source("docs/documentation_tab.R")
+source("ideal_response/ideal_response_functions.R")
 source("BDInterface/R/interface.R")
 source("reconnect_compliance/R/specified_reconnect_profile.R")
 source("reconnect_compliance/R/calculate_reconnection_times.R")
@@ -43,9 +41,9 @@ source("reconnect_compliance/R/categorise_reconnection_compliance.R")
 source("reconnect_compliance/R/calculate_ramp_rates.R")
 source("reconnect_compliance/R/find_first_resource_limited_interval.R")
 source("reconnect_compliance/R/create_reconnection_summary.R")
-source("Confidence Intervals Binomial.R")
+source("confidence_intervals/Confidence Intervals Binomial.R")
 source("upscale_disconnections/summarise_disconnections.R")
-source("process_cer_data/calc_installed_capacity_by_standard_and_manufacturer.R")
+source("preprocess_cer_data/calc_installed_capacity_by_standard_and_manufacturer.R")
 
 ui <- fluidPage(
   tags$head(
@@ -636,7 +634,7 @@ server <- function(input,output,session){
         v$manufacturer_install_data <- calc_installed_capacity_by_standard_and_manufacturer(manufacturer_install_data)
         
         # Load postcode lat and long data
-        postcode_data_file <- "PostcodesLatLongQGIS.csv"
+        postcode_data_file <- "inbuilt_data/PostcodesLatLongQGIS.csv"
         postcode_data <- read.csv(file=postcode_data_file, header=TRUE, stringsAsFactors = FALSE)
         v$postcode_data <- process_postcode_data(postcode_data)
         
@@ -1006,13 +1004,13 @@ server <- function(input,output,session){
           disconnection_summary <- calc_confidence_intervals_for_disconnections(disconnection_summary)
           v$disconnection_summary <- calc_upscale_kw_loss(disconnection_summary)
           v$upscaled_disconnections <- upscale_disconnections(v$disconnection_summary)
-          write.csv(manufacters_missing_from_cer, "manufacters_missing_from_cer.csv", row.names=FALSE)
-          write.csv(manufacters_missing_from_solar_analytics, "manufacters_missing_from_solar_analytics.csv", row.names=FALSE)
+          write.csv(manufacters_missing_from_cer, "logging/manufacters_missing_from_cer.csv", row.names=FALSE)
+          write.csv(manufacters_missing_from_solar_analytics, "logging/manufacters_missing_from_solar_analytics.csv", row.names=FALSE)
           
           if(length(manufacters_missing_from_cer$manufacturer) > 0) {
             long_error_message <- c("Some manufacturers present in the solar analytics data could not be ",
                                     "matched to the cer data set. A list of these has been saved in the ",
-                                    "file manufacters_missing_from_cer.csv. You may want to review the ", 
+                                    "file logging/manufacters_missing_from_cer.csv. You may want to review the ", 
                                     "mapping used in processing the solar analytics data.")
             long_error_message <- paste(long_error_message, collapse = '')
             shinyalert("Manufacturers missing from CER data", long_error_message)
@@ -1020,8 +1018,8 @@ server <- function(input,output,session){
           
           if(length(manufacters_missing_from_solar_analytics$manufacturer) > 0) {
             long_error_message <- c("Some manufacturers present in the CER data could not be ",
-                                    "matched to the solar analytics data set. A list of these has been svaed in the ",
-                                    "file manufacters_missing_from_solar_analytics.csv. You may wish to review the ", 
+                                    "matched to the solar analytics data set. A list of these has been saved in the ",
+                                    "file logging/manufacters_missing_from_solar_analytics.csv. You may wish to review the ", 
                                     "file to check the number and names of missing manufacturers. ")
             long_error_message <- paste(long_error_message, collapse = '')
             shinyalert("Manufacturers missing from Solar Analytics data", long_error_message)

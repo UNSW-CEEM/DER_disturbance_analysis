@@ -1,57 +1,3 @@
-
-process_raw_time_series_data <- function(time_series_data){
-  # Sometimes data from solar analytics contains rows that are additional 
-  # headers explicity remove these.
-  gc()
-  time_series_data <- time_series_data[!time_series_data$c_id=="c_id",]
-  # Convert data that comes as strings to numeric where applicable.
-  #time_series_data <- time_series_data %>%  mutate(d = as.numeric(d))
-  # Convert time stamp to date time object assuming UTC time is being used.
-  time_series_data <- time_series_data %>%  mutate(ts = fastPOSIXct(ts))
-  time_series_data_1 <- group_by(time_series_data, c_id) %>% summarise(Count=n()) %>% filter(Count==1)
-  time_series_data <- anti_join(time_series_data, time_series_data_1,by="c_id")
-  time_series_data <- mutate(time_series_data, d=as.numeric(d))
-  
-  #time_series_data <- mutate(time_series_data, d=ifelse(d == 0, 5, d))
-  #time_series_durations = group_by(time_series_data, c_id)
-  #time_series_durations <- summarise(time_series_durations, d_filter=duration_mode(ts), d_min=duration_min(ts))
-  gc()
-  #time_series_durations <- filter(time_series_durations, d_filter==d_min)
-  #time_series_data <- left_join(time_series_data, time_series_durations, by="c_id")
-  # Assert assumptions about data set
-  
-  time_series_data <- time_series_data %>% group_by(c_id) %>% mutate(interval = ts - lag(ts, order_by = ts))
-  gc()
-  time_series_data <- mutate(time_series_data, d=ifelse(interval==5,5,d))
-  gc()
-  time_series_data <- select(time_series_data, ts, c_id, e, f, v, d) 
-  gc()
-  assert_raw_time_series_assumptions(time_series_data)
-  # Change time zone to NEM standard time.
-  time_series_data <- mutate(time_series_data, ts = with_tz(ts,"Australia/Brisbane"))
-  # Covert columns to numeric type.
-  time_series_data <- mutate(time_series_data, e = as.numeric(e))
-  time_series_data <- mutate(time_series_data, v = as.numeric(v))
-  processed_time_series_data <- mutate(time_series_data, f = as.numeric(f))
-  return(processed_time_series_data)
-}
-
-assert_raw_time_series_assumptions <- function(raw_time_series_data){
-  # Check in coming timeseries data for conformance to data processing 
-  # assumptions
-  # We assume that the only reason for a character value to appear in a numeric
-  # column is if we have header duplication.
-  c_ids <- as.numeric(raw_time_series_data$c_id)
-  assert_that(all(c_ids == floor(c_ids)), msg="Not all circuit IDs are integers")
-  # We assume that all values in the ts column were of the format year month day hour minute second
-  assert_that(all(!is.na(raw_time_series_data$ts)), msg="Not all ts datetimes in correct format")
-  # We assume that all values in the "e" column can be safely converted to numeric type
-  assert_that(all(!is.na(as.numeric(raw_time_series_data$e))), msg="Not all e values could be interprested as numbers")
-  # We assume after interpreting NAs as 5 s data that all duration data should equal 60, 30 or 5
-  #assert_that(all(raw_time_series_data$d==5 | raw_time_series_data$d==30 | raw_time_series_data$d==60), 
-  #              msg="Not all duration values are 5, 30 or 60")
-}
-
 get_time_offsets <- function(time_series_data){
   offsets <- mutate(time_series_data, time_offset=format(ts, "%S"))
   offsets <- group_by(offsets, c_id, time_offset)
@@ -86,28 +32,6 @@ get_offset_sample_counts <- function(time_series_data, unique_offsets){
   return(sample_counts)
 }
 
-get_duration_sample_counts <- function(time_series_data, duration_options){
-  time_series_data <- distinct(time_series_data, c_id, .keep_all=TRUE)
-  sample_counts <- c()
-  for(i in 1:length(duration_options)){
-    sample_counts <- c(sample_counts, length(filter(time_series_data, d==as.numeric(duration_options[i]))$c_id))
-  }
-  return(sample_counts)
-}
-
-process_raw_circuit_details <- function(circuit_details){
-  assert_circuit_details_assumptions(circuit_details)
-  # Filter circuit id by connection type, just including solar data.
-  site_types <- c("pv_site_net", "pv_site", "pv_inverter_net", "pv_inverter")
-  processed_circuit_details <- filter(circuit_details, con_type %in% site_types)
-  processed_circuit_details <- mutate(processed_circuit_details, c_id=as.character(c_id))
-  return(processed_circuit_details)
-}
-
-assert_circuit_details_assumptions <- function(data){
-  # polarity needs to be type numeric, either postive of negative one
-  assert_that(all(data$polarity == 1 | data$polarity == -1), msg="Not all polarity values are 1 or -1")
-}
 
 process_raw_site_details <- function(site_details){
   site_details <- filter(site_details, !is.na(ac) & ac != "")
@@ -150,9 +74,9 @@ assert_raw_site_details_assumptions <- function(site_details){
   site_details_grouped <- summarise(site_details_grouped, s_state=unique(s_state), s_postcode=unique(s_postcode))
   site_details_grouped <- as.data.frame(site_details_grouped)
   assert_that(all(lapply(site_details_grouped$s_state, length)==1), 
-              msg="Some stites have mutiple distinct s_state values")
+              msg="Some sites have mutiple distinct s_state values")
   assert_that(all(lapply(site_details_grouped$s_postcode, length)==1),
-              msg="Some stites have mutiple distinct s_postcode values")
+              msg="Some sites have mutiple distinct s_postcode values")
   # We assume ac and dc values can be converted to numeric without be turned
   # into NAs
   assert_that(all(!is.na(as.numeric(site_details$ac))))
@@ -294,51 +218,4 @@ combine_data_tables <- function(time_series_data, circuit_details,
   time_series_data <- inner_join(time_series_data, site_details, by="site_id")
   time_series_data <- perform_power_calculations(time_series_data)
   return(time_series_data)
-}
-
-get_mode <- function(x) {
-  ux <- unique(x)
-  ux[which.max(tabulate(match(x, ux)))]
-}
-
-duration_mode <- function(time_vector){
-  ds <- c()
-  time_vector <- sort(time_vector)
-  ds <- as.numeric(diff(time_vector), units='secs')
-  mode_ds <- get_mode(ds)
-  return(mode_ds)
-}
-
-duration_mean <- function(time_vector){
-  ds <- c()
-  time_vector <- sort(time_vector)
-  ds <- as.numeric(diff(time_vector), units='secs')
-  mean_ds <- mean(ds)
-  return(mean_ds)
-}
-
-duration_min <- function(time_vector){
-  ds <- c()
-  time_vector <- sort(time_vector)
-  ds <- as.numeric(diff(time_vector), units='secs')
-  min_ds <- min(ds)
-  return(min_ds)
-}
-
-calc_interval <- function(time_series){
-  time_series <- time_series[order(time_series$ts),]
-  time_series <- time_series %>% group_by(c_id) %>% mutate(interval = ts - lag(ts))
-  return(time_series)
-}
-
-write_sql_filter <- function(c_ids){
-  filter_statement_head <- "SELECT * FROM file JOIN TABLE(SELECT column_value FROM sys.dbms_debug_vc2coll("
-  
-  filter_statement_c_id_list <- paste(c_ids, collapse = ', ')
-  
-  filter_statement_tail <- ")) c on table.c_id = c.column_value;"
-  
-  filter_statement <- paste0(c(filter_statement_head, filter_statement_c_id_list, filter_statement_tail), 
-                             collapse = "")
-  return(filter_statement)
 }
