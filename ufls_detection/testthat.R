@@ -1,0 +1,6 @@
+library(testthat)
+source("load_tool_environment.R")
+cur_wd <- getwd()
+setwd(dirname(parent.frame(2)$ofile))
+test_dir("testthat")
+setwd(cur_wd)
