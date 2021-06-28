@@ -57,26 +57,26 @@ testthat::test_that("Test get_max_circuit_powers simple case",{
 })
 
 testthat::test_that("Test get_samples_per_circuit all samples in time window, NSW",{
-  sample_sizes <- dp$get_samples_per_circuit('NSW', start_time = '2018-01-01 00:00:05',
+  sample_sizes <- dp$get_sampled_time_per_circuit('NSW', start_time = '2018-01-01 00:00:05',
                                            end_time = '2018-01-01 00:00:40')
   expected_results <- data.frame(c_id = c(1),
-                                 samples = c(8))
+                                 sampled_seconds = 8 * 5)
   testthat::expect_equal(sample_sizes, expected_results)
 })
 
 testthat::test_that("Test get_samples_per_circuit all samples in time window, SA",{
-  sample_sizes <- dp$get_samples_per_circuit('SA', start_time = '2018-01-01 00:00:05',
+  sample_sizes <- dp$get_sampled_time_per_circuit('SA', start_time = '2018-01-01 00:00:05',
                                              end_time = '2018-01-01 00:00:40')
   expected_results <- data.frame(c_id = c(2),
-                                 samples = c(8))
+                                 sampled_seconds = 8 * 5)
   testthat::expect_equal(sample_sizes, expected_results)
 })
 
 testthat::test_that("Test get_samples_per_circuit smaller time window, SA",{
-  sample_sizes <- dp$get_samples_per_circuit('SA', start_time = '2018-01-01 00:00:10',
+  sample_sizes <- dp$get_sampled_time_per_circuit('SA', start_time = '2018-01-01 00:00:10',
                                              end_time = '2018-01-01 00:00:35')
   expected_results <- data.frame(c_id = c(2),
-                                 samples = c(6))
+                                 sampled_seconds = 6 * 5)
   testthat::expect_equal(sample_sizes, expected_results)
 })
 
