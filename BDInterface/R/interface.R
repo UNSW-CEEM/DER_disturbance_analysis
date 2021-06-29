@@ -383,9 +383,23 @@ DBInterface <- R6::R6Class("DBInterface",
       query <- "select ts, c_id, d, e, v, f from timeseries 
                         where c_id in (select c_id from circuit_in_state)
                         and d = duration
-                        and ts >= 'start_time'
-                        and ts <= 'end_time'"
+                        and datetime(ts) >= datetime('start_time')
+                        and datetime(ts) <= datetime('end_time')"
       query <- gsub('duration', duration, query)
+      query <- gsub('start_time', start_time, query)
+      query <- gsub('end_time', end_time, query)
+      time_series <- sqldf::read.csv.sql(sql = query , dbname = self$db_path_name)
+      return(time_series)
+    },
+    get_filtered_time_series_data_all_durations = function(state, start_time, end_time){
+      circuit_details = self$get_circuit_details_raw()
+      site_details = self$get_site_details_raw()
+      site_in_state = filter(site_details, s_state==state)
+      circuit_in_state = filter(circuit_details, site_id %in% site_in_state$site_id)
+      query <- "select ts, c_id, d, e, v, f from timeseries 
+                        where c_id in (select c_id from circuit_in_state)
+                        and datetime(ts) >= datetime('start_time')
+                        and datetime(ts) <= datetime('end_time')"
       query <- gsub('start_time', start_time, query)
       query <- gsub('end_time', end_time, query)
       time_series <- sqldf::read.csv.sql(sql = query , dbname = self$db_path_name)
@@ -566,23 +580,6 @@ DBInterface <- R6::R6Class("DBInterface",
       max_timestamp <- RSQLite::dbGetQuery(con, "SELECT MAX(ts) as ts FROM timeseries")
       RSQLite::dbDisconnect(con)
       return(fastPOSIXct(max_timestamp$ts[1], tz="Australia/Brisbane"))
-    },
-    get_sampled_time_per_circuit = function(state, start_time, end_time){
-      circuit_details = self$get_circuit_details_raw()
-      site_details = self$get_site_details_raw()
-      site_in_state = filter(site_details, s_state == state)
-      circuit_in_state = filter(circuit_details, site_id %in% site_in_state$site_id)
-      query <- "select c_id, sum(d) as sampled_seconds from(
-                  select ts, min(d) as d, c_id from timeseries 
-                   where c_id in (select c_id from circuit_in_state)
-                         and ts > 'start_time'
-                         and ts <= 'end_time'
-                   group by ts, c_id)
-                 group by c_id"
-      query <- gsub('start_time', start_time, query)
-      query <- gsub('end_time', end_time, query)
-      time_series <- sqldf::read.csv.sql(sql = query , dbname = self$db_path_name)
-      return(time_series)
     }
   )
 )

@@ -493,14 +493,16 @@ server <- function(input,output,session){
       v$frequency_data <- read.csv(file=frequency_data_file(), header=TRUE, stringsAsFactors = FALSE)
       expected_columns_names <- c("ts", "QLD", "NSW", "VIC", "SA", "TAS", "WA")
       column_names <- names(v$frequency_data)
-      if (length(column_names) != expected_columns_names){
-        long_error_message <- c("The frequency data csv should only contain the following columns, ", 
-                                "ts, QLD, NSW, VIC, SA, TAS, WA. If this error persists after checking ",
-                                "the columns names, then the file may be incorrectly incoded, please ", 
-                                "re-save it using the CSV (Comma delimited) (*.csv) option in excel.")
-        long_error_message <- paste(long_error_message, collapse = '')
-        shinyalert("Error loading frequency data", long_error_message)
-        error_check_passed = FALSE
+      for (col_name in column_names){ 
+        if (!(col_name %in% expected_columns_names)){
+          long_error_message <- c("The frequency data csv should only contain the following columns, ", 
+                                  "ts, QLD, NSW, VIC, SA, TAS, WA. If this error persists after checking ",
+                                  "the columns names, then the file may be incorrectly incoded, please ", 
+                                  "re-save it using the CSV (Comma delimited) (*.csv) option in excel.")
+          long_error_message <- paste(long_error_message, collapse = '')
+          shinyalert("Error loading frequency data", long_error_message)
+          error_check_passed = FALSE
+        }
       }
       if (!(region_to_load() %in% column_names)){
         long_error_message <- c("The frequency data csv must contain a column for the region being loaded. ", 
