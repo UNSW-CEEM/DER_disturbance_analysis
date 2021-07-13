@@ -32,7 +32,6 @@ testthat::test_that("test simple case no ufls dropout",{
   
   expected_results <- "c_id, pre_event_sampled_seconds, post_event_sampled_seconds,       ufls_status
                           1,                        10,                          5,  'No~UFLS~Dropout'"
-  
   expected_results <- load_test_df(expected_results)
   
   testthat::expect_equal(ufls_statuses, expected_results)
