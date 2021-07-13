@@ -1,17 +1,17 @@
 library(data.table)
 library(dplyr)
 
-intall_data_file <- "C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/cer_cumulative_capacity_and_number_by_manufacturer_filter_off_grid.csv"
+intall_data_file <- "C:/Users/NGorman/Documents/CER data/cer_test_data.csv"
 install_data <- read.csv(file=intall_data_file, header=TRUE, stringsAsFactors = FALSE)
 
-start_date = min(install_data$index)
-end_date = max(install_data$index)
+start_date = min(install_data$date)
+end_date = max(install_data$date)
 date_vector <- seq(as.Date(start_date), as.Date(end_date), by="days")
 
 manufcaturers <- unique(install_data$manufacturer)
 
 state_table <- data.table(
-  State = c('QLD', 'NSW', "VIC", "TAS", 'SA', 'WA'),
+  state = c('QLD', 'NSW', "VIC", "TAS", 'SA', 'WA'),
   dummy = 1
 )
 
@@ -29,19 +29,19 @@ date_table <- date_table[, date:=as.Date(date)]
 date_table <- setkey(date_table, dummy)
 
 date_table <- date_table[type_table, allow.cartesian=TRUE]
-date_table <- setkey(date_table, State, manufacturer, date)
+date_table <- setkey(date_table, state, manufacturer, date)
 
 install_data <- mutate(install_data)
 install_data <- data.table(install_data)
-install_data <- install_data[, index := as.Date(index)]
-install_data <- setkey(install_data, State, manufacturer, index)
+install_data <- install_data[, date := as.Date(date)]
+install_data <- setkey(install_data, state, manufacturer, date)
 
 combined <- as.data.frame(install_data[date_table, roll = T ])
 
-combined <- filter(combined, format(index, format = '%d') == "01")
+combined <- filter(combined, format(date, format = '%d') == "01")
 
-combined <- select(combined, index, State, manufacturer, Capacity, Number)
+combined <- select(combined, date, state, manufacturer, capacity, number)
 
 combined[is.na(combined)] <- 0
 
-write.csv(combined, "cer_cumulative_capacity_and_number_by_manufacturer_filter_off_grid_formatted.csv", row.names=FALSE)
+write.csv(combined, "C:/Users/NGorman/Documents/CER Data/cer_test_data_no_gaps.csv", row.names=FALSE)
