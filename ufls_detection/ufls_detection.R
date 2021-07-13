@@ -26,10 +26,16 @@ ufls_detection <- function(db, region, pre_event_interval, event_window_length, 
 calc_sampled_time_per_circuit <- function(ts_data, start_time, end_time){
   test_sampled_points <- seq(start_time, end_time, by = "sec")
   test_sampled_points <- test_sampled_points[2:length(test_sampled_points)]
-  test_sampled_points <- data.frame(test_point = test_sampled_points, dummy = 1)
-  ts_data <- mutate(ts_data, dummy = 1)
-  ts_data <- inner_join(ts_data, test_sampled_points, by=c("dummy"))
+  test_sampled_points <- data.frame(test_point = test_sampled_points)
+  max_duration <- max(ts_data$d) + 1
   ts_data <- mutate(ts_data, ts = fastPOSIXct(ts, tz="Australia/Brisbane"))
+  ts_data <- mutate(ts_data, min_join_time = ts - max_duration)
+  query <- "select * from ts_data 
+            left join test_sampled_points
+           where ts >= test_point and
+                 test_point >= min_join_time"
+  ts_data <- sqldf(query)
+  # ts_data <- inner_join(ts_data, test_sampled_points, by=c("dummy"))
   ts_data <- mutate(ts_data, t_delta = difftime(ts, test_point, units = 'secs'))
   ts_data <- mutate(ts_data, sampled = if_else((t_delta >= 0) & (t_delta < d), 1, 0))
   ts_data <- group_by(ts_data, c_id, test_point)
