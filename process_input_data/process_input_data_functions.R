@@ -94,8 +94,8 @@ perform_power_calculations <- function(master_data_table){
 process_install_data <- function(install_data){
   assert_install_data_assumptions(install_data)
   # Rename time column and catergorise data based on inverter standards.
-  install_data <- mutate(install_data, pv_installation_year_month=index)
-  install_data <- setnames(install_data, c("State"), c("s_state"))
+  install_data <- setnames(install_data, c("state", "sizegroup", "date", "capacity"), 
+                           c("s_state", "Grouping", "pv_installation_year_month", "Capacity"))
   install_data <- site_categorisation(install_data)
   # Convert column names to same format as solar analytics data.
   install_data <- setnames(install_data, c("pv_installation_year_month"), c("date"))
@@ -123,19 +123,19 @@ process_install_data <- function(install_data){
 
 assert_install_data_assumptions <- function(install_data){
   # Assert that the date column is convertable to a date object using the assumed format.
-  assert_that(all(!is.na(as.Date(install_data$index, format="%Y-%m-%d"))), 
+  assert_that(all(!is.na(as.Date(install_data$date, format="%Y-%m-%d"))), 
               msg="pv_installation_year_month has an unexpected format, should be YYYY-MM-DD")
   # Assert groupings only one of two options 
-  assert_that(all(install_data$Grouping %in% c("30-100kW" ,"<30 kW")), msg="Grouping values in install data do not match
+  assert_that(all(install_data$sizegroup %in% c("30-100kW" ,"<30 kW")), msg="Grouping values in install data do not match
               the expected values")
   # Assert that all capacity values can be converted to numeric without creating nas. 
-  assert_that(all(!is.na(as.numeric(install_data$Capacity))), msg="Not all capacity values can convert to numeric in 
+  assert_that(all(!is.na(as.numeric(install_data$capacity))), msg="Not all capacity values can convert to numeric in 
               install data")
   # Assert that State values are within expected set.
-  assert_that(all(install_data$State %in% c("NSW", "VIC", "SA", "TAS", "QLD", "NT", "ACT", "WA")), 
+  assert_that(all(install_data$state %in% c("NSW", "VIC", "SA", "TAS", "QLD", "NT", "ACT", "WA")), 
               msg="State values in install data do not match the expected values")
   # Assert that the first date in the install data is before the start of the transition peroid 
-  assert_that(min(ymd(install_data$index))<ymd("2015-10-01"), msg="Install data first entery does not predate start of
+  assert_that(min(ymd(install_data$date))<ymd("2015-10-01"), msg="Install data first entery does not predate start of
               transition peroid")
   
 }
@@ -218,4 +218,9 @@ combine_data_tables <- function(time_series_data, circuit_details,
   time_series_data <- inner_join(time_series_data, site_details, by="site_id")
   time_series_data <- perform_power_calculations(time_series_data)
   return(time_series_data)
+}
+
+get_mode <- function(x) {
+  ux <- unique(x)
+  ux[which.max(tabulate(match(x, ux)))]
 }
