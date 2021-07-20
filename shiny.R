@@ -867,7 +867,7 @@ server <- function(input,output,session){
         pre_event_daily_norm_power <- mutate(pre_event_daily_norm_power, pre_event_norm_power = c_id_daily_norm_power)
         pre_event_daily_norm_power <- select(pre_event_daily_norm_power, clean, c_id, pre_event_norm_power)
         combined_data_f <- left_join(combined_data_f, pre_event_daily_norm_power, by=c("c_id", "clean"))
-        event_window_data <- filter(combined_data_f, ts >= pre_event_interval()) # & ts <= pre_event_interval() + 60 * window_length())
+        event_window_data <- filter(combined_data_f, ts >= pre_event_interval())
         reconnection_categories <- create_reconnection_summary(event_window_data, pre_event_interval(),
                                                                disconnecting_threshold(),
                                                                reconnect_threshold = reconnection_threshold(),
@@ -945,8 +945,10 @@ server <- function(input,output,session){
           
           # Summarise and upscale disconnections on a manufacturer basis.
           if (exclude_solar_edge()){
-            circuits_to_summarise <- filter(v$circuit_summary, manufacturer != "SolarEdge")
-            manufacturer_install_data <- filter(v$manufacturer_install_data, manufacturer != "SolarEdge")
+            circuits_to_summarise <- filter(v$circuit_summary, manufacturer != "SolarEdge" | 
+                                            is.na(manufacturer))
+            manufacturer_install_data <- filter(v$manufacturer_install_data, manufacturer != "SolarEdge" | 
+                                                  is.na(manufacturer))
           } else {
             circuits_to_summarise <- v$circuit_summary
             manufacturer_install_data <- v$manufacturer_install_data

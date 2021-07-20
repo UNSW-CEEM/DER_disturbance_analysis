@@ -1,6 +1,0 @@
-library(testthat)
-cur_wd <- getwd()
-setwd(dirname(parent.frame(2)$ofile))
-source("../R/interface.R")
-test_dir("testthat")
-setwd(cur_wd)

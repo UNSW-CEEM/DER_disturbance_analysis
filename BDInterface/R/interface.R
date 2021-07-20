@@ -20,11 +20,18 @@ DBInterface <- R6::R6Class("DBInterface",
     default_timeseries_column_aliases = list(ts='_ts', time_stamp='_ts', c_id='_c_id', v='_v', f='_f', e='_e', d='_d', 
                                              p='_p'),
     connect_to_new_database = function(db_path_name){
+      if (file.exists(db_path_name)){
+        stop("That database file already exits. If you want to create a new db with this name please delete the
+             existing db. If you want to conect to an eixting db please use the connect_to_existing_database method.")
+      }
       con <- RSQLite::dbConnect(RSQLite::SQLite(), db_path_name)
       RSQLite::dbDisconnect(con)
       self$db_path_name = db_path_name
     },
     connect_to_existing_database = function(db_path_name, check_tables_have_expected_columns=TRUE){
+      if (!file.exists(db_path_name)){
+        stop("Specified database file not found. Please check the filepath provided.")
+      }
       self$db_path_name = db_path_name
       if (check_tables_have_expected_columns) {
         self$check_tables_have_expected_columns()
@@ -68,6 +75,16 @@ DBInterface <- R6::R6Class("DBInterface",
     },
     build_database = function(timeseries, circuit_details, site_details, check_disk_space=TRUE, 
                               check_dataset_ids_match=TRUE) {
+      
+      if (!file.exists(timeseries)){
+        stop("Specified timeseries file not found. Please check the filepath provided.")
+      }
+      if (!file.exists(circuit_details)){
+        stop("Specified circuit_details file not found. Please check the filepath provided.")
+      }
+      if (!file.exists(site_details)){
+        stop("Specified site_details file not found. Please check the filepath provided.")
+      }
       
       #free_space_gigabytes <- get_free_disk_space_in_working_directory()
       #time_series_size_gigabytes <- file.size(timeseries) / 1073741824
@@ -540,6 +557,9 @@ DBInterface <- R6::R6Class("DBInterface",
       sqldf::read.csv.sql(sql = query, dbname = self$db_path_name)
     },
     add_postcode_lon_lat_to_database = function(file_path_name){
+      if (!file.exists(file_path_name)){
+        stop("Specified postcode lon lat file not found. Please check the filepath provided.")
+      }
       self$create_postcode_lon_lat_table()
       self$insert_postcode_lon_lat_cleaned(file_path_name)
     },
@@ -555,6 +575,9 @@ DBInterface <- R6::R6Class("DBInterface",
       invisible(sqldf::read.csv.sql(sql = query, dbname = self$db_path_name)) # stops an empty df being prinited.
     },
     add_manufacturer_mapping_table = function(file_path_name){
+      if (!file.exists(file_path_name)){
+        stop("Specified manufacturer mapping file not found. Please check the filepath provided.")
+      }
       self$create_manufacturer_mapping_table()
       self$insert_manufacturer_mapping(file_path_name)
     },

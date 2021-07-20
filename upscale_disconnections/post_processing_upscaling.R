@@ -1,17 +1,16 @@
-library(lubridate)
-library(dplyr)
-library(tidyr)
-library(data.table)
-
-source("data_manipulation_functions.R")
-source("upscale_disconnections/summarise_disconnections.R")
-source("process_cer_data/calc_installed_capacity_by_standard_and_manufacturer.R")
+("load_tool_environment.R")
 
 exclude_solar_edge <- TRUE
 region_to_load <- 'SA'
 load_start_time <- '2021-01-24'
-circuit_summary <- read.csv(file = "data/2021-01-24/combined_60s_5s.csv", header = TRUE, stringsAsFactors = FALSE)
-manufacturer_install_data <- read.csv(file = "cer_cumulative_capacity_and_number_by_manufacturer.csv", header = TRUE, stringsAsFactors = FALSE)
+circuit_summary <- read.csv(file = "data/2021-01-24/check_against_elisha/circuits_60s.csv", header = TRUE, stringsAsFactors = FALSE)
+manufacturer_install_data <- read.csv(file = "inbuilt_data/cer_cumulative_capacity_and_number_by_manufacturer.csv", header = TRUE, stringsAsFactors = FALSE)
+
+circuits_to_summarise <- mutate(
+  circuits_to_summarise,  manufacturer=ifelse(is.na(manufacturer), 'Other', manufacturer))
+manufacturer_install_data <- mutate(
+  manufacturer_install_data,  manufacturer=ifelse(is.na(manufacturer), 'Other', manufacturer))
+
 
 manufacturer_install_data <- calc_installed_capacity_by_standard_and_manufacturer(manufacturer_install_data)
 
