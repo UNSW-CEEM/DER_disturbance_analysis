@@ -140,11 +140,11 @@ DBInterface <- R6::R6Class("DBInterface",
       SELECT _ts as ts, cast(_c_id as integer) as c_id, cast(IFNULL(_d, 0) as integer) as d_key, _e as e, _v as v,
       _f as f from file"
       
-      for (name in column_names){
-        if (name %in% names(self$default_timeseries_column_aliases)){
+      for (name in names(self$default_timeseries_column_aliases)){
+        if (name %in% column_names){
           query <- gsub(self$default_timeseries_column_aliases[[name]], name, query)
         } else {
-          error_message <- "The provided time series file should have the columns ts, c_id, d e, v and f, 
+          error_message <- "The provided time series file should have the columns _colsalias_ 
           or known aliases of these columns. 
           
           The columns _cols_ where found instead.
@@ -152,6 +152,7 @@ DBInterface <- R6::R6Class("DBInterface",
           Please overide the column alaises in the database interface and try again."
           
           error_message <- gsub('_cols_', paste(column_names, collapse=', '), error_message)
+          error_message <- gsub('_colsalias_', paste(names(self$default_timeseries_column_aliases), collapse=', '), error_message)
           
           stop(error_message)
         }
