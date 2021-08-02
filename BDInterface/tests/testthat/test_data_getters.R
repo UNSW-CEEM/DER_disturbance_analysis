@@ -56,30 +56,6 @@ testthat::test_that("Test get_max_circuit_powers simple case",{
   testthat::expect_equal(max_powers, expected_results)
 })
 
-testthat::test_that("Test get_samples_per_circuit all samples in time window, NSW",{
-  sample_sizes <- dp$get_sampled_time_per_circuit('NSW', start_time = '2018-01-01 00:00:05',
-                                           end_time = '2018-01-01 00:00:40')
-  expected_results <- data.frame(c_id = c(1),
-                                 sampled_seconds = 8 * 5)
-  testthat::expect_equal(sample_sizes, expected_results)
-})
-
-testthat::test_that("Test get_samples_per_circuit all samples in time window, SA",{
-  sample_sizes <- dp$get_sampled_time_per_circuit('SA', start_time = '2018-01-01 00:00:05',
-                                             end_time = '2018-01-01 00:00:40')
-  expected_results <- data.frame(c_id = c(2),
-                                 sampled_seconds = 8 * 5)
-  testthat::expect_equal(sample_sizes, expected_results)
-})
-
-testthat::test_that("Test get_samples_per_circuit smaller time window, SA",{
-  sample_sizes <- dp$get_sampled_time_per_circuit('SA', start_time = '2018-01-01 00:00:10',
-                                             end_time = '2018-01-01 00:00:35')
-  expected_results <- data.frame(c_id = c(2),
-                                 sampled_seconds = 6 * 5)
-  testthat::expect_equal(sample_sizes, expected_results)
-})
-
 #Setup database for testing getters.
 
 timeseries_path_name <- "data/timeseries_max_power_testing.csv"

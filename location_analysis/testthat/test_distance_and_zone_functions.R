@@ -1,27 +1,4 @@
 context("Testing the DER event analysis distance and zone functions")
-##RSHINY APP
-library (shiny)
-library(shinyTime)
-library(shinyWidgets)
-library(shinyalert)
-library(plotly)
-library(feather)
-library(lubridate)
-library(dplyr)
-library(tidyr)
-library(data.table)
-library(shinycssloaders)
-library(shinyFiles)
-library(shinyjs)
-library(stringr)
-library(fasttime)
-library(DT)
-library(suncalc)
-library(ggmap)
-library(measurements)
-library(assertthat)
-library(geosphere)
-source("distance_from_event.R")
 
 test_that("Test the calculation of the distance between two sets of latitude and longditude" ,{
   # Test input data
