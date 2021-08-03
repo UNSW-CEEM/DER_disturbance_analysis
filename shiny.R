@@ -1441,7 +1441,7 @@ server <- function(input,output,session){
     settings$frequency_data_file <- frequency_data_file()
     
     settings$cleaned <- clean()
-    settings$StdVersion <- standards()
+    settings$standards <- standards()
     settings$responses <- responses()
     settings$postcodes <- postcodes()
     settings$manufactures <- manufacturers()
@@ -1464,6 +1464,7 @@ server <- function(input,output,session){
     settings$zone_agg <- zone_agg()
     settings$reconnection_compliance_agg <- reconnection_compliance_agg()
     
+    settings$confidence_category <- confidence_category()
     settings$raw_upscale <- raw_upscale()
     
     settings$pre_event_interval <- as.character(pre_event_interval())
@@ -1503,7 +1504,7 @@ server <- function(input,output,session){
   })
   
   load_settings <- function(){
-    settings <- NA
+    settings <- c()
     tryCatch(
       {
         settings <- fromJSON(file = settings_file())
@@ -1517,12 +1518,12 @@ server <- function(input,output,session){
   
   observeEvent(input$load_file_from_settings, {
     settings <- load_settings()
-    if (!is.na(settings)){updateTextInput(session, "database_name", value = settings$database_name)}
+    if (length(settings) > 0){updateTextInput(session, "database_name", value = settings$database_name)}
   })
   
   observeEvent(input$load_first_filter_settings, {
     settings <- load_settings()
-    if (!is.na(settings)){
+    if (length(settings) > 0){
       updateDateRangeInput(session, "load_date", start = strftime(settings$load_start_time, format="%Y-%m-%d"))
       updateDateRangeInput(session, "load_date", end = strftime(settings$load_end_time, format="%Y-%m-%d"))
       updateTimeInput(session, "load_time_start", value = settings$load_start_time)
@@ -1535,7 +1536,7 @@ server <- function(input,output,session){
   
   observeEvent(input$load_second_filter_settings, {
     settings <- load_settings()
-    if (!is.na(settings)){
+    if (length(settings) > 0){
       updateCheckboxGroupButtons(session, "cleaned", selected = settings$cleaned)
       updateCheckboxGroupButtons(session, "StdVersion", selected = settings$standards)
       updateCheckboxGroupButtons(session, "responses", selected = settings$responses)
@@ -1552,7 +1553,7 @@ server <- function(input,output,session){
       updateSelectizeInput(session, "sites", selected = settings$sites)
       updateSelectizeInput(session, "circuits", selected = settings$circuits)
       
-      updateMaterialSwitch(session, "standard_agg", value = settings$agg_on_standard)
+      updateMaterialSwitch(session, "standard_agg", value = settings$standard_agg)
       updateMaterialSwitch(session, "pst_agg", value = settings$pst_agg)
       updateMaterialSwitch(session, "grouping_agg", value = settings$grouping_agg)
       updateMaterialSwitch(session, "response_agg", value = settings$response_agg)
@@ -1565,6 +1566,7 @@ server <- function(input,output,session){
         updateMaterialSwitch(session, "reconnection_compliance_agg", value = settings$reconnection_compliance_agg)
       }
       
+      updateRadioButtons(session, "confidence_category", selected = settings$confidence_category)
       updateMaterialSwitch(session, "raw_upscale", value = settings$raw_upscale)
       
       updateDateInput(session, "event_date", value = strftime(settings$pre_event_interval, format = "%Y-%m-%d"))
@@ -1581,7 +1583,7 @@ server <- function(input,output,session){
   
   observeEvent(input$load_backend_settings, {
     settings <- load_settings()
-    if (!is.na(settings)){
+    if (length(settings) > 0){
       updateNumericInput(session, "compliance_threshold", value = settings$compliance_threshold)
       updateNumericInput(session, "start_buffer", value = settings$start_buffer)
       updateNumericInput(session, "end_buffer", value = settings$end_buffer)

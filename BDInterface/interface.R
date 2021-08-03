@@ -179,8 +179,13 @@ DBInterface <- R6::R6Class("DBInterface",
       column_names <- names(read.csv(timeseries, nrows=3, header = TRUE))
       
       query <- "REPLACE INTO timeseries 
-      SELECT _ts as ts, cast(_c_id as integer) as c_id, cast(IFNULL(_d, 0) as integer) as d_key, _e as e, _v as v,
-      _f as f from file_con"
+      SELECT _ts as ts, 
+             cast(_c_id as integer) as c_id, 
+             cast(IFNULL(_d, 0) as integer) as d_key, 
+             _e as e, 
+             _v as v,
+             _f as f 
+        from file_con"
       
       for (name in column_names){
         if (name %in% names(self$default_timeseries_column_aliases)){
