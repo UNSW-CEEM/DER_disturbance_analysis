@@ -1,3 +1,12 @@
+
+process_time_series_data <- function(time_series_data){
+  time_series_data <- mutate(time_series_data, ts = fastPOSIXct(ts, tz="Australia/Brisbane"))
+  time_series_data <- mutate(time_series_data, e = as.numeric(e))
+  time_series_data <- mutate(time_series_data, v = as.numeric(v))
+  time_series_data <- mutate(time_series_data, f = as.numeric(f))
+  return(time_series_data)
+}
+
 get_time_offsets <- function(time_series_data){
   offsets <- mutate(time_series_data, time_offset=format(ts, "%S"))
   offsets <- group_by(offsets, c_id, time_offset)

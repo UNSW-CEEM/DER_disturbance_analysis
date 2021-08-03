@@ -559,9 +559,7 @@ server <- function(input,output,session){
         v$site_details <- size_grouping(v$site_details)
         v$circuit_details <- bind_rows(v$circuit_details_raw, circuit_details_clean)
   
-        time_series_data <- mutate(time_series_data, ts = fastPOSIXct(ts, tz="Australia/Brisbane"))
-        time_series_data <- mutate(time_series_data, v = as.numeric(v))
-        time_series_data <- mutate(time_series_data, f = as.numeric(f))
+        time_series_data <- process_time_series_data(time_series_data)
   
         v$combined_data <- inner_join(time_series_data, v$circuit_details, by = "c_id")
         v$combined_data <- inner_join(v$combined_data, v$site_details, by = c("site_id", "clean"))

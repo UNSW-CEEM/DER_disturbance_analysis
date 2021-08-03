@@ -1,92 +1,13 @@
 context("Testing the DER event analysis underlying data manipulation functions")
-##RSHINY APP
-library (shiny)
-library(shinyTime)
-library(shinyWidgets)
-library(shinyalert)
-library(plotly)
-library(feather)
-library(lubridate)
-library(dplyr)
-library(tidyr)
-library(data.table)
-library(shinycssloaders)
-library(shinyFiles)
-library(shinyjs)
-library(stringr)
-library(fasttime)
-library(DT)
-library(suncalc)
-library(ggmap)
-library(measurements)
-library(assertthat)
-source("data_manipulation_functions.R")
-
-
-test_that("Test assertion of time series data assumptions, c_id not empty",{
-  # Test input data
-  c_id <- c("", "101", "c_id")
-  ts <- c("2018-01-01 00:01:00", "2018-01-01 00:02:00", "ts")
-  e <- c("1015.0", "-1010.0", "e")
-  d <- c("60", "60", "d")
-  test_time_series_data <- data.frame(c_id, ts, e, d, stringsAsFactors = FALSE)
-  # Test output data
-  expect_error(process_raw_time_series_data(test_time_series_data))
-})
-
-
-test_that("Test assertion of time series data assumptions, ts is formated correctlty 1",{
-  # Test input data
-  c_id <- c("101", "101", "c_id")
-  ts <- c("2018-21-01 00:01:00", "2018-01-01 00:02:00", "ts")
-  e <- c("1015.0", "-1010.0", "e")
-  d <- c("60", "60", "d")
-  test_time_series_data <- data.frame(c_id, ts, e, d, stringsAsFactors = FALSE)
-  # Test output data
-  expect_error(process_raw_time_series_data(test_time_series_data))
-})
-
-test_that("Test assertion of time series data assumptions, e can be interpreted as numeric 1",{
-  # Test input data
-  c_id <- c("101", "101", "c_id")
-  ts <- c("2018-01-01 00:01:00", "2018-01-01 00:02:00", "ts")
-  e <- c("1015.0", "x", "e")
-  d <- c("60", "60", "d")
-  test_time_series_data <- data.frame(c_id, ts, e, d, stringsAsFactors = FALSE)
-  # Test output data
-  expect_error(process_raw_time_series_data(test_time_series_data))
-})
-
-test_that("Test assertion of time series data assumptions, e can be interpreted as numeric 2",{
-            # Test input data
-            c_id <- c("101", "101", "c_id")
-            ts <- c("2018-01-01 00:01:00", "2018-01-01 00:02:00", "ts")
-            e <- c("1015.0", " ", "e")
-            d <- c("60", "60", "d")
-            test_time_series_data <- data.frame(c_id, ts, e, d, stringsAsFactors = FALSE)
-            # Test output data
-            expect_error(process_raw_time_series_data(test_time_series_data))
-            })
-
-test_that("Test assertion of time series data assumptions, d must be 5, 30 or 60",{
-            # Test input data
-            c_id <- c("101", "101", "c_id")
-            ts <- c("2018-01-01 00:01:00", "2018-01-01 00:02:00", "ts")
-            e <- c("1015.0", "50.5", "e")
-            d <- c("60", "6", "d")
-            test_time_series_data <- data.frame(c_id, ts, e, d, stringsAsFactors = FALSE)
-            # Test output data
-            expect_error(process_raw_time_series_data(test_time_series_data))
-          })
 
 test_that("Test the preprocessing of the timeseries data",{
   # Test input data
-  c_id <- c("101", "101", "c_id")
-  ts <- c("2018-01-01 00:01:00", "2018-01-01 00:02:00", "ts")
-  e <- c("1015.0", "-1010.0", "e")
-  v <- c("240.1", "240.2", "e")
-  f <- c("50.1", "50.0", "e")
-  d <- c("60", "60", "d")
+  c_id <- c("101", "101")
+  ts <- c("2018-01-01 00:01:00", "2018-01-01 00:02:00")
+  e <- c("1015.0", "-1010.0")
+  v <- c("240.1", "240.2")
+  f <- c("50.1", "50.0")
+  d <- c(60, 60)
   test_time_series_data <- data.frame(c_id, ts, e, d, v, f, stringsAsFactors = FALSE)
   # Test output data
   c_id <- c("101", "101")
@@ -98,13 +19,9 @@ test_that("Test the preprocessing of the timeseries data",{
   v <- c(240.1, 240.2)
   f <- c(50.1, 50.0)
   d <- c(60, 60)
-  d2 <- c(60, 60)
-  d_e <- c(0, 0)
-  d_min <- c(60, 60)
-  time_offset <- as.numeric(c(NA, NA))
-  expected_answer <- data.frame(c_id, ts, e, d, v, f, d2, d_e, d_min, time_offset, stringsAsFactors = FALSE)
+  expected_answer <- data.frame(c_id, ts, e, d, v, f, stringsAsFactors = FALSE)
   # Call processing function
-  processed_time_series <- process_raw_time_series_data(test_time_series_data)
+  processed_time_series <- process_time_series_data(test_time_series_data)
   # Test the answer matches the expected answer
   expect_equal(processed_time_series, expected_answer)
 })
@@ -204,7 +121,7 @@ test_that("Test the preprocessing of the site_details data",{
   # Test output data
   site_id <- c(101, 300)
   s_state <- c("NSW", "SA")
-  s_postcode <- c("2031", "2031")
+  s_postcode <- c(2031, 2031)
   sum_ac <- c(119, 8)
   first_ac <- c(59, 8)
   pv_installation_year_month <- c("2017-01", "2018-01")
@@ -357,14 +274,14 @@ test_that("Test assertion in install data processing functions triggers on earli
 })
 
 test_that("Install data processing works on simple case", {
-  index <- c("2015-09-01", "2015-10-02", "2017-01-01", "2015-09-01", "2015-10-02", "2017-01-01", 
+  date <- c("2015-09-01", "2015-10-02", "2017-01-01", "2015-09-01", "2015-10-02", "2017-01-01", 
              "2015-09-01", "2015-10-02", "2017-01-01")
-  State <- c("NSW", "NSW", "NSW", "NSW", "NSW", "NSW", "SA", "SA", "SA")
-  Grouping <- c("<30 kW", "<30 kW", "<30 kW", "30-100kW", "30-100kW", "30-100kW", "<30 kW", "<30 kW", "<30 kW")
-  Capacity <- c(100, 150, 210, 50, 100, 170, 60, 70, 80)
-  install_data <- data.frame(index, State, Grouping, Capacity, stringsAsFactors=FALSE)
+  state <- c("NSW", "NSW", "NSW", "NSW", "NSW", "NSW", "SA", "SA", "SA")
+  sizegroup <- c("<30 kW", "<30 kW", "<30 kW", "30-100kW", "30-100kW", "30-100kW", "<30 kW", "<30 kW", "<30 kW")
+  capacity <- c(100, 150, 210, 50, 100, 170, 60, 70, 80)
+  install_data <- data.frame(date, state, sizegroup, capacity, stringsAsFactors=FALSE)
   
-  index <- c("2015-09-01", "2015-10-02", "2017-01-01", "2015-09-01", "2015-10-02", "2017-01-01", 
+  date <- c("2015-09-01", "2015-10-02", "2017-01-01", "2015-09-01", "2015-10-02", "2017-01-01", 
              "2015-09-01", "2015-10-02", "2017-01-01")
   s_state <- c("NSW", "NSW", "NSW", "NSW", "NSW", "NSW", "SA", "SA", "SA")
   Grouping <- c("<30 kW", "<30 kW", "<30 kW", "30-100kW", "30-100kW", "30-100kW", "<30 kW", "<30 kW", "<30 kW")
@@ -375,7 +292,7 @@ test_that("Install data processing works on simple case", {
                         "AS4777.3:2005", "Transition", "AS4777.2:2015")
   initial_cap <- c(0, 100, 150, 0, 50, 100, 0, 60, 70)
   standard_capacity <- c(100, 50, 60, 50, 50, 70, 60, 10, 10)
-  expected_answer <- data.frame(index, s_state, Grouping, Capacity, date, Standard_Version,
+  expected_answer <- data.frame(date, s_state, Grouping, Capacity, Standard_Version,
                                 initial_cap, standard_capacity, stringsAsFactors=FALSE)
   answer <- process_install_data(install_data)
   expect_identical(answer, expected_answer)

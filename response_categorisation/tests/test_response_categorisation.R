@@ -1,26 +1,4 @@
 context("Testing the DER event analysis response categorisation function")
-##RSHINY APP
-library (shiny)
-library(shinyTime)
-library(shinyWidgets)
-library(shinyalert)
-library(plotly)
-library(feather)
-library(lubridate)
-library(dplyr)
-library(tidyr)
-library(data.table)
-library(shinycssloaders)
-library(shinyFiles)
-library(shinyjs)
-library(stringr)
-library(fasttime)
-library(DT)
-library(suncalc)
-library(ggmap)
-library(measurements)
-library(assertthat)
-source("response_categorisation_function.R")
 
 test_that("Test the calculation of number of consectutive zeros, less than 0.1 at t0 returns 0" ,{
   # Test input data

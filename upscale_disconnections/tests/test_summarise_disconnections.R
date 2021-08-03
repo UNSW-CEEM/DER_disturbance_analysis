@@ -48,9 +48,9 @@ testthat::test_that("join_solar_analytics_and_cer_manufacturer_data",{
                               z,            x,       12"
   
   expected_output <- "Standard_Version, manufacturer, disconnections, sample_size, cer_capacity
-                                     y,        Other,             NA,          NA,          11
+                                     y,            a,             NA,          NA,          11
                                      y,          SMA,              2,           3,          10
-                                     y,        Other,              1,           1,          NA
+                                     y,            x,              1,           1,          NA
                                      z,            x,              0,           3,          12"
   
   disconnection_summary <- load_test_file(disconnection_summary)
@@ -100,18 +100,18 @@ testthat::test_that("calc_confidence_intervals_for_disconnections",{
   testthat::expect_equal(output, expected_output, tolerance = 1e-4)
 })
 
-testthat::test_that("calc_upscale_mw_loss",{
+testthat::test_that("calc_upscale_kw_loss",{
   
   input <- "Standard_Version, manufacturer, disconnections, sample_size, cer_capacity, proportion, lower_bound, upper_bound
                            y,        Other,              5,           6,           21,  0.8333333,   0.3583333,    0.996333  
                            z,            x,              0,          30,           12,          0,         0.0,   0.1160000"
   
-  expected_output <- "Standard_Version, manufacturer, disconnections, sample_size, cer_capacity, proportion, lower_bound, upper_bound, predicted_mw_loss, lower_bound_mw_loss, upper_bound_mw_loss
+  expected_output <- "Standard_Version, manufacturer, disconnections, sample_size, cer_capacity, proportion, lower_bound, upper_bound, predicted_kw_loss, lower_bound_kw_loss, upper_bound_kw_loss
                                      y,        Other,              5,           6,           21,  0.8333333,   0.3583333,   0.9963333,              17.5,            7.524999,              20.923
                                      z,            x,              0,          30,           12,          0,         0.0,   0.1160000,               0.0,                 0.0,               1.392"            
   
   input <- load_test_file(input)
   expected_output <- load_test_file(expected_output)
-  output <- calc_upscale_mw_loss(input)
+  output <- calc_upscale_kw_loss(input)
   testthat::expect_equal(output, expected_output, tolerance = 1e-4)
 })

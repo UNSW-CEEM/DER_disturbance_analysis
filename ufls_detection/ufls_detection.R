@@ -38,6 +38,7 @@ calc_sampled_time_per_circuit <- function(ts_data, start_time, end_time){
   # ts_data <- inner_join(ts_data, test_sampled_points, by=c("dummy"))
   ts_data <- mutate(ts_data, t_delta = difftime(ts, test_point, units = 'secs'))
   ts_data <- mutate(ts_data, sampled = if_else((t_delta >= 0) & (t_delta < d), 1, 0))
+  browser()
   ts_data <- group_by(ts_data, c_id, test_point)
   ts_data <- data.frame(summarise(ts_data, sampled = max(sampled)))
   ts_data <- group_by(ts_data, c_id)

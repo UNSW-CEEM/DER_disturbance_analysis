@@ -11,7 +11,7 @@ testthat::test_that("simple case",{
   
   event_time <- as.POSIXct("2018-01-01 00:00:00", tz = "Australia/Brisbane")
   
-  data_by_state_and_manufacturer <- "     index, State, manufacturer, Capacity, Number
+  data_by_state_and_manufacturer <- "      date, state, manufacturer, capacity, number
                                      2014-01-01,   NSW,          SMA,      100,      2
                                      2014-01-01,    WA,          SMA,       50,      3
                                      2014-01-01,   NSW,            X,      101,      4
@@ -42,7 +42,7 @@ testthat::test_that("simple case",{
                                      2017-11-01,    WA,            X,      651,     11"
   
   
-  e_out <- "      date, s_state, manufacturer, Capacity, Number, Standard_Version, initial_cap, standard_capacity
+  e_out <- "      date, s_state, manufacturer, capacity, number, Standard_Version, initial_cap, standard_capacity
             2014-01-01,     NSW,          SMA,      100,      2,    AS4777.3:2005,           0,               100                
             2014-01-01,      WA,          SMA,       50,      3,    AS4777.3:2005,           0,                50   
             2014-01-01,     NSW,            X,      101,      4,    AS4777.3:2005,           0,               101
@@ -84,7 +84,7 @@ testthat::test_that("discontinued line",{
   
   event_time <- as.POSIXct("2018-01-01 00:00:00", tz = "Australia/Brisbane")
   
-  data_by_state_and_manufacturer <- "     index, State, manufacturer, Capacity, Number
+  data_by_state_and_manufacturer <- "       date, state, manufacturer, capacity, number
                                       2014-01-01,   NSW,          SMA,      100,      2
                                       2014-01-01,    WA,          SMA,       50,      3
                                       2014-01-01,   NSW,            X,      101,      4
@@ -115,7 +115,7 @@ testthat::test_that("discontinued line",{
                                       2017-11-01,    WA,            X,      651,     11"
   
   
-  e_out <- "      date, s_state, manufacturer, Capacity, Number, Standard_Version, initial_cap, standard_capacity
+  e_out <- "      date, s_state, manufacturer, capacity, number, Standard_Version, initial_cap, standard_capacity
             2014-01-01,     NSW,          SMA,      100,      2,    AS4777.3:2005,           0,               100                
             2014-01-01,      WA,          SMA,       50,      3,    AS4777.3:2005,           0,                50   
             2014-01-01,     NSW,            X,      101,      4,    AS4777.3:2005,           0,               101
