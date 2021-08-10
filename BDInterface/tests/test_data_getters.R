@@ -56,6 +56,13 @@ testthat::test_that("Test get_max_circuit_powers simple case",{
   testthat::expect_equal(max_powers, expected_results)
 })
 
+testthat::test_that("Test check_if_table_exists works",{
+  flag <- dp$check_if_table_exists('timeseries')
+  testthat::expect_equal(flag, TRUE)
+  flag <- dp$check_if_table_exists('blah')
+  testthat::expect_equal(flag, FALSE)
+})
+
 #Setup database for testing getters.
 
 timeseries_path_name <- "data/timeseries_max_power_testing.csv"

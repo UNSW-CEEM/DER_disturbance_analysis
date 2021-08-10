@@ -542,22 +542,40 @@ server <- function(input,output,session){
       if (error_check_passed){
         site_details_raw <- v$db$get_site_details_raw()
         site_details_raw <- process_raw_site_details(site_details_raw)
-        site_details_raw <- mutate(site_details_raw, clean = 'raw')
+        v$site_details <- mutate(site_details_raw, clean = 'raw')
         
-        site_details_clean <- v$db$get_site_details_cleaned()
-        site_details_clean <- process_raw_site_details(site_details_clean)
-        site_details_clean <- mutate(site_details_clean, clean = 'clean')
+        if (v$db$check_if_table_exists('site_details_cleaned')){
+          site_details_clean <- v$db$get_site_details_cleaned()
+          site_details_clean <- process_raw_site_details(site_details_clean)
+          site_details_clean <- mutate(site_details_clean, clean = 'clean')
+          v$site_details <- bind_rows(v$site_details, site_details_clean)
+          
+          v$site_details_for_editing <- v$db$get_site_details_cleaning_report()
+          v$site_details_for_editing <- filter(v$site_details_for_editing, s_state == region_to_load())
+          output$site_details_editor <- renderDT(isolate(v$site_details_for_editing), selection='single', rownames=FALSE, 
+                                                 editable=TRUE)
+          v$proxy_site_details_editor <- dataTableProxy('site_details_editor')
+        }
         
-        circuit_details_raw <- v$db$get_circuit_details_raw()
-        v$circuit_details_raw <- mutate(circuit_details_raw, clean = 'raw')
-        
-        circuit_details_clean <- v$db$get_circuit_details_cleaned()
-        circuit_details_clean <- mutate(circuit_details_clean, clean = 'clean')
-        
-        v$site_details <- bind_rows(site_details_raw, site_details_clean)
         v$site_details <- site_categorisation(v$site_details)
         v$site_details <- size_grouping(v$site_details)
-        v$circuit_details <- bind_rows(v$circuit_details_raw, circuit_details_clean)
+
+        circuit_details_raw <- v$db$get_circuit_details_raw()
+        v$circuit_details <- mutate(circuit_details_raw, clean = 'raw')
+        v$circuit_details_raw <- v$circuit_details
+        
+        if (v$db$check_if_table_exists('circuit_details_cleaned')){
+          circuit_details_clean <- v$db$get_circuit_details_cleaned()
+          circuit_details_clean <- mutate(circuit_details_clean, clean = 'clean')
+          v$circuit_details <- bind_rows(v$circuit_details, circuit_details_clean)
+          
+          v$circuit_details_for_editing <- v$db$get_circuit_details_cleaning_report()
+          v$circuit_details_for_editing <- filter(v$circuit_details_for_editing, site_id %in% v$site_details_for_editing$site_id)
+          
+          output$circuit_details_editor <- renderDT(isolate(v$circuit_details_for_editing), selection='single', 
+                                                    rownames=FALSE, editable=TRUE)
+          v$proxy_circuit_details_editor <- dataTableProxy('circuit_details_editor')
+        }
   
         time_series_data <- process_time_series_data(time_series_data)
   
@@ -566,19 +584,6 @@ server <- function(input,output,session){
         
         v$combined_data <- perform_power_calculations(v$combined_data)
         
-        
-        v$site_details_for_editing <- v$db$get_site_details_cleaning_report()
-        v$site_details_for_editing <- filter(v$site_details_for_editing, s_state == region_to_load())
-        v$circuit_details_for_editing <- v$db$get_circuit_details_cleaning_report()
-        v$circuit_details_for_editing <- filter(v$circuit_details_for_editing, site_id %in% v$site_details_for_editing$site_id)
-       
-        
-        output$site_details_editor <- renderDT(isolate(v$site_details_for_editing), selection='single', rownames=FALSE, 
-                                               editable=TRUE)
-        v$proxy_site_details_editor <- dataTableProxy('site_details_editor')
-        output$circuit_details_editor <- renderDT(isolate(v$circuit_details_for_editing), selection='single', 
-                                                  rownames=FALSE, editable=TRUE)
-        v$proxy_circuit_details_editor <- dataTableProxy('circuit_details_editor')
         removeNotification(id)
   
   
@@ -859,7 +864,7 @@ server <- function(input,output,session){
         
         # Set reconnection compliance values.
         max_power <- v$db$get_max_circuit_powers(region_to_load())
-        combined_data_f <- left_join(combined_data_f, max_power, by=c("c_id"))
+        combined_data_f <- left_join(combined_data_f, max_power, by=c("c_id", "clean"))
         combined_data_f <- mutate(combined_data_f, c_id_daily_norm_power=power_kW/max_power)
         pre_event_daily_norm_power <- filter(combined_data_f, ts == pre_event_interval())
         pre_event_daily_norm_power <- mutate(pre_event_daily_norm_power, pre_event_norm_power = c_id_daily_norm_power)

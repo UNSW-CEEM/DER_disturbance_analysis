@@ -42,20 +42,28 @@ DBInterface <- R6::R6Class("DBInterface",
       self$check_table_has_expected_columns('circuit_details_raw', c("c_id", "site_id", "con_type", "polarity", 
                                                                      "manual_droop_compliance", 
                                                                      "manual_reconnect_compliance"))
-      self$check_table_has_expected_columns('circuit_details_cleaned', c("c_id", "site_id", "con_type", "polarity", 
-                                                                         "sunrise", "sunset", "min_power", "max_power", 
-                                                                         "frac_day", "old_con_type", "con_type_changed", 
-                                                                         "polarity_changed", "manual_droop_compliance", 
-                                                                         "manual_reconnect_compliance"))
+      if (self$check_if_table_exists('circuit_details_cleaned')){
+        self$check_table_has_expected_columns('circuit_details_cleaned', c("c_id", "site_id", "con_type", "polarity", 
+                                                                           "sunrise", "sunset", "min_power", "max_power", 
+                                                                           "frac_day", "old_con_type", "con_type_changed", 
+                                                                           "polarity_changed", "manual_droop_compliance", 
+                                                                           "manual_reconnect_compliance"))
+      }
       self$check_table_has_expected_columns('site_details_raw', c("site_id", "s_postcode", "s_state", "ac", "dc", 
                                                                   "manufacturer", "model", 
                                                                   "pv_installation_year_month"))
-      self$check_table_has_expected_columns('site_details_cleaned', c("site_id", "s_postcode", "s_state", 
-                                                                      "pv_installation_year_month", "ac", "dc", 
-                                                                      "ac_old", "dc_old", "ac_dc_ratio", "manufacturer", 
-                                                                      "model", "rows_grouped", "max_power_kW", 
-                                                                      "change_ac", "change_dc"))
-      self$check_table_has_expected_columns('postcode_lon_lat', c("postcode", "lon", "lat"))
+      
+      if (self$check_if_table_exists('site_details_cleaned')){
+        self$check_table_has_expected_columns('site_details_cleaned', c("site_id", "s_postcode", "s_state", 
+                                                                        "pv_installation_year_month", "ac", "dc", 
+                                                                        "ac_old", "dc_old", "ac_dc_ratio", "manufacturer", 
+                                                                        "model", "rows_grouped", "max_power_kW", 
+                                                                        "change_ac", "change_dc"))
+      }
+      
+      if (self$check_if_table_exists('postcode_lon_lat')){
+        self$check_table_has_expected_columns('postcode_lon_lat', c("postcode", "lon", "lat"))
+      }
       
     },
     check_table_has_expected_columns = function(table, expected_columns){
@@ -465,12 +473,25 @@ DBInterface <- R6::R6Class("DBInterface",
                     ((select c_id, d, e from timeseries 
                             where c_id in (select c_id from circuit_in_state)) a
                         inner join
+                     (select c_id, polarity from circuit_details_raw) b
+                    on a.c_id == b.c_id) c
+                group by c.c_id; 
+               "
+      max_power <- sqldf::sqldf(query , dbname = self$db_path_name)
+      max_power <- mutate(max_power, clean = 'raw')
+      if (self$check_if_table_exists('circuit_details_clean')){
+        query <- "select c.c_id as c_id, max(c.e * c.polarity / (c.d * 1000)) as max_power from
+                    ((select c_id, d, e from timeseries 
+                            where c_id in (select c_id from circuit_in_state)) a
+                        inner join
                      (select c_id, polarity from circuit_details_cleaned) b
                     on a.c_id == b.c_id) c
                 group by c.c_id; 
                "
-
-      max_power <- sqldf::sqldf(query , dbname = self$db_path_name)
+        max_power_clean <- sqldf::sqldf(query , dbname = self$db_path_name)
+        max_power_clean <- mutate(max_power_clean, clean = 'clean')
+        max_power <- bind_rows(max_power, max_power_clean)
+      }
       return(max_power)
     },
     get_postcode_lon_lat = function(){
@@ -684,6 +705,14 @@ DBInterface <- R6::R6Class("DBInterface",
       max_timestamp <- RSQLite::dbGetQuery(con, "SELECT MAX(ts) as ts FROM timeseries")
       RSQLite::dbDisconnect(con)
       return(fastPOSIXct(max_timestamp$ts[1], tz="Australia/Brisbane"))
+    },
+    check_if_table_exists = function(table_name){
+      query <- "SELECT count(*) as flag FROM sqlite_master WHERE type='table' AND name='table_name'"
+      query <- gsub('table_name', table_name, query)
+      con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)
+      exists_flag <- RSQLite::dbGetQuery(con, query)
+      RSQLite::dbDisconnect(con)
+      return(exists_flag$flag == 1)
     }
   )
 )
