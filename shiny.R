@@ -86,6 +86,7 @@ ui <- fluidPage(
           uiOutput("event_date"),
           uiOutput("pre_event_interval"),
           uiOutput("window_length"),
+          uiOutput("post_event_ufls_window_length"),
           uiOutput("event_latitude"),
           uiOutput("event_longitude"),
           uiOutput("zone_one_radius"),
@@ -186,6 +187,18 @@ ui <- fluidPage(
                                          label = strong('Toatl ramp threshold for non compliance, in pct'), value = 0.25),
                             numericInput("ramp_rate_change_resource_limit_threshold", 
                                          label = strong('Ramp rate change threshold for detecting resource limitation, in pct/min'), value = -0.1),
+                            h3("UFLS settings"),
+                            numericInput("pre_event_ufls_window_length", 
+                                         label = strong('Pre-event UFLS Window: The time window before the 
+                                                         event used to determine if the connection with a 
+                                                         device is stable enough to determine its UFLS status, 
+                                                         in minutes.'), 
+                                         value = 5),
+                            numericInput("pre_event_ufls_stability_threshold", 
+                                         label = strong('The fraction of the Pre-event UFLS Window that needs to be 
+                                                         sampled for the connection with a device to be considered
+                                                         stable enough to determine its UFLS status.'), 
+                                         value = 0.6, max = 1, min = 0),
                             h3("Misc settings"),
                             numericInput("disconnecting_threshold", 
                                          label = strong('Disconnecting threshold, level below which circuit is considered to
@@ -235,6 +248,7 @@ reset_sidebar <- function(input, output, session, stringsAsFactors) {
   output$event_date <- renderUI({})
   output$pre_event_interval <- renderUI({})
   output$window_length <- renderUI({})
+  output$post_event_ufls_window_length <- renderUI({})
   output$event_latitude <- renderUI({})
   output$event_longitude <- renderUI({})
   output$zone_one_radius <- renderUI({})
@@ -370,6 +384,7 @@ server <- function(input,output,session){
   })
   agg_on_standard <- reactive({input$standard_agg})
   window_length <- reactive({input$window_length})
+  post_event_ufls_window_length <- reactive({input$post_event_ufls_window_length})
   event_latitude <- reactive({input$event_latitude})
   event_longitude <- reactive({input$event_longitude})
   zone_one_radius <- reactive({input$zone_one_radius})
@@ -389,6 +404,8 @@ server <- function(input,output,session){
   total_ramp_threshold_for_compliance <- reactive({input$total_ramp_threshold_for_compliance})
   total_ramp_threshold_for_non_compliance <- reactive({input$total_ramp_threshold_for_non_compliance})
   ramp_rate_change_resource_limit_threshold <- reactive({input$ramp_rate_change_resource_limit_threshold})
+  pre_event_ufls_window_length <- reactive({input$pre_event_ufls_window_length})
+  pre_event_ufls_stability_threshold <- reactive({input$pre_event_ufls_stability_threshold})
   disconnecting_threshold <- reactive({input$disconnecting_threshold})
   exclude_solar_edge <- reactive({input$exclude_solar_edge})
   
@@ -662,9 +679,9 @@ server <- function(input,output,session){
           checkboxGroupButtons(inputId="responses", 
                                label=strong("Select Responses:"),
                                choices=list("1 Ride Through", "2 Curtail", "3 Drop to Zero", "4 Disconnect","5 Off at t0", 
-                                            "6 Not enough data", "Undefined", NA),
+                                            "6 Not enough data", "7 UFLS Dropout", "Undefined", NA),
                                selected=list("1 Ride Through", "2 Curtail", "3 Drop to Zero", "4 Disconnect",
-                                             "5 Off at t0", "6 Not enough data", "Undefined", NA),
+                                             "5 Off at t0", "6 Not enough data", "7 UFLS Dropout", "Undefined", NA),
                                justified=TRUE, status="primary", individual=TRUE,
                                checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")))
         })
@@ -678,10 +695,10 @@ server <- function(input,output,session){
         output$compliance <- renderUI({
           checkboxGroupButtons(inputId="compliance", label=strong("Compliance"), 
                                choices=list("Compliant", "Non-compliant Responding", 
-                                            "Non-compliant", "Disconnect/Drop to Zero",
+                                            "Non-compliant", "UFLS Dropout", "Disconnect/Drop to Zero",
                                             "Off at t0", "Not enough data", "Undefined", NA),
                                selected=list("Compliant", "Non-compliant Responding", 
-                                             "Non-compliant", "Disconnect/Drop to Zero",
+                                             "Non-compliant", "UFLS Dropout", "Disconnect/Drop to Zero",
                                              "Off at t0", "Not enough data", "Undefined", NA), 
                                justified=TRUE, status="primary", individual=TRUE,
                                checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")))
@@ -725,7 +742,12 @@ server <- function(input,output,session){
         })
         output$window_length <- renderUI({
           numericInput("window_length", label=strong('Set window length (min),
-                                                     Only data in this window is used for response analysis.'), value=5, min = 1, max = 100, step = 1)
+                                                     Only data in this window is used for response analysis.'), 
+                       value=5, min = 1, max = 100, step = 1)
+        })
+        output$post_event_ufls_window_length <- renderUI({
+          numericInput("post_event_ufls_window_length", label=strong('Set post event UFLS window length (min)'), 
+                       value=5, min = 1, max = 100, step = 1)
         })
         output$event_latitude <- renderUI({
           numericInput("event_latitude", label=strong('Set event latitude'), value=-28.838132)
@@ -805,11 +827,21 @@ server <- function(input,output,session){
       if (length(models()) > 0) {combined_data_f <- filter(combined_data_f, model %in% models())}
       if (length(sites()) > 0) {combined_data_f <- filter(combined_data_f, site_id %in% sites())}
       if (length(circuits()) > 0) {combined_data_f <- filter(combined_data_f, c_id %in% circuits())}
+      
       if(length(combined_data_f$ts) > 0){
         combined_data_f <- categorise_response(combined_data_f, pre_event_interval(), window_length())
         combined_data_f <- mutate(combined_data_f,  response_category=ifelse(response_category %in% c(NA), "NA", response_category))
         combined_data_f <- filter(combined_data_f, response_category %in% responses())
+        ufls_statuses <- ufls_detection(db = v$db, region = region_to_load(), 
+                                        pre_event_interval = pre_event_interval(), 
+                                        pre_event_window_length = pre_event_ufls_window_length(),
+                                        post_event_window_length = post_event_ufls_window_length(), 
+                                        pre_pct_sample_seconds_threshold = pre_event_ufls_stability_threshold())
+        combined_data_f <- left_join(combined_data_f, ufls_statuses, by=c("c_id"))
+        combined_data_f <- mutate(combined_data_f, response_category = 
+                                  if_else(ufls_status == 'UFLS Dropout', ufls_status, response_category))
       }
+      
       # Filter data by user selected time window
       if(length(combined_data_f$ts) > 0){
         combined_data_f <- get_distance_from_event(combined_data_f, v$postcode_data, event_latitude(), event_longitude())
@@ -920,7 +952,8 @@ server <- function(input,output,session){
                                     site_performance_factor, response_category, zone, distance, lat, lon, e, con_type,
                                     first_ac, polarity, compliance_status, reconnection_compliance_status, 
                                     manual_droop_compliance, manual_reconnect_compliance, reconnection_time, 
-                                    ramp_above_threshold, c_id_daily_norm_power, max_power)
+                                    ramp_above_threshold, c_id_daily_norm_power, max_power, ufls_status,
+                                    pre_event_sampled_seconds, post_event_sampled_seconds)
         # Create copy of filtered data to use in upscaling
         combined_data_f2 <- combined_data_f
           if(raw_upscale()){combined_data_f2 <- upscale(combined_data_f2, v$install_data)}
@@ -944,7 +977,8 @@ server <- function(input,output,session){
                                       Standard_Version, Grouping, sum_ac, clean, manufacturer, model, response_category, 
                                       zone, distance, lat, lon, con_type, first_ac, polarity, compliance_status, 
                                       reconnection_compliance_status, manual_droop_compliance, manual_reconnect_compliance, 
-                                      reconnection_time, ramp_above_threshold, max_power)
+                                      reconnection_time, ramp_above_threshold, max_power, ufls_status,
+                                      pre_event_sampled_seconds, post_event_sampled_seconds)
           
           # Summarise and upscale disconnections on a manufacturer basis.
           if (exclude_solar_edge()){
@@ -1474,6 +1508,7 @@ server <- function(input,output,session){
     
     settings$pre_event_interval <- as.character(pre_event_interval())
     settings$window_length <- window_length()
+    settings$post_event_ufls_window_length <- post_event_ufls_window_length()
     settings$event_latitude <- event_latitude()
     settings$event_longitude <- event_longitude()
     settings$zone_one_radius <- zone_one_radius()
@@ -1490,6 +1525,8 @@ server <- function(input,output,session){
     settings$total_ramp_threshold_for_compliance <- total_ramp_threshold_for_compliance()
     settings$total_ramp_threshold_for_non_compliance <- total_ramp_threshold_for_non_compliance()
     settings$ramp_rate_change_resource_limit_threshold <- ramp_rate_change_resource_limit_threshold()
+    settings$pre_event_ufls_window_length <- pre_event_ufls_window_length()
+    settings$pre_event_ufls_stability_threshold <- pre_event_ufls_stability_threshold()
     settings$disconnecting_threshold <- disconnecting_threshold()
     settings$exclude_solar_edge <- exclude_solar_edge()
     
@@ -1577,6 +1614,8 @@ server <- function(input,output,session){
       updateDateInput(session, "event_date", value = strftime(settings$pre_event_interval, format = "%Y-%m-%d"))
       updateTimeInput(session, "pre_event_interval", value = settings$pre_event_interval)
       updateNumericInput(session, "window_length", value = settings$window_length)
+      updateNumericInput(session, "post_event_ufls_window_length", 
+                         value = settings$post_event_ufls_window_length)
       updateNumericInput(session, "event_latitude", value = settings$event_latitude)
       updateNumericInput(session, "event_longitude", value = settings$event_longitude)
       updateNumericInput(session, "zone_one_radius", value = settings$zone_one_radius)
@@ -1599,6 +1638,9 @@ server <- function(input,output,session){
       updateNumericInput(session, "total_ramp_threshold_for_compliance", value = settings$total_ramp_threshold_for_compliance)
       updateNumericInput(session, "total_ramp_threshold_for_non_compliance", value = settings$total_ramp_threshold_for_non_compliance)
       updateNumericInput(session, "ramp_rate_change_resource_limit_threshold", value = settings$ramp_rate_change_resource_limit_threshold)
+      updateNumericInput(session, "pre_event_ufls_window_length", value = settings$pre_event_ufls_window_length)
+      updateNumericInput(session, "pre_event_ufls_stability_threshold", 
+                         value = settings$pre_event_ufls_stability_threshold)
       updateNumericInput(session, "disconnecting_threshold", value = settings$disconnecting_threshold)
       updateMaterialSwitch(session, "exclude_solar_edge", value = settings$exclude_solar_edge)
     }
