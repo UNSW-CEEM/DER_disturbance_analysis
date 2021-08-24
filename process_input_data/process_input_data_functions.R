@@ -7,14 +7,18 @@ process_time_series_data <- function(time_series_data){
   return(time_series_data)
 }
 
-get_time_offsets <- function(time_series_data){
-  offsets <- mutate(time_series_data, time_offset=format(ts, "%S"))
-  offsets <- group_by(offsets, c_id, time_offset)
-  offsets <- summarise(offsets, time_offset_count=length(time_offset))
-  offsets <- filter(offsets, time_offset_count>=10)
-  offsets <- group_by(offsets, c_id)
-  offsets <- summarise(offsets, time_offset=min(as.numeric(time_offset)))
-  time_series_data <- left_join(time_series_data, offsets, by='c_id')
+get_time_offsets <- function(time_series_data, d){
+  if (d != 5) {
+    offsets <- mutate(time_series_data, time_offset=format(ts, "%S"))
+    offsets <- group_by(offsets, c_id, time_offset)
+    offsets <- summarise(offsets, time_offset_count=length(time_offset))
+    offsets <- filter(offsets, time_offset_count>=10)
+    offsets <- group_by(offsets, c_id)
+    offsets <- summarise(offsets, time_offset=min(as.numeric(time_offset)))
+    time_series_data <- left_join(time_series_data, offsets, by='c_id')
+  } else {
+    time_series_data <- mutate(time_series_data, time_offset = 0)
+  }
   return(time_series_data)
 }
 

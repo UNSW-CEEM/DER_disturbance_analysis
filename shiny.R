@@ -534,7 +534,7 @@ server <- function(input,output,session){
     install_data_file <- "inbuilt_data/cer_cumulative_capacity_and_number.csv"
     if (!file.exists(install_data_file)){
       long_error_message <- c("The required file cer_cumulative_capacity_and_number.csv could ",
-                              "not be found. Please add it to the main project directory.")
+                              "not be found. Please add it to the inbuilt_data directory.")
       long_error_message <- paste(long_error_message, collapse = '')
       shinyalert("Error loading install data", long_error_message)
       error_check_passed = FALSE
@@ -550,9 +550,17 @@ server <- function(input,output,session){
     cer_manufacturer_data <- "inbuilt_data/cer_cumulative_capacity_and_number_by_manufacturer.csv"
     if (!file.exists(cer_manufacturer_data)){
       long_error_message <- c("The required file cer_manufacturer_data could ",
-                              "not be found. Please add it to the main project directory.")
+                              "not be found. Please add it to the inbuilt_data directory.")
       long_error_message <- paste(long_error_message, collapse = '')
       shinyalert("Error loading manufacturer install data", long_error_message)
+      error_check_passed = FALSE
+    }
+    off_grid_postcodes <- "inbuilt_data/off_grid_postcodes.csv"
+    if (!file.exists(off_grid_postcodes)){
+      long_error_message <- c("The required file off_grid_postcodes could ",
+                              "not be found. Please add it to the inbuilt_data directory.")
+      long_error_message <- paste(long_error_message, collapse = '')
+      shinyalert("Error loading off grid post code data", long_error_message)
       error_check_passed = FALSE
     }
 
@@ -611,10 +619,13 @@ server <- function(input,output,session){
         manufacturer_install_data <- read.csv(file = cer_manufacturer_data, header = TRUE, stringsAsFactors = FALSE)
         v$manufacturer_install_data <- calc_installed_capacity_by_standard_and_manufacturer(manufacturer_install_data)
         
-        # Load postcode lat and long data
         postcode_data_file <- "inbuilt_data/PostcodesLatLongQGIS.csv"
         postcode_data <- read.csv(file=postcode_data_file, header=TRUE, stringsAsFactors = FALSE)
         v$postcode_data <- process_postcode_data(postcode_data)
+        
+        off_grid_postcodes <- "inbuilt_data/off_grid_postcodes.csv"
+        v$off_grid_postcodes <- read.csv(file=off_grid_postcodes, header=TRUE, stringsAsFactors = FALSE)
+        v$off_grid_postcodes <- v$off_grid_postcodes$postcodes
         
         if(frequency_data_file()!=''){
           v$frequency_data <- read.csv(file=frequency_data_file(), header=TRUE, stringsAsFactors = FALSE)
@@ -625,7 +636,7 @@ server <- function(input,output,session){
         }
         
         # Get offset filter options and label
-        v$combined_data <- get_time_offsets(v$combined_data)
+        v$combined_data <- get_time_offsets(v$combined_data, d=duration())
         v$unique_offsets <- get_time_series_unique_offsets(v$combined_data)
         sample_counts <- get_offset_sample_counts(v$combined_data, v$unique_offsets)
         unique_offsets_filter_label <- make_offset_filter_label(sample_counts, v$unique_offsets)
@@ -819,6 +830,8 @@ server <- function(input,output,session){
       combined_data_f <- filter(combined_data_f, sum_ac<=100)
       site_types <- c("pv_site_net", "pv_site", "pv_inverter_net", "pv_inverter")
       combined_data_f <- filter(combined_data_f, con_type %in% site_types)
+      off_grid_postcodes <- v$off_grid_postcodes
+      combined_data_f <- filter(combined_data_f, !(s_postcode %in% off_grid_postcodes))
       combined_data_f <- filter(combined_data_f, clean %in% clean())
       combined_data_f <- filter(combined_data_f, Grouping %in% size_groupings())
       combined_data_f <- filter(combined_data_f, Standard_Version %in% standards())
@@ -827,6 +840,8 @@ server <- function(input,output,session){
       if (length(models()) > 0) {combined_data_f <- filter(combined_data_f, model %in% models())}
       if (length(sites()) > 0) {combined_data_f <- filter(combined_data_f, site_id %in% sites())}
       if (length(circuits()) > 0) {combined_data_f <- filter(combined_data_f, c_id %in% circuits())}
+      
+      browser()
       
       if(length(combined_data_f$ts) > 0){
         combined_data_f <- categorise_response(combined_data_f, pre_event_interval(), window_length())
