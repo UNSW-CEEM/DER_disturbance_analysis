@@ -157,32 +157,6 @@ test_that("Test the power calculations",{
   expect_equal(test_combined_data, expected_answer, tolerance=0.0001)
 }) 
 
-test_that("Test assertion in cicruit details processing function, should fail if polarity is not 1 or -1", {
-  e <- c(10.0, 9.0, 11.5)
-  polarity <- c(1, -1, 2)
-  d <- c(5, 5, 5)
-  con_type <-c("type 1", "type 1", "type 1")
-  c_id <- c(1, 1, 1)
-  test_energy_data <- data.frame(e, polarity, d, con_type, c_id, stringsAsFactors=FALSE)
-  expect_error(process_raw_circuit_details(test_energy_data))
-})
-
-test_that("Test the circuit details filtering function",{
-  # Test input data
-  con_type <- c("ac_load_net", "load_air_conditioner", "ac_load", "load_hot_water", "pv_inverter", "pv_inverter_net",
-                "pv_site", "pv_site_net")
-  c_id <- c(1001, 1002, 1003, 1000, 1000, 1001, 1002, 1003)
-  test_combined_data <- data.frame(con_type, c_id, stringsAsFactors = FALSE)
-  # Test output data
-  con_type <- c("pv_inverter", "pv_inverter_net", "pv_site", "pv_site_net")
-  c_id <- c("1000", "1001", "1002", "1003")
-  expected_answer <- data.frame(con_type, c_id, stringsAsFactors = FALSE)
-  # Call processing function
-  test_combined_data = process_raw_circuit_details(test_combined_data)
-  # Test the answer matches the expected answer
-  expect_equal(test_combined_data, expected_answer, tolerance=0.0001)
-})
-
 test_that("Test the standard categorisation function",{
   # Test input data
   site_id <- c(101, 50, 10002, 89, 567, 111, 1)
@@ -328,12 +302,37 @@ test_that("Test assertion of s_postcode data assumptions, lon can be interpreted
   expect_error(process_postcode_data(postcode_data))
 })
 
-test_that("Test the calc of duration modes",{
-  # Test input data
-  ts <- c("2018-01-01 00:01:00", "2018-01-01 00:02:00", "2018-01-01 00:03:00")
-  ts <- as.POSIXct(strptime(ts, "%Y-%m-%d %H:%M:%S", tz="Australia/Brisbane"))
-  # Call processing function
-  out = duration_mode(ts)
-  # Test the answer matches the expected answer
-  expect_identical(out, 60)
+load_test_df <- function(text){
+  text <- gsub(" ", "", text)
+  text <- gsub("~", " ", text)
+  df <- read.table(text = text, sep = ",", header = TRUE, stringsAsFactors = FALSE)
+  return(df)
+}
+
+testthat::test_that("Calculating time offsets",{
+  
+  time_series_data <- "                 ts, c_id,  d
+                       2018-01-01~00:01:05,    1,  5     
+                       2018-01-01~00:02:40,    2,  5          
+                       2018-01-01~00:03:33,    3, 30
+                       2018-01-01~00:04:55,    4, 60
+                       2018-01-01~00:04:40,    4, 60"
+  
+  time_series_data <- load_test_df(time_series_data)
+  time_series_data <- mutate(time_series_data, ts = fastPOSIXct(ts, tz="Australia/Brisbane"))
+  
+  
+  data_with_offsets <- "                 ts, c_id,  d, time_offset
+                        2018-01-01~00:01:05,    1,  5,           0
+                        2018-01-01~00:02:40,    2,  5,           0
+                        2018-01-01~00:03:33,    3, 30,           3  
+                        2018-01-01~00:04:55,    4, 60,          55  
+                        2018-01-01~00:04:40,    4, 60,          40" 
+  
+  data_with_offsets <- load_test_df(data_with_offsets)
+  data_with_offsets <- mutate(data_with_offsets, ts = fastPOSIXct(ts, tz="Australia/Brisbane"))
+  
+  time_series_data <- get_time_offsets(time_series_data)
+
+  testthat::expect_equal(time_series_data, data_with_offsets, tolerance = 1e-4)
 })

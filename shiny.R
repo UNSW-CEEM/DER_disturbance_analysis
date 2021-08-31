@@ -636,7 +636,7 @@ server <- function(input,output,session){
         }
         
         # Get offset filter options and label
-        v$combined_data <- get_time_offsets(v$combined_data, d=duration())
+        v$combined_data <- get_time_offsets(v$combined_data)
         v$unique_offsets <- get_time_series_unique_offsets(v$combined_data)
         sample_counts <- get_offset_sample_counts(v$combined_data, v$unique_offsets)
         unique_offsets_filter_label <- make_offset_filter_label(sample_counts, v$unique_offsets)
@@ -669,14 +669,16 @@ server <- function(input,output,session){
           checkboxGroupButtons(inputId="size_groupings", label=strong("Size Groupings"),
                                choices=list("30-100kW", "<30 kW"), selected=list("30-100kW", "<30 kW"),
                                justified=TRUE, status="primary", individual=TRUE,
-                               checkIcon=list(yes=icon("ok", lib="glyphicon"),no=icon("remove", lib="glyphicon")))
+                               checkIcon=list(yes=icon("ok", lib="glyphicon"),no=icon("remove", lib="glyphicon")),
+                               direction = "vertical")
         })
         output$cleaned <- renderUI({
           checkboxGroupButtons(inputId="cleaned", 
                                label=strong("Data sets"), choices=list("clean", "raw"),
                                selected=list("clean"),
                                justified=TRUE, status="primary", individual=TRUE,
-                               checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")))
+                               checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")),
+                               direction = "vertical")
         })
         output$StdVersion <- renderUI({
           checkboxGroupButtons(inputId="StdVersion", 
@@ -684,7 +686,8 @@ server <- function(input,output,session){
                                                                               "AS4777.2:2015", "AS4777.2:2015 VDRT"),
                                selected=list("AS4777.3:2005", "Transition", "AS4777.2:2015", "AS4777.2:2015 VDRT"),
                                justified=TRUE, status="primary", individual=TRUE,
-                               checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")))
+                               checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")),
+                               direction = "vertical")
           })
         output$responses <- renderUI({
           checkboxGroupButtons(inputId="responses", 
@@ -694,14 +697,16 @@ server <- function(input,output,session){
                                selected=list("1 Ride Through", "2 Curtail", "3 Drop to Zero", "4 Disconnect",
                                              "5 Off at t0", "6 Not enough data", "7 UFLS Dropout", "Undefined", NA),
                                justified=TRUE, status="primary", individual=TRUE,
-                               checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")))
+                               checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")),
+                               direction = "vertical")
         })
         output$zones <- renderUI({
           checkboxGroupButtons(inputId="zones", label=strong("Zones"), 
                                choices=list("1 Zone", "2 Zone", "3 Zone", "Undefined", NA),
                                selected=list("1 Zone", "2 Zone", "3 Zone", "Undefined", NA), 
                                justified=TRUE, status="primary", individual=TRUE,
-                               checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")))
+                               checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")),
+                               direction = "vertical")
         })
         output$compliance <- renderUI({
           checkboxGroupButtons(inputId="compliance", label=strong("Compliance"), 
@@ -712,7 +717,8 @@ server <- function(input,output,session){
                                              "Non-compliant", "UFLS Dropout", "Disconnect/Drop to Zero",
                                              "Off at t0", "Not enough data", "Undefined", NA), 
                                justified=TRUE, status="primary", individual=TRUE,
-                               checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")))
+                               checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")),
+                               direction = "vertical")
         })
         output$reconnection_compliance <- renderUI({
           checkboxGroupButtons(inputId="reconnection_compliance", label=strong("Reconnection Compliance"), 
@@ -721,13 +727,15 @@ server <- function(input,output,session){
                                selected=list("Compliant", "Non Compliant", 
                                              "Unsure", "Cannot be set", NA),
                                justified=TRUE, status="primary", individual=TRUE,
-                               checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")))
+                               checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")),
+                               direction = "vertical")
         })
         output$offsets <- renderUI({
           checkboxGroupButtons(inputId="offsets", label=unique_offsets_filter_label, 
                                choices=v$unique_offsets, selected=c(v$unique_offsets[which.max(sample_counts)]) ,
                                justified=TRUE, status="primary", individual=TRUE,
-                               checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")))
+                               checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")),
+                               direction = "vertical")
         }) 
         shinyjs::show("raw_upscale")
         shinyjs::show("pst_agg")
@@ -841,18 +849,18 @@ server <- function(input,output,session){
       if (length(sites()) > 0) {combined_data_f <- filter(combined_data_f, site_id %in% sites())}
       if (length(circuits()) > 0) {combined_data_f <- filter(combined_data_f, c_id %in% circuits())}
       
-      browser()
-      
       if(length(combined_data_f$ts) > 0){
         combined_data_f <- categorise_response(combined_data_f, pre_event_interval(), window_length())
-        combined_data_f <- mutate(combined_data_f,  response_category=ifelse(response_category %in% c(NA), "NA", response_category))
+        combined_data_f <- mutate(combined_data_f,  
+                                  response_category = ifelse(response_category %in% c(NA), "NA", response_category))
         combined_data_f <- filter(combined_data_f, response_category %in% responses())
+        
         ufls_statuses <- ufls_detection(db = v$db, region = region_to_load(), 
                                         pre_event_interval = pre_event_interval(), 
                                         pre_event_window_length = pre_event_ufls_window_length(),
                                         post_event_window_length = post_event_ufls_window_length(), 
                                         pre_pct_sample_seconds_threshold = pre_event_ufls_stability_threshold())
-        combined_data_f <- left_join(combined_data_f, ufls_statuses, by=c("c_id"))
+        combined_data_f <- left_join(combined_data_f, ufls_statuses, by = c("c_id"))
         combined_data_f <- mutate(combined_data_f, response_category = 
                                   if_else(ufls_status == 'UFLS Dropout', ufls_status, response_category))
       }
@@ -1483,7 +1491,7 @@ server <- function(input,output,session){
   })
   
   
-  get_current_settings <-function(){
+  get_current_settings <- function(){
     settings <- vector(mode='list')
     
     settings$database_name <- database_name()
