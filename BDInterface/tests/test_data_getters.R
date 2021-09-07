@@ -51,8 +51,11 @@ testthat::test_that("Test get_max_timestamp",{
 
 testthat::test_that("Test get_max_circuit_powers simple case",{
   max_powers <- dp$get_max_circuit_powers('NSW')
-  expected_results <- data.frame(c_id = c(1),
-                                 max_power = c((100/5)/1000))
+  expected_results <- data.frame(c_id = c(1, 1),
+                                 max_power = c((100/5)/1000,
+                                               (100/5)/1000),
+                                 clean = c('raw', 'clean'),
+                                 stringsAsFactors = FALSE)
   testthat::expect_equal(max_powers, expected_results)
 })
 
@@ -90,10 +93,16 @@ dp$run_data_cleaning_loop(max_chunk_size = 10)
 
 testthat::test_that("Test get_max_circuit_powers complex case",{
   max_powers <- dp$get_max_circuit_powers('NSW')
-  expected_results <- data.frame(c_id = c(1, 2, 3),
+  expected_results <- data.frame(c_id = c(1, 2, 3, 1, 2, 3),
                                  max_power = c((100/5)/1000,
                                                (10000/60)/1000,
-                                                (-101/5)/1000))
+                                               (-101/5)/1000,
+                                               (100/5)/1000,
+                                               (10000/60)/1000,
+                                               (-101/5)/1000),
+                                 clean = c('raw', 'raw', 'raw',
+                                           'clean', 'clean', 'clean'),
+                                 stringsAsFactors = FALSE)
   testthat::expect_equal(max_powers, expected_results)
 })
 

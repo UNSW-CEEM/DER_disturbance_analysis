@@ -479,7 +479,7 @@ DBInterface <- R6::R6Class("DBInterface",
                "
       max_power <- sqldf::sqldf(query , dbname = self$db_path_name)
       max_power <- mutate(max_power, clean = 'raw')
-      if (self$check_if_table_exists('circuit_details_clean')){
+      if (self$check_if_table_exists('circuit_details_cleaned')){
         query <- "select c.c_id as c_id, max(c.e * c.polarity / (c.d * 1000)) as max_power from
                     ((select c_id, d, e from timeseries 
                             where c_id in (select c_id from circuit_in_state)) a
