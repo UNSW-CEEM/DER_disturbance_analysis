@@ -204,7 +204,7 @@ ui <- fluidPage(
                                          label = strong('Disconnecting threshold, level below which circuit is considered to
                                                       have disconnected.'), 
                                          value = 0.05, max = 1, min = 0),
-                            materialSwitch("exclude_solar_edge", label = strong("Exclude solar edge from reconnection summary."), 
+                            materialSwitch("exclude_solar_edge", label = strong("Exclude solar edge from disconnection summary."), 
                                            status = "primary", value = FALSE),
                             actionButton("load_backend_settings", "Load from settings file")
                             ),
