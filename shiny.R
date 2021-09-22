@@ -860,9 +860,14 @@ server <- function(input,output,session){
                                         pre_event_window_length = pre_event_ufls_window_length(),
                                         post_event_window_length = post_event_ufls_window_length(), 
                                         pre_pct_sample_seconds_threshold = pre_event_ufls_stability_threshold())
+        # TODO: voltage UFLS check
+        ufls_statuses_v <- ufls_detection_voltage(combined_data_f, pre_event_interval(), window_length(), fill_nans = TRUE)
         combined_data_f <- left_join(combined_data_f, ufls_statuses, by = c("c_id"))
+        combined_data_f <- left_join(combined_data_f, ufls_statuses_v, by = c("c_id"))
         combined_data_f <- mutate(combined_data_f, response_category = 
-                                  if_else(ufls_status == 'UFLS Dropout', ufls_status, response_category))
+                                  if_else((ufls_status == 'UFLS Dropout') | 
+                                            (ufls_status_v == 'UFLS Dropout'), 
+                                          'UFLS Dropout', response_category))
       }
       
       # Filter data by user selected time window
