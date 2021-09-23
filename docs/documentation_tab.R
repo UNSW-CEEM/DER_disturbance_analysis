@@ -29,6 +29,13 @@ documentation_panel <- function(){
             tags$li('"NA" which is assigned to circuits that have zero data points during the event window'),
             tags$li('"Undefined" is the default category for circuits that do not fall into one of the above categories,
                     circuits falling into this category probably indicates the tool is not functioning properly')),
+    h4('UFLS classification'),
+    div('Circuits which disconnect due to UFLS are identified by two methods. The first is a timestamp check which 
+        looks at the number of timesteps included in the dataset directly before and after the event. If the circuit
+        has greater than the threshold samples before and 0 samples after it is classified as UFLS Dropout.
+        The second method was developed for the Tesla data in which a site can island and so timesteps may not be 
+        skipped. This method calculates the average voltage at the site for a set window size before and after the event 
+        time, and a drop from a pre event average > 180 to post event average < 180 is classified as UFLS Dropout.'),
     h4('Zone category definition'),
     div('Circuits can be assigned one of 5 zone categories:'), 
     tags$ul(tags$li('zones 1 to 3 are assigned to circuits between the outer radius of zone and the outer radius 
