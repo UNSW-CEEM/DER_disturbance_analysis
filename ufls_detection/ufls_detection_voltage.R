@@ -24,7 +24,7 @@ ufls_detection_voltage <- function(combined_data, event_time, window_length,
   
   ufls_dropout_voltage <- mutate(voltage_by_c_id,
       ufls_status_v = if_else((pre_event_v_mean > 180) &
-                              (post_event_v_mean/pre_event_v_mean < 0.5),
+                              (post_event_v_mean < 180),
                               'UFLS Dropout', 
                               if_else(pre_event_v_mean > 180, 
                                       'No UFLS Dropout', 
