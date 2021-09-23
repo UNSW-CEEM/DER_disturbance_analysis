@@ -861,7 +861,7 @@ server <- function(input,output,session){
                                         post_event_window_length = post_event_ufls_window_length(), 
                                         pre_pct_sample_seconds_threshold = pre_event_ufls_stability_threshold())
         # TODO: voltage UFLS check
-        ufls_statuses_v <- ufls_detection_voltage(combined_data_f, pre_event_interval(), window_length(), fill_nans = TRUE)
+        ufls_statuses_v <- ufls_detection_voltage(combined_data_f, pre_event_interval(), window_length(), fill_nans = FALSE)
         combined_data_f <- left_join(combined_data_f, ufls_statuses, by = c("c_id"))
         combined_data_f <- left_join(combined_data_f, ufls_statuses_v, by = c("c_id"))
         combined_data_f <- mutate(combined_data_f, response_category = 
@@ -1006,7 +1006,8 @@ server <- function(input,output,session){
                                       zone, distance, lat, lon, con_type, first_ac, polarity, compliance_status, 
                                       reconnection_compliance_status, manual_droop_compliance, manual_reconnect_compliance, 
                                       reconnection_time, ramp_above_threshold, max_power, ufls_status,
-                                      pre_event_sampled_seconds, post_event_sampled_seconds)
+                                      pre_event_sampled_seconds, post_event_sampled_seconds, 
+                                      ufls_status_v, pre_event_v_mean, post_event_v_mean)
           
           # Summarise and upscale disconnections on a manufacturer basis.
           if (exclude_solar_edge()){
