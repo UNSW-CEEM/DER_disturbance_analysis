@@ -86,6 +86,7 @@ test_that("Test a simple example with one systems through high level function", 
   clean <- c("raw", "raw", "raw", "raw", "raw", "raw")
   power_kW <- c(10, 10, 10, 10, 10, 10)
   input_data <- data.frame(c_id, ts, power_kW, d, clean, stringsAsFactors = FALSE)
+  NED_threshold_pct <- 0.8
   out <- categorise_response(input_data, event_time, window_length,NED_threshold_pct)
   ts <- c("2018-01-01 13:11:55", "2018-01-01 13:12:55", "2018-01-01 13:13:55", "2018-01-01 13:14:55", 
           "2018-01-01 13:15:55", "2018-01-01 13:16:55")
@@ -112,6 +113,7 @@ test_that("Test a simple example with one systems with no pre event interval", {
   clean <- c("raw", "raw", "raw", "raw", "raw", "raw")
   power_kW <- c(10, 10, 10, 10, 10, 10)
   input_data <- data.frame(c_id, ts, power_kW, d, clean, stringsAsFactors = FALSE)
+  NED_threshold_pct <- 0.8
   out <- categorise_response(input_data, event_time, window_length,NED_threshold_pct)
   ts <- c("2018-01-01 13:10:55", "2018-01-01 13:12:55", "2018-01-01 13:13:55", "2018-01-01 13:14:55", 
           "2018-01-01 13:15:55", "2018-01-01 13:16:55")
@@ -140,6 +142,7 @@ test_that("Test a simple example with one system with data points above threshol
   clean <- c("raw", "raw", "raw", "raw")
   power_kW <- c(10, 10, 10, 10)
   input_data <- data.frame(c_id, ts, power_kW, d, clean, stringsAsFactors = FALSE)
+  NED_threshold_pct <- 0.8
   out <- categorise_response(input_data, event_time, window_length,NED_threshold_pct)
   ts <- c("2018-01-01 13:11:55", "2018-01-01 13:12:55", 
           "2018-01-01 13:15:55", "2018-01-01 13:16:55")
@@ -167,6 +170,7 @@ test_that("Test a simple example with one system with data points below threshol
   clean <- c("raw",  "raw", "raw")
   power_kW <- c(10,  10, 10)
   input_data <- data.frame(c_id, ts, power_kW, d, clean, stringsAsFactors = FALSE)
+  NED_threshold_pct <- 0.8
   out <- categorise_response(input_data, event_time, window_length,NED_threshold_pct)
   ts <- c("2018-01-01 13:11:55", 
           "2018-01-01 13:15:55", "2018-01-01 13:16:55")
@@ -194,6 +198,7 @@ test_that("Test a simple example with one system with data points below threshol
   clean <- c("raw",  "raw", "raw","raw",  "raw", "raw")
   power_kW <- c(10,  10, 10,10,  10, 10)
   input_data <- data.frame(c_id, ts, power_kW, d, clean, stringsAsFactors = FALSE)
+  NED_threshold_pct <- 0.8
   out <- categorise_response(input_data, event_time, window_length,NED_threshold_pct)
   ts <- c("2018-01-01 13:11:55",
           "2018-01-01 13:12:00", "2018-01-01 13:12:05","2018-01-01 13:12:05","2018-01-01 13:13:15","2018-01-01 13:14:00")
