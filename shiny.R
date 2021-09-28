@@ -1019,13 +1019,13 @@ server <- function(input,output,session){
           disconnection_summary <- join_solar_analytics_and_cer_manufacturer_data(disconnection_summary,
                                                                                   manufacturer_capacitys)
           manufacters_missing_from_cer <- get_manufactures_in_solar_analytics_but_not_cer(disconnection_summary)
-          manufacters_missing_from_solar_analytics <- get_manufactures_in_cer_but_not_solar_analytics(disconnection_summary)
+          manufacters_missing_from_input_db <- get_manufactures_in_cer_but_not_solar_analytics(disconnection_summary)
           disconnection_summary <- impose_sample_size_threshold(disconnection_summary, sample_threshold = 30)
           disconnection_summary <- calc_confidence_intervals_for_disconnections(disconnection_summary)
           v$disconnection_summary <- calc_upscale_kw_loss(disconnection_summary)
           v$upscaled_disconnections <- upscale_disconnections(v$disconnection_summary)
           write.csv(manufacters_missing_from_cer, "logging/manufacters_missing_from_cer.csv", row.names=FALSE)
-          write.csv(manufacters_missing_from_solar_analytics, "logging/manufacters_missing_from_solar_analytics.csv", row.names=FALSE)
+          write.csv(manufacters_missing_from_input_db, "logging/manufacters_missing_from_input_db.csv", row.names=FALSE)
           
           if(length(manufacters_missing_from_cer$manufacturer) > 0) {
             long_error_message <- c("Some manufacturers present in the solar analytics data could not be ",
@@ -1036,10 +1036,10 @@ server <- function(input,output,session){
             shinyalert("Manufacturers missing from CER data", long_error_message)
           }
           
-          if(length(manufacters_missing_from_solar_analytics$manufacturer) > 0) {
+          if(length(manufacters_missing_from_input_db$manufacturer) > 0) {
             long_error_message <- c("Some manufacturers present in the CER data could not be ",
                                     "matched to the solar analytics data set. A list of these has been saved in the ",
-                                    "file logging/manufacters_missing_from_solar_analytics.csv. You may wish to review the ", 
+                                    "file logging/manufacters_missing_from_input_db.csv. You may wish to review the ", 
                                     "file to check the number and names of missing manufacturers. ")
             long_error_message <- paste(long_error_message, collapse = '')
             shinyalert("Manufacturers missing from Solar Analytics data", long_error_message)
