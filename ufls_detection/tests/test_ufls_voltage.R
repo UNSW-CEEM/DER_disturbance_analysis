@@ -1,5 +1,18 @@
 context("Testing the DER event analysis UFLS detection based on voltage")
 
+# Define constants
+window_length <- 5
+event_time <- "2018-01-01 13:11:55"
+event_time <- as.POSIXct(strptime(event_time, "%Y-%m-%d %H:%M:%S", 
+                                  tz="Australia/Brisbane"))
+ts_3_times <- c("2018-01-01 13:10:55", "2018-01-01 13:11:55", 
+                "2018-01-01 13:12:55")
+ts_3_times <- as.POSIXct(strptime(ts_3_times, "%Y-%m-%d %H:%M:%S", tz="Australia/Brisbane"))
+ts_2_post <- c("2018-01-01 13:11:55", "2018-01-01 13:12:55")
+ts_2_post <- as.POSIXct(strptime(ts_2_post, "%Y-%m-%d %H:%M:%S", tz="Australia/Brisbane"))
+ts_2_split <- c("2018-01-01 13:10:55", "2018-01-01 13:12:55")
+ts_2_split <- as.POSIXct(strptime(ts_2_split, "%Y-%m-%d %H:%M:%S", tz="Australia/Brisbane")) 
+
 
 test_that("Test the calculation of average voltage over a window for 1 site" ,{
   # Test input data
@@ -22,16 +35,9 @@ test_that("Test the calculation of average voltage over a window for 2 sites" ,{
 })
 
 test_that("Test a No UFLS Dropout example with one system", {
-  window_length <- 5
-  event_time <- "2018-01-01 13:11:55"
-  event_time <- as.POSIXct(strptime(event_time, "%Y-%m-%d %H:%M:%S", 
-                                    tz="Australia/Brisbane"))
-  ts <- c("2018-01-01 13:08:55", "2018-01-01 13:09:55", "2018-01-01 13:10:55", 
-          "2018-01-01 13:11:55", "2018-01-01 13:12:55", "2018-01-01 13:13:55", 
-          "2018-01-01 13:14:55", "2018-01-01 13:15:55", "2018-01-01 13:16:55")
-  ts <- as.POSIXct(strptime(ts, "%Y-%m-%d %H:%M:%S", tz="Australia/Brisbane"))
-  c_id <- c(1, 1, 1, 1, 1, 1, 1, 1, 1)
-  v <- c(240, 239, 238, 240, 238, 240, 240, 238, 239)
+  ts <- ts_3_times
+  c_id <- c(1, 1, 1)
+  v <- c(239, 239, 239)
   input_data <- data.frame(c_id, ts, v, stringsAsFactors = FALSE)
   out <- ufls_detection_voltage(input_data, event_time, window_length)
   c_id <- c(1)
@@ -43,16 +49,9 @@ test_that("Test a No UFLS Dropout example with one system", {
 })
 
 test_that("Test a UFLS dropout example with one system", {
-  window_length <- 5
-  event_time <- "2018-01-01 13:11:55"
-  event_time <- as.POSIXct(strptime(event_time, "%Y-%m-%d %H:%M:%S", 
-                                    tz="Australia/Brisbane"))
-  ts <- c("2018-01-01 13:08:55", "2018-01-01 13:09:55", "2018-01-01 13:10:55", 
-          "2018-01-01 13:11:55", "2018-01-01 13:12:55", "2018-01-01 13:13:55", 
-          "2018-01-01 13:14:55", "2018-01-01 13:15:55", "2018-01-01 13:16:55")
-  ts <- as.POSIXct(strptime(ts, "%Y-%m-%d %H:%M:%S", tz="Australia/Brisbane"))
-  c_id <- c(1, 1, 1, 1, 1, 1, 1, 1, 1)
-  v <- c(240, 239, 238, 0, 0, 0, 0, 0, 0)
+  ts <- ts_3_times
+  c_id <- c(1, 1, 1)
+  v <- c(239, 0, 0)
   input_data <- data.frame(c_id, ts, v, stringsAsFactors = FALSE)
   out <- ufls_detection_voltage(input_data, event_time, window_length)
   c_id <- c(1)
@@ -64,15 +63,9 @@ test_that("Test a UFLS dropout example with one system", {
 })
 
 test_that("Test a UFLS example with no pre-event timesteps", {
-  window_length <- 5
-  event_time <- "2018-01-01 13:11:55"
-  event_time <- as.POSIXct(strptime(event_time, "%Y-%m-%d %H:%M:%S", 
-                                    tz="Australia/Brisbane"))
-  ts <- c("2018-01-01 13:11:55", "2018-01-01 13:12:55", "2018-01-01 13:13:55", 
-          "2018-01-01 13:14:55", "2018-01-01 13:15:55", "2018-01-01 13:16:55")
-  ts <- as.POSIXct(strptime(ts, "%Y-%m-%d %H:%M:%S", tz="Australia/Brisbane"))
-  c_id <- c(1, 1, 1, 1, 1, 1)
-  v <- c(240, 239, 238, 241, 242, 240)
+  ts <- ts_2_post
+  c_id <- c(1, 1)
+  v <- c(238, 240)
   input_data <- data.frame(c_id, ts, v, stringsAsFactors = FALSE)
   out <- ufls_detection_voltage(input_data, event_time, window_length)
   c_id <- c(1)
@@ -84,15 +77,9 @@ test_that("Test a UFLS example with no pre-event timesteps", {
 })
 
 test_that("Test a UFLS example with no pre or post event timesteps, with fillna", {
-  window_length <- 5
-  event_time <- "2018-01-01 13:11:55"
-  event_time <- as.POSIXct(strptime(event_time, "%Y-%m-%d %H:%M:%S", 
-                                    tz="Australia/Brisbane"))
-  ts <- c("2018-01-01 13:11:55", "2018-01-01 13:12:55", "2018-01-01 13:13:55", 
-          "2018-01-01 13:14:55", "2018-01-01 13:15:55", "2018-01-01 13:16:55")
-  ts <- as.POSIXct(strptime(ts, "%Y-%m-%d %H:%M:%S", tz="Australia/Brisbane"))
-  c_id <- c(1, 1, 1, 1, 1, 1)
-  v <- c(NA, NA, NA, NA, NA, NA)
+  ts <- ts_2_post
+  c_id <- c(1, 1)
+  v <- c(NA, NA)
   input_data <- data.frame(c_id, ts, v, stringsAsFactors = FALSE)
   out <- ufls_detection_voltage(input_data, event_time, window_length, fill_nans = TRUE)
   c_id <- c(1)
@@ -104,15 +91,9 @@ test_that("Test a UFLS example with no pre or post event timesteps, with fillna"
 })
 
 test_that("Test a UFLS example with no pre or post event timesteps, no fillna", {
-  window_length <- 5
-  event_time <- "2018-01-01 13:11:55"
-  event_time <- as.POSIXct(strptime(event_time, "%Y-%m-%d %H:%M:%S", 
-                                    tz="Australia/Brisbane"))
-  ts <- c("2018-01-01 13:11:55", "2018-01-01 13:12:55", "2018-01-01 13:13:55", 
-          "2018-01-01 13:14:55", "2018-01-01 13:15:55", "2018-01-01 13:16:55")
-  ts <- as.POSIXct(strptime(ts, "%Y-%m-%d %H:%M:%S", tz="Australia/Brisbane"))
-  c_id <- c(1, 1, 1, 1, 1, 1)
-  v <- c(NA, NA, NA, NA, NA, NA)
+  ts <- ts_2_post
+  c_id <- c(1, 1)
+  v <- c(NA, NA)
   input_data <- data.frame(c_id, ts, v, stringsAsFactors = FALSE)
   out <- ufls_detection_voltage(input_data, event_time, window_length)
   c_id <- c(1)
@@ -124,15 +105,9 @@ test_that("Test a UFLS example with no pre or post event timesteps, no fillna", 
 })
 
 test_that("Test a UFLS example with no pre-event timesteps and post-event 0s", {
-  window_length <- 5
-  event_time <- "2018-01-01 13:11:55"
-  event_time <- as.POSIXct(strptime(event_time, "%Y-%m-%d %H:%M:%S", 
-                                    tz="Australia/Brisbane"))
-  ts <- c("2018-01-01 13:11:55", "2018-01-01 13:12:55", "2018-01-01 13:13:55", 
-          "2018-01-01 13:14:55", "2018-01-01 13:15:55", "2018-01-01 13:16:55")
-  ts <- as.POSIXct(strptime(ts, "%Y-%m-%d %H:%M:%S", tz="Australia/Brisbane"))
-  c_id <- c(1, 1, 1, 1, 1, 1)
-  v <- c(0, 0, 0, 0, 0, 0)
+  ts <- ts_2_post
+  c_id <- c(1, 1)
+  v <- c(0, 0)
   input_data <- data.frame(c_id, ts, v, stringsAsFactors = FALSE)
   out <- ufls_detection_voltage(input_data, event_time, window_length)
   c_id <- c(1)
@@ -144,15 +119,9 @@ test_that("Test a UFLS example with no pre-event timesteps and post-event 0s", {
 })
 
 test_that("Test a UFLS example with pre-event values and no post-event timesteps, with fillna", {
-  window_length <- 5
-  event_time <- "2018-01-01 13:11:55"
-  event_time <- as.POSIXct(strptime(event_time, "%Y-%m-%d %H:%M:%S", 
-                                    tz="Australia/Brisbane"))
-  ts <- c("2018-01-01 13:08:55", "2018-01-01 13:09:55", "2018-01-01 13:10:55", 
-          "2018-01-01 13:12:55", "2018-01-01 13:13:55", "2018-01-01 13:14:55")
-  ts <- as.POSIXct(strptime(ts, "%Y-%m-%d %H:%M:%S", tz="Australia/Brisbane"))
-  c_id <- c(1, 1, 1, 1, 1, 1)
-  v <- c(240, 240, 240, NA, NA, NA)
+  ts <- ts_2_split
+  c_id <- c(1, 1)
+  v <- c(240, NA)
   input_data <- data.frame(c_id, ts, v, stringsAsFactors = FALSE)
   out <- ufls_detection_voltage(input_data, event_time, window_length, fill_nans = TRUE)
   c_id <- c(1)
@@ -164,15 +133,9 @@ test_that("Test a UFLS example with pre-event values and no post-event timesteps
 })
 
 test_that("Test a UFLS example with pre-event values and no post-event timesteps, no fillna", {
-  window_length <- 5
-  event_time <- "2018-01-01 13:11:55"
-  event_time <- as.POSIXct(strptime(event_time, "%Y-%m-%d %H:%M:%S", 
-                                    tz="Australia/Brisbane"))
-  ts <- c("2018-01-01 13:08:55", "2018-01-01 13:09:55", "2018-01-01 13:10:55", 
-          "2018-01-01 13:12:55", "2018-01-01 13:13:55", "2018-01-01 13:14:55")
-  ts <- as.POSIXct(strptime(ts, "%Y-%m-%d %H:%M:%S", tz="Australia/Brisbane"))
-  c_id <- c(1, 1, 1, 1, 1, 1)
-  v <- c(240, 240, 240, NA, NA, NA)
+  ts <- ts_2_split
+  c_id <- c(1, 1)
+  v <- c(240, NA)
   input_data <- data.frame(c_id, ts, v, stringsAsFactors = FALSE)
   out <- ufls_detection_voltage(input_data, event_time, window_length)
   c_id <- c(1)
@@ -184,15 +147,9 @@ test_that("Test a UFLS example with pre-event values and no post-event timesteps
 })
 
 test_that("Test a UFLS example with pre-event 0s and post-event 240", {
-  window_length <- 5
-  event_time <- "2018-01-01 13:11:55"
-  event_time <- as.POSIXct(strptime(event_time, "%Y-%m-%d %H:%M:%S", 
-                                    tz="Australia/Brisbane"))
-  ts <- c("2018-01-01 13:08:55", "2018-01-01 13:09:55", "2018-01-01 13:10:55", 
-          "2018-01-01 13:12:55", "2018-01-01 13:13:55", "2018-01-01 13:14:55")
-  ts <- as.POSIXct(strptime(ts, "%Y-%m-%d %H:%M:%S", tz="Australia/Brisbane"))
-  c_id <- c(1, 1, 1, 1, 1, 1)
-  v <- c(0, 0, 0, 240, 240, 240)
+  ts <- ts_2_split
+  c_id <- c(1, 1)
+  v <- c(0, 240)
   input_data <- data.frame(c_id, ts, v, stringsAsFactors = FALSE)
   out <- ufls_detection_voltage(input_data, event_time, window_length)
   c_id <- c(1)
@@ -204,15 +161,9 @@ test_that("Test a UFLS example with pre-event 0s and post-event 240", {
 })
 
 test_that("Test a UFLS example with pre-event 10V and post-event 0v", {
-  window_length <- 5
-  event_time <- "2018-01-01 13:11:55"
-  event_time <- as.POSIXct(strptime(event_time, "%Y-%m-%d %H:%M:%S", 
-                                    tz="Australia/Brisbane"))
-  ts <- c("2018-01-01 13:08:55", "2018-01-01 13:09:55", "2018-01-01 13:10:55", 
-          "2018-01-01 13:12:55", "2018-01-01 13:13:55", "2018-01-01 13:14:55")
-  ts <- as.POSIXct(strptime(ts, "%Y-%m-%d %H:%M:%S", tz="Australia/Brisbane"))
-  c_id <- c(1, 1, 1, 1, 1, 1)
-  v <- c(10, 11, 9, 0, 0, 0)
+  ts <- ts_2_split
+  c_id <- c(1, 1)
+  v <- c(10, 0)
   input_data <- data.frame(c_id, ts, v, stringsAsFactors = FALSE)
   out <- ufls_detection_voltage(input_data, event_time, window_length)
   c_id <- c(1)
