@@ -1,6 +1,6 @@
 source("load_tool_environment.R")
 
-db_file = "20210525_Tesla.db"
+db_file <- "20210525_Tesla.db"
 
 ts <- sqldf::sqldf("select * from timeseries", dbname = db_file)
 
