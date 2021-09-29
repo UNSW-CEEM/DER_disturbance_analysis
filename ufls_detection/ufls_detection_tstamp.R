@@ -1,5 +1,5 @@
 
-ufls_detection <- function(db, region, pre_event_interval, pre_event_window_length, post_event_window_length,pre_pct_sample_seconds_threshold){
+ufls_detection_tstamp <- function(db, region, pre_event_interval, pre_event_window_length, post_event_window_length,pre_pct_sample_seconds_threshold){
   start_pre_event_window_obj <- pre_event_interval - 60 * pre_event_window_length
   start_pre_event_window_str <- format(start_pre_event_window_obj, tz = 'GMT')
   end_event_window_obj <- pre_event_interval + 60 * post_event_window_length
