@@ -1,6 +1,10 @@
 ##RSHINY APP
 source("load_tool_environment.R")
 
+# set up logging at debug level
+basicConfig(level = 10)
+addHandler(writeToFile, logger="shinyapp", file="logging/applogs.log")
+
 ui <- fluidPage(
   tags$head(
     tags$style(HTML("hr {border-top: 1px solid #000000;}"))
@@ -792,11 +796,18 @@ server <- function(input,output,session){
 
   # Create plots when update plots button is clicked.
   observeEvent(input$update_plots, {
+    logdebug('update_plots event triggered', logger="shinyapp")
+    
+    
+    # -------- checks --------
+    # inputs: v$combined_data
+    # outputs: error_check_passed (bool)
+    # dependencies: time reactives (load_start_time, load_en_time, pre_event_interval, window_length)
+    logdebug('start of checks', logger="shinyapp")
+    # check pre-event interval is on the selected time offset
     error_check_passed = TRUE
     start_time <- as.POSIXct(load_start_time(), tz = "Australia/Brisbane")
     end_time <- as.POSIXct(load_end_time(), tz = "Australia/Brisbane")
-    
-    # check pre-event interval is on the selected time offset
     data_at_set_pre_event_interval = filter(v$combined_data, ts == pre_event_interval())
     if (dim(data_at_set_pre_event_interval)[1] == 0) {
       long_error_message <- c("The pre-event time interval does not match any time step in the time series data.")
@@ -820,8 +831,16 @@ server <- function(input,output,session){
       shinyalert("Error in pre-event time interval", long_error_message)
       error_check_passed = FALSE
     }
+    # -------- end checks --------
+    
     
     if (error_check_passed) {
+      logdebug('error checks passed', logger="shinyapp")
+  
+      # -------- ideal response --------
+      # inputs: v$frequency_data
+      # outputs: error_check_passed (bool)
+      # dependencies: region_to_load reactive
       id <- showNotification("Updating plots", duration=1000)
       # Get ideal response.
       if (dim(v$frequency_data)[1] > 0) {
@@ -832,8 +851,17 @@ server <- function(input,output,session){
       } else {
         ideal_response_to_plot <- data.frame()
       }
-
+      
       v$ideal_response_to_plot <- ideal_response_to_plot
+      
+      # -------- end ideal response --------
+      
+      
+      # -------- filter combined data by user filters --------
+      # inputs: v$combined_data, v$off_grid_postcodes
+      # outputs: combined_data_f
+      # dependencies: clean(), size_groupings(), standards(), postcodes(), manufacturers(), models(), sites(), circuits(),
+      logdebug('compose combined_data_f', logger="shinyapp")
       combined_data_f <- filter(v$combined_data, clean %in% clean())
       combined_data_f <- filter(combined_data_f, sum_ac<=100)
       site_types <- c("pv_site_net", "pv_site", "pv_inverter_net", "pv_inverter")
@@ -848,13 +876,25 @@ server <- function(input,output,session){
       if (length(models()) > 0) {combined_data_f <- filter(combined_data_f, model %in% models())}
       if (length(sites()) > 0) {combined_data_f <- filter(combined_data_f, site_id %in% sites())}
       if (length(circuits()) > 0) {combined_data_f <- filter(combined_data_f, c_id %in% circuits())}
+      # --------
+      
       
       if(length(combined_data_f$ts) > 0){
+        # -------- categorise response --------
+        # inputs: combined_data_f
+        # outputs: combined_data_f
+        # dependencies: pre_event_interval(), window_length(), responses()
         combined_data_f <- categorise_response(combined_data_f, pre_event_interval(), window_length())
         combined_data_f <- mutate(combined_data_f,  
                                   response_category = ifelse(response_category %in% c(NA), "NA", response_category))
         combined_data_f <- filter(combined_data_f, response_category %in% responses())
+        # -------- 
         
+        # -------- ufls detection --------
+        # inputs: v$db, combined_data_f
+        # outputs: combined_data_f
+        # dependencies: region_to_load(), pre_event_interval(), pre_event_interval_ufls_length(), post_event_interval_ufls_length(), pre_event_ufls_stability_threshold()
+        logdebug('run ufls detection', logger="shinyapp")
         ufls_statuses <- ufls_detection(db = v$db, region = region_to_load(), 
                                         pre_event_interval = pre_event_interval(), 
                                         pre_event_window_length = pre_event_ufls_window_length(),
@@ -863,19 +903,38 @@ server <- function(input,output,session){
         combined_data_f <- left_join(combined_data_f, ufls_statuses, by = c("c_id"))
         combined_data_f <- mutate(combined_data_f, response_category = 
                                   if_else(ufls_status == 'UFLS Dropout', ufls_status, response_category))
+        # --------
       }
+
       
-      # Filter data by user selected time window
+      # -------- caclulate distance zones --------
+      # inputs: combined_data_f, v$postcode_data
+      # outputs: combined_data_f
+      # dependencies: event_latitude(), event_longitude()
       if(length(combined_data_f$ts) > 0){
         combined_data_f <- get_distance_from_event(combined_data_f, v$postcode_data, event_latitude(), event_longitude())
         combined_data_f <- get_zones(combined_data_f, zone_one_radius(), zone_two_radius(), zone_three_radius())
         combined_data_f <- mutate(combined_data_f,  zone=ifelse(zone %in% c(NA), "NA", zone))
         if (length(zones()) < 3) { combined_data_f <- filter(combined_data_f, zone %in% zones())}
       }
+      # --------
+      
+      # -------- filter by time window --------
+      # inputs: combined_data_f, v$unique_offsets
+      # outputs: combined_data_f
+      # dependencies: offsets()
+      # Filter data by user selected time window
+      logdebug('filter by time window', logger="shinyapp")
       if (length(offsets()) < length(v$unique_offsets)) { 
         combined_data_f <- filter(combined_data_f, time_offset %in% offsets())
       }
-    
+      # --------
+      
+      
+      # -------- check for any aggregation --------
+      # inputs: -
+      # outputs: no_grouping
+      # dependencies: agg_on_standard(), pst_agg(), grouping_agg(), manufacturer_agg(), model_agg(), zone_agg(), circuit_agg(), compliance_agg(), reconnection_compliance_agg()
       # Decide if the settings mean no grouping is being performed.
       if (agg_on_standard()==FALSE & pst_agg()==FALSE & grouping_agg()==FALSE & manufacturer_agg()==FALSE & 
           model_agg()==FALSE & zone_agg()==FALSE & circuit_agg()==TRUE & compliance_agg()==TRUE & reconnection_compliance_agg()){
@@ -883,22 +942,41 @@ server <- function(input,output,session){
       } else {
         no_grouping=FALSE
       }
+      # --------
       
+      
+      # -------- normalise event power --------
+      # inputs: combined_data_f
+      # outputs: combined_data_f
+      # dependencies: pre_event_interval()
+      # does this actually continue after site_performance factors?
+      logdebug('Calc event normalised power', logger="shinyapp")
       # Calc event normalised power
       event_powers <- filter(combined_data_f, ts == pre_event_interval())
       event_powers <- mutate(event_powers, event_power=power_kW)
       event_powers <- select(event_powers, c_id, clean, event_power)
       combined_data_f <- left_join(combined_data_f, event_powers, by=c("c_id", "clean"))
       combined_data_f <- mutate(combined_data_f, c_id_norm_power=power_kW/event_power)
+      # --------
       
       if(length(combined_data_f$ts) > 0){
+        
+        # -------- Calculate site performance factors --------
+        # inputs: 
+        # outputs: 
+        # dependencies: 
         # Calaculate the site peformance factors.
+        logdebug('Calc site peformance factors', logger="shinyapp")
         id2 <- showNotification("Calculating site performance factors", duration=1000)
         combined_data_f <- calc_site_performance_factors(combined_data_f)
         combined_data_f <- setnames(combined_data_f, c("ts"), c("Time"))
+        # --------
+        
         combined_data_f <- event_normalised_power(combined_data_f, pre_event_interval(), keep_site_id=TRUE)
         combined_data_f <- setnames(combined_data_f, c("Event_Normalised_Power_kW"), c("Site_Event_Normalised_Power_kW"))
         combined_data_f <- setnames(combined_data_f, c("Time"), c("ts"))
+        # --------
+
         if(dim(ideal_response_to_plot)[1]>0){
           ideal_response_downsampled <- down_sample_1s(ideal_response_to_plot, duration(), min(combined_data_f$ts))
           v$ideal_response_downsampled <- ideal_response_downsampled
@@ -916,8 +994,18 @@ server <- function(input,output,session){
           combined_data_f <- mutate(combined_data_f, compliance_status="Undefined")  
         }
         if (length(compliance()) < 8) {combined_data_f <- filter(combined_data_f, compliance_status %in% compliance())}
+        # --------
         
+        # -------- determine reconnection compliace --------
+        # inputs: combined_data_f, 
+        # outputs: combined_data_f
+        # dependencies: 
+        #   v$db$get_max_circuit_powers(region_to_load()), pre_event_interval(),
+        #   disconnecting_threshold, reconnection_threshold, ramp_rate_threshold(),
+        #   total_ramp_threshold_for_compliance(), total_ramp_threshold_for_non_compliance(),
+        #   ramp_rate_change_resource_limit_threshold()
         # Set reconnection compliance values.
+        logdebug('Set reconnection compliance values', logger="shinyapp")
         max_power <- v$db$get_max_circuit_powers(region_to_load())
         combined_data_f <- left_join(combined_data_f, max_power, by=c("c_id", "clean"))
         combined_data_f <- mutate(combined_data_f, c_id_daily_norm_power=power_kW/max_power)
@@ -938,16 +1026,20 @@ server <- function(input,output,session){
                                                                  ramp_rate_change_resource_limit_threshold())
         combined_data_f <- left_join(combined_data_f, reconnection_categories, by = 'c_id')
         removeNotification(id2)
-      
-      
+        # --------
+        
+        # -------- calculate summary stats --------
+        # inputs: combined_data_f
+        # outputs: v$sample_count_table
+        # dependencies: too many to list for  find_grouping_cols()
         # Count samples in each data series to be displayed
+        logdebug('Count samples in each data series to be displayed', logger="shinyapp")
         grouping_cols <- find_grouping_cols(agg_on_standard=agg_on_standard(), pst_agg=pst_agg(), 
                                             grouping_agg=grouping_agg(), manufacturer_agg=manufacturer_agg(), 
                                             model_agg=model_agg(), circuit_agg=circuit_agg(), response_agg=response_agg(), 
                                             zone_agg=zone_agg(), compliance_agg=compliance_agg(), 
                                             reconnection_compliance_agg=reconnection_compliance_agg())
       
-
         v$sample_count_table <- vector_groupby_count(combined_data_f, grouping_cols)
         if (confidence_category() %in% grouping_cols) {
           population_groups <- grouping_cols[confidence_category() != grouping_cols]
@@ -962,14 +1054,23 @@ server <- function(input,output,session){
           v$sample_count_table$upper_95_CI <- round(result[2,], digits = 4)
           v$sample_count_table$width <- v$sample_count_table$upper_95_CI - v$sample_count_table$lower_95_CI
         }
-        
       }
+      # --------
+      
+
       # Procced to  aggregation and plotting only if there is less than 1000 data series to plot, else stop and notify the
       # user.
+      logdebug('Proceed to aggregation and plotting', logger="shinyapp")
       if ((sum(v$sample_count_table$sample_count)<1000 & no_grouping) | 
           (length(v$sample_count_table$sample_count)<1000 & !no_grouping)){
+        
+        # -------- Create copies of data? --------
+        # inputs: combined_data_f
+        # outputs: v$combined_data_f, combined_data_f2
+        # dependencies: raw_upscale()
         if(length(combined_data_f$ts) > 0){
         # Copy data for saving
+        logdebug('Copy data for saving', logger="shinyapp")
         v$combined_data_f <- select(combined_data_f, ts, site_id, c_id, power_kW, c_id_norm_power, v, f, s_state, s_postcode, 
                                     pv_installation_year_month, Standard_Version, Grouping, sum_ac, clean, manufacturer, model,
                                     site_performance_factor, response_category, zone, distance, lat, lon, e, con_type,
@@ -981,8 +1082,17 @@ server <- function(input,output,session){
         combined_data_f2 <- combined_data_f
           if(raw_upscale()){combined_data_f2 <- upscale(combined_data_f2, v$install_data)}
         }
+        # -------- 
+
         # Check that the filter does not result in an empty dataframe.
+        logdebug('Check that the filter does not result in an empty dataframe.', logger="shinyapp")
         if(length(combined_data_f$ts) > 0){
+          
+          # -------- Initialise aggregate dataframes  --------
+          # inputs: combined_data_f, combined_data_f2, grouping_cols
+          # outputs: agg_norm_power, agg_f_and_v, v$agg_power, v$response_count, v$zone_count, v$distance_response, geo_data, v$circuit_summary
+          # dependencies: vector_groupby_norm_power(), vector_groupby_f_and_v(), vector_groupby_power(), vector_groupby_count_response(),
+          #   vector_groupby_count_zones(), vector_groupby_cumulative_distance(), vector_groupby_system()
           if (norm_power_filter_off_at_t0()){
             combined_data_for_norm_power <- filter(combined_data_f,  response_category != "5 Off at t0")
           } else {
@@ -1003,7 +1113,28 @@ server <- function(input,output,session){
                                       reconnection_time, ramp_above_threshold, max_power, ufls_status,
                                       pre_event_sampled_seconds, post_event_sampled_seconds)
           
+          # Combine data sets that have the same grouping so they can be saved in a single file
+          if (no_grouping){
+            et <- pre_event_interval()
+            # agg_norm_power <- event_normalised_power(agg_norm_power, et, keep_site_id=TRUE)
+            v$agg_power <- left_join( v$agg_power, agg_norm_power[, c("c_id_norm_power", "c_id", "Time")], 
+                                      by=c("Time", "c_id"))
+          } else {
+            et <- pre_event_interval()
+            # agg_norm_power <- event_normalised_power(agg_norm_power, et,  keep_site_id=FALSE)
+            v$agg_power <- left_join(v$agg_power, agg_norm_power[, c("c_id_norm_power", "series", "Time")], 
+                                     by=c("Time", "series"))
+          }
+          v$agg_power <- left_join( v$agg_power, agg_f_and_v[, c("Time", "series", "Voltage", "Frequency")], 
+                                    by=c("Time", "series"))
+          # --------
+          
+          # -------- Create disconnection_sumaries --------
+          # inputs: v$circuit_summary, v$manufacturer_install_data, 
+          # outputs: circuits_to_summarise, v$disconnection_summary, v$upscaled_disconnection
+          # dependencies: load_date(), region_to_load(), exclude_solar_edge()
           # Summarise and upscale disconnections on a manufacturer basis.
+          logdebug('Summarise and upscale disconnections on a manufacturer basis.', logger="shinyapp")
           if (exclude_solar_edge()){
             circuits_to_summarise <- filter(v$circuit_summary, manufacturer != "SolarEdge" | 
                                             is.na(manufacturer))
@@ -1013,6 +1144,7 @@ server <- function(input,output,session){
             circuits_to_summarise <- v$circuit_summary
             manufacturer_install_data <- v$manufacturer_install_data
           }
+
           disconnection_summary <- group_disconnections_by_manufacturer(circuits_to_summarise)
           manufacturer_capacitys <- get_manufacturer_capacitys(manufacturer_install_data, load_date(), 
                                                                region_to_load())
@@ -1044,25 +1176,17 @@ server <- function(input,output,session){
             long_error_message <- paste(long_error_message, collapse = '')
             shinyalert("Manufacturers missing from Solar Analytics data", long_error_message)
           }
+          # --------
           
-          
-          # Combine data sets that have the same grouping so they can be saved in a single file
-          if (no_grouping){
-            et <- pre_event_interval()
-            # agg_norm_power <- event_normalised_power(agg_norm_power, et, keep_site_id=TRUE)
-            v$agg_power <- left_join( v$agg_power, agg_norm_power[, c("c_id_norm_power", "c_id", "Time")], 
-                                      by=c("Time", "c_id"))
-          } else {
-            et <- pre_event_interval()
-            # agg_norm_power <- event_normalised_power(agg_norm_power, et,  keep_site_id=FALSE)
-            v$agg_power <- left_join(v$agg_power, agg_norm_power[, c("c_id_norm_power", "series", "Time")], 
-                                     by=c("Time", "series"))
-          }
-          v$agg_power <- left_join( v$agg_power, agg_f_and_v[, c("Time", "series", "Voltage", "Frequency")], 
-                                    by=c("Time", "series"))
           
           
           # Create plots on main tab
+          logdebug('create plots', logger="shinyapp")
+          
+          # -------- Render plots and save buttons --------
+          # inputs:v$agg_power,  v$sample_count_table, ideal_response_to_plot, agg_norm_power, v$response_count, v$zone_count, v$agg_power, v$distance_response, geo_data, v$combined_data_f
+          # outputs: output$...
+          # dependencies: event_longitude(), event_latitude(), zone_one_radius(), pre_event_interval(), duration()
             output$PlotlyTest <- renderPlotly({
               plot_ly(v$agg_power, x=~Time, y=~Power_kW, color=~series, type="scattergl")  %>% 
                 layout(yaxis = list(title = "Aggregate Power (kW)"))})
@@ -1198,7 +1322,7 @@ server <- function(input,output,session){
                                                                   time_step_seconds = as.numeric(duration()))
             
             removeNotification(id)
-            
+            # --------
         } else {
           # If there is no data left after filtering alert the user and create an empty plot.
           shinyalert("Opps", "There is no data to plot")
@@ -1212,6 +1336,7 @@ server <- function(input,output,session){
         removeNotification(id)
       }
     }
+    logdebug('Update plots completed', logger="shinyapp")
   })
   
   observeEvent(input$compliance_cleaned_or_raw, {
