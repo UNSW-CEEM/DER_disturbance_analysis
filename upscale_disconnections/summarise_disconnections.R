@@ -1,10 +1,11 @@
 get_upscaling_results <- function(circuit_summary, manufacturer_install_data, event_date, region, sample_threshold){
+  # Upscale the proportion of disconnecting circuits by manufacturer to better represent the installed capacity.
   out <- list()
   disconnection_summary <- group_disconnections_by_manufacturer(circuit_summary)
   manufacturer_capacitys <- get_manufacturer_capacitys(manufacturer_install_data, event_date, region)
-  disconnection_summary <- join_solar_analytics_and_cer_manufacturer_data(disconnection_summary, manufacturer_capacitys)
-  out$manufacters_missing_from_cer <- get_manufactures_in_solar_analytics_but_not_cer(disconnection_summary)
-  out$manufacters_missing_from_input_db <- get_manufactures_in_cer_but_not_solar_analytics(disconnection_summary)
+  disconnection_summary <- join_circuit_summary_and_cer_manufacturer_data(disconnection_summary, manufacturer_capacitys)
+  out$manufacturers_missing_from_cer <- get_manufactures_in_solar_analytics_but_not_cer(disconnection_summary)
+  out$manufacturers_missing_from_input_db <- get_manufactures_in_cer_but_not_solar_analytics(disconnection_summary)
   disconnection_summary <- impose_sample_size_threshold(disconnection_summary, sample_threshold)
   disconnection_summary <- calc_confidence_intervals_for_disconnections(disconnection_summary)
   out$disconnection_summary <- calc_upscale_kw_loss(disconnection_summary)
@@ -12,11 +13,31 @@ get_upscaling_results <- function(circuit_summary, manufacturer_install_data, ev
   return(out)
 }
 
-group_disconnections_by_manufacturer <- function(circuit_summary){
+get_upscaling_results_excluding_ufls <- function(circuit_summary, manufacturer_install_data, event_date, region, 
+                                                 sample_threshold){
+  # Upscale the proportion of disconnecting circuits based on sample sizes once UFLS circuits are removed.
+  out <- list()
+  disconnection_summary <- group_disconnections_by_manufacturer(circuit_summary, exclude_ufls_circuits = TRUE)
+  ufls_stats <- get_number_of_ufls_disconnections(circuit_summary$response_category)
+  manufacturer_capacitys <- get_manufacturer_capacitys(manufacturer_install_data, event_date, region)
+  disconnection_summary <- join_circuit_summary_and_cer_manufacturer_data(disconnection_summary, manufacturer_capacitys)
+  out$manufacturers_missing_from_cer <- get_manufactures_in_solar_analytics_but_not_cer(disconnection_summary)
+  out$manufacturers_missing_from_input_db <- get_manufactures_in_cer_but_not_solar_analytics(disconnection_summary)
+  disconnection_summary <- scale_manufacturer_capacities_by_ufls(disconnection_summary, ufls_stats)
+  disconnection_summary <- impose_sample_size_threshold(disconnection_summary, sample_threshold)
+  disconnection_summary <- calc_confidence_intervals_for_disconnections(disconnection_summary)
+  out$disconnection_summary <- calc_upscale_kw_loss(disconnection_summary)
+  out$upscaled_disconnections <- upscale_disconnections(out$disconnection_summary)
+  return(out)
+}
+
+group_disconnections_by_manufacturer <- function(circuit_summary, exclude_ufls_circuits=FALSE){
   # Don't count circuits without a well defined response type.
-  # TODO: include UFLS in bad categories
-  bad_categories <- c("6 Not enough data", "Undefined")
-  # TODO: | response_category == "NA"
+  if (exclude_ufls_circuits) {
+    bad_categories <- c("6 Not enough data", "Undefined", "UFLS Dropout")
+  } else {
+    bad_categories <- c("6 Not enough data", "Undefined")
+  }
   circuit_summary <- filter(circuit_summary, !(response_category %in% bad_categories | is.na(response_category)))
   
   # Get an initial summary of disconnection count and sample size by manufacturer.
@@ -33,9 +54,31 @@ get_number_of_disconnections <- function(response_categories){
   return(length(response_categories))
 }
 
-# TODO: get_number_of_ufls_disconnections
+get_number_of_ufls_disconnections <- function(response_categories){
+  # Find the number of circuits identified as UFLS Dropout and the sample size to use for the UFLS proportion
+  ufls_stats <- list()
+  bad_categories <- c("6 Not enough data", "Undefined")
+  response_categories <- response_categories[!(response_categories %in% bad_categories | is.na(response_categories))]
+  ufls_stats$sample_size <- length(response_categories)
+  disconnection_categories <- c("UFLS Dropout")
+  response_categories <- response_categories[response_categories %in% disconnection_categories]
+  ufls_stats$disconnections <- length(response_categories)
+  return(ufls_stats)
+}
 
-join_solar_analytics_and_cer_manufacturer_data <- function(circuit_summary, cer_manufacturer_data){
+scale_manufacturer_capacities_by_ufls <- function(disconnection_summary, ufls_stats){
+  # Reduce the CER capacities by the UFLS proportion
+  ufls_proportion <- ufls_stats$disconnections / ufls_stats$sample_size
+  disconnection_summary <- mutate(disconnection_summary, cer_capacity=cer_capacity*(1-ufls_proportion))
+  # Add a UFLS row to the disconnection summary
+  ufls_row <- data.frame(Standard_Version="UFLS", manufacturer="UFLS", disconnections=ufls_stats$disconnections,
+                         sample_size=ufls_stats$sample_size, s_state="UFLS", 
+                         cer_capacity=sum(disconnection_summary$cer_capacity, na.rm = TRUE) / (1-ufls_proportion))
+  disconnection_summary <- rbind(disconnection_summary, ufls_row)
+  return(disconnection_summary)
+}
+
+join_circuit_summary_and_cer_manufacturer_data <- function(circuit_summary, cer_manufacturer_data){
   circuit_summary <- merge(circuit_summary, cer_manufacturer_data, by = c('Standard_Version', 'manufacturer'), 
                            all = TRUE)
   circuit_summary <- rename(circuit_summary, cer_capacity = capacity)
