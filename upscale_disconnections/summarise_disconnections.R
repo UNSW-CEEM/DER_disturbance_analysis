@@ -4,8 +4,8 @@ get_upscaling_results <- function(circuit_summary, manufacturer_install_data, ev
   disconnection_summary <- group_disconnections_by_manufacturer(circuit_summary)
   manufacturer_capacitys <- get_manufacturer_capacitys(manufacturer_install_data, event_date, region)
   disconnection_summary <- join_circuit_summary_and_cer_manufacturer_data(disconnection_summary, manufacturer_capacitys)
-  out$manufacturers_missing_from_cer <- get_manufactures_in_solar_analytics_but_not_cer(disconnection_summary)
-  out$manufacturers_missing_from_input_db <- get_manufactures_in_cer_but_not_solar_analytics(disconnection_summary)
+  out$manufacturers_missing_from_cer <- get_manufactures_in_input_db_but_not_cer(disconnection_summary)
+  out$manufacturers_missing_from_input_db <- get_manufactures_in_cer_but_not_input_db(disconnection_summary)
   disconnection_summary <- impose_sample_size_threshold(disconnection_summary, sample_threshold)
   disconnection_summary <- calc_confidence_intervals_for_disconnections(disconnection_summary)
   out$disconnection_summary <- calc_upscale_kw_loss(disconnection_summary)
@@ -21,8 +21,8 @@ get_upscaling_results_excluding_ufls <- function(circuit_summary, manufacturer_i
   ufls_stats <- get_number_of_ufls_disconnections(circuit_summary$response_category)
   manufacturer_capacitys <- get_manufacturer_capacitys(manufacturer_install_data, event_date, region)
   disconnection_summary <- join_circuit_summary_and_cer_manufacturer_data(disconnection_summary, manufacturer_capacitys)
-  out$manufacturers_missing_from_cer <- get_manufactures_in_solar_analytics_but_not_cer(disconnection_summary)
-  out$manufacturers_missing_from_input_db <- get_manufactures_in_cer_but_not_solar_analytics(disconnection_summary)
+  out$manufacturers_missing_from_cer <- get_manufactures_in_input_db_but_not_cer(disconnection_summary)
+  out$manufacturers_missing_from_input_db <- get_manufactures_in_cer_but_not_input_db(disconnection_summary)
   disconnection_summary <- scale_manufacturer_capacities_by_ufls(disconnection_summary, ufls_stats)
   disconnection_summary <- impose_sample_size_threshold(disconnection_summary, sample_threshold)
   disconnection_summary <- calc_confidence_intervals_for_disconnections(disconnection_summary)
@@ -139,12 +139,12 @@ calc_upscale_kw_loss <- function(disconnection_summary){
   return(disconnection_summary)
 }
 
-get_manufactures_in_solar_analytics_but_not_cer <- function(disconnection_summary){
+get_manufactures_in_input_db_but_not_cer <- function(disconnection_summary){
   disconnection_summary <- filter(disconnection_summary, is.na(cer_capacity))
   return(disconnection_summary)
 }
 
-get_manufactures_in_cer_but_not_solar_analytics <- function(disconnection_summary){
+get_manufactures_in_cer_but_not_input_db <- function(disconnection_summary){
   disconnection_summary <- filter(disconnection_summary, is.na(sample_size))
   return(disconnection_summary)
 }
