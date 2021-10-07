@@ -26,8 +26,20 @@ get_upscaling_results_excluding_ufls <- function(circuit_summary, manufacturer_i
   disconnection_summary <- scale_manufacturer_capacities_by_ufls(disconnection_summary, ufls_stats)
   disconnection_summary <- impose_sample_size_threshold(disconnection_summary, sample_threshold)
   disconnection_summary <- calc_confidence_intervals_for_disconnections(disconnection_summary)
-  out$disconnection_summary <- calc_upscale_kw_loss(disconnection_summary)
-  out$upscaled_disconnections <- upscale_disconnections(out$disconnection_summary)
+  disconnection_summary <- calc_upscale_kw_loss(disconnection_summary)
+  upscaled_disconnections <- upscale_disconnections(disconnection_summary)
+  disconnection_summary <- disconnection_summary %>% 
+    rename(
+      sample_size_after_removing_UFLS_affected_circuits = sample_size,
+      cer_capacity_reduced_by_UFLS_proportion = cer_capacity
+    )
+  out$disconnection_summary <- disconnection_summary
+  upscaled_disconnections <- upscaled_disconnections %>% 
+    rename(
+      sample_size_after_removing_UFLS_affected_circuits = sample_size,
+      cer_capacity_reduced_by_UFLS_proportion = cer_capacity
+    )
+  out$upscaled_disconnections <- upscaled_disconnections
   return(out)
 }
 
@@ -71,7 +83,8 @@ scale_manufacturer_capacities_by_ufls <- function(disconnection_summary, ufls_st
   ufls_proportion <- ufls_stats$disconnections / ufls_stats$sample_size
   disconnection_summary <- mutate(disconnection_summary, cer_capacity=cer_capacity*(1-ufls_proportion))
   # Add a UFLS row to the disconnection summary
-  ufls_row <- data.frame(Standard_Version="UFLS", manufacturer="UFLS", disconnections=ufls_stats$disconnections,
+  ufls_row <- data.frame(Standard_Version="UFLS_disconnections_and_totals_including_ULFS_affected_circuits", 
+                         manufacturer="UFLS", disconnections=ufls_stats$disconnections, 
                          sample_size=ufls_stats$sample_size, s_state="UFLS", 
                          cer_capacity=sum(disconnection_summary$cer_capacity, na.rm = TRUE) / (1-ufls_proportion))
   disconnection_summary <- rbind(disconnection_summary, ufls_row)
@@ -98,6 +111,7 @@ impose_sample_size_threshold <- function(disconnection_summary, sample_threshold
                                                           manufacturer == "Unknown" | 
                                                           manufacturer == "Multiple" |
                                                           manufacturer == "Mixed" | 
+                                                          manufacturer == "" |
                                                           is.na(manufacturer), 
                                                         "Other", manufacturer)
                                   )
