@@ -114,7 +114,11 @@ ui <- fluidPage(
           HTML("<br>"),
           uiOutput("save_manufacturer_disconnection_summary"),
           HTML("<br>"),
+          uiOutput("save_manufacturer_disconnection_summary_with_separate_ufls_counts"),
+          HTML("<br>"),
           uiOutput("save_upscaled_disconnection_summary"),
+          HTML("<br>"),
+          uiOutput("save_upscaled_disconnection_summary_with_separate_ufls_counts"),
           HTML("<br><br>"),
           plotlyOutput(outputId="NormPower"),
           plotlyOutput(outputId="Frequency"),
@@ -1013,33 +1017,36 @@ server <- function(input,output,session){
             circuits_to_summarise <- v$circuit_summary
             manufacturer_install_data <- v$manufacturer_install_data
           }
-          disconnection_summary <- group_disconnections_by_manufacturer(circuits_to_summarise)
-          manufacturer_capacitys <- get_manufacturer_capacitys(manufacturer_install_data, load_date(), 
-                                                               region_to_load())
-          disconnection_summary <- join_circuit_summary_and_cer_manufacturer_data(disconnection_summary,
-                                                                                  manufacturer_capacitys)
-          manufacters_missing_from_cer <- get_manufactures_in_input_db_but_not_cer(disconnection_summary)
-          manufacters_missing_from_input_db <- get_manufactures_in_cer_but_not_input_db(disconnection_summary)
-          disconnection_summary <- impose_sample_size_threshold(disconnection_summary, sample_threshold = 30)
-          disconnection_summary <- calc_confidence_intervals_for_disconnections(disconnection_summary)
-          v$disconnection_summary <- calc_upscale_kw_loss(disconnection_summary)
-          v$upscaled_disconnections <- upscale_disconnections(v$disconnection_summary)
-          write.csv(manufacters_missing_from_cer, "logging/manufacters_missing_from_cer.csv", row.names=FALSE)
-          write.csv(manufacters_missing_from_input_db, "logging/manufacters_missing_from_input_db.csv", row.names=FALSE)
+          upscaling_results <- get_upscaling_results(circuits_to_summarise, manufacturer_install_data, load_date(), 
+                                                     region_to_load(), sample_threshold = 30)
+          upscaling_results_with_separate_ufls_counts <- get_upscaling_results_excluding_ufls_affected_circuits(
+            circuits_to_summarise, manufacturer_install_data, load_date(), region_to_load(), sample_threshold = 30)
+
+          v$disconnection_summary <- upscaling_results$disconnection_summary
+          v$upscaled_disconnections <- upscaling_results$upscaled_disconnections
+          v$disconnection_summary_with_separate_ufls_counts <- 
+            upscaling_results_with_separate_ufls_counts$disconnection_summary
+          v$upscaled_disconnections_with_separate_ufls_counts <- 
+            upscaling_results_with_separate_ufls_counts$upscaled_disconnections
           
-          if(length(manufacters_missing_from_cer$manufacturer) > 0) {
+          write.csv(upscaling_results$manufacturers_missing_from_cer, 
+                    "logging/manufacturers_missing_from_cer.csv", row.names=FALSE)
+          write.csv(upscaling_results$manufacturers_missing_from_input_db, 
+                    "logging/manufacturers_missing_from_input_db.csv", row.names=FALSE)
+          
+          if(length(upscaling_results$manufacturers_missing_from_cer$manufacturer) > 0) {
             long_error_message <- c("Some manufacturers present in the input data could not be ",
                                     "matched to the cer data set. A list of these has been saved in the ",
-                                    "file logging/manufacters_missing_from_cer.csv. You may want to review the ", 
+                                    "file logging/manufacturers_missing_from_cer.csv. You may want to review the ", 
                                     "mapping used in processing the input data.")
             long_error_message <- paste(long_error_message, collapse = '')
             shinyalert("Manufacturers missing from CER data", long_error_message)
           }
           
-          if(length(manufacters_missing_from_input_db$manufacturer) > 0) {
+          if(length(upscaling_results$manufacturers_missing_from_input_db$manufacturer) > 0) {
             long_error_message <- c("Some manufacturers present in the CER data could not be ",
                                     "matched to the input data set. A list of these has been saved in the ",
-                                    "file logging/manufacters_missing_from_input_db.csv. You may wish to review the ", 
+                                    "file logging/manufacturers_missing_from_input_db.csv. You may wish to review the ", 
                                     "file to check the number and names of missing manufacturers. ")
             long_error_message <- paste(long_error_message, collapse = '')
             shinyalert("Manufacturers missing from input data", long_error_message)
@@ -1091,8 +1098,18 @@ server <- function(input,output,session){
               shinySaveButton("save_manufacturer_disconnection_summary", "Save manufacturer disconnection summary", 
                               "Choose directory for report files ...", filetype=list(xlsx="csv"))
             })
+            output$save_manufacturer_disconnection_summary_with_separate_ufls_counts <- renderUI({
+              shinySaveButton("save_manufacturer_disconnection_summary_with_separate_ufls_counts", 
+                              "Save manufacturer disconnection summary with separate ufls counts", 
+                              "Choose directory for report files ...", filetype=list(xlsx="csv"))
+            })
             output$save_upscaled_disconnection_summary <- renderUI({
               shinySaveButton("save_upscaled_disconnection_summary", "Save upscaled disconnection summary", 
+                              "Choose directory for report files ...", filetype=list(xlsx="csv"))
+            })
+            output$save_upscaled_disconnection_summary_with_separate_ufls_counts <- renderUI({
+              shinySaveButton("save_upscaled_disconnection_summary_with_separate_ufls_counts", 
+                              "Save upscaled disconnection summary with separate ufls counts", 
                               "Choose directory for report files ...", filetype=list(xlsx="csv"))
             })
           
@@ -1481,12 +1498,35 @@ server <- function(input,output,session){
     }
   })
   
+  
+  observeEvent(input$save_manufacturer_disconnection_summary_with_separate_ufls_counts,{
+    volumes <- c(home=getwd())
+    shinyFileSave(input, "save_manufacturer_disconnection_summary_with_separate_ufls_counts", roots=volumes, 
+                  session=session)
+    fileinfo <- parseSavePath(volumes, input$save_manufacturer_disconnection_summary_with_separate_ufls_counts)
+    if (nrow(fileinfo) > 0) {
+      write.csv(v$disconnection_summary_with_separate_ufls_counts, as.character(fileinfo$datapath), row.names=FALSE)
+    }
+  })
+  
+  
   observeEvent(input$save_upscaled_disconnection_summary,{
     volumes <- c(home=getwd())
     shinyFileSave(input, "save_upscaled_disconnection_summary", roots=volumes, session=session)
     fileinfo <- parseSavePath(volumes, input$save_upscaled_disconnection_summary)
     if (nrow(fileinfo) > 0) {
       write.csv(v$upscaled_disconnections, as.character(fileinfo$datapath), row.names=FALSE)
+    }
+  })
+  
+  
+  observeEvent(input$save_upscaled_disconnection_summary_with_separate_ufls_counts,{
+    volumes <- c(home=getwd())
+    shinyFileSave(input, "save_upscaled_disconnection_summary_with_separate_ufls_counts", roots=volumes, 
+                  session=session)
+    fileinfo <- parseSavePath(volumes, input$save_upscaled_disconnection_summary_with_separate_ufls_counts)
+    if (nrow(fileinfo) > 0) {
+      write.csv(v$upscaled_disconnections_with_separate_ufls_counts, as.character(fileinfo$datapath), row.names=FALSE)
     }
   })
   

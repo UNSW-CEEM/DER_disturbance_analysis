@@ -13,7 +13,7 @@ get_upscaling_results <- function(circuit_summary, manufacturer_install_data, ev
   return(out)
 }
 
-get_upscaling_results_excluding_ufls <- function(circuit_summary, manufacturer_install_data, event_date, region, 
+get_upscaling_results_excluding_ufls_affected_circuits <- function(circuit_summary, manufacturer_install_data, event_date, region, 
                                                  sample_threshold){
   # Upscale the proportion of disconnecting circuits based on sample sizes once UFLS circuits are removed.
   out <- list()

@@ -22,8 +22,8 @@ manufacturer_install_data <- mutate(manufacturer_install_data,
 
 manufacturer_install_data <- calc_installed_capacity_by_standard_and_manufacturer(manufacturer_install_data)
 
-upsc_results <- get_upscaling_results_excluding_ufls(circuits_to_summarise, manufacturer_install_data, load_start_time, region_to_load, 
-                                      30)
+upsc_results <- get_upscaling_results_excluding_ufls_affected_circuits(circuits_to_summarise, manufacturer_install_data,
+                                                                       load_start_time, region_to_load, 30)
 
 disconnection_summary <- upsc_results$disconnection_summary
 upscaled_disconnections <- upsc_results$upscaled_disconnections
