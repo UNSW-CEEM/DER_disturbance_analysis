@@ -4,6 +4,10 @@ Tool to analyse PV and DER response to System Disturbances
 
 ## Version Control
 
+This project uses Git for version control.
+
+For guides on how to start using Git see those by [Github](https://guides.github.com/activities/hello-world/) or [Atlassian](https://www.atlassian.com/git/tutorials/what-is-version-control).
+
 ### Branching
 
 This project uses feature branches. New features should increment minor version number once version labels are implemented.
@@ -25,6 +29,12 @@ Work is continuing on automating tests for PRs.
 
 ## Style Guide
 
-We're planning to start using the Tidyverse style guide: https://style.tidyverse.org/index.html
+We're planning to start using the [Tidyverse style guide](https://style.tidyverse.org/index.html) with the following exceptions:
 
-The exception to this is that functions should continue to use explicit returns rather than the implicit ones in the guide.
+1. Functions should continue to use explicit returns rather than the implicit ones in the guide.
+e.g.
+```
+divide_by_two <- function(x) {
+  return(x/2)
+}
+```
