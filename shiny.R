@@ -1,4 +1,3 @@
-##RSHINY APP
 source("load_tool_environment.R")
 
 ui <- fluidPage(
@@ -208,7 +207,10 @@ ui <- fluidPage(
                                          label = strong('Disconnecting threshold, level below which circuit is considered to
                                                       have disconnected.'), 
                                          value = 0.05, max = 1, min = 0),
-                            materialSwitch("exclude_solar_edge", label = strong("Exclude solar edge from disconnection summary."), 
+                            numericInput("NED_threshold", 
+                                         label = strong('Minimum proportion of sampled seconds allowed within post event interval to not have a 6 Not enough data response'), 
+                                         value = 0.8, max = 1, min = 0),
+                            materialSwitch("exclude_solar_edge", label = strong("Exclude solar edge from reconnection summary."), 
                                            status = "primary", value = FALSE),
                             actionButton("load_backend_settings", "Load from settings file")
                             ),
@@ -410,6 +412,7 @@ server <- function(input,output,session){
   ramp_rate_change_resource_limit_threshold <- reactive({input$ramp_rate_change_resource_limit_threshold})
   pre_event_ufls_window_length <- reactive({input$pre_event_ufls_window_length})
   pre_event_ufls_stability_threshold <- reactive({input$pre_event_ufls_stability_threshold})
+  NED_threshold <- reactive({input$NED_threshold})
   disconnecting_threshold <- reactive({input$disconnecting_threshold})
   exclude_solar_edge <- reactive({input$exclude_solar_edge})
   
@@ -854,19 +857,24 @@ server <- function(input,output,session){
       if (length(circuits()) > 0) {combined_data_f <- filter(combined_data_f, c_id %in% circuits())}
       
       if(length(combined_data_f$ts) > 0){
-        combined_data_f <- categorise_response(combined_data_f, pre_event_interval(), window_length())
+        combined_data_f <- categorise_response(combined_data_f, pre_event_interval(), window_length(),NED_threshold())
         combined_data_f <- mutate(combined_data_f,  
                                   response_category = ifelse(response_category %in% c(NA), "NA", response_category))
         combined_data_f <- filter(combined_data_f, response_category %in% responses())
         
-        ufls_statuses <- ufls_detection(db = v$db, region = region_to_load(), 
+        ufls_statuses_ts <- ufls_detection_tstamp(db = v$db, region = region_to_load(), 
                                         pre_event_interval = pre_event_interval(), 
                                         pre_event_window_length = pre_event_ufls_window_length(),
                                         post_event_window_length = post_event_ufls_window_length(), 
                                         pre_pct_sample_seconds_threshold = pre_event_ufls_stability_threshold())
-        combined_data_f <- left_join(combined_data_f, ufls_statuses, by = c("c_id"))
+        
+        ufls_statuses_v <- ufls_detection_voltage(combined_data_f, pre_event_interval(), window_length(), fill_nans = FALSE)
+        combined_data_f <- left_join(combined_data_f, ufls_statuses_ts, by = c("c_id"))
+        combined_data_f <- left_join(combined_data_f, ufls_statuses_v, by = c("c_id"))
         combined_data_f <- mutate(combined_data_f, response_category = 
-                                  if_else(ufls_status == 'UFLS Dropout', ufls_status, response_category))
+                                  if_else((ufls_status == 'UFLS Dropout') | 
+                                            (ufls_status_v == 'UFLS Dropout'), 
+                                          'UFLS Dropout', response_category))
       }
       
       # Filter data by user selected time window
@@ -1005,7 +1013,8 @@ server <- function(input,output,session){
                                       zone, distance, lat, lon, con_type, first_ac, polarity, compliance_status, 
                                       reconnection_compliance_status, manual_droop_compliance, manual_reconnect_compliance, 
                                       reconnection_time, ramp_above_threshold, max_power, ufls_status,
-                                      pre_event_sampled_seconds, post_event_sampled_seconds)
+                                      pre_event_sampled_seconds, post_event_sampled_seconds, 
+                                      ufls_status_v, pre_event_v_mean, post_event_v_mean)
           
           # Summarise and upscale disconnections on a manufacturer basis.
           if (exclude_solar_edge()){
@@ -1590,6 +1599,7 @@ server <- function(input,output,session){
     settings$ramp_rate_change_resource_limit_threshold <- ramp_rate_change_resource_limit_threshold()
     settings$pre_event_ufls_window_length <- pre_event_ufls_window_length()
     settings$pre_event_ufls_stability_threshold <- pre_event_ufls_stability_threshold()
+    settings$NED_threshold <- NED_threshold()
     settings$disconnecting_threshold <- disconnecting_threshold()
     settings$exclude_solar_edge <- exclude_solar_edge()
     
@@ -1704,6 +1714,7 @@ server <- function(input,output,session){
       updateNumericInput(session, "pre_event_ufls_window_length", value = settings$pre_event_ufls_window_length)
       updateNumericInput(session, "pre_event_ufls_stability_threshold", 
                          value = settings$pre_event_ufls_stability_threshold)
+      updateNumericInput(session,"NED_threshold", value = settings$NED_threshold)
       updateNumericInput(session, "disconnecting_threshold", value = settings$disconnecting_threshold)
       updateMaterialSwitch(session, "exclude_solar_edge", value = settings$exclude_solar_edge)
     }

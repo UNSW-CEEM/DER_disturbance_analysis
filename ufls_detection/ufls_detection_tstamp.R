@@ -1,5 +1,5 @@
 
-ufls_detection <- function(db, region, pre_event_interval, pre_event_window_length, post_event_window_length,pre_pct_sample_seconds_threshold){
+ufls_detection_tstamp <- function(db, region, pre_event_interval, pre_event_window_length, post_event_window_length,pre_pct_sample_seconds_threshold){
   start_pre_event_window_obj <- pre_event_interval - 60 * pre_event_window_length
   start_pre_event_window_str <- format(start_pre_event_window_obj, tz = 'GMT')
   end_event_window_obj <- pre_event_interval + 60 * post_event_window_length
@@ -41,6 +41,7 @@ calc_sampled_time_per_circuit <- function(ts_data, start_time, end_time){
            where ts >= test_point and
                  test_point >= min_join_time"
   ts_data <- sqldf(query)
+  ts_data <- mutate(ts_data, ts = as.POSIXct(ts, origin='1970-01-01'))
   ts_data <- mutate(ts_data, t_delta = difftime(ts, test_point, units = 'secs'))
   ts_data <- mutate(ts_data, sampled = if_else((t_delta >= 0) & (t_delta < d), 1, 0))
   ts_data <- group_by(ts_data, c_id, test_point)

@@ -1,2 +1,2 @@
-.libPaths("C:/Users/NGorman/Documents/testlib2")
+.libPaths("C:\\Users\\mtrollip\\Local\\R Library")
 message("Using library: ", .libPaths()[1])

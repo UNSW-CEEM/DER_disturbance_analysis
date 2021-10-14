@@ -1,4 +1,4 @@
-testthat::context("Testing the ulfs detection function.")
+testthat::context("Testing the ulfs detection function based on missing timestamps.")
 
 load_test_df <- function(text){
   text <- gsub(" ", "", text)
@@ -30,7 +30,7 @@ testthat::test_that("test bad circuit signal ufls no dropout",{
                              ))
   db <- DBInterface$new()
   
-  ufls_statuses <- ufls_detection(db = db, region = 'blah', 
+  ufls_statuses <- ufls_detection_tstamp(db = db, region = 'blah', 
                                   pre_event_interval = strptime('2021-01-01 13:00:00', format="%Y-%m-%d %H:%M:%S", tz="Australia/Brisbane"), 
                                   pre_event_window_length = 5,post_event_window_length = 9, pre_pct_sample_seconds_threshold = 0.8)
   
@@ -64,7 +64,7 @@ testthat::test_that("test simple case no ufls dropout",{
                              ))
   db <- DBInterface$new()
   
-  ufls_statuses <- ufls_detection(db = db, region = 'blah', 
+  ufls_statuses <- ufls_detection_tstamp(db = db, region = 'blah', 
                                   pre_event_interval = strptime('2021-01-01 13:00:00', format="%Y-%m-%d %H:%M:%S", tz="Australia/Brisbane"), 
                                   pre_event_window_length = 5,post_event_window_length = 9, pre_pct_sample_seconds_threshold = 0.8)
   
@@ -96,7 +96,7 @@ testthat::test_that("test simple case ufls dropout",{
                              ))
   db <- DBInterface$new()
   
-  ufls_statuses <- ufls_detection(db = db, region = 'blah', 
+  ufls_statuses <- ufls_detection_tstamp(db = db, region = 'blah', 
                                   pre_event_interval = strptime('2021-01-01 13:00:00', format="%Y-%m-%d %H:%M:%S", tz="Australia/Brisbane"), 
                                   pre_event_window_length = 5,post_event_window_length = 9, pre_pct_sample_seconds_threshold = 0.8)
   
