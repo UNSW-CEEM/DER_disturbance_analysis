@@ -11,7 +11,10 @@ For guides on how to start using Git see those by [Github](https://guides.github
 ### Branching
 
 This project uses feature branches. New features should increment minor version number once version labels are implemented.
-Major version numbers will be incremented when non-backwards compatible changes are made.
+Major version numbers will be incremented when non-backwards compatible API changes are made.
+
+An example requiring a major version increment would be changing input or output formats drastically to allow new features that would no longer work with older data/analyses.
+
 
 ### Pull requests
 
@@ -38,3 +41,4 @@ divide_by_two <- function(x) {
   return(x/2)
 }
 ```
+2. We'll use a 120 character maximum line length.
