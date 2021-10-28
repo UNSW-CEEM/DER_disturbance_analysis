@@ -1,6 +1,55 @@
-group_disconnections_by_manufacturer <- function(circuit_summary){
+get_upscaling_results <- function(circuit_summary, manufacturer_install_data, event_date, region, sample_threshold){
+  # Upscale the proportion of disconnecting circuits by manufacturer to better represent the installed capacity.
+  out <- list()
+  disconnection_summary <- group_disconnections_by_manufacturer(circuit_summary)
+  manufacturer_capacitys <- get_manufacturer_capacitys(manufacturer_install_data, event_date, region)
+  disconnection_summary <- join_circuit_summary_and_cer_manufacturer_data(disconnection_summary, manufacturer_capacitys)
+  out$manufacturers_missing_from_cer <- get_manufactures_in_input_db_but_not_cer(disconnection_summary)
+  out$manufacturers_missing_from_input_db <- get_manufactures_in_cer_but_not_input_db(disconnection_summary)
+  disconnection_summary <- impose_sample_size_threshold(disconnection_summary, sample_threshold)
+  disconnection_summary <- calc_confidence_intervals_for_disconnections(disconnection_summary)
+  out$disconnection_summary <- calc_upscale_kw_loss(disconnection_summary)
+  out$upscaled_disconnections <- upscale_disconnections(out$disconnection_summary)
+  return(out)
+}
+
+get_upscaling_results_excluding_ufls_affected_circuits <- function(circuit_summary, manufacturer_install_data, event_date, region, 
+                                                 sample_threshold){
+  # Upscale the proportion of disconnecting circuits based on sample sizes once UFLS circuits are removed.
+  out <- list()
+  disconnection_summary <- group_disconnections_by_manufacturer(circuit_summary, exclude_ufls_circuits = TRUE)
+  ufls_stats <- get_number_of_ufls_disconnections(circuit_summary$response_category)
+  manufacturer_capacitys <- get_manufacturer_capacitys(manufacturer_install_data, event_date, region)
+  disconnection_summary <- join_circuit_summary_and_cer_manufacturer_data(disconnection_summary, manufacturer_capacitys)
+  out$manufacturers_missing_from_cer <- get_manufactures_in_input_db_but_not_cer(disconnection_summary)
+  out$manufacturers_missing_from_input_db <- get_manufactures_in_cer_but_not_input_db(disconnection_summary)
+  disconnection_summary <- scale_manufacturer_capacities_by_ufls(disconnection_summary, ufls_stats)
+  disconnection_summary <- impose_sample_size_threshold(disconnection_summary, sample_threshold)
+  disconnection_summary <- calc_confidence_intervals_for_disconnections(disconnection_summary)
+  disconnection_summary <- calc_upscale_kw_loss(disconnection_summary)
+  upscaled_disconnections <- upscale_disconnections(disconnection_summary)
+  disconnection_summary <- disconnection_summary %>% 
+    rename(
+      sample_size_after_removing_UFLS_affected_circuits = sample_size,
+      cer_capacity_reduced_by_UFLS_proportion = cer_capacity
+    )
+  out$disconnection_summary <- disconnection_summary
+  upscaled_disconnections <- upscaled_disconnections %>% 
+    rename(
+      sample_size_after_removing_UFLS_affected_circuits = sample_size,
+      cer_capacity_reduced_by_UFLS_proportion = cer_capacity
+    )
+  out$upscaled_disconnections <- upscaled_disconnections
+  return(out)
+}
+
+group_disconnections_by_manufacturer <- function(circuit_summary, exclude_ufls_circuits=FALSE){
   # Don't count circuits without a well defined response type.
-  bad_categories <- c("6 Not enough data", "Undefined")
+  if (exclude_ufls_circuits) {
+    bad_categories <- c("6 Not enough data", "Undefined", "UFLS Dropout")
+  } else {
+    bad_categories <- c("6 Not enough data", "Undefined")
+  }
   circuit_summary <- filter(circuit_summary, !(response_category %in% bad_categories | is.na(response_category)))
   
   # Get an initial summary of disconnection count and sample size by manufacturer.
@@ -17,7 +66,32 @@ get_number_of_disconnections <- function(response_categories){
   return(length(response_categories))
 }
 
-join_solar_analytics_and_cer_manufacturer_data <- function(circuit_summary, cer_manufacturer_data){
+get_number_of_ufls_disconnections <- function(response_categories){
+  # Find the number of circuits identified as UFLS Dropout and the sample size to use for the UFLS proportion
+  ufls_stats <- list()
+  bad_categories <- c("6 Not enough data", "Undefined")
+  response_categories <- response_categories[!(response_categories %in% bad_categories | is.na(response_categories))]
+  ufls_stats$sample_size <- length(response_categories)
+  disconnection_categories <- c("UFLS Dropout")
+  response_categories <- response_categories[response_categories %in% disconnection_categories]
+  ufls_stats$disconnections <- length(response_categories)
+  return(ufls_stats)
+}
+
+scale_manufacturer_capacities_by_ufls <- function(disconnection_summary, ufls_stats){
+  # Reduce the CER capacities by the UFLS proportion
+  ufls_proportion <- ufls_stats$disconnections / ufls_stats$sample_size
+  disconnection_summary <- mutate(disconnection_summary, cer_capacity=cer_capacity*(1-ufls_proportion))
+  # Add a UFLS row to the disconnection summary
+  ufls_row <- data.frame(Standard_Version="UFLS_disconnections_and_totals_including_ULFS_affected_circuits", 
+                         manufacturer="UFLS", disconnections=ufls_stats$disconnections, 
+                         sample_size=ufls_stats$sample_size, s_state="UFLS", 
+                         cer_capacity=sum(disconnection_summary$cer_capacity, na.rm = TRUE) / (1-ufls_proportion))
+  disconnection_summary <- rbind(disconnection_summary, ufls_row)
+  return(disconnection_summary)
+}
+
+join_circuit_summary_and_cer_manufacturer_data <- function(circuit_summary, cer_manufacturer_data){
   circuit_summary <- merge(circuit_summary, cer_manufacturer_data, by = c('Standard_Version', 'manufacturer'), 
                            all = TRUE)
   circuit_summary <- rename(circuit_summary, cer_capacity = capacity)
@@ -25,8 +99,10 @@ join_solar_analytics_and_cer_manufacturer_data <- function(circuit_summary, cer_
 }
   
 impose_sample_size_threshold <- function(disconnection_summary, sample_threshold){
-  circuit_summary <- mutate(disconnection_summary, sample_threshold, manufacturer = ifelse(is.na(cer_capacity), 'Other', manufacturer))
-  circuit_summary <- mutate(disconnection_summary, sample_threshold, manufacturer = ifelse(is.na(disconnections), 'Other', manufacturer))
+  circuit_summary <- mutate(disconnection_summary, sample_threshold, manufacturer = ifelse(is.na(cer_capacity), 
+                                                                                           'Other', manufacturer))
+  circuit_summary <- mutate(disconnection_summary, sample_threshold, manufacturer = ifelse(is.na(disconnections), 
+                                                                                           'Other', manufacturer))
   
   # Create an Other group for manufacturers with a small sample size.
   disconnection_summary <- mutate(disconnection_summary, sample_size = ifelse(is.na(sample_size), 0, sample_size))
@@ -35,6 +111,7 @@ impose_sample_size_threshold <- function(disconnection_summary, sample_threshold
                                                           manufacturer == "Unknown" | 
                                                           manufacturer == "Multiple" |
                                                           manufacturer == "Mixed" | 
+                                                          manufacturer == "" |
                                                           is.na(manufacturer), 
                                                         "Other", manufacturer)
                                   )
@@ -76,12 +153,12 @@ calc_upscale_kw_loss <- function(disconnection_summary){
   return(disconnection_summary)
 }
 
-get_manufactures_in_solar_analytics_but_not_cer <- function(disconnection_summary){
+get_manufactures_in_input_db_but_not_cer <- function(disconnection_summary){
   disconnection_summary <- filter(disconnection_summary, is.na(cer_capacity))
   return(disconnection_summary)
 }
 
-get_manufactures_in_cer_but_not_solar_analytics <- function(disconnection_summary){
+get_manufactures_in_cer_but_not_input_db <- function(disconnection_summary){
   disconnection_summary <- filter(disconnection_summary, is.na(sample_size))
   return(disconnection_summary)
 }

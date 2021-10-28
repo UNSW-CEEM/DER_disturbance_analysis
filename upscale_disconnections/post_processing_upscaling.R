@@ -25,10 +25,10 @@ if (exclude_solar_edge){
 disconnection_summary <- group_disconnections_by_manufacturer(circuits_to_summarise)
 manufacturer_capacitys <- get_manufacturer_capacitys(manufacturer_install_data, load_start_time, 
                                                      region_to_load)
-disconnection_summary <- join_solar_analytics_and_cer_manufacturer_data(disconnection_summary,
+disconnection_summary <- join_circuit_summary_and_cer_manufacturer_data(disconnection_summary,
                                                                         manufacturer_capacitys)
-manufacters_missing_from_cer <- get_manufactures_in_solar_analytics_but_not_cer(disconnection_summary)
-manufacters_missing_from_solar_analytics <- get_manufactures_in_cer_but_not_solar_analytics(disconnection_summary)
+manufacturers_missing_from_cer <- get_manufactures_in_input_db_but_not_cer(disconnection_summary)
+manufacturers_missing_from_input_db <- get_manufactures_in_cer_but_not_input_db(disconnection_summary)
 disconnection_summary <- impose_sample_size_threshold(disconnection_summary, sample_threshold = 30)
 disconnection_summary <- calc_confidence_intervals_for_disconnections(disconnection_summary)
 disconnection_summary <- calc_upscale_kw_loss(disconnection_summary)
@@ -36,5 +36,5 @@ upscaled_disconnections <- upscale_disconnections(disconnection_summary)
 
 write.csv(disconnection_summary, "test_disconnection_summary.csv", row.names = FALSE)
 write.csv(upscaled_disconnections, "test_upscaled_disconnections.csv", row.names = FALSE)
-write.csv(manufacters_missing_from_cer, "test_manufacters_missing_from_cer.csv", row.names=FALSE)
-write.csv(manufacters_missing_from_solar_analytics, "test_manufacters_missing_from_solar_analytics.csv", row.names=FALSE)
+write.csv(manufacturers_missing_from_cer, "test_manufacturers_missing_from_cer.csv", row.names=FALSE)
+write.csv(manufacturers_missing_from_input_db, "test_manufacturers_missing_from_input_db.csv", row.names=FALSE)
