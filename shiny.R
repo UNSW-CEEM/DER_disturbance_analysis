@@ -895,16 +895,21 @@ server <- function(input,output,session){
         # outputs: combined_data_f
         # dependencies: region_to_load(), pre_event_interval(), pre_event_interval_ufls_length(), post_event_interval_ufls_length(), pre_event_ufls_stability_threshold()
         logdebug('run ufls detection', logger="shinyapp")
-        ufls_statuses <- ufls_detection(db = v$db, region = region_to_load(), 
+        ufls_statuses_ts <- ufls_detection_tstamp(db = v$db, region = region_to_load(), 
                                         pre_event_interval = pre_event_interval(), 
                                         pre_event_window_length = pre_event_ufls_window_length(),
                                         post_event_window_length = post_event_ufls_window_length(), 
                                         pre_pct_sample_seconds_threshold = pre_event_ufls_stability_threshold())
-        combined_data_f <- left_join(combined_data_f, ufls_statuses, by = c("c_id"))
+        
+        ufls_statuses_v <- ufls_detection_voltage(combined_data_f, pre_event_interval(), window_length(), fill_nans = FALSE)
+        combined_data_f <- left_join(combined_data_f, ufls_statuses_ts, by = c("c_id"))
+        combined_data_f <- left_join(combined_data_f, ufls_statuses_v, by = c("c_id"))
         combined_data_f <- mutate(combined_data_f, response_category = 
-                                  if_else(ufls_status == 'UFLS Dropout', ufls_status, response_category))
-        # --------
+                                  if_else((ufls_status == 'UFLS Dropout') | 
+                                            (ufls_status_v == 'UFLS Dropout'), 
+                                          'UFLS Dropout', response_category))
       }
+        # --------
 
       
       # -------- caclulate distance zones --------
@@ -1111,7 +1116,8 @@ server <- function(input,output,session){
                                       zone, distance, lat, lon, con_type, first_ac, polarity, compliance_status, 
                                       reconnection_compliance_status, manual_droop_compliance, manual_reconnect_compliance, 
                                       reconnection_time, ramp_above_threshold, max_power, ufls_status,
-                                      pre_event_sampled_seconds, post_event_sampled_seconds)
+                                      pre_event_sampled_seconds, post_event_sampled_seconds, 
+                                      ufls_status_v, pre_event_v_mean, post_event_v_mean)
           
           # Combine data sets that have the same grouping so they can be saved in a single file
           if (no_grouping){
