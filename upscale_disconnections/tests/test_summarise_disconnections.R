@@ -34,7 +34,7 @@ testthat::test_that("group_disconnections_by_manufacturer",{
   testthat::expect_equal(output, expected_output, tolerance = 1e-4)
 })
 
-testthat::test_that("join_solar_analytics_and_cer_manufacturer_data",{
+testthat::test_that("join_circuit_summary_and_cer_manufacturer_data",{
 
   
   disconnection_summary <- "Standard_Version, manufacturer, disconnections, sample_size
@@ -56,7 +56,7 @@ testthat::test_that("join_solar_analytics_and_cer_manufacturer_data",{
   disconnection_summary <- load_test_file(disconnection_summary)
   cer_data <- load_test_file(cer_data)
   expected_output <- load_test_file(expected_output)
-  output <- join_solar_analytics_and_cer_manufacturer_data(disconnection_summary, cer_data)
+  output <- join_circuit_summary_and_cer_manufacturer_data(disconnection_summary, cer_data)
   testthat::expect_equal(output, expected_output, tolerance = 1e-4)
 })
 

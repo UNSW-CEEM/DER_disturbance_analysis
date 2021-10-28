@@ -1,4 +1,3 @@
-##RSHINY APP
 source("load_tool_environment.R")
 
 # set up logging at debug level
@@ -118,7 +117,11 @@ ui <- fluidPage(
           HTML("<br>"),
           uiOutput("save_manufacturer_disconnection_summary"),
           HTML("<br>"),
+          uiOutput("save_manufacturer_disconnection_summary_with_separate_ufls_counts"),
+          HTML("<br>"),
           uiOutput("save_upscaled_disconnection_summary"),
+          HTML("<br>"),
+          uiOutput("save_upscaled_disconnection_summary_with_separate_ufls_counts"),
           HTML("<br><br>"),
           plotlyOutput(outputId="NormPower"),
           plotlyOutput(outputId="Frequency"),
@@ -208,7 +211,10 @@ ui <- fluidPage(
                                          label = strong('Disconnecting threshold, level below which circuit is considered to
                                                       have disconnected.'), 
                                          value = 0.05, max = 1, min = 0),
-                            materialSwitch("exclude_solar_edge", label = strong("Exclude solar edge from disconnection summary."), 
+                            numericInput("NED_threshold", 
+                                         label = strong('Minimum proportion of sampled seconds allowed within post event interval to not have a 6 Not enough data response'), 
+                                         value = 0.8, max = 1, min = 0),
+                            materialSwitch("exclude_solar_edge", label = strong("Exclude solar edge from reconnection summary."), 
                                            status = "primary", value = FALSE),
                             actionButton("load_backend_settings", "Load from settings file")
                             ),
@@ -410,6 +416,7 @@ server <- function(input,output,session){
   ramp_rate_change_resource_limit_threshold <- reactive({input$ramp_rate_change_resource_limit_threshold})
   pre_event_ufls_window_length <- reactive({input$pre_event_ufls_window_length})
   pre_event_ufls_stability_threshold <- reactive({input$pre_event_ufls_stability_threshold})
+  NED_threshold <- reactive({input$NED_threshold})
   disconnecting_threshold <- reactive({input$disconnecting_threshold})
   exclude_solar_edge <- reactive({input$exclude_solar_edge})
   
@@ -884,12 +891,12 @@ server <- function(input,output,session){
         # inputs: combined_data_f
         # outputs: combined_data_f
         # dependencies: pre_event_interval(), window_length(), responses()
-        combined_data_f <- categorise_response(combined_data_f, pre_event_interval(), window_length())
+        combined_data_f <- categorise_response(combined_data_f, pre_event_interval(), window_length(), NED_threshold())
         combined_data_f <- mutate(combined_data_f,  
                                   response_category = ifelse(response_category %in% c(NA), "NA", response_category))
         combined_data_f <- filter(combined_data_f, response_category %in% responses())
         # -------- 
-        
+
         # -------- ufls detection --------
         # inputs: v$db, combined_data_f
         # outputs: combined_data_f
@@ -1150,37 +1157,39 @@ server <- function(input,output,session){
             circuits_to_summarise <- v$circuit_summary
             manufacturer_install_data <- v$manufacturer_install_data
           }
+          upscaling_results <- get_upscaling_results(circuits_to_summarise, manufacturer_install_data, load_date(), 
+                                                     region_to_load(), sample_threshold = 30)
+          upscaling_results_with_separate_ufls_counts <- get_upscaling_results_excluding_ufls_affected_circuits(
+            circuits_to_summarise, manufacturer_install_data, load_date(), region_to_load(), sample_threshold = 30)
 
-          disconnection_summary <- group_disconnections_by_manufacturer(circuits_to_summarise)
-          manufacturer_capacitys <- get_manufacturer_capacitys(manufacturer_install_data, load_date(), 
-                                                               region_to_load())
-          disconnection_summary <- join_solar_analytics_and_cer_manufacturer_data(disconnection_summary,
-                                                                                  manufacturer_capacitys)
-          manufacters_missing_from_cer <- get_manufactures_in_solar_analytics_but_not_cer(disconnection_summary)
-          manufacters_missing_from_solar_analytics <- get_manufactures_in_cer_but_not_solar_analytics(disconnection_summary)
-          disconnection_summary <- impose_sample_size_threshold(disconnection_summary, sample_threshold = 30)
-          disconnection_summary <- calc_confidence_intervals_for_disconnections(disconnection_summary)
-          v$disconnection_summary <- calc_upscale_kw_loss(disconnection_summary)
-          v$upscaled_disconnections <- upscale_disconnections(v$disconnection_summary)
-          write.csv(manufacters_missing_from_cer, "logging/manufacters_missing_from_cer.csv", row.names=FALSE)
-          write.csv(manufacters_missing_from_solar_analytics, "logging/manufacters_missing_from_solar_analytics.csv", row.names=FALSE)
+          v$disconnection_summary <- upscaling_results$disconnection_summary
+          v$upscaled_disconnections <- upscaling_results$upscaled_disconnections
+          v$disconnection_summary_with_separate_ufls_counts <- 
+            upscaling_results_with_separate_ufls_counts$disconnection_summary
+          v$upscaled_disconnections_with_separate_ufls_counts <- 
+            upscaling_results_with_separate_ufls_counts$upscaled_disconnections
           
-          if(length(manufacters_missing_from_cer$manufacturer) > 0) {
-            long_error_message <- c("Some manufacturers present in the solar analytics data could not be ",
+          write.csv(upscaling_results$manufacturers_missing_from_cer, 
+                    "logging/manufacturers_missing_from_cer.csv", row.names=FALSE)
+          write.csv(upscaling_results$manufacturers_missing_from_input_db, 
+                    "logging/manufacturers_missing_from_input_db.csv", row.names=FALSE)
+          
+          if(length(upscaling_results$manufacturers_missing_from_cer$manufacturer) > 0) {
+            long_error_message <- c("Some manufacturers present in the input data could not be ",
                                     "matched to the cer data set. A list of these has been saved in the ",
-                                    "file logging/manufacters_missing_from_cer.csv. You may want to review the ", 
-                                    "mapping used in processing the solar analytics data.")
+                                    "file logging/manufacturers_missing_from_cer.csv. You may want to review the ", 
+                                    "mapping used in processing the input data.")
             long_error_message <- paste(long_error_message, collapse = '')
             shinyalert("Manufacturers missing from CER data", long_error_message)
           }
           
-          if(length(manufacters_missing_from_solar_analytics$manufacturer) > 0) {
+          if(length(upscaling_results$manufacturers_missing_from_input_db$manufacturer) > 0) {
             long_error_message <- c("Some manufacturers present in the CER data could not be ",
-                                    "matched to the solar analytics data set. A list of these has been saved in the ",
-                                    "file logging/manufacters_missing_from_solar_analytics.csv. You may wish to review the ", 
+                                    "matched to the input data set. A list of these has been saved in the ",
+                                    "file logging/manufacturers_missing_from_input_db.csv. You may wish to review the ", 
                                     "file to check the number and names of missing manufacturers. ")
             long_error_message <- paste(long_error_message, collapse = '')
-            shinyalert("Manufacturers missing from Solar Analytics data", long_error_message)
+            shinyalert("Manufacturers missing from input data", long_error_message)
           }
           # --------
           
@@ -1221,8 +1230,18 @@ server <- function(input,output,session){
               shinySaveButton("save_manufacturer_disconnection_summary", "Save manufacturer disconnection summary", 
                               "Choose directory for report files ...", filetype=list(xlsx="csv"))
             })
+            output$save_manufacturer_disconnection_summary_with_separate_ufls_counts <- renderUI({
+              shinySaveButton("save_manufacturer_disconnection_summary_with_separate_ufls_counts", 
+                              "Save manufacturer disconnection summary with separate ufls counts", 
+                              "Choose directory for report files ...", filetype=list(xlsx="csv"))
+            })
             output$save_upscaled_disconnection_summary <- renderUI({
               shinySaveButton("save_upscaled_disconnection_summary", "Save upscaled disconnection summary", 
+                              "Choose directory for report files ...", filetype=list(xlsx="csv"))
+            })
+            output$save_upscaled_disconnection_summary_with_separate_ufls_counts <- renderUI({
+              shinySaveButton("save_upscaled_disconnection_summary_with_separate_ufls_counts", 
+                              "Save upscaled disconnection summary with separate ufls counts", 
                               "Choose directory for report files ...", filetype=list(xlsx="csv"))
             })
           
@@ -1612,12 +1631,35 @@ server <- function(input,output,session){
     }
   })
   
+  
+  observeEvent(input$save_manufacturer_disconnection_summary_with_separate_ufls_counts,{
+    volumes <- c(home=getwd())
+    shinyFileSave(input, "save_manufacturer_disconnection_summary_with_separate_ufls_counts", roots=volumes, 
+                  session=session)
+    fileinfo <- parseSavePath(volumes, input$save_manufacturer_disconnection_summary_with_separate_ufls_counts)
+    if (nrow(fileinfo) > 0) {
+      write.csv(v$disconnection_summary_with_separate_ufls_counts, as.character(fileinfo$datapath), row.names=FALSE)
+    }
+  })
+  
+  
   observeEvent(input$save_upscaled_disconnection_summary,{
     volumes <- c(home=getwd())
     shinyFileSave(input, "save_upscaled_disconnection_summary", roots=volumes, session=session)
     fileinfo <- parseSavePath(volumes, input$save_upscaled_disconnection_summary)
     if (nrow(fileinfo) > 0) {
       write.csv(v$upscaled_disconnections, as.character(fileinfo$datapath), row.names=FALSE)
+    }
+  })
+  
+  
+  observeEvent(input$save_upscaled_disconnection_summary_with_separate_ufls_counts,{
+    volumes <- c(home=getwd())
+    shinyFileSave(input, "save_upscaled_disconnection_summary_with_separate_ufls_counts", roots=volumes, 
+                  session=session)
+    fileinfo <- parseSavePath(volumes, input$save_upscaled_disconnection_summary_with_separate_ufls_counts)
+    if (nrow(fileinfo) > 0) {
+      write.csv(v$upscaled_disconnections_with_separate_ufls_counts, as.character(fileinfo$datapath), row.names=FALSE)
     }
   })
   
@@ -1681,6 +1723,7 @@ server <- function(input,output,session){
     settings$ramp_rate_change_resource_limit_threshold <- ramp_rate_change_resource_limit_threshold()
     settings$pre_event_ufls_window_length <- pre_event_ufls_window_length()
     settings$pre_event_ufls_stability_threshold <- pre_event_ufls_stability_threshold()
+    settings$NED_threshold <- NED_threshold()
     settings$disconnecting_threshold <- disconnecting_threshold()
     settings$exclude_solar_edge <- exclude_solar_edge()
     
@@ -1795,6 +1838,7 @@ server <- function(input,output,session){
       updateNumericInput(session, "pre_event_ufls_window_length", value = settings$pre_event_ufls_window_length)
       updateNumericInput(session, "pre_event_ufls_stability_threshold", 
                          value = settings$pre_event_ufls_stability_threshold)
+      updateNumericInput(session,"NED_threshold", value = settings$NED_threshold)
       updateNumericInput(session, "disconnecting_threshold", value = settings$disconnecting_threshold)
       updateMaterialSwitch(session, "exclude_solar_edge", value = settings$exclude_solar_edge)
     }
