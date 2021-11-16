@@ -293,6 +293,44 @@ reset_data_cleaning_tab <- function(input, output, session, stringsAsFactors) {
   output$site_plot <- renderPlotly({})
 }
 
+#' Check that pre-event interval value is in data and matches time window
+#' @param pre_event_interval The pre-event timestamp to be checked
+#' @param load_start_time The start boundary timestamp for loaded data
+#' @param load_start_time The end boundary timestamp for loaded data
+#' @param window_length The input window length
+#' @param data The dataframe containing the loaded data
+validate_pre_event_interval <- function(pre_event_interval, load_start_time, load_end_time, window_length, data){
+  logdebug("Validating pre_event_interval", logger="shinyapp")
+  # check pre-event interval is on the selected time offset
+  error_check_passed = TRUE
+  start_time <- as.POSIXct(load_start_time, tz = "Australia/Brisbane")
+  end_time <- as.POSIXct(load_end_time, tz = "Australia/Brisbane")
+  data_at_set_pre_event_interval = filter(data, ts == pre_event_interval)
+  if (dim(data_at_set_pre_event_interval)[1] == 0) {
+    long_error_message <- c("The pre-event time interval does not match any time step in the time series data.")
+    long_error_message <- paste(long_error_message, collapse = '')
+    shinyalert("Error in pre-event time interval", long_error_message)
+    error_check_passed = FALSE
+  }
+  # check pre-event interval is inside the time window loaded
+  if ((pre_event_interval < start_time) | (pre_event_interval > end_time)) {
+    long_error_message <- c("The pre-event interval must be within the time window of loaded data.")
+    long_error_message <- paste(long_error_message, collapse = '')
+    shinyalert("Error in pre-event time interval", long_error_message)
+    error_check_passed = FALSE
+  }
+  # check window length does not extend outside time window loaded.
+  if ((pre_event_interval + window_length * 60) > end_time) {
+    long_error_message <- c("The event window length must be within the time window of loaded data.")
+    long_error_message <- paste(long_error_message, collapse = '')
+    shinyalert("Error in pre-event time interval", long_error_message)
+    error_check_passed = FALSE
+  }
+  return(error_check_passed)
+}
+
+
+
 server <- function(input,output,session){
   # Create radio button dyamically so label can be updated
   output$duration <- renderUI({radioButtons("duration", label=strong("Sampled duration (seconds), select one."), 
@@ -803,50 +841,18 @@ server <- function(input,output,session){
 
   # Create plots when update plots button is clicked.
   observeEvent(input$update_plots, {
-    logdebug('update_plots event triggered', logger="shinyapp")
+    logdebug  ("update_plots event triggered", logger="shinyapp")
     
-    
-    # -------- checks --------
-    # inputs: v$combined_data
-    # outputs: error_check_passed (bool)
-    # dependencies: time reactives (load_start_time, load_en_time, pre_event_interval, window_length)
-    logdebug('start of checks', logger="shinyapp")
-    # check pre-event interval is on the selected time offset
-    error_check_passed = TRUE
-    start_time <- as.POSIXct(load_start_time(), tz = "Australia/Brisbane")
-    end_time <- as.POSIXct(load_end_time(), tz = "Australia/Brisbane")
-    data_at_set_pre_event_interval = filter(v$combined_data, ts == pre_event_interval())
-    if (dim(data_at_set_pre_event_interval)[1] == 0) {
-      long_error_message <- c("The pre-event time interval does not match any time step in the time series data.")
-      long_error_message <- paste(long_error_message, collapse = '')
-      shinyalert("Error in pre-event time interval", long_error_message)
-      error_check_passed = FALSE
-    }
-    
-    # check pre-event interval is inside the time window loaded
-    if ((pre_event_interval() < start_time) | (pre_event_interval() > end_time)) {
-      long_error_message <- c("The pre-event interval must be within the time window of loaded data.")
-      long_error_message <- paste(long_error_message, collapse = '')
-      shinyalert("Error in pre-event time interval", long_error_message)
-      error_check_passed = FALSE
-    }
-    
-    # check window length does not extend outside time window loaded.
-    if ((pre_event_interval() + window_length() * 60) > end_time) {
-      long_error_message <- c("The event window length must be within the time window of loaded data.")
-      long_error_message <- paste(long_error_message, collapse = '')
-      shinyalert("Error in pre-event time interval", long_error_message)
-      error_check_passed = FALSE
-    }
-    # -------- end checks --------
-    
+    error_check_passed = validate_pre_event_interval(
+      pre_event_interval(), load_start_time(), load_end_time(), window_length(), v$combined_data
+    )
     
     if (error_check_passed) {
-      logdebug('error checks passed', logger="shinyapp")
+      logdebug("error checks passed", logger="shinyapp")
   
       # -------- ideal response --------
       # inputs: v$frequency_data
-      # outputs: error_check_passed (bool)
+      # outputs: v$ideal_response_to_plot
       # dependencies: region_to_load reactive
       id <- showNotification("Updating plots", duration=1000)
       # Get ideal response.
