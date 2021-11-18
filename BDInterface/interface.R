@@ -112,7 +112,9 @@ DBInterface <- R6::R6Class("DBInterface",
       time_series_build_query <- self$get_time_series_build_query(timeseries)
       circuit_details_build_query <- self$get_circuit_details_build_query(circuit_details)
       site_details_build_query <- self$get_site_details_build_query(site_details)
-      alerts_build_query <- self$get_alerts_build_query(alerts_file)
+      if (!is.null(alerts_file)){
+        alerts_build_query <- self$get_alerts_build_query(alerts_file)
+      }
       
       con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)
       
@@ -285,7 +287,6 @@ DBInterface <- R6::R6Class("DBInterface",
       return(query)
     },
     get_alerts_build_query = function(alerts_file){
-      #TODO: write function!
       column_names <- names(read.csv(alerts_file, nrows=3, header = TRUE))
       
       column_aliases <- list(c_id='_c_id', GridFaultContactorTrip='_GridFaultContactorTrip', 
