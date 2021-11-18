@@ -81,7 +81,7 @@ DBInterface <- R6::R6Class("DBInterface",
         RSQLite::dbDisconnect(con)
       }
     },
-    build_database = function(timeseries, circuit_details, site_details, check_disk_space=TRUE, 
+    build_database = function(timeseries, circuit_details, site_details, alerts_file=NULL, check_disk_space=TRUE, 
                               check_dataset_ids_match=TRUE) {
       
       if (!file.exists(timeseries)){
@@ -93,7 +93,12 @@ DBInterface <- R6::R6Class("DBInterface",
       if (!file.exists(site_details)){
         stop("Specified site_details file not found. Please check the filepath provided.")
       }
-      
+      if (!is.null(alerts_file)){
+        if (!file.exists(alerts_file)){
+          stop("Specified alerts file not found. Please check the filepath provided.")
+          } 
+      }
+
       #free_space_gigabytes <- get_free_disk_space_in_working_directory()
       #time_series_size_gigabytes <- file.size(timeseries) / 1073741824
       #extimated_database_size <- time_series_size_gigabytes * 2.5
@@ -107,6 +112,7 @@ DBInterface <- R6::R6Class("DBInterface",
       time_series_build_query <- self$get_time_series_build_query(timeseries)
       circuit_details_build_query <- self$get_circuit_details_build_query(circuit_details)
       site_details_build_query <- self$get_site_details_build_query(site_details)
+      alerts_build_query <- self$get_alerts_build_query(alerts_file)
       
       con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)
       
@@ -177,6 +183,26 @@ DBInterface <- R6::R6Class("DBInterface",
           invokeRestart("muffleWarning")
       })
       
+      
+      RSQLite::dbExecute(con, "DROP TABLE IF EXISTS alerts")
+      
+      RSQLite::dbExecute(con, "CREATE TABLE alerts(
+                         c_id INT, GridFaultContactorTrip INT, SYNC_a038_DoOpenArguments INT, count_times_open INT, 
+                         first_timestamp INT, SYNC_a010_vfCheckFreqWobble INT, SYNC_a005_vfCheckUnderVoltage INT)")
+      
+      if (!is.null(alerts_file)){
+        # Suppress warning
+        withCallingHandlers({
+          file_con <- base::file(alerts_file)
+          sqldf::read.csv.sql(sql = alerts_build_query, eol = '\n',
+                              dbname = self$db_path_name)
+          base::close(file_con)
+        }, warning=function(w) {
+          if (startsWith(conditionMessage(w), "Don't need to call dbFetch()"))
+            invokeRestart("muffleWarning")
+        })
+      }
+        
       if (check_dataset_ids_match) {
         self$check_ids_match_between_datasets()
       }
@@ -254,6 +280,36 @@ DBInterface <- R6::R6Class("DBInterface",
           stop("The provided site details file should have the columns site_id, s_postcode, s_state,
                ac, dc, manufacturer, model and pv_installation_year_month. The ac column should be in
                kW and the the dc in W. Please check this file and try again.")
+        }
+      }
+      return(query)
+    },
+    get_alerts_build_query = function(alerts_file){
+      #TODO: write function!
+      column_names <- names(read.csv(alerts_file, nrows=3, header = TRUE))
+      
+      column_aliases <- list(c_id='_c_id', GridFaultContactorTrip='_GridFaultContactorTrip', 
+                             SYNC_a038_DoOpenArguments='_SYNC_a038_DoOpenArguments', 
+                             count_times_open='_count_times_open', 
+                             first_timestamp='_first_timestamp', 
+                             SYNC_a010_vfCheckFreqWobble='_SYNC_a010_vfCheckFreqWobble', 
+                             SYNC_a005_vfCheckUnderVoltage='_SYNC_a005_vfCheckUnderVoltage')
+      
+      query <- "REPLACE INTO alerts 
+      SELECT cast(_c_id as integer) as c_id, _GridFaultContactorTrip as GridFaultContactorTrip, 
+      _SYNC_a038_DoOpenArguments as SYNC_a038_DoOpenArguments, 
+      _count_times_open as count_times_open, _first_timestamp as first_timestamp, 
+      _SYNC_a010_vfCheckFreqWobble as SYNC_a010_vfCheckFreqWobble,
+      _SYNC_a005_vfCheckUnderVoltage as SYNC_a005_vfCheckUnderVoltage
+      from file_con"
+      
+      for (name in column_names){
+        if (name %in% names(column_aliases)){
+          query <- gsub(column_aliases[[name]], name, query)
+        } else {
+          stop("The provided alerts file should have the columns c_id, GridFaultContactorTrip, 
+          SYNC_a038_DoOpenArguments, count_times_open, first_timestamp, SYNC_a010_vfCheckFreqWobble and 
+          SYNC_a005_vfCheckUnderVoltage. Please check this file and try again.")
         }
       }
       return(query)
@@ -552,6 +608,7 @@ DBInterface <- R6::R6Class("DBInterface",
     },
     perform_power_calculations = function(time_series){
       time_series <- mutate(time_series, d = as.numeric(d))
+      time_series <- mutate(time_series, e = as.numeric(e))
       time_series <- mutate(time_series, e_polarity=e*polarity)
       time_series <- mutate(time_series, power_kW = e_polarity/(d * 1000))
       return(time_series)
