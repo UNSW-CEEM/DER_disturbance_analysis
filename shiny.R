@@ -293,7 +293,7 @@ reset_data_cleaning_tab <- function(input, output, session, stringsAsFactors) {
   output$site_plot <- renderPlotly({})
 }
 
-#' Check that pre-event interval value is in data and matches time window
+#' Check pre-event interval value is in data and matches time window
 #' @param pre_event_interval The pre-event timestamp to be checked
 #' @param load_start_time The start boundary timestamp for loaded data
 #' @param load_start_time The end boundary timestamp for loaded data
@@ -329,6 +329,68 @@ validate_pre_event_interval <- function(pre_event_interval, load_start_time, loa
   return(error_check_passed)
 }
 
+#' Get the ideal frequency-watt response for a region
+#' @param frequency_data The frequency data input to the tool
+#' @param region_to_load Which region (state) to pull from the frequency data
+ideal_response_from_frequency <- function(frequency_data, region_to_load) {
+  if (dim(frequency_data)[1] > 0) {
+    temp_f_data <- select(frequency_data, ts, region_to_load) 
+    temp_f_data <- setnames(temp_f_data, c(region_to_load), c("f"))
+    temp_f_data <- mutate(temp_f_data, f = as.numeric(f))
+    ideal_response_to_plot <- ideal_response(temp_f_data)
+  } else {
+    ideal_response_to_plot <- data.frame()
+  }
+  return(ideal_response_to_plot)
+}
+
+#' Apply user filters to combined data
+fiter_combined_data <- function(combined_data, off_grid_postcodes, clean, size_groupings, standards, postcodes,
+                                manufacturers, models, sites, circuits) {
+  logdebug("Apply user filters to combined data", logger="shinyapp")
+  combined_data_f <- combined_data
+  site_types <- c("pv_site_net", "pv_site", "pv_inverter_net", "pv_inverter")
+  if (length(clean) > 0) {combined_data_f <- filter(combined_data_f, clean %in% clean)}
+  combined_data_f <- filter(combined_data_f, sum_ac<=100)
+  if (length(site_types) > 0 ) {combined_data_f <- filter(combined_data_f, con_type %in% site_types)}
+  if (length(off_grid_postcodes) > 0 ) {
+    combined_data_f <- filter(combined_data_f, !(s_postcode %in% off_grid_postcodes))}
+  if (length(size_groupings) > 0 ) {combined_data_f <- filter(combined_data_f, Grouping %in% size_groupings)}
+  if (length(standards) > 0 ) {combined_data_f <- filter(combined_data_f, Standard_Version %in% standards)}
+  if (length(postcodes) > 0) {combined_data_f <- filter(combined_data_f, s_postcode %in% postcodes)}
+  if (length(manufacturers) > 0) {combined_data_f <- filter(combined_data_f, manufacturer %in% manufacturers)}
+  if (length(models) > 0) {combined_data_f <- filter(combined_data_f, model %in% models)}
+  if (length(sites) > 0) {combined_data_f <- filter(combined_data_f, site_id %in% sites)}
+  if (length(circuits) > 0) {combined_data_f <- filter(combined_data_f, c_id %in% circuits)}
+  return(combined_data_f)
+}
+
+#' Check for UFLS disconnections
+#' Runs UFLS status checks - both voltage and timestamp based.
+#' Returns an updated dataframe with columns for UFLS check results
+#' @seealso
+#' * [ufls_detection_tstamp()] for detail of timestamp based UFLS detection
+#' * [ufls_detection_voltage()] for detail of voltage based UFLS detection
+ufls_detection <- function(
+  db_interface, combined_data_f, region_to_load, pre_event_interval, window_length, pre_event_ufls_window_length,
+  post_event_ufls_window_length, pre_event_ufls_stability_threshold
+) {
+  logdebug("run ufls detection", logger = "shinyapp")
+  ufls_statuses_ts <- ufls_detection_tstamp(db = db_interface, region = region_to_load, 
+                                  pre_event_interval = pre_event_interval, 
+                                  pre_event_window_length = pre_event_ufls_window_length,
+                                  post_event_window_length = post_event_ufls_window_length, 
+                                  pre_pct_sample_seconds_threshold = pre_event_ufls_stability_threshold)
+  
+  ufls_statuses_v <- ufls_detection_voltage(combined_data_f, pre_event_interval, window_length, fill_nans = FALSE)
+  combined_data_f <- left_join(combined_data_f, ufls_statuses_ts, by = c("c_id"))
+  combined_data_f <- left_join(combined_data_f, ufls_statuses_v, by = c("c_id"))
+  combined_data_f <- mutate(combined_data_f, response_category =
+                            if_else((ufls_status == "UFLS Dropout") |
+                                      (ufls_status_v == "UFLS Dropout"),
+                                    "UFLS Dropout", response_category))
+  return(combined_data_f)
+}
 
 
 server <- function(input,output,session){
@@ -841,57 +903,26 @@ server <- function(input,output,session){
 
   # Create plots when update plots button is clicked.
   observeEvent(input$update_plots, {
-    logdebug  ("update_plots event triggered", logger="shinyapp")
+    logdebug("update_plots event triggered", logger="shinyapp")
     
     error_check_passed = validate_pre_event_interval(
       pre_event_interval(), load_start_time(), load_end_time(), window_length(), v$combined_data
     )
     
     if (error_check_passed) {
-      logdebug("error checks passed", logger="shinyapp")
-  
-      # -------- ideal response --------
-      # inputs: v$frequency_data
-      # outputs: v$ideal_response_to_plot
-      # dependencies: region_to_load reactive
+      logging::logdebug("error checks passed", logger="shinyapp")
       id <- showNotification("Updating plots", duration=1000)
-      # Get ideal response.
-      if (dim(v$frequency_data)[1] > 0) {
-        temp_f_data <- select(v$frequency_data, ts, region_to_load()) 
-        temp_f_data <- setnames(temp_f_data, c(region_to_load()), c("f"))
-        temp_f_data <- mutate(temp_f_data, f = as.numeric(f))
-        ideal_response_to_plot <- ideal_response(temp_f_data)
-      } else {
-        ideal_response_to_plot <- data.frame()
-      }
-      
-      v$ideal_response_to_plot <- ideal_response_to_plot
-      
-      # -------- end ideal response --------
-      
-      
+  
+      v$ideal_response_to_plot <- ideal_response_from_frequency(
+        v$frequency_data, region_to_load()
+      )
+
       # -------- filter combined data by user filters --------
-      # inputs: v$combined_data, v$off_grid_postcodes
-      # outputs: combined_data_f
-      # dependencies: clean(), size_groupings(), standards(), postcodes(), manufacturers(), models(), sites(), circuits(),
-      logdebug('compose combined_data_f', logger="shinyapp")
-      combined_data_f <- filter(v$combined_data, clean %in% clean())
-      combined_data_f <- filter(combined_data_f, sum_ac<=100)
-      site_types <- c("pv_site_net", "pv_site", "pv_inverter_net", "pv_inverter")
-      combined_data_f <- filter(combined_data_f, con_type %in% site_types)
-      off_grid_postcodes <- v$off_grid_postcodes
-      combined_data_f <- filter(combined_data_f, !(s_postcode %in% off_grid_postcodes))
-      combined_data_f <- filter(combined_data_f, clean %in% clean())
-      combined_data_f <- filter(combined_data_f, Grouping %in% size_groupings())
-      combined_data_f <- filter(combined_data_f, Standard_Version %in% standards())
-      if (length(postcodes()) > 0) {combined_data_f <- filter(combined_data_f, s_postcode %in% postcodes())}
-      if (length(manufacturers()) > 0) {combined_data_f <- filter(combined_data_f, manufacturer %in% manufacturers())}
-      if (length(models()) > 0) {combined_data_f <- filter(combined_data_f, model %in% models())}
-      if (length(sites()) > 0) {combined_data_f <- filter(combined_data_f, site_id %in% sites())}
-      if (length(circuits()) > 0) {combined_data_f <- filter(combined_data_f, c_id %in% circuits())}
-      # --------
-      
-      
+      combined_data_f <- fiter_combined_data(
+        v$combined_data, v$off_grid_postcodes, clean(), size_groupings(), standards(), postcodes(), manufacturers(),
+        models(), sites(), circuits()
+      )
+
       if(length(combined_data_f$ts) > 0){
         # -------- categorise response --------
         # inputs: combined_data_f
@@ -903,26 +934,11 @@ server <- function(input,output,session){
         combined_data_f <- filter(combined_data_f, response_category %in% responses())
         # -------- 
 
-        # -------- ufls detection --------
-        # inputs: v$db, combined_data_f
-        # outputs: combined_data_f
-        # dependencies: region_to_load(), pre_event_interval(), pre_event_interval_ufls_length(), post_event_interval_ufls_length(), pre_event_ufls_stability_threshold()
-        logdebug('run ufls detection', logger="shinyapp")
-        ufls_statuses_ts <- ufls_detection_tstamp(db = v$db, region = region_to_load(), 
-                                        pre_event_interval = pre_event_interval(), 
-                                        pre_event_window_length = pre_event_ufls_window_length(),
-                                        post_event_window_length = post_event_ufls_window_length(), 
-                                        pre_pct_sample_seconds_threshold = pre_event_ufls_stability_threshold())
-        
-        ufls_statuses_v <- ufls_detection_voltage(combined_data_f, pre_event_interval(), window_length(), fill_nans = FALSE)
-        combined_data_f <- left_join(combined_data_f, ufls_statuses_ts, by = c("c_id"))
-        combined_data_f <- left_join(combined_data_f, ufls_statuses_v, by = c("c_id"))
-        combined_data_f <- mutate(combined_data_f, response_category = 
-                                  if_else((ufls_status == 'UFLS Dropout') | 
-                                            (ufls_status_v == 'UFLS Dropout'), 
-                                          'UFLS Dropout', response_category))
+        combined_data_f <- ufls_detection(
+          v$db, combined_data_f, region_to_load(), pre_event_interval(), window_length(), pre_event_ufls_window_length(),
+          post_event_ufls_window_length(), pre_event_ufls_stability_threshold()
+        )
       }
-        # --------
 
       
       # -------- caclulate distance zones --------
@@ -995,13 +1011,13 @@ server <- function(input,output,session){
         combined_data_f <- setnames(combined_data_f, c("Time"), c("ts"))
         # --------
 
-        if(dim(ideal_response_to_plot)[1]>0){
-          ideal_response_downsampled <- down_sample_1s(ideal_response_to_plot, duration(), min(combined_data_f$ts))
+        if(dim(v$ideal_response_to_plot)[1]>0){
+          ideal_response_downsampled <- down_sample_1s(v$ideal_response_to_plot, duration(), min(combined_data_f$ts))
           v$ideal_response_downsampled <- ideal_response_downsampled
           combined_data_f <- 
             calc_error_metric_and_compliance_2(combined_data_f, 
                                                ideal_response_downsampled,
-                                               ideal_response_to_plot,
+                                               v$ideal_response_to_plot,
                                                compliance_threshold(),
                                                start_buffer(),
                                                end_buffer(),
@@ -1264,10 +1280,10 @@ server <- function(input,output,session){
             output$save_sample_count <- renderUI({shinySaveButton("save_sample_count", "Save data", "Save file as ...", 
                                                                   filetype=list(xlsx="csv"))
             })
-            if(dim(ideal_response_to_plot)[1]>0){
+            if(dim(v$ideal_response_to_plot)[1]>0){
               output$NormPower <- renderPlotly({
                 plot_ly(agg_norm_power, x=~Time, y=~c_id_norm_power, color=~series, type="scattergl") %>% 
-                  add_trace(x=~ideal_response_to_plot$ts, y=~ideal_response_to_plot$norm_power, name='Ideal Response', 
+                  add_trace(x=~v$ideal_response_to_plot$ts, y=~v$ideal_response_to_plot$norm_power, name='Ideal Response', 
                             mode='markers', inherit=FALSE) %>%
                   add_trace(x=~ideal_response_downsampled$time_group, y=~ideal_response_downsampled$norm_power, 
                             name='Ideal Response Downsampled', mode='markers', inherit=FALSE) %>%
