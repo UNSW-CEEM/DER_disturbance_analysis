@@ -137,7 +137,7 @@ calc_confidence_intervals_for_disconnections <- function(disconnection_summary){
 
 CI_wrapper <- function(count, sample_size, ci){
   if (sample_size > 0) {
-    result <- ConfidenceInterval(count, sample_size, ci)
+    result <- confidence_interval(count, sample_size, ci)
   } else {
     result <- c(NA, NA)
   }

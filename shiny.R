@@ -968,7 +968,7 @@ server <- function(input,output,session){
           v$sample_count_table <- left_join(population_count_table, v$sample_count_table, by=population_groups)
           v$sample_count_table$percentage_of_sub_pop <- v$sample_count_table$sample_count / v$sample_count_table$sub_population_size
           v$sample_count_table$percentage_of_sub_pop <- round(v$sample_count_table$percentage_of_sub_pop, digits = 4)
-          result <- mapply(ConfidenceInterval, v$sample_count_table$sample_count, 
+          result <- mapply(confidence_interval, v$sample_count_table$sample_count, 
                            v$sample_count_table$sub_population_size, 0.95)
           v$sample_count_table$lower_95_CI <- round(result[1,], digits = 4)
           v$sample_count_table$upper_95_CI <- round(result[2,], digits = 4)
