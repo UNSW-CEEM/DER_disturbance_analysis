@@ -94,3 +94,5 @@ test_disconnection_summary.csv
 test_manufacturers_missing_from_cer.csv
 test_manufacturers_missing_from_solar_analytics.csv
 test_upscaled_disconnections.csv
+access_database.R
+inbuilt_data/manufacturer_mapping_*
