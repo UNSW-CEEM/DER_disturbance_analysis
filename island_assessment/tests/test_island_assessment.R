@@ -1,19 +1,267 @@
-test_that("Test the identify islands function" ,{
+test_that("Test identify_islanded_sites for a site with GridFaultContactorTrip=1" ,{
   # Test input data
-  c_id <- c(101, 2, 3000, 3, 4, 5)
+  c_id <- c(101)
   combined_data <- data.frame(c_id)
-  first_timestamp <- c(1611470760257, 1611470760257, 1611470760257, 1611470760257, 1611470760257, 1611470760257)
-  GridFaultContactorTrip <- c(1, 1, 1, 1, 1, 1)
-  SYNC_a038_DoOpenArguments <- c(1, NA, 1, 0, 1, 0)
-  SYNC_a005_vfCheckUnderVoltage <- c(1, NA, 1, NA, 1, NA)
-  SYNC_a010_vfCheckFreqWobble <- c(100, 1, 1, 1, NA, NA)
+  first_timestamp <- c(1611470760257)
+  GridFaultContactorTrip <- c(1)
+  SYNC_a038_DoOpenArguments <- c(0)
+  SYNC_a005_vfCheckUnderVoltage <- c(1)
+  SYNC_a010_vfCheckFreqWobble <- c(100)
   alert_data <- data.frame(c_id, first_timestamp, GridFaultContactorTrip, SYNC_a038_DoOpenArguments, 
                            SYNC_a005_vfCheckUnderVoltage, SYNC_a010_vfCheckFreqWobble)
   event_time <- as.POSIXct("2021-01-24 16:46:00", tz = "Australia/Brisbane")
   
   out <- identify_islanded_sites(combined_data, alert_data, event_time)
-  Islanded <- c(1, 1, 1, 1, 1, 1)
+  Islanded <- c(1)
   expected_output <- data.frame(c_id, Islanded, SYNC_a005_vfCheckUnderVoltage, SYNC_a010_vfCheckFreqWobble)
   expect_equal(out, expected_output, tolerance=0.001)
 })
 
+test_that("Test identify_islanded_sites for a site with SYNC_a038_DoOpenArguments=1 and 
+          GridFaultContactorTrip=NA" ,{
+  # Test input data
+  c_id <- c(2)
+  combined_data <- data.frame(c_id)
+  first_timestamp <- c(1611470760257)
+  GridFaultContactorTrip <- c(NA)
+  SYNC_a038_DoOpenArguments <- c(1)
+  SYNC_a005_vfCheckUnderVoltage <- c(1)
+  SYNC_a010_vfCheckFreqWobble <- c(100)
+  alert_data <- data.frame(c_id, first_timestamp, GridFaultContactorTrip, SYNC_a038_DoOpenArguments, 
+                           SYNC_a005_vfCheckUnderVoltage, SYNC_a010_vfCheckFreqWobble)
+  event_time <- as.POSIXct("2021-01-24 16:46:00", tz = "Australia/Brisbane")
+  
+  out <- identify_islanded_sites(combined_data, alert_data, event_time)
+  Islanded <- c(1)
+  expected_output <- data.frame(c_id, Islanded, SYNC_a005_vfCheckUnderVoltage, SYNC_a010_vfCheckFreqWobble)
+  expect_equal(out, expected_output, tolerance=0.001)
+})
+
+test_that("Test identify_islanded_sites for a site that islanded more than 30s after the event" ,{
+  # Test input data
+  c_id <- c(3000)
+  combined_data <- data.frame(c_id)
+  first_timestamp <- c(1611470790257)
+  GridFaultContactorTrip <- c(1)
+  SYNC_a038_DoOpenArguments <- c(0)
+  SYNC_a005_vfCheckUnderVoltage <- c(1)
+  SYNC_a010_vfCheckFreqWobble <- c(100)
+  alert_data <- data.frame(c_id, first_timestamp, GridFaultContactorTrip, SYNC_a038_DoOpenArguments, 
+                           SYNC_a005_vfCheckUnderVoltage, SYNC_a010_vfCheckFreqWobble)
+  event_time <- as.POSIXct("2021-01-24 16:46:00", tz = "Australia/Brisbane")
+  
+  out <- identify_islanded_sites(combined_data, alert_data, event_time)
+  Islanded <- c(0)
+  expected_output <- data.frame(c_id, Islanded, SYNC_a005_vfCheckUnderVoltage, SYNC_a010_vfCheckFreqWobble)
+  expect_equal(out, expected_output, tolerance=0.001)
+})
+
+test_that("Test identify_islanded_sites for a site that islanded but didn't have a timestamp" ,{
+  # Test input data
+  c_id <- c(3000)
+  combined_data <- data.frame(c_id)
+  first_timestamp <- c(NA)
+  GridFaultContactorTrip <- c(1)
+  SYNC_a038_DoOpenArguments <- c(0)
+  SYNC_a005_vfCheckUnderVoltage <- c(1)
+  SYNC_a010_vfCheckFreqWobble <- c(100)
+  alert_data <- data.frame(c_id, first_timestamp, GridFaultContactorTrip, SYNC_a038_DoOpenArguments, 
+                           SYNC_a005_vfCheckUnderVoltage, SYNC_a010_vfCheckFreqWobble)
+  event_time <- as.POSIXct("2021-01-24 16:46:00", tz = "Australia/Brisbane")
+  
+  out <- identify_islanded_sites(combined_data, alert_data, event_time)
+  Islanded <- c(1)
+  expected_output <- data.frame(c_id, Islanded, SYNC_a005_vfCheckUnderVoltage, SYNC_a010_vfCheckFreqWobble)
+  expect_equal(out, expected_output, tolerance=0.001)
+})
+
+test_that("Test identify_islanded_sites for a site with no SYNC_a005_vfCheckUnderVoltage value" ,{
+  # Test input data
+  c_id <- c(3000)
+  combined_data <- data.frame(c_id)
+  first_timestamp <- c(1611470790257)
+  GridFaultContactorTrip <- c(1)
+  SYNC_a038_DoOpenArguments <- c(0)
+  SYNC_a005_vfCheckUnderVoltage <- c(NA)
+  SYNC_a010_vfCheckFreqWobble <- c(100)
+  alert_data <- data.frame(c_id, first_timestamp, GridFaultContactorTrip, SYNC_a038_DoOpenArguments, 
+                           SYNC_a005_vfCheckUnderVoltage, SYNC_a010_vfCheckFreqWobble)
+  event_time <- as.POSIXct("2021-01-24 16:46:00", tz = "Australia/Brisbane")
+  
+  out <- identify_islanded_sites(combined_data, alert_data, event_time)
+  Islanded <- c(0)
+  expected_output <- data.frame(c_id, Islanded, SYNC_a005_vfCheckUnderVoltage, SYNC_a010_vfCheckFreqWobble)
+  expect_equal(out, expected_output, tolerance=0.001)
+})
+
+test_that("Test assess_islands with response_category = 'NED'" ,{
+  # Test input data
+  c_id <- c(3000)
+  ts <- c('2021-05-25 13:05')
+  clean <- c(1)
+  Islanded <- c(1)
+  response_category <- c('NED')
+  frequency <- c(55)
+  voltage <- c(240)
+  combined_data <- data.frame(c_id, ts, clean, Islanded, response_category, frequency, voltage, stringsAsFactors = FALSE)
+  
+  out <- assess_islands(combined_data)
+  c_id <- c(numeric())
+  clean <- c(numeric())
+  island_assessment <- c(logical())
+  expected_output <- data.frame(c_id, clean, island_assessment, stringsAsFactors = FALSE)
+  expect_equal(out, expected_output, tolerance=0.001)
+})
+
+test_that("Test assess_islands with max_freq = 55Hz" ,{
+  # Test input data
+  c_id <- c(3000)
+  ts <- c('2021-05-25 13:05')
+  clean <- c(1)
+  Islanded <- c(1)
+  response_category <- c('3 Drop to Zero')
+  frequency <- c(55)
+  voltage <- c(240)
+  combined_data <- data.frame(c_id, ts, clean, Islanded, response_category, frequency, voltage, stringsAsFactors = FALSE)
+
+  out <- assess_islands(combined_data)
+  island_assessment <- c('Gateway curtailed')
+  expected_output <- data.frame(c_id, clean, island_assessment, stringsAsFactors = FALSE)
+  expect_equal(out, expected_output, tolerance=0.001)
+})
+
+test_that("Test assess_islands with min_freq = 49Hz" ,{
+  # Test input data
+  c_id <- c(3000)
+  ts <- c('2021-05-25 13:05')
+  clean <- c(1)
+  Islanded <- c(1)
+  response_category <- c('3 Drop to Zero')
+  frequency <- c(49)
+  voltage <- c(240)
+  combined_data <- data.frame(c_id, ts, clean, Islanded, response_category, frequency, voltage, stringsAsFactors = FALSE)
+  
+  out <- assess_islands(combined_data)
+  island_assessment <- c('Frequency disruption')
+  expected_output <- data.frame(c_id, clean, island_assessment, stringsAsFactors = FALSE)
+  expect_equal(out, expected_output, tolerance=0.001)
+})
+
+test_that("Test assess_islands with max_voltage = 270Hz" ,{
+  # Test input data
+  c_id <- c(30)
+  ts <- c('2021-05-25 13:05')
+  clean <- c(1)
+  Islanded <- c(1)
+  response_category <- c('3 Drop to Zero')
+  frequency <- c(50)
+  voltage <- c(270)
+  combined_data <- data.frame(c_id, ts, clean, Islanded, response_category, frequency, voltage, stringsAsFactors = FALSE)
+  
+  out <- assess_islands(combined_data)
+  island_assessment <- c('Voltage disruption')
+  expected_output <- data.frame(c_id, clean, island_assessment, stringsAsFactors = FALSE)
+  expect_equal(out, expected_output, tolerance=0.001)
+})
+
+test_that("Test assess_islands for site with no other disruptions" ,{
+  # Test input data
+  c_id <- c(30)
+  ts <- c('2021-05-25 13:05')
+  clean <- c(1)
+  Islanded <- c(1)
+  response_category <- c('4 Disconnect')
+  frequency <- c(50)
+  voltage <- c(241)
+  combined_data <- data.frame(c_id, ts, clean, Islanded, response_category, frequency, voltage, stringsAsFactors = FALSE)
+  
+  out <- assess_islands(combined_data)
+  island_assessment <- c('PV disconnect')
+  expected_output <- data.frame(c_id, clean, island_assessment, stringsAsFactors = FALSE)
+  expect_equal(out, expected_output, tolerance=0.001)
+})
+
+test_that("Test replace_response_with_alert with neither alert flag" ,{
+  # Test input data
+  c_id <- c(30)
+  Islanded <- c(1)
+  response_category <- c('4 Disconnect')
+  SYNC_a005_vfCheckUnderVoltage <- c(0)
+  SYNC_a010_vfCheckFreqWobble <- c(0)
+
+  combined_data <- data.frame(c_id, Islanded, response_category, SYNC_a005_vfCheckUnderVoltage, 
+                              SYNC_a010_vfCheckFreqWobble, stringsAsFactors = FALSE)
+  
+  out <- replace_response_with_alert(combined_data)
+  response_category <- c('Islanded - Other')
+  expected_output <- data.frame(c_id, Islanded, response_category, SYNC_a005_vfCheckUnderVoltage, 
+                                SYNC_a010_vfCheckFreqWobble, stringsAsFactors = FALSE)
+  expect_equal(out, expected_output, tolerance=0.001)
+})
+
+test_that("Test replace_response_with_alert for under voltage alert" ,{
+  # Test input data
+  c_id <- c(30)
+  Islanded <- c(1)
+  response_category <- c('4 Disconnect')
+  SYNC_a005_vfCheckUnderVoltage <- c(1)
+  SYNC_a010_vfCheckFreqWobble <- c(0)
+  
+  combined_data <- data.frame(c_id, Islanded, response_category, SYNC_a005_vfCheckUnderVoltage, 
+                              SYNC_a010_vfCheckFreqWobble, stringsAsFactors = FALSE)
+  
+  out <- replace_response_with_alert(combined_data)
+  response_category <- c('Islanded - Under Volt alert')
+  expected_output <- data.frame(c_id, Islanded, response_category, SYNC_a005_vfCheckUnderVoltage, 
+                                SYNC_a010_vfCheckFreqWobble, stringsAsFactors = FALSE)
+  expect_equal(out, expected_output, tolerance=0.001)
+})
+
+test_that("Test replace_response_with_alert for freq wobble alert" ,{
+  # Test input data
+  c_id <- c(30)
+  Islanded <- c(1)
+  response_category <- c('4 Disconnect')
+  SYNC_a005_vfCheckUnderVoltage <- c(0)
+  SYNC_a010_vfCheckFreqWobble <- c(100)
+  
+  combined_data <- data.frame(c_id, Islanded, response_category, SYNC_a005_vfCheckUnderVoltage, 
+                              SYNC_a010_vfCheckFreqWobble, stringsAsFactors = FALSE)
+  
+  out <- replace_response_with_alert(combined_data)
+  response_category <- c('Islanded - Freq Wobble')
+  expected_output <- data.frame(c_id, Islanded, response_category, SYNC_a005_vfCheckUnderVoltage, 
+                                SYNC_a010_vfCheckFreqWobble, stringsAsFactors = FALSE)
+  expect_equal(out, expected_output, tolerance=0.001)
+})
+
+test_that("Test high level classify_islands fn" ,{
+  # Test input data
+
+  c_id <- c(3000)
+  ts <- as.POSIXct("2021-01-24 16:47:00", tz = "Australia/Brisbane")
+  clean <- c(1)
+  response_category <- c('3 Drop to Zero')
+  frequency <- c(52)
+  voltage <- c(240)
+  combined_data <- data.frame(c_id, ts, clean, response_category, frequency, voltage, stringsAsFactors = FALSE)
+  
+  first_timestamp <- c(1611470760257)
+  GridFaultContactorTrip <- c(1)
+  SYNC_a038_DoOpenArguments <- c(0)
+  SYNC_a005_vfCheckUnderVoltage <- c(1)
+  SYNC_a010_vfCheckFreqWobble <- c(100)
+  alert_data <- data.frame(c_id, first_timestamp, GridFaultContactorTrip, SYNC_a038_DoOpenArguments, 
+                           SYNC_a005_vfCheckUnderVoltage, SYNC_a010_vfCheckFreqWobble)
+  event_time <- as.POSIXct("2021-01-24 16:46:00", tz = "Australia/Brisbane")
+  window_length <- 5
+  
+  out <- classify_islands(combined_data, alert_data, event_time, window_length)
+  Islanded <- c(1)
+  island_assessment <- c('Frequency disruption')
+  response_category <- c('Islanded - Freq Wobble')
+  expected_output <- data.frame(c_id, ts, clean, response_category, frequency, voltage, Islanded,
+                                SYNC_a005_vfCheckUnderVoltage, SYNC_a010_vfCheckFreqWobble, island_assessment, 
+                                stringsAsFactors = FALSE)
+  expect_equal(out, expected_output, tolerance=0.001)
+})

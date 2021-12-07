@@ -4,7 +4,6 @@ classify_islands <- function(combined_data, alert_data, event_time, window_lengt
   # determine which islanded sites can be classified as disconnect
   event_window_data <- filter(combined_data, ts >= event_time & ts <= event_time + 60 * window_length)
   event_window_data <- assess_islands(event_window_data)
-  event_window_data <- select(event_window_data, "c_id", "clean", "island_assessment")
   combined_data <- left_join(combined_data, event_window_data, on=c("c_id", "clean"))
   # replace response_category with island_assessment response
   combined_data <- replace_response_with_alert(combined_data)
@@ -32,6 +31,8 @@ identify_islanded_sites <- function(combined_data, alert_data, event_time){
                                                   'SYNC_a010_vfCheckFreqWobble')],
                          by = c('c_id'))
   
+  #TODO: missing values in undervolt and freqwobble cols need to be filled with 0
+  
   #lapply(c('SYNC_a005_vfCheckUnderVoltage', 'SYNC_a010_vfCheckFreqWobble'), function(x) {
   #  combined_data[, paste0(x) := ifelse(is.na(combined_data[[x]]), 0, combined_data[[x]])]
   #})
@@ -42,7 +43,7 @@ identify_islanded_sites <- function(combined_data, alert_data, event_time){
 
 assess_islands <- function(event_window_data){
   event_window_data <- filter(event_window_data, Islanded & response_category %in% c('3 Drop to Zero', '4 Disconnect'))
-  event_window_data <- groupby(event_window_data, c_id, clean)
+  event_window_data <- group_by(event_window_data, c_id, clean)
   event_window_data <- summarise(event_window_data, 
                                  max_f=max(frequency), min_f=min(frequency), 
                                  max_v=(max(voltage) - 240) / 240, min_v=(240 - min(voltage)) / 240)
@@ -58,6 +59,7 @@ assess_islands <- function(event_window_data){
                               island_assessment=ifelse(island_assessment=='Undefined',
                                                        'PV disconnect', island_assessment))
 
+  event_window_data <- select(event_window_data, "c_id", "clean", "island_assessment")
   return(event_window_data)
 }
 
