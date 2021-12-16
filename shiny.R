@@ -332,6 +332,7 @@ validate_pre_event_interval <- function(pre_event_interval, load_start_time, loa
 #' Get the ideal frequency-watt response for a region
 #' @param frequency_data The frequency data input to the tool
 #' @param region_to_load Which region (state) to pull from the frequency data
+#' @return Ideal response time series dataframe
 ideal_response_from_frequency <- function(frequency_data, region_to_load) {
   if (dim(frequency_data)[1] > 0) {
     temp_f_data <- select(frequency_data, ts, region_to_load) 
@@ -367,10 +368,10 @@ fiter_combined_data <- function(combined_data, off_grid_postcodes, clean, size_g
 
 #' Check for UFLS disconnections
 #' Runs UFLS status checks - both voltage and timestamp based.
-#' Returns an updated dataframe with columns for UFLS check results
 #' @seealso
 #' * [ufls_detection_tstamp()] for detail of timestamp based UFLS detection
 #' * [ufls_detection_voltage()] for detail of voltage based UFLS detection
+#' @return An updated dataframe with columns for UFLS check results
 ufls_detection <- function(
   db_interface, combined_data_f, region_to_load, pre_event_interval, window_length, pre_event_ufls_window_length,
   post_event_ufls_window_length, pre_event_ufls_stability_threshold
@@ -392,6 +393,47 @@ ufls_detection <- function(
   return(combined_data_f)
 }
 
+#' Determine distance based zones for each site
+#' Distance is from input event location to the postcode the site is in
+#' @return An updated dataframe with zones added
+determine_distance_zones <- function(
+  combined_data_f, postcode_data, event_latitude, event_longitude, zone_one_radius, zone_two_radius, zone_three_radius,
+  zones
+) {
+  if(length(combined_data_f$ts) > 0){
+    combined_data_f <- get_distance_from_event(combined_data_f, postcode_data, event_latitude, event_longitude)
+    combined_data_f <- get_zones(combined_data_f, zone_one_radius, zone_two_radius, zone_three_radius)
+    combined_data_f <- mutate(combined_data_f,  zone=ifelse(zone %in% c(NA), "NA", zone))
+    if (length(zones) < 3) { combined_data_f <- filter(combined_data_f, zone %in% zones)}
+  } else {
+    logwarn("no timestamp data found for distance zones")
+  }
+  return(combined_data_f)
+}
+
+#' Normalise power by c_id, based on pre-event interval power
+#' @return An updated dataframe with the column c_id_norm_power added
+normalise_c_id_power_by_pre_event <- function(combined_data_f, pre_event_interval) {
+  logdebug('Calc event normalised power', logger="shinyapp")
+  event_powers <- filter(combined_data_f, ts == pre_event_interval)
+  event_powers <- mutate(event_powers, event_power=power_kW)
+  event_powers <- select(event_powers, c_id, clean, event_power)
+  combined_data_f <- left_join(combined_data_f, event_powers, by=c("c_id", "clean"))
+  combined_data_f <- mutate(combined_data_f, c_id_norm_power=power_kW/event_power)
+  return(combined_data_f)
+}
+
+determine_performance_factors <- function(combined_data_f, pre_event_interval) {
+  logdebug('Calc site peformance factors', logger="shinyapp")
+  combined_data_f <- calc_site_performance_factors(combined_data_f)
+  combined_data_f <- setnames(combined_data_f, c("ts"), c("Time"))
+  
+  combined_data_f <- event_normalised_power(combined_data_f, pre_event_interval, keep_site_id=TRUE)
+  combined_data_f <- setnames(
+    combined_data_f, c("Event_Normalised_Power_kW"), c("Site_Event_Normalised_Power_kW"))
+  combined_data_f <- setnames(combined_data_f, c("Time"), c("ts"))
+  return(combined_data_f)
+}
 
 server <- function(input,output,session){
   # Create radio button dyamically so label can be updated
@@ -940,19 +982,11 @@ server <- function(input,output,session){
         )
       }
 
-      
-      # -------- caclulate distance zones --------
-      # inputs: combined_data_f, v$postcode_data
-      # outputs: combined_data_f
-      # dependencies: event_latitude(), event_longitude()
-      if(length(combined_data_f$ts) > 0){
-        combined_data_f <- get_distance_from_event(combined_data_f, v$postcode_data, event_latitude(), event_longitude())
-        combined_data_f <- get_zones(combined_data_f, zone_one_radius(), zone_two_radius(), zone_three_radius())
-        combined_data_f <- mutate(combined_data_f,  zone=ifelse(zone %in% c(NA), "NA", zone))
-        if (length(zones()) < 3) { combined_data_f <- filter(combined_data_f, zone %in% zones())}
-      }
-      # --------
-      
+      combined_data_f <- determine_distance_zones(
+        combined_data_f, v$postcode_data, event_latitude(), event_longitude(), zone_one_radius(), zone_two_radius(),
+        zone_three_radius(), zones()
+      )
+
       # -------- filter by time window --------
       # inputs: combined_data_f, v$unique_offsets
       # outputs: combined_data_f
@@ -964,53 +998,14 @@ server <- function(input,output,session){
       }
       # --------
       
-      
-      # -------- check for any aggregation --------
-      # inputs: -
-      # outputs: no_grouping
-      # dependencies: agg_on_standard(), pst_agg(), grouping_agg(), manufacturer_agg(), model_agg(), zone_agg(), circuit_agg(), compliance_agg(), reconnection_compliance_agg()
-      # Decide if the settings mean no grouping is being performed.
-      if (agg_on_standard()==FALSE & pst_agg()==FALSE & grouping_agg()==FALSE & manufacturer_agg()==FALSE & 
-          model_agg()==FALSE & zone_agg()==FALSE & circuit_agg()==TRUE & compliance_agg()==TRUE & reconnection_compliance_agg()){
-        no_grouping=TRUE
-      } else {
-        no_grouping=FALSE
-      }
-      # --------
-      
-      
-      # -------- normalise event power --------
-      # inputs: combined_data_f
-      # outputs: combined_data_f
-      # dependencies: pre_event_interval()
-      # does this actually continue after site_performance factors?
-      logdebug('Calc event normalised power', logger="shinyapp")
-      # Calc event normalised power
-      event_powers <- filter(combined_data_f, ts == pre_event_interval())
-      event_powers <- mutate(event_powers, event_power=power_kW)
-      event_powers <- select(event_powers, c_id, clean, event_power)
-      combined_data_f <- left_join(combined_data_f, event_powers, by=c("c_id", "clean"))
-      combined_data_f <- mutate(combined_data_f, c_id_norm_power=power_kW/event_power)
-      # --------
+      combined_data_f <- normalise_c_id_power_by_pre_event(combined_data_f, pre_event_interval())
       
       if(length(combined_data_f$ts) > 0){
-        
-        # -------- Calculate site performance factors --------
-        # inputs: 
-        # outputs: 
-        # dependencies: 
-        # Calaculate the site peformance factors.
-        logdebug('Calc site peformance factors', logger="shinyapp")
         id2 <- showNotification("Calculating site performance factors", duration=1000)
-        combined_data_f <- calc_site_performance_factors(combined_data_f)
-        combined_data_f <- setnames(combined_data_f, c("ts"), c("Time"))
-        # --------
-        
-        combined_data_f <- event_normalised_power(combined_data_f, pre_event_interval(), keep_site_id=TRUE)
-        combined_data_f <- setnames(combined_data_f, c("Event_Normalised_Power_kW"), c("Site_Event_Normalised_Power_kW"))
-        combined_data_f <- setnames(combined_data_f, c("Time"), c("ts"))
-        # --------
+        combined_data_f <- determine_performance_factors(combined_data_f, pre_event_interval())
 
+
+        # -------- determine f-W compliance
         if(dim(v$ideal_response_to_plot)[1]>0){
           ideal_response_downsampled <- down_sample_1s(v$ideal_response_to_plot, duration(), min(combined_data_f$ts))
           v$ideal_response_downsampled <- ideal_response_downsampled
@@ -1090,7 +1085,20 @@ server <- function(input,output,session){
         }
       }
       # --------
+            
       
+      # -------- check for any aggregation --------
+      # inputs: -
+      # outputs: no_grouping
+      # dependencies: agg_on_standard(), pst_agg(), grouping_agg(), manufacturer_agg(), model_agg(), zone_agg(), circuit_agg(), compliance_agg(), reconnection_compliance_agg()
+      # Decide if the settings mean no grouping is being performed.
+      if (agg_on_standard()==FALSE & pst_agg()==FALSE & grouping_agg()==FALSE & manufacturer_agg()==FALSE & 
+          model_agg()==FALSE & zone_agg()==FALSE & circuit_agg()==TRUE & compliance_agg()==TRUE & reconnection_compliance_agg()){
+        no_grouping=TRUE
+      } else {
+        no_grouping=FALSE
+      }
+      # --------
 
       # Procced to  aggregation and plotting only if there is less than 1000 data series to plot, else stop and notify the
       # user.
@@ -1285,7 +1293,7 @@ server <- function(input,output,session){
                 plot_ly(agg_norm_power, x=~Time, y=~c_id_norm_power, color=~series, type="scattergl") %>% 
                   add_trace(x=~v$ideal_response_to_plot$ts, y=~v$ideal_response_to_plot$norm_power, name='Ideal Response', 
                             mode='markers', inherit=FALSE) %>%
-                  add_trace(x=~ideal_response_downsampled$time_group, y=~ideal_response_downsampled$norm_power, 
+                  add_trace(x=~v$ideal_response_downsampled$time_group, y=~v$ideal_response_downsampled$norm_power, 
                             name='Ideal Response Downsampled', mode='markers', inherit=FALSE) %>%
                   layout(yaxis=list(title="Circuit power normalised to value of pre-event interval, \n aggregated by averaging"))
               })
