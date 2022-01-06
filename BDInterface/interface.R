@@ -452,6 +452,11 @@ DBInterface <- R6::R6Class("DBInterface",
                                               dbname = self$db_path_name)
       return(circuit_details_cleaned)
     },
+    get_alerts_data = function(){
+      alerts_data <- sqldf::sqldf("select * from alerts", 
+                                           dbname = self$db_path_name)
+      return(alerts_data)
+    },
     get_site_details_cleaning_report = function(){
       site_details_cleaned <- sqldf::sqldf("select * from site_details_cleaned", 
                                            dbname = self$db_path_name)

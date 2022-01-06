@@ -875,6 +875,11 @@ server <- function(input,output,session){
                                   if_else((ufls_status == 'UFLS Dropout') | 
                                             (ufls_status_v == 'UFLS Dropout'), 
                                           'UFLS Dropout', response_category))
+        alert_data <- v$db$get_alerts_data()
+        if(length(alert_data$c_id) > 0){
+          # run islanded site assessment
+          combined_data_f <- classify_islands(combined_data_f, alert_data, pre_event_interval(), window_length())
+        }
       }
       
       # Filter data by user selected time window
@@ -1012,7 +1017,8 @@ server <- function(input,output,session){
                                       Standard_Version, Grouping, sum_ac, clean, manufacturer, model, response_category, 
                                       zone, distance, lat, lon, con_type, first_ac, polarity, compliance_status, 
                                       reconnection_compliance_status, manual_droop_compliance, manual_reconnect_compliance, 
-                                      reconnection_time, ramp_above_threshold, max_power, ufls_status,
+                                      reconnection_time, ramp_above_threshold, max_power, Islanded, 
+                                      island_assessment, islanding_alert, ufls_status,
                                       pre_event_sampled_seconds, post_event_sampled_seconds, 
                                       ufls_status_v, pre_event_v_mean, post_event_v_mean)
           
