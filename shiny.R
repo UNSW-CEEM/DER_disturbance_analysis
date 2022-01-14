@@ -346,7 +346,7 @@ ideal_response_from_frequency <- function(frequency_data, region_to_load) {
 }
 
 #' Apply user filters to combined data
-fiter_combined_data <- function(combined_data, off_grid_postcodes, clean, size_groupings, standards, postcodes,
+filter_combined_data <- function(combined_data, off_grid_postcodes, clean, size_groupings, standards, postcodes,
                                 manufacturers, models, sites, circuits) {
   logdebug("Apply user filters to combined data", logger="shinyapp")
   combined_data_f <- combined_data
@@ -423,6 +423,22 @@ normalise_c_id_power_by_pre_event <- function(combined_data_f, pre_event_interva
   return(combined_data_f)
 }
 
+#' Normalise power by c_id, based on maximum daily power
+#' Optionally adds pre event normalised power as a new column when pre_event_interval is provided
+#' @return An updated dataframe with the column c_id_daily_norm_power added
+normalise_c_id_power_by_daily_max <- function(combined_data, max_power, pre_event_interval){
+  logdebug('Calc daily normalised power', logger="shinyapp")
+  combined_data_f <- left_join(combined_data, max_power, by=c("c_id", "clean"))
+  combined_data_f <- mutate(combined_data_f, c_id_daily_norm_power=power_kW/max_power)
+  if (!missing(pre_event_interval)){
+    pre_event_daily_norm_power <- filter(combined_data_f, ts == pre_event_interval)
+    pre_event_daily_norm_power <- mutate(pre_event_daily_norm_power, pre_event_norm_power = c_id_daily_norm_power)
+    pre_event_daily_norm_power <- select(pre_event_daily_norm_power, clean, c_id, pre_event_norm_power)
+    combined_data_f <- left_join(combined_data_f, pre_event_daily_norm_power, by=c("c_id", "clean"))
+  }
+  return(combined_data_f)
+}
+
 determine_performance_factors <- function(combined_data_f, pre_event_interval) {
   logdebug('Calc site peformance factors', logger="shinyapp")
   combined_data_f <- calc_site_performance_factors(combined_data_f)
@@ -434,6 +450,36 @@ determine_performance_factors <- function(combined_data_f, pre_event_interval) {
   combined_data_f <- setnames(combined_data_f, c("Time"), c("ts"))
   return(combined_data_f)
 }
+
+#' Upscale disconnections
+upscale_and_summarise_disconnections <- function(circuit_summary, manufacturer_install_data, load_date, region_to_load, exclude_solar_edge) {
+  logdebug('Summarise and upscale disconnections on a manufacturer basis.', logger="shinyapp")
+  if (exclude_solar_edge){
+    circuits_to_summarise <- filter(circuit_summary, manufacturer != "SolarEdge" | 
+                                    is.na(manufacturer))
+    manufacturer_install_data <- filter(manufacturer_install_data, manufacturer != "SolarEdge" | 
+                                          is.na(manufacturer))
+  } else {
+    circuits_to_summarise <- circuit_summary
+    manufacturer_install_data <- manufacturer_install_data
+  }
+  upscaling_results <- get_upscaling_results(circuits_to_summarise, manufacturer_install_data, load_date, 
+                                              region_to_load, sample_threshold = 30)
+  upscaling_results$with_separaute_ufls_counts <- get_upscaling_results_excluding_ufls_affected_circuits(
+    circuits_to_summarise, manufacturer_install_data, load_date, region_to_load, sample_threshold = 30)
+
+  write.csv(upscaling_results$manufacturers_missing_from_cer, 
+            "logging/manufacturers_missing_from_cer.csv", row.names=FALSE)
+  write.csv(upscaling_results$manufacturers_missing_from_input_db, 
+            "logging/manufacturers_missing_from_input_db.csv", row.names=FALSE)
+
+  return(upscaling_results)
+}
+
+run_analysis <- function(data, settings) {
+
+}
+
 
 server <- function(input,output,session){
   # Create radio button dyamically so label can be updated
@@ -960,7 +1006,7 @@ server <- function(input,output,session){
       )
 
       # -------- filter combined data by user filters --------
-      combined_data_f <- fiter_combined_data(
+      combined_data_f <- filter_combined_data(
         v$combined_data, v$off_grid_postcodes, clean(), size_groupings(), standards(), postcodes(), manufacturers(),
         models(), sites(), circuits()
       )
@@ -1004,8 +1050,10 @@ server <- function(input,output,session){
         id2 <- showNotification("Calculating site performance factors", duration=1000)
         combined_data_f <- determine_performance_factors(combined_data_f, pre_event_interval())
 
-
-        # -------- determine f-W compliance
+        # -------- determine f-W compliance --------
+        # inputs: v$ideal_response_to_plot, combined_data_f
+        # outputs: v$ideal_response_downsampled, combined_data_f
+        # dependencies: duration(), compliance_threshold(), start_buffer(), end_buffer(), end_buffer_responding(), disconnecting_threshold(), compliance()
         if(dim(v$ideal_response_to_plot)[1]>0){
           ideal_response_downsampled <- down_sample_1s(v$ideal_response_to_plot, duration(), min(combined_data_f$ts))
           v$ideal_response_downsampled <- ideal_response_downsampled
@@ -1026,22 +1074,11 @@ server <- function(input,output,session){
         # --------
         
         # -------- determine reconnection compliace --------
-        # inputs: combined_data_f, 
-        # outputs: combined_data_f
-        # dependencies: 
-        #   v$db$get_max_circuit_powers(region_to_load()), pre_event_interval(),
-        #   disconnecting_threshold, reconnection_threshold, ramp_rate_threshold(),
-        #   total_ramp_threshold_for_compliance(), total_ramp_threshold_for_non_compliance(),
-        #   ramp_rate_change_resource_limit_threshold()
-        # Set reconnection compliance values.
         logdebug('Set reconnection compliance values', logger="shinyapp")
         max_power <- v$db$get_max_circuit_powers(region_to_load())
-        combined_data_f <- left_join(combined_data_f, max_power, by=c("c_id", "clean"))
-        combined_data_f <- mutate(combined_data_f, c_id_daily_norm_power=power_kW/max_power)
-        pre_event_daily_norm_power <- filter(combined_data_f, ts == pre_event_interval())
-        pre_event_daily_norm_power <- mutate(pre_event_daily_norm_power, pre_event_norm_power = c_id_daily_norm_power)
-        pre_event_daily_norm_power <- select(pre_event_daily_norm_power, clean, c_id, pre_event_norm_power)
-        combined_data_f <- left_join(combined_data_f, pre_event_daily_norm_power, by=c("c_id", "clean"))
+        combined_data_f <- normalise_c_id_power_by_daily_max(
+          combined_data_f, max_power, pre_event_interval()
+        )
         event_window_data <- filter(combined_data_f, ts >= pre_event_interval())
         reconnection_categories <- create_reconnection_summary(event_window_data, pre_event_interval(),
                                                                disconnecting_threshold(),
@@ -1068,7 +1105,7 @@ server <- function(input,output,session){
                                             model_agg=model_agg(), circuit_agg=circuit_agg(), response_agg=response_agg(), 
                                             zone_agg=zone_agg(), compliance_agg=compliance_agg(), 
                                             reconnection_compliance_agg=reconnection_compliance_agg())
-      
+        
         v$sample_count_table <- vector_groupby_count(combined_data_f, grouping_cols)
         if (confidence_category() %in% grouping_cols) {
           population_groups <- grouping_cols[confidence_category() != grouping_cols]
@@ -1177,32 +1214,16 @@ server <- function(input,output,session){
           # outputs: circuits_to_summarise, v$disconnection_summary, v$upscaled_disconnection
           # dependencies: load_date(), region_to_load(), exclude_solar_edge()
           # Summarise and upscale disconnections on a manufacturer basis.
-          logdebug('Summarise and upscale disconnections on a manufacturer basis.', logger="shinyapp")
-          if (exclude_solar_edge()){
-            circuits_to_summarise <- filter(v$circuit_summary, manufacturer != "SolarEdge" | 
-                                            is.na(manufacturer))
-            manufacturer_install_data <- filter(v$manufacturer_install_data, manufacturer != "SolarEdge" | 
-                                                  is.na(manufacturer))
-          } else {
-            circuits_to_summarise <- v$circuit_summary
-            manufacturer_install_data <- v$manufacturer_install_data
-          }
-          upscaling_results <- get_upscaling_results(circuits_to_summarise, manufacturer_install_data, load_date(), 
-                                                     region_to_load(), sample_threshold = 30)
-          upscaling_results_with_separate_ufls_counts <- get_upscaling_results_excluding_ufls_affected_circuits(
-            circuits_to_summarise, manufacturer_install_data, load_date(), region_to_load(), sample_threshold = 30)
+          upscaling_results <- upscale_and_summarise_disconnections(
+            v$circuit_summary, v$manufacturer_install_data, load_date(), region_to_load(), exclude_solar_edge()
+          )
 
           v$disconnection_summary <- upscaling_results$disconnection_summary
           v$upscaled_disconnections <- upscaling_results$upscaled_disconnections
           v$disconnection_summary_with_separate_ufls_counts <- 
-            upscaling_results_with_separate_ufls_counts$disconnection_summary
+            upscaling_results$with_separate_ufls_counts$disconnection_summary
           v$upscaled_disconnections_with_separate_ufls_counts <- 
-            upscaling_results_with_separate_ufls_counts$upscaled_disconnections
-          
-          write.csv(upscaling_results$manufacturers_missing_from_cer, 
-                    "logging/manufacturers_missing_from_cer.csv", row.names=FALSE)
-          write.csv(upscaling_results$manufacturers_missing_from_input_db, 
-                    "logging/manufacturers_missing_from_input_db.csv", row.names=FALSE)
+            upscaling_results$with_separate_ufls_counts$upscaled_disconnections
           
           if(length(upscaling_results$manufacturers_missing_from_cer$manufacturer) > 0) {
             long_error_message <- c("Some manufacturers present in the input data could not be ",
