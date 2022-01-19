@@ -285,7 +285,7 @@ reset_chart_area <- function(input, output, session, stringsAsFactors) {
   output$save_distance_response <- renderUI({})
   output$map <- renderPlotly({})
 
-}
+  }
 
 reset_data_cleaning_tab <- function(input, output, session, stringsAsFactors) {
   output$circuit_details_editor <- renderDT({})
@@ -476,8 +476,251 @@ upscale_and_summarise_disconnections <- function(circuit_summary, manufacturer_i
   return(upscaling_results)
 }
 
-run_analysis <- function(data, settings) {
+check_grouping <- function(settings) {
+  if (settings$standard_agg==FALSE & settings$pst_agg==FALSE & settings$grouping_agg==FALSE &
+      settings$manufacturer_agg==FALSE & settings$model_agg==FALSE & settings$zone_agg==FALSE &
+      settings$circuit_agg==TRUE & settings$compliance_agg==TRUE & settings$reconnection_compliance_agg){
+    no_grouping=TRUE
+  } else {
+    no_grouping=FALSE
+  }
+  return(no_grouping)
+}
 
+run_analysis <- function(data, settings) {
+  error_check_passed = validate_pre_event_interval(
+    settings$pre_event_interval,
+    settings$load_start_time,
+    settings$load_end_time,
+    settings$window_length,
+    data$combined_data
+  )
+
+  if (error_check_passed) {
+    logging::logdebug("error checks passed", logger="shinyapp")
+    id <- showNotification("Updating plots", duration=1000)
+
+    data$ideal_response_to_plot <- ideal_response_from_frequency(
+      data$frequency_data, settings$region_to_load
+    )
+
+    # -------- filter combined data by user filters --------
+    combined_data_f <- filter_combined_data(
+      data$combined_data, data$off_grid_postcodes, settings$clean, settings$size_groupings, settings$standards,
+      settings$postcodes, settings$manufacturers, settings$models, settings$sites, settings$circuits
+    )
+
+    if(length(combined_data_f$ts) > 0){
+      # -------- categorise response --------
+      combined_data_f <- categorise_response(
+        combined_data_f, settings$pre_event_interval, settings$window_length, settings$NED_threshold)
+      combined_data_f <- mutate(combined_data_f,  
+                                response_category = ifelse(response_category %in% c(NA), "NA", response_category))
+      combined_data_f <- filter(combined_data_f, response_category %in% settings$responses)
+
+      combined_data_f <- ufls_detection(
+        data$db, combined_data_f, settings$region_to_load, settings$pre_event_interval, settings$window_length,
+        settings$pre_event_ufls_window_length, settings$post_event_ufls_window_length,
+        settings$pre_event_ufls_stability_threshold
+      )
+    }
+
+    combined_data_f <- determine_distance_zones(
+      combined_data_f, data$postcode_data, settings$event_latitude, settings$event_longitude, settings$zone_one_radius,
+      settings$zone_two_radius, settings$zone_three_radius, settings$zones
+    )
+
+    # -------- filter by time window --------
+    logdebug('filter by time window', logger="shinyapp")
+    if (length(settings$offsets) < length(data$unique_offsets)) { 
+      combined_data_f <- filter(combined_data_f, time_offset %in% settings$offsets)
+    }
+    
+    combined_data_f <- normalise_c_id_power_by_pre_event(combined_data_f, settings$pre_event_interval)
+    
+    if(length(combined_data_f$ts) > 0){
+      id2 <- showNotification("Calculating site performance factors", duration=1000)
+      combined_data_f <- determine_performance_factors(combined_data_f, settings$pre_event_interval)
+
+      # -------- determine f-W compliance --------
+      if(dim(data$ideal_response_to_plot)[1]>0){
+        ideal_response_downsampled <- down_sample_1s(
+          data$ideal_response_to_plot, settings$duration, min(combined_data_f$ts))
+        data$ideal_response_downsampled <- ideal_response_downsampled
+        combined_data_f <- 
+          calc_error_metric_and_compliance_2(combined_data_f, 
+                                              ideal_response_downsampled,
+                                              data$ideal_response_to_plot,
+                                              settings$compliance_threshold,
+                                              settings$start_buffer,
+                                              settings$end_buffer,
+                                              settings$end_buffer_responding,
+                                              settings$disconnecting_threshold)
+        combined_data_f <- mutate(
+          combined_data_f,  compliance_status=ifelse(compliance_status %in% c(NA), "NA", compliance_status))
+      } else {
+        combined_data_f <- mutate(combined_data_f, compliance_status="Undefined")  
+      }
+      if (length(settings$compliance) < 8) {
+        combined_data_f <- filter(combined_data_f, compliance_status %in% settings$compliance)
+      }
+      # --------
+      
+      # -------- determine reconnection compliace --------
+      logdebug('Set reconnection compliance values', logger="shinyapp")
+      max_power <- data$db$get_max_circuit_powers(settings$region_to_load)
+      combined_data_f <- normalise_c_id_power_by_daily_max(
+        combined_data_f, max_power, settings$pre_event_interval
+      )
+      event_window_data <- filter(combined_data_f, ts >= settings$pre_event_interval)
+      reconnection_categories <- create_reconnection_summary(event_window_data, settings$pre_event_interval,
+                                                              settings$disconnecting_threshold,
+                                                              reconnect_threshold = settings$reconnection_threshold,
+                                                              ramp_rate_threshold = settings$ramp_rate_threshold,
+                                                              ramp_threshold_for_compliance = 
+                                                                settings$total_ramp_threshold_for_compliance,
+                                                              ramp_threshold_for_non_compliance = 
+                                                                settings$total_ramp_threshold_for_non_compliance,
+                                                              ramp_rate_change_resource_limit_threshold = 
+                                                                settings$ramp_rate_change_resource_limit_threshold)
+      combined_data_f <- left_join(combined_data_f, reconnection_categories, by = 'c_id')
+      removeNotification(id2)
+      # --------
+      
+      # -------- calculate summary stats --------
+      # inputs: combined_data_f
+      # outputs: v$sample_count_table
+      # dependencies: too many to list for  find_grouping_cols()
+      # Count samples in each data series to be displayed
+      logdebug('Count samples in each data series to be displayed', logger="shinyapp")
+      grouping_cols <- find_grouping_cols(settings)
+      
+      data$sample_count_table <- vector_groupby_count(combined_data_f, grouping_cols)
+      if (settings$confidence_category %in% grouping_cols) {
+        population_groups <- grouping_cols[settings$confidence_category != grouping_cols]
+        population_count_table <- vector_groupby_count(combined_data_f, population_groups)
+        population_count_table <- dplyr::rename(population_count_table, sub_population_size=sample_count)
+        data$sample_count_table <- left_join(population_count_table, data$sample_count_table, by=population_groups)
+        data$sample_count_table$percentage_of_sub_pop <- data$sample_count_table$sample_count / data$sample_count_table$sub_population_size
+        data$sample_count_table$percentage_of_sub_pop <- round(data$sample_count_table$percentage_of_sub_pop, digits = 4)
+        result <- mapply(ConfidenceInterval, data$sample_count_table$sample_count, 
+                          data$sample_count_table$sub_population_size, 0.95)
+        data$sample_count_table$lower_95_CI <- round(result[1,], digits = 4)
+        data$sample_count_table$upper_95_CI <- round(result[2,], digits = 4)
+        data$sample_count_table$width <- data$sample_count_table$upper_95_CI - data$sample_count_table$lower_95_CI
+      }
+    }
+    # --------
+
+    no_grouping <- check_grouping(settings)
+
+    # Procced to  aggregation and plotting only if there is less than 1000 data series to plot, else stop and notify the
+    # user.
+    logdebug('Proceed to aggregation and plotting', logger="shinyapp")
+    if ((sum(data$sample_count_table$sample_count)<1000 & no_grouping) | 
+        (length(data$sample_count_table$sample_count)<1000 & !no_grouping)){
+      
+      # -------- Create copies of data? --------
+      # inputs: combined_data_f
+      # outputs: v$combined_data_f, combined_data_f2
+      # dependencies: raw_upscale()
+      if(length(combined_data_f$ts) > 0){
+      # Copy data for saving
+      logdebug('Copy data for saving', logger="shinyapp")
+      data$combined_data_f <- select(combined_data_f, ts, site_id, c_id, power_kW, c_id_norm_power, v, f, s_state, s_postcode, 
+                                  pv_installation_year_month, Standard_Version, Grouping, sum_ac, clean, manufacturer, model,
+                                  site_performance_factor, response_category, zone, distance, lat, lon, e, con_type,
+                                  first_ac, polarity, compliance_status, reconnection_compliance_status, 
+                                  manual_droop_compliance, manual_reconnect_compliance, reconnection_time, 
+                                  ramp_above_threshold, c_id_daily_norm_power, max_power, ufls_status,
+                                  pre_event_sampled_seconds, post_event_sampled_seconds)
+      # Create copy of filtered data to use in upscaling
+      combined_data_f2 <- combined_data_f
+        if(settings$raw_upscale){combined_data_f2 <- upscale(combined_data_f2, data$install_data)}
+      }
+      # -------- 
+
+      # Check that the filter does not result in an empty dataframe.
+      logdebug('Check that the filter does not result in an empty dataframe.', logger="shinyapp")
+      if(length(combined_data_f$ts) > 0){
+        
+        # -------- Initialise aggregate dataframes  --------
+        # inputs: combined_data_f, combined_data_f2, grouping_cols
+        # outputs: agg_norm_power, agg_f_and_v, v$agg_power, v$response_count, v$zone_count, v$distance_response, geo_data, v$circuit_summary
+        # dependencies: vector_groupby_norm_power(), vector_groupby_f_and_v(), vector_groupby_power(), vector_groupby_count_response(),
+        #   vector_groupby_count_zones(), vector_groupby_cumulative_distance(), vector_groupby_system()
+        if (settings$norm_power_filter_off_at_t0){
+          combined_data_for_norm_power <- filter(combined_data_f,  response_category != "5 Off at t0")
+        } else {
+          combined_data_for_norm_power <- combined_data_f
+        }
+        data$agg_norm_power <- vector_groupby_norm_power(combined_data_for_norm_power, grouping_cols)
+        agg_f_and_v <- vector_groupby_f_and_v(combined_data_f, grouping_cols)
+        data$agg_power <- vector_groupby_power(combined_data_f2, grouping_cols)
+        data$response_count <- vector_groupby_count_response(combined_data_f, grouping_cols)
+        data$zone_count <- vector_groupby_count_zones(combined_data_f, grouping_cols)
+        data$distance_response <- vector_groupby_cumulative_distance(combined_data_f, grouping_cols)
+        data$geo_data <- vector_groupby_system(combined_data_f, grouping_cols)
+        data$circuit_summary <- distinct(combined_data_f, c_id, clean, .keep_all = TRUE)
+        data$circuit_summary <- select(data$circuit_summary, site_id, c_id, s_state, s_postcode, pv_installation_year_month, 
+                                    Standard_Version, Grouping, sum_ac, clean, manufacturer, model, response_category, 
+                                    zone, distance, lat, lon, con_type, first_ac, polarity, compliance_status, 
+                                    reconnection_compliance_status, manual_droop_compliance, manual_reconnect_compliance, 
+                                    reconnection_time, ramp_above_threshold, max_power, ufls_status,
+                                    pre_event_sampled_seconds, post_event_sampled_seconds, 
+                                    ufls_status_v, pre_event_v_mean, post_event_v_mean)
+        # Combine data sets that have the same grouping so they can be saved in a single file
+        if (no_grouping){
+          et <- settings$pre_event_interval
+          # agg_norm_power <- event_normalised_power(agg_norm_power, et, keep_site_id=TRUE)
+          data$agg_power <- left_join(data$agg_power, data$agg_norm_power[, c("c_id_norm_power", "c_id", "Time")], 
+                                    by=c("Time", "c_id"))
+        } else {
+          et <- settings$pre_event_interval
+          # agg_norm_power <- event_normalised_power(agg_norm_power, et,  keep_site_id=FALSE)
+          data$agg_power <- left_join(data$agg_power, data$agg_norm_power[, c("c_id_norm_power", "series", "Time")], 
+                                    by=c("Time", "series"))
+        }
+        data$agg_power <- left_join(data$agg_power, agg_f_and_v[, c("Time", "series", "Voltage", "Frequency")], 
+                                  by=c("Time", "series"))
+        # --------
+        
+        # -------- Create disconnection_sumaries --------
+        # inputs: v$circuit_summary, v$manufacturer_install_data, 
+        # outputs: circuits_to_summarise, v$disconnection_summary, v$upscaled_disconnection
+        # dependencies: load_date(), region_to_load(), exclude_solar_edge()
+        # Summarise and upscale disconnections on a manufacturer basis.
+        upscaling_results <- upscale_and_summarise_disconnections(
+          data$circuit_summary, data$manufacturer_install_data, settings$load_date, settings$region_to_load, settings$exclude_solar_edge
+        )
+        data$disconnection_summary <- upscaling_results$disconnection_summary
+        data$upscaled_disconnections <- upscaling_results$upscaled_disconnections
+        data$disconnection_summary_with_separate_ufls_counts <- 
+          upscaling_results$with_separate_ufls_counts$disconnection_summary
+        data$upscaled_disconnections_with_separate_ufls_counts <- 
+          upscaling_results$with_separate_ufls_counts$upscaled_disconnections
+
+        if(length(upscaling_results$manufacturers_missing_from_cer$manufacturer) > 0) {
+          long_error_message <- c("Some manufacturers present in the input data could not be ",
+                                  "matched to the cer data set. A list of these has been saved in the ",
+                                  "file logging/manufacturers_missing_from_cer.csv. You may want to review the ", 
+                                  "mapping used in processing the input data.")
+          long_error_message <- paste(long_error_message, collapse = '')
+          shinyalert("Manufacturers missing from CER data", long_error_message)
+        }
+        
+        if(length(upscaling_results$manufacturers_missing_from_input_db$manufacturer) > 0) {
+          long_error_message <- c("Some manufacturers present in the CER data could not be ",
+                                  "matched to the input data set. A list of these has been saved in the ",
+                                  "file logging/manufacturers_missing_from_input_db.csv. You may wish to review the ", 
+                                  "file to check the number and names of missing manufacturers. ")
+          long_error_message <- paste(long_error_message, collapse = '')
+          shinyalert("Manufacturers missing from input data", long_error_message)
+        }
+      }
+    }
+  }
+  return(data)
 }
 
 
@@ -614,6 +857,7 @@ server <- function(input,output,session){
   v <- reactiveValues(combined_data = data.frame(),
                       combined_data_no_ac_filter = data.frame(),
                       agg_power = data.frame(),
+                      agg_norm_power = data.frame(),
                       install_data = data.frame(),
                       site_details = data.frame(),
                       circuit_details = data.frame(),
@@ -935,7 +1179,7 @@ server <- function(input,output,session){
                                justified=TRUE, status="primary", individual=TRUE,
                                checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")),
                                direction = "vertical")
-        }) 
+        })
         shinyjs::show("raw_upscale")
         shinyjs::show("pst_agg")
         shinyjs::show("grouping_agg")
@@ -992,425 +1236,184 @@ server <- function(input,output,session){
   # Create plots when update plots button is clicked.
   observeEvent(input$update_plots, {
     logdebug("update_plots event triggered", logger="shinyapp")
-    
-    error_check_passed = validate_pre_event_interval(
-      pre_event_interval(), load_start_time(), load_end_time(), window_length(), v$combined_data
-    )
-    
-    if (error_check_passed) {
-      logging::logdebug("error checks passed", logger="shinyapp")
-      id <- showNotification("Updating plots", duration=1000)
-  
-      v$ideal_response_to_plot <- ideal_response_from_frequency(
-        v$frequency_data, region_to_load()
-      )
 
-      # -------- filter combined data by user filters --------
-      combined_data_f <- filter_combined_data(
-        v$combined_data, v$off_grid_postcodes, clean(), size_groupings(), standards(), postcodes(), manufacturers(),
-        models(), sites(), circuits()
-      )
+    data <- reactiveValuesToList(v)
+    settings <- get_current_settings()
+    data <- run_analysis(data, settings)
+    browser()
+    for (d_name in names(data)) {
+      v[[d_name]] <- data[[d_name]]
+    }
 
-      if(length(combined_data_f$ts) > 0){
-        # -------- categorise response --------
-        # inputs: combined_data_f
-        # outputs: combined_data_f
-        # dependencies: pre_event_interval(), window_length(), responses()
-        combined_data_f <- categorise_response(combined_data_f, pre_event_interval(), window_length(), NED_threshold())
-        combined_data_f <- mutate(combined_data_f,  
-                                  response_category = ifelse(response_category %in% c(NA), "NA", response_category))
-        combined_data_f <- filter(combined_data_f, response_category %in% responses())
-        # -------- 
+    no_grouping <- check_grouping(settings)
 
-        combined_data_f <- ufls_detection(
-          v$db, combined_data_f, region_to_load(), pre_event_interval(), window_length(), pre_event_ufls_window_length(),
-          post_event_ufls_window_length(), pre_event_ufls_stability_threshold()
-        )
-      }
+    if ((sum(v$sample_count_table$sample_count)<1000 & no_grouping) | 
+      (length(v$sample_count_table$sample_count)<1000 & !no_grouping)){
+      if(length(v$combined_data_f$ts) > 0){
+        # Create plots on main tab
+        logdebug('create plots', logger="shinyapp")
+        
+        # -------- Render plots and save buttons --------
+        # inputs:v$agg_power,  v$sample_count_table, ideal_response_to_plot, agg_norm_power, v$response_count, v$zone_count, v$agg_power, v$distance_response, geo_data, v$combined_data_f
+        # outputs: output$...
+        # dependencies: event_longitude(), event_latitude(), zone_one_radius(), pre_event_interval(), duration()
+        output$PlotlyTest <- renderPlotly({
+          plot_ly(v$agg_power, x=~Time, y=~Power_kW, color=~series, type="scattergl")  %>% 
+            layout(yaxis = list(title = "Aggregate Power (kW)"))})
+        output$save_agg_power <- renderUI({
+          shinySaveButton("save_agg_power", "Save Aggregated Results", "Save file as ...", filetype=list(xlsx="csv"))
+          })
+        output$save_underlying <- renderUI({
+          shinySaveButton("save_underlying", "Save Underlying Data", "Save file as ...", filetype=list(xlsx="csv"))
+          })
+        output$save_circuit_summary <- renderUI({
+          shinySaveButton("save_circuit_summary", "Save Circuit Summary", "Save file as ...", filetype=list(xlsx="csv"))
+        })
 
-      combined_data_f <- determine_distance_zones(
-        combined_data_f, v$postcode_data, event_latitude(), event_longitude(), zone_one_radius(), zone_two_radius(),
-        zone_three_radius(), zones()
-      )
-
-      # -------- filter by time window --------
-      # inputs: combined_data_f, v$unique_offsets
-      # outputs: combined_data_f
-      # dependencies: offsets()
-      # Filter data by user selected time window
-      logdebug('filter by time window', logger="shinyapp")
-      if (length(offsets()) < length(v$unique_offsets)) { 
-        combined_data_f <- filter(combined_data_f, time_offset %in% offsets())
-      }
-      # --------
+        output$batch_save <- renderUI({
+          shinySaveButton("batch_save", "Batch save", "Save file as ...", filetype=list(xlsx="csv"))
+        })
+        output$save_ideal_response <- renderUI({
+          shinySaveButton("save_ideal_response", "Save response", "Choose directory for report files ...", 
+                          filetype=list(xlsx="csv"))
+        })
+        output$save_ideal_response_downsampled <- renderUI({
+          shinySaveButton("save_ideal_response_downsampled", "Save downsampled response", 
+                          "Choose directory for report files ...", filetype=list(xlsx="csv"))
+        })
+        output$save_manufacturer_disconnection_summary <- renderUI({
+          shinySaveButton("save_manufacturer_disconnection_summary", "Save manufacturer disconnection summary", 
+                          "Choose directory for report files ...", filetype=list(xlsx="csv"))
+        })
+        output$save_manufacturer_disconnection_summary_with_separate_ufls_counts <- renderUI({
+          shinySaveButton("save_manufacturer_disconnection_summary_with_separate_ufls_counts", 
+                          "Save manufacturer disconnection summary with separate ufls counts", 
+                          "Choose directory for report files ...", filetype=list(xlsx="csv"))
+        })
+        output$save_upscaled_disconnection_summary <- renderUI({
+          shinySaveButton("save_upscaled_disconnection_summary", "Save upscaled disconnection summary", 
+                          "Choose directory for report files ...", filetype=list(xlsx="csv"))
+        })
+        output$save_upscaled_disconnection_summary_with_separate_ufls_counts <- renderUI({
+          shinySaveButton("save_upscaled_disconnection_summary_with_separate_ufls_counts", 
+                          "Save upscaled disconnection summary with separate ufls counts", 
+                          "Choose directory for report files ...", filetype=list(xlsx="csv"))
+        })
       
-      combined_data_f <- normalise_c_id_power_by_pre_event(combined_data_f, pre_event_interval())
-      
-      if(length(combined_data_f$ts) > 0){
-        id2 <- showNotification("Calculating site performance factors", duration=1000)
-        combined_data_f <- determine_performance_factors(combined_data_f, pre_event_interval())
+    
+        if ("width" %in% names(v$sample_count_table)) {
+          sample_count_table <- datatable(v$sample_count_table) %>% formatStyle(
+            "width",  background = styleColorBar(c(0, 1), 'red'))
+        } else {
+          sample_count_table <- v$sample_count_table
+        }
+        
+        output$sample_count_table <- renderDataTable({sample_count_table})
 
-        # -------- determine f-W compliance --------
-        # inputs: v$ideal_response_to_plot, combined_data_f
-        # outputs: v$ideal_response_downsampled, combined_data_f
-        # dependencies: duration(), compliance_threshold(), start_buffer(), end_buffer(), end_buffer_responding(), disconnecting_threshold(), compliance()
+        output$save_sample_count <- renderUI({shinySaveButton("save_sample_count", "Save data", "Save file as ...", 
+                                                              filetype=list(xlsx="csv"))
+        })
         if(dim(v$ideal_response_to_plot)[1]>0){
-          ideal_response_downsampled <- down_sample_1s(v$ideal_response_to_plot, duration(), min(combined_data_f$ts))
-          v$ideal_response_downsampled <- ideal_response_downsampled
-          combined_data_f <- 
-            calc_error_metric_and_compliance_2(combined_data_f, 
-                                               ideal_response_downsampled,
-                                               v$ideal_response_to_plot,
-                                               compliance_threshold(),
-                                               start_buffer(),
-                                               end_buffer(),
-                                               end_buffer_responding(),
-                                               disconnecting_threshold())
-          combined_data_f <- mutate(combined_data_f,  compliance_status=ifelse(compliance_status %in% c(NA), "NA", compliance_status))
+          output$NormPower <- renderPlotly({
+            plot_ly(v$agg_norm_power, x=~Time, y=~c_id_norm_power, color=~series, type="scattergl") %>% 
+              add_trace(x=~v$ideal_response_to_plot$ts, y=~v$ideal_response_to_plot$norm_power, name='Ideal Response', 
+                        mode='markers', inherit=FALSE) %>%
+              add_trace(x=~v$ideal_response_downsampled$time_group, y=~v$ideal_response_downsampled$norm_power, 
+                        name='Ideal Response Downsampled', mode='markers', inherit=FALSE) %>%
+              layout(yaxis=list(title="Circuit power normalised to value of pre-event interval, \n aggregated by averaging"))
+          })
         } else {
-          combined_data_f <- mutate(combined_data_f, compliance_status="Undefined")  
+          output$NormPower <- renderPlotly({
+            plot_ly(v$agg_norm_power, x=~Time, y=~c_id_norm_power, color=~series, type="scattergl", 
+                    mode = 'lines+markers') %>% 
+              layout(yaxis=list(title="Circuit power normalised to value of pre-event interval, \n aggregated by averaging"))
+          }) 
         }
-        if (length(compliance()) < 8) {combined_data_f <- filter(combined_data_f, compliance_status %in% compliance())}
-        # --------
+        output$ResponseCount <- renderPlotly({
+          plot_ly(v$response_count, x=~series_x, y=~sample_count, color=~series_y, type="bar") %>% 
+            layout(yaxis = list(title = 'Fraction of circuits \n (denominator is count post filtering)'),
+                    xaxis = list(title = 'Response categories'),
+                    barmode = 'stack')
+          })
+        output$save_response_count <- renderUI({
+          shinySaveButton("save_response_count", "Save data", "Save file as ...", filetype=list(xlsx="csv"))
+          })
         
-        # -------- determine reconnection compliace --------
-        logdebug('Set reconnection compliance values', logger="shinyapp")
-        max_power <- v$db$get_max_circuit_powers(region_to_load())
-        combined_data_f <- normalise_c_id_power_by_daily_max(
-          combined_data_f, max_power, pre_event_interval()
-        )
-        event_window_data <- filter(combined_data_f, ts >= pre_event_interval())
-        reconnection_categories <- create_reconnection_summary(event_window_data, pre_event_interval(),
-                                                               disconnecting_threshold(),
-                                                               reconnect_threshold = reconnection_threshold(),
-                                                               ramp_rate_threshold = ramp_rate_threshold(),
-                                                               ramp_threshold_for_compliance = 
-                                                                 total_ramp_threshold_for_compliance(),
-                                                               ramp_threshold_for_non_compliance = 
-                                                                 total_ramp_threshold_for_non_compliance(),
-                                                               ramp_rate_change_resource_limit_threshold = 
-                                                                 ramp_rate_change_resource_limit_threshold())
-        combined_data_f <- left_join(combined_data_f, reconnection_categories, by = 'c_id')
-        removeNotification(id2)
-        # --------
-        
-        # -------- calculate summary stats --------
-        # inputs: combined_data_f
-        # outputs: v$sample_count_table
-        # dependencies: too many to list for  find_grouping_cols()
-        # Count samples in each data series to be displayed
-        logdebug('Count samples in each data series to be displayed', logger="shinyapp")
-        grouping_cols <- find_grouping_cols(agg_on_standard=agg_on_standard(), pst_agg=pst_agg(), 
-                                            grouping_agg=grouping_agg(), manufacturer_agg=manufacturer_agg(), 
-                                            model_agg=model_agg(), circuit_agg=circuit_agg(), response_agg=response_agg(), 
-                                            zone_agg=zone_agg(), compliance_agg=compliance_agg(), 
-                                            reconnection_compliance_agg=reconnection_compliance_agg())
-        
-        v$sample_count_table <- vector_groupby_count(combined_data_f, grouping_cols)
-        if (confidence_category() %in% grouping_cols) {
-          population_groups <- grouping_cols[confidence_category() != grouping_cols]
-          population_count_table <- vector_groupby_count(combined_data_f, population_groups)
-          population_count_table <- dplyr::rename(population_count_table, sub_population_size=sample_count)
-          v$sample_count_table <- left_join(population_count_table, v$sample_count_table, by=population_groups)
-          v$sample_count_table$percentage_of_sub_pop <- v$sample_count_table$sample_count / v$sample_count_table$sub_population_size
-          v$sample_count_table$percentage_of_sub_pop <- round(v$sample_count_table$percentage_of_sub_pop, digits = 4)
-          result <- mapply(ConfidenceInterval, v$sample_count_table$sample_count, 
-                           v$sample_count_table$sub_population_size, 0.95)
-          v$sample_count_table$lower_95_CI <- round(result[1,], digits = 4)
-          v$sample_count_table$upper_95_CI <- round(result[2,], digits = 4)
-          v$sample_count_table$width <- v$sample_count_table$upper_95_CI - v$sample_count_table$lower_95_CI
-        }
-      }
-      # --------
-            
-      
-      # -------- check for any aggregation --------
-      # inputs: -
-      # outputs: no_grouping
-      # dependencies: agg_on_standard(), pst_agg(), grouping_agg(), manufacturer_agg(), model_agg(), zone_agg(), circuit_agg(), compliance_agg(), reconnection_compliance_agg()
-      # Decide if the settings mean no grouping is being performed.
-      if (agg_on_standard()==FALSE & pst_agg()==FALSE & grouping_agg()==FALSE & manufacturer_agg()==FALSE & 
-          model_agg()==FALSE & zone_agg()==FALSE & circuit_agg()==TRUE & compliance_agg()==TRUE & reconnection_compliance_agg()){
-        no_grouping=TRUE
-      } else {
-        no_grouping=FALSE
-      }
-      # --------
-
-      # Procced to  aggregation and plotting only if there is less than 1000 data series to plot, else stop and notify the
-      # user.
-      logdebug('Proceed to aggregation and plotting', logger="shinyapp")
-      if ((sum(v$sample_count_table$sample_count)<1000 & no_grouping) | 
-          (length(v$sample_count_table$sample_count)<1000 & !no_grouping)){
-        
-        # -------- Create copies of data? --------
-        # inputs: combined_data_f
-        # outputs: v$combined_data_f, combined_data_f2
-        # dependencies: raw_upscale()
-        if(length(combined_data_f$ts) > 0){
-        # Copy data for saving
-        logdebug('Copy data for saving', logger="shinyapp")
-        v$combined_data_f <- select(combined_data_f, ts, site_id, c_id, power_kW, c_id_norm_power, v, f, s_state, s_postcode, 
-                                    pv_installation_year_month, Standard_Version, Grouping, sum_ac, clean, manufacturer, model,
-                                    site_performance_factor, response_category, zone, distance, lat, lon, e, con_type,
-                                    first_ac, polarity, compliance_status, reconnection_compliance_status, 
-                                    manual_droop_compliance, manual_reconnect_compliance, reconnection_time, 
-                                    ramp_above_threshold, c_id_daily_norm_power, max_power, ufls_status,
-                                    pre_event_sampled_seconds, post_event_sampled_seconds)
-        # Create copy of filtered data to use in upscaling
-        combined_data_f2 <- combined_data_f
-          if(raw_upscale()){combined_data_f2 <- upscale(combined_data_f2, v$install_data)}
-        }
-        # -------- 
-
-        # Check that the filter does not result in an empty dataframe.
-        logdebug('Check that the filter does not result in an empty dataframe.', logger="shinyapp")
-        if(length(combined_data_f$ts) > 0){
-          
-          # -------- Initialise aggregate dataframes  --------
-          # inputs: combined_data_f, combined_data_f2, grouping_cols
-          # outputs: agg_norm_power, agg_f_and_v, v$agg_power, v$response_count, v$zone_count, v$distance_response, geo_data, v$circuit_summary
-          # dependencies: vector_groupby_norm_power(), vector_groupby_f_and_v(), vector_groupby_power(), vector_groupby_count_response(),
-          #   vector_groupby_count_zones(), vector_groupby_cumulative_distance(), vector_groupby_system()
-          if (norm_power_filter_off_at_t0()){
-            combined_data_for_norm_power <- filter(combined_data_f,  response_category != "5 Off at t0")
-          } else {
-            combined_data_for_norm_power <- combined_data_f
-          }
-          agg_norm_power <- vector_groupby_norm_power(combined_data_for_norm_power, grouping_cols)
-          agg_f_and_v <- vector_groupby_f_and_v(combined_data_f, grouping_cols)
-          v$agg_power <- vector_groupby_power(combined_data_f2, grouping_cols)
-          v$response_count <- vector_groupby_count_response(combined_data_f, grouping_cols)
-          v$zone_count <- vector_groupby_count_zones(combined_data_f, grouping_cols)
-          v$distance_response <- vector_groupby_cumulative_distance(combined_data_f, grouping_cols)
-          geo_data <- vector_groupby_system(combined_data_f, grouping_cols)
-          v$circuit_summary <- distinct(combined_data_f, c_id, clean, .keep_all = TRUE)
-          v$circuit_summary <- select(v$circuit_summary, site_id, c_id, s_state, s_postcode, pv_installation_year_month, 
-                                      Standard_Version, Grouping, sum_ac, clean, manufacturer, model, response_category, 
-                                      zone, distance, lat, lon, con_type, first_ac, polarity, compliance_status, 
-                                      reconnection_compliance_status, manual_droop_compliance, manual_reconnect_compliance, 
-                                      reconnection_time, ramp_above_threshold, max_power, ufls_status,
-                                      pre_event_sampled_seconds, post_event_sampled_seconds, 
-                                      ufls_status_v, pre_event_v_mean, post_event_v_mean)
-          
-          # Combine data sets that have the same grouping so they can be saved in a single file
-          if (no_grouping){
-            et <- pre_event_interval()
-            # agg_norm_power <- event_normalised_power(agg_norm_power, et, keep_site_id=TRUE)
-            v$agg_power <- left_join( v$agg_power, agg_norm_power[, c("c_id_norm_power", "c_id", "Time")], 
-                                      by=c("Time", "c_id"))
-          } else {
-            et <- pre_event_interval()
-            # agg_norm_power <- event_normalised_power(agg_norm_power, et,  keep_site_id=FALSE)
-            v$agg_power <- left_join(v$agg_power, agg_norm_power[, c("c_id_norm_power", "series", "Time")], 
-                                     by=c("Time", "series"))
-          }
-          v$agg_power <- left_join( v$agg_power, agg_f_and_v[, c("Time", "series", "Voltage", "Frequency")], 
-                                    by=c("Time", "series"))
-          # --------
-          
-          # -------- Create disconnection_sumaries --------
-          # inputs: v$circuit_summary, v$manufacturer_install_data, 
-          # outputs: circuits_to_summarise, v$disconnection_summary, v$upscaled_disconnection
-          # dependencies: load_date(), region_to_load(), exclude_solar_edge()
-          # Summarise and upscale disconnections on a manufacturer basis.
-          upscaling_results <- upscale_and_summarise_disconnections(
-            v$circuit_summary, v$manufacturer_install_data, load_date(), region_to_load(), exclude_solar_edge()
-          )
-
-          v$disconnection_summary <- upscaling_results$disconnection_summary
-          v$upscaled_disconnections <- upscaling_results$upscaled_disconnections
-          v$disconnection_summary_with_separate_ufls_counts <- 
-            upscaling_results$with_separate_ufls_counts$disconnection_summary
-          v$upscaled_disconnections_with_separate_ufls_counts <- 
-            upscaling_results$with_separate_ufls_counts$upscaled_disconnections
-          
-          if(length(upscaling_results$manufacturers_missing_from_cer$manufacturer) > 0) {
-            long_error_message <- c("Some manufacturers present in the input data could not be ",
-                                    "matched to the cer data set. A list of these has been saved in the ",
-                                    "file logging/manufacturers_missing_from_cer.csv. You may want to review the ", 
-                                    "mapping used in processing the input data.")
-            long_error_message <- paste(long_error_message, collapse = '')
-            shinyalert("Manufacturers missing from CER data", long_error_message)
-          }
-          
-          if(length(upscaling_results$manufacturers_missing_from_input_db$manufacturer) > 0) {
-            long_error_message <- c("Some manufacturers present in the CER data could not be ",
-                                    "matched to the input data set. A list of these has been saved in the ",
-                                    "file logging/manufacturers_missing_from_input_db.csv. You may wish to review the ", 
-                                    "file to check the number and names of missing manufacturers. ")
-            long_error_message <- paste(long_error_message, collapse = '')
-            shinyalert("Manufacturers missing from input data", long_error_message)
-          }
-          # --------
-          
-          
-          
-          # Create plots on main tab
-          logdebug('create plots', logger="shinyapp")
-          
-          # -------- Render plots and save buttons --------
-          # inputs:v$agg_power,  v$sample_count_table, ideal_response_to_plot, agg_norm_power, v$response_count, v$zone_count, v$agg_power, v$distance_response, geo_data, v$combined_data_f
-          # outputs: output$...
-          # dependencies: event_longitude(), event_latitude(), zone_one_radius(), pre_event_interval(), duration()
-            output$PlotlyTest <- renderPlotly({
-              plot_ly(v$agg_power, x=~Time, y=~Power_kW, color=~series, type="scattergl")  %>% 
-                layout(yaxis = list(title = "Aggregate Power (kW)"))})
-            output$save_agg_power <- renderUI({
-              shinySaveButton("save_agg_power", "Save Aggregated Results", "Save file as ...", filetype=list(xlsx="csv"))
-              })
-            output$save_underlying <- renderUI({
-              shinySaveButton("save_underlying", "Save Underlying Data", "Save file as ...", filetype=list(xlsx="csv"))
-              })
-            output$save_circuit_summary <- renderUI({
-              shinySaveButton("save_circuit_summary", "Save Circuit Summary", "Save file as ...", filetype=list(xlsx="csv"))
+        output$ZoneCount <- renderPlotly({
+          plot_ly(v$zone_count, x=~series_x, y=~sample_count, color=~series_y, type="bar") %>%
+            layout(yaxis = list(title = 'Fraction of zone circuits \n (denominator is count post filtering)'),
+                    xaxis = list(title = 'Zone categories'), barmode = 'stack')
+          })
+        output$save_zone_count <- renderUI({
+          shinySaveButton("save_zone_count", "Save data", "Save file as ...", filetype=list(xlsx="csv"))
+          })
+        if(dim(v$frequency_data)[1]>0){
+          output$Frequency <- renderPlotly({
+            plot_ly(v$agg_power, x=~Time, y=~Frequency, color=~series, type="scattergl")%>% 
+              add_trace(x=~temp_f_data$ts, y=~temp_f_data$f, name='High Speed Data', 
+                        mode='markers', inherit=FALSE) %>% 
+              layout(yaxis=list(title="Average frequency (Hz)"))
             })
-  
-            output$batch_save <- renderUI({
-              shinySaveButton("batch_save", "Batch save", "Save file as ...", filetype=list(xlsx="csv"))
-            })
-            output$save_ideal_response <- renderUI({
-              shinySaveButton("save_ideal_response", "Save response", "Choose directory for report files ...", 
-                              filetype=list(xlsx="csv"))
-            })
-            output$save_ideal_response_downsampled <- renderUI({
-              shinySaveButton("save_ideal_response_downsampled", "Save downsampled response", 
-                              "Choose directory for report files ...", filetype=list(xlsx="csv"))
-            })
-            output$save_manufacturer_disconnection_summary <- renderUI({
-              shinySaveButton("save_manufacturer_disconnection_summary", "Save manufacturer disconnection summary", 
-                              "Choose directory for report files ...", filetype=list(xlsx="csv"))
-            })
-            output$save_manufacturer_disconnection_summary_with_separate_ufls_counts <- renderUI({
-              shinySaveButton("save_manufacturer_disconnection_summary_with_separate_ufls_counts", 
-                              "Save manufacturer disconnection summary with separate ufls counts", 
-                              "Choose directory for report files ...", filetype=list(xlsx="csv"))
-            })
-            output$save_upscaled_disconnection_summary <- renderUI({
-              shinySaveButton("save_upscaled_disconnection_summary", "Save upscaled disconnection summary", 
-                              "Choose directory for report files ...", filetype=list(xlsx="csv"))
-            })
-            output$save_upscaled_disconnection_summary_with_separate_ufls_counts <- renderUI({
-              shinySaveButton("save_upscaled_disconnection_summary_with_separate_ufls_counts", 
-                              "Save upscaled disconnection summary with separate ufls counts", 
-                              "Choose directory for report files ...", filetype=list(xlsx="csv"))
-            })
-          
-        
-            if ("width" %in% names(v$sample_count_table)) {
-              sample_count_table <- datatable(v$sample_count_table) %>% formatStyle(
-                "width",  background = styleColorBar(c(0, 1), 'red'))
-            } else {
-              sample_count_table <- v$sample_count_table
-            }
-            
-            output$sample_count_table <- renderDataTable({sample_count_table})
-
-            output$save_sample_count <- renderUI({shinySaveButton("save_sample_count", "Save data", "Save file as ...", 
-                                                                  filetype=list(xlsx="csv"))
-            })
-            if(dim(v$ideal_response_to_plot)[1]>0){
-              output$NormPower <- renderPlotly({
-                plot_ly(agg_norm_power, x=~Time, y=~c_id_norm_power, color=~series, type="scattergl") %>% 
-                  add_trace(x=~v$ideal_response_to_plot$ts, y=~v$ideal_response_to_plot$norm_power, name='Ideal Response', 
-                            mode='markers', inherit=FALSE) %>%
-                  add_trace(x=~v$ideal_response_downsampled$time_group, y=~v$ideal_response_downsampled$norm_power, 
-                            name='Ideal Response Downsampled', mode='markers', inherit=FALSE) %>%
-                  layout(yaxis=list(title="Circuit power normalised to value of pre-event interval, \n aggregated by averaging"))
-              })
-            } else {
-              output$NormPower <- renderPlotly({
-                plot_ly(agg_norm_power, x=~Time, y=~c_id_norm_power, color=~series, type="scattergl", 
-                        mode = 'lines+markers') %>% 
-                  layout(yaxis=list(title="Circuit power normalised to value of pre-event interval, \n aggregated by averaging"))
-              }) 
-            }
-            output$ResponseCount <- renderPlotly({
-              plot_ly(v$response_count, x=~series_x, y=~sample_count, color=~series_y, type="bar") %>% 
-                layout(yaxis = list(title = 'Fraction of circuits \n (denominator is count post filtering)'),
-                       xaxis = list(title = 'Response categories'),
-                       barmode = 'stack')
-              })
-            output$save_response_count <- renderUI({
-              shinySaveButton("save_response_count", "Save data", "Save file as ...", filetype=list(xlsx="csv"))
-              })
-            
-            output$ZoneCount <- renderPlotly({
-              plot_ly(v$zone_count, x=~series_x, y=~sample_count, color=~series_y, type="bar") %>%
-                layout(yaxis = list(title = 'Fraction of zone circuits \n (denominator is count post filtering)'),
-                       xaxis = list(title = 'Zone categories'), barmode = 'stack')
-              })
-            output$save_zone_count <- renderUI({
-              shinySaveButton("save_zone_count", "Save data", "Save file as ...", filetype=list(xlsx="csv"))
-              })
-            if(dim(v$frequency_data)[1]>0){
-              output$Frequency <- renderPlotly({
-                plot_ly(v$agg_power, x=~Time, y=~Frequency, color=~series, type="scattergl")%>% 
-                  add_trace(x=~temp_f_data$ts, y=~temp_f_data$f, name='High Speed Data', 
-                            mode='markers', inherit=FALSE) %>% 
-                  layout(yaxis=list(title="Average frequency (Hz)"))
-                })
-            } else {
-              output$Frequency <- renderPlotly({
-                plot_ly(v$agg_power, x=~Time, y=~Frequency, color=~series, type="scattergl")%>% 
-                  layout(yaxis=list(title="Average frequency (Hz)"))
-              })
-            }
-            output$Voltage <- renderPlotly({plot_ly(v$agg_power, x=~Time, y=~Voltage, color=~series, type="scattergl") %>% 
-                layout(yaxis=list(title="Average volatge (V)"))
-              })
-            output$distance_response <- renderPlotly({
-              plot_ly(v$distance_response, x=~distance, y=~percentage, color=~series, type="scattergl") %>% 
-                layout(yaxis=list(title="Cumlative  disconnects / Cumulative circuits \n (Includes response categories 3 and 4)"),
-                       xaxis=list(title="Distance from event (km)"))
-              })
-            output$save_distance_response <- renderUI({
-              shinySaveButton("save_distance_response", "Save data", "Save file as ...", filetype=list(xlsx="csv"))
-              })
-            z1 <- data.frame(circle.polygon(event_longitude(), event_latitude(), zone_one_radius(), sides = 20, units='km', poly.type = "gc.earth"))
-            z2 <- data.frame(circle.polygon(event_longitude(), event_latitude(), zone_two_radius(), sides = 20, units='km', poly.type = "gc.earth"))
-            z3 <- data.frame(circle.polygon(event_longitude(), event_latitude(), zone_three_radius(), sides = 20, units='km', poly.type = "gc.earth"))
-            output$map <- renderPlotly({plot_geo(geo_data, lat=~lat, lon=~lon, color=~percentage_disconnect) %>%
-                add_polygons(x=~z1$lon, y=~z1$lat, inherit=FALSE, fillcolor='transparent', 
-                             line=list(width=2,color="grey"), hoverinfo = "none", showlegend=FALSE) %>%
-                add_polygons(x=~z2$lon, y=~z2$lat, inherit=FALSE, fillcolor='transparent', 
-                             line=list(width=2,color="grey"), hoverinfo = "none", showlegend=FALSE) %>%
-                add_polygons(x=~z3$lon, y=~z3$lat, inherit=FALSE, fillcolor='transparent', 
-                             line=list(width=2,color="grey"), hoverinfo = "none", showlegend=FALSE) %>%
-                add_markers(x=~geo_data$lon, y=~geo_data$lat,  inherit=FALSE, 
-                            hovertext=~geo_data$info, legendgroup = list(title = "Percentage Disconnects"),
-                            marker=list(color=~percentage_disconnect, colorbar=list(title='Percentage \n Disconnects'), 
-                                        colorscale='Bluered')) %>%
-                layout(annotations = 
-                         list(x = 1, y = -0.1, text = "Note: pecentage disconnects includes categories 3 and 4.", 
-                              showarrow = F, xref='paper', yref='paper', 
-                              xanchor='right', yanchor='auto', xshift=0, yshift=0))
-              })
-            
-            output$compliance_cleaned_or_raw <- 
-              renderUI({radioButtons("compliance_cleaned_or_raw", 
-                                     label=strong("Choose data set"), 
-                                     choices = list("clean","raw"), 
-                                     selected = v$combined_data_f$clean[1], 
-                                     inline = TRUE)})
-            
-            v$reconnection_profile <- create_reconnection_profile(pre_event_interval(), ramp_length_minutes = 6,
-                                                                  time_step_seconds = as.numeric(duration()))
-            
-            removeNotification(id)
-            # --------
         } else {
-          # If there is no data left after filtering alert the user and create an empty plot.
-          shinyalert("Opps", "There is no data to plot")
-          reset_chart_area(input, output, session)
-          removeNotification(id)
+          output$Frequency <- renderPlotly({
+            plot_ly(v$agg_power, x=~Time, y=~Frequency, color=~series, type="scattergl")%>% 
+              layout(yaxis=list(title="Average frequency (Hz)"))
+          })
         }
+        output$Voltage <- renderPlotly({plot_ly(v$agg_power, x=~Time, y=~Voltage, color=~series, type="scattergl") %>% 
+            layout(yaxis=list(title="Average volatge (V)"))
+          })
+        output$distance_response <- renderPlotly({
+          plot_ly(v$distance_response, x=~distance, y=~percentage, color=~series, type="scattergl") %>% 
+            layout(yaxis=list(title="Cumlative  disconnects / Cumulative circuits \n (Includes response categories 3 and 4)"),
+                    xaxis=list(title="Distance from event (km)"))
+          })
+        output$save_distance_response <- renderUI({
+          shinySaveButton("save_distance_response", "Save data", "Save file as ...", filetype=list(xlsx="csv"))
+          })
+        z1 <- data.frame(circle.polygon(event_longitude(), event_latitude(), zone_one_radius(), sides = 20, units='km', poly.type = "gc.earth"))
+        z2 <- data.frame(circle.polygon(event_longitude(), event_latitude(), zone_two_radius(), sides = 20, units='km', poly.type = "gc.earth"))
+        z3 <- data.frame(circle.polygon(event_longitude(), event_latitude(), zone_three_radius(), sides = 20, units='km', poly.type = "gc.earth"))
+        output$map <- renderPlotly({plot_geo(v$geo_data, lat=~lat, lon=~lon, color=~percentage_disconnect) %>%
+            add_polygons(x=~z1$lon, y=~z1$lat, inherit=FALSE, fillcolor='transparent', 
+                          line=list(width=2,color="grey"), hoverinfo = "none", showlegend=FALSE) %>%
+            add_polygons(x=~z2$lon, y=~z2$lat, inherit=FALSE, fillcolor='transparent', 
+                          line=list(width=2,color="grey"), hoverinfo = "none", showlegend=FALSE) %>%
+            add_polygons(x=~z3$lon, y=~z3$lat, inherit=FALSE, fillcolor='transparent', 
+                          line=list(width=2,color="grey"), hoverinfo = "none", showlegend=FALSE) %>%
+            add_markers(x=~v$geo_data$lon, y=~v$geo_data$lat,  inherit=FALSE, 
+                        hovertext=~v$geo_data$info, legendgroup = list(title = "Percentage Disconnects"),
+                        marker=list(color=~percentage_disconnect, colorbar=list(title='Percentage \n Disconnects'), 
+                                    colorscale='Bluered')) %>%
+            layout(annotations = 
+                      list(x = 1, y = -0.1, text = "Note: pecentage disconnects includes categories 3 and 4.", 
+                          showarrow = F, xref='paper', yref='paper', 
+                          xanchor='right', yanchor='auto', xshift=0, yshift=0))
+          })
+        
+        output$compliance_cleaned_or_raw <- 
+          renderUI({radioButtons("compliance_cleaned_or_raw", 
+                                  label=strong("Choose data set"), 
+                                  choices = list("clean","raw"), 
+                                  selected = v$combined_data_f$clean[1], 
+                                  inline = TRUE)})
+        
+        v$reconnection_profile <- create_reconnection_profile(pre_event_interval(), ramp_length_minutes = 6,
+                                                              time_step_seconds = as.numeric(duration()))
+        
+        removeNotification(id)
+        # --------
       } else {
-        shinyalert("Wow", "You are trying to plot more than 1000 series, maybe try
-                   narrowing down those filters and agg settings")
+        # If there is no data left after filtering alert the user and create an empty plot.
+        shinyalert("Opps", "There is no data to plot")
         reset_chart_area(input, output, session)
         removeNotification(id)
       }
+    } else {
+      shinyalert("Wow", "You are trying to plot more than 1000 series, maybe try
+                  narrowing down those filters and agg settings")
+      reset_chart_area(input, output, session)
+      removeNotification(id)
     }
     logdebug('Update plots completed', logger="shinyapp")
   })
@@ -1749,11 +1752,13 @@ server <- function(input,output,session){
     settings$circuit_agg <- circuit_agg()
     settings$zone_agg <- zone_agg()
     settings$reconnection_compliance_agg <- reconnection_compliance_agg()
+    settings$compliance_agg <- compliance_agg()
     
     settings$confidence_category <- confidence_category()
     settings$raw_upscale <- raw_upscale()
+    settings$load_date <- load_date()
     
-    settings$pre_event_interval <- as.character(pre_event_interval())
+    settings$pre_event_interval <- pre_event_interval()
     settings$window_length <- window_length()
     settings$post_event_ufls_window_length <- post_event_ufls_window_length()
     settings$event_latitude <- event_latitude()
@@ -1761,7 +1766,9 @@ server <- function(input,output,session){
     settings$zone_one_radius <- zone_one_radius()
     settings$zone_two_radius <- zone_two_radius()
     settings$zone_three_radius <- zone_three_radius()
-    
+    settings$zone_three_radius <- zone_three_radius()
+    settings$norm_power_filter_off_at_t0 <- norm_power_filter_off_at_t0()
+  
     settings$compliance_threshold <- compliance_threshold()
     settings$start_buffer <- start_buffer()
     settings$end_buffer <- end_buffer()
@@ -1778,13 +1785,18 @@ server <- function(input,output,session){
     settings$disconnecting_threshold <- disconnecting_threshold()
     settings$exclude_solar_edge <- exclude_solar_edge()
     
+    return(settings)
+  }
+
+  get_settings_as_json <- function(){
+    settings <- get_current_settings()
+    settings$pre_event_interval <- as.character(settings$pre_event_interval)
     settings_as_json <- toJSON(settings, indent = 1)
-    
     return(settings_as_json)
   }
   
   observeEvent(input$save_settings, {
-    settings_as_json <- get_current_settings()
+    settings_as_json <- get_settings_as_json()
     volumes <- c(home=getwd())
     shinyFileSave(input, "save_settings", roots=volumes, session=session)
     fileinfo <- parseSavePath(volumes, input$save_settings)
@@ -1904,7 +1916,7 @@ server <- function(input,output,session){
 
   # Save data from aggregate pv power plot
   observeEvent(input$batch_save, {
-    meta_data <- get_current_settings()
+    meta_data <- get_settings_as_json()
     volumes <- getVolumes()
     shinyFileSave(input, "batch_save", roots=volumes, session=session)
     fileinfo <- parseSavePath(volumes, input$batch_save)
@@ -2007,7 +2019,6 @@ server <- function(input,output,session){
     v$db$update_circuit_details_cleaned(v$circuit_details_for_editing)
   })
 }
-
 
 shinyApp(ui = ui, server = server)
 
