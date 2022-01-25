@@ -46,12 +46,12 @@ identify_islanded_sites <- function(combined_data, alert_data, event_time){
 assess_islands <- function(event_window_data){
   event_window_data <- filter(event_window_data, Islanded & response_category %in% c('3 Drop to Zero', '4 Disconnect'))
   if(length(event_window_data$c_id) > 0){
-    event_window_data <- mutate(event_window_data, voltage = as.numeric(v))
-    event_window_data <- mutate(event_window_data, frequency = as.numeric(f))
+    event_window_data <- mutate(event_window_data, voltage = as.numeric(v), vmin = as.numeric(vmin), vmax = as.numeric(vmax))
+    event_window_data <- mutate(event_window_data, frequency = as.numeric(f), fmin = as.numeric(fmin), fmax = as.numeric(fmax))
     event_window_data <- group_by(event_window_data, c_id, clean)
     event_window_data <- summarise(event_window_data, 
-                                   max_f=max(frequency), min_f=min(frequency), 
-                                   max_v=(max(voltage) - 240) / 240, min_v=(240 - min(voltage)) / 240)
+                                   max_f=max(fmax), min_f=min(fmin), 
+                                   max_v=(max(vmax) - 240) / 240, min_v=(240 - min(vmin)) / 240)
     
     event_window_data <- mutate(event_window_data, island_assessment=ifelse(max_f > 53, "Gateway curtailed", 
                                                                             "Undefined"))
