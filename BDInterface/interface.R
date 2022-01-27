@@ -145,6 +145,13 @@ DBInterface <- R6::R6Class("DBInterface",
         if (startsWith(conditionMessage(w), "Don't need to call dbFetch()"))
           invokeRestart("muffleWarning")
       })
+      RSQLite::dbExecute(con, "UPDATE timeseries SET e = NULL WHERE e = ''")
+      RSQLite::dbExecute(con, "UPDATE timeseries SET v = NULL WHERE v = ''")
+      RSQLite::dbExecute(con, "UPDATE timeseries SET vmin = NULL WHERE vmin = ''")
+      RSQLite::dbExecute(con, "UPDATE timeseries SET vmax = NULL WHERE vmax = ''")
+      RSQLite::dbExecute(con, "UPDATE timeseries SET f = NULL WHERE f = ''")
+      RSQLite::dbExecute(con, "UPDATE timeseries SET fmin = NULL WHERE fmin = ''")
+      RSQLite::dbExecute(con, "UPDATE timeseries SET fmax = NULL WHERE fmax = ''")
       
       self$drop_repeated_headers()
       
@@ -210,6 +217,16 @@ DBInterface <- R6::R6Class("DBInterface",
             invokeRestart("muffleWarning")
         })
       }
+      
+      RSQLite::dbExecute(con, "UPDATE timeseries SET GridFaultContactorTrip = NULL WHERE GridFaultContactorTrip = ''")
+      RSQLite::dbExecute(con, "UPDATE timeseries SET SYNC_a038_DoOpenArguments = NULL 
+                         WHERE SYNC_a038_DoOpenArguments = ''")
+      RSQLite::dbExecute(con, "UPDATE timeseries SET count_times_open = NULL WHERE count_times_open = ''")
+      RSQLite::dbExecute(con, "UPDATE timeseries SET first_timestamp = NULL WHERE first_timestamp = ''")
+      RSQLite::dbExecute(con, "UPDATE timeseries SET SYNC_a010_vfCheckFreqWobble = NULL 
+                         WHERE SYNC_a010_vfCheckFreqWobble = ''")
+      RSQLite::dbExecute(con, "UPDATE timeseries SET SYNC_a005_vfCheckUnderVoltage = NULL 
+                         WHERE SYNC_a005_vfCheckUnderVoltage = ''")
         
       if (check_dataset_ids_match) {
         self$check_ids_match_between_datasets()
