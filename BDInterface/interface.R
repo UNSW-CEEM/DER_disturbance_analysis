@@ -540,9 +540,11 @@ DBInterface <- R6::R6Class("DBInterface",
       site_details = self$get_site_details_raw()
       site_in_state = filter(site_details, s_state==state)
       circuit_in_state = filter(circuit_details, site_id %in% site_in_state$site_id)
+      # TODO: check validity of e != ''
       query <- "select ts, c_id, d, e, v, vmin, vmax, f, fmin, fmax from timeseries 
                         where c_id in (select c_id from circuit_in_state)
                         and d = duration
+                        and e != ''
                         and datetime(ts) >= datetime('start_time')
                         and datetime(ts) <= datetime('end_time')"
       query <- gsub('duration', duration, query)
