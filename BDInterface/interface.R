@@ -218,14 +218,14 @@ DBInterface <- R6::R6Class("DBInterface",
         })
       }
       
-      RSQLite::dbExecute(con, "UPDATE timeseries SET GridFaultContactorTrip = NULL WHERE GridFaultContactorTrip = ''")
-      RSQLite::dbExecute(con, "UPDATE timeseries SET SYNC_a038_DoOpenArguments = NULL 
+      RSQLite::dbExecute(con, "UPDATE alerts SET GridFaultContactorTrip = NULL WHERE GridFaultContactorTrip = ''")
+      RSQLite::dbExecute(con, "UPDATE alerts SET SYNC_a038_DoOpenArguments = NULL 
                          WHERE SYNC_a038_DoOpenArguments = ''")
-      RSQLite::dbExecute(con, "UPDATE timeseries SET count_times_open = NULL WHERE count_times_open = ''")
-      RSQLite::dbExecute(con, "UPDATE timeseries SET first_timestamp = NULL WHERE first_timestamp = ''")
-      RSQLite::dbExecute(con, "UPDATE timeseries SET SYNC_a010_vfCheckFreqWobble = NULL 
+      RSQLite::dbExecute(con, "UPDATE alerts SET count_times_open = NULL WHERE count_times_open = ''")
+      RSQLite::dbExecute(con, "UPDATE alerts SET first_timestamp = NULL WHERE first_timestamp = ''")
+      RSQLite::dbExecute(con, "UPDATE alerts SET SYNC_a010_vfCheckFreqWobble = NULL 
                          WHERE SYNC_a010_vfCheckFreqWobble = ''")
-      RSQLite::dbExecute(con, "UPDATE timeseries SET SYNC_a005_vfCheckUnderVoltage = NULL 
+      RSQLite::dbExecute(con, "UPDATE alerts SET SYNC_a005_vfCheckUnderVoltage = NULL 
                          WHERE SYNC_a005_vfCheckUnderVoltage = ''")
         
       if (check_dataset_ids_match) {
