@@ -13,22 +13,18 @@ classify_islands <- function(combined_data, alert_data, event_time, window_lengt
 # TODO: determine and apply hierarchy of responses
 # TODO: figure out which other functions rely on the responses/ need islanded sites removed
 
-# TODO: This assessment needs to be run on the original (undownsampled) data since downsampling will smooth freq spikes
-# Hence either needs the raw data, or extra columns with the min/max freq and voltage for each ts
-
 identify_islanded_sites <- function(combined_data, alert_data, event_time){
   if (!all(is.na(alert_data$first_timestamp))){
     alert_data <- mutate(alert_data, first_timestamp = as.POSIXct((first_timestamp)/1000, tz="Australia/Brisbane", 
                                                                   origin="1970-01-01"))
     alert_data <- mutate(alert_data, Islanded = ifelse(is.na(first_timestamp),0,
                                     ifelse((GridFaultContactorTrip >= 1 | SYNC_a038_DoOpenArguments >= 1)
-                                           | ((first_timestamp < (event_time+60)) & (first_timestamp >= (event_time))),
+                                           & ((first_timestamp < (event_time+60)) & (first_timestamp >= (event_time))),
                                            1,0)))
   } else {
     alert_data <- mutate(alert_data, Islanded = ifelse((GridFaultContactorTrip >= 1 | SYNC_a038_DoOpenArguments >= 1),
                                                        1,0))
   }
-  #browser()
 
   combined_data <- left_join(combined_data, alert_data[,c('c_id', 
                                                           'Islanded',
@@ -46,8 +42,12 @@ identify_islanded_sites <- function(combined_data, alert_data, event_time){
 assess_islands <- function(event_window_data){
   event_window_data <- filter(event_window_data, Islanded & response_category %in% c('3 Drop to Zero', '4 Disconnect'))
   if(length(event_window_data$c_id) > 0){
-    event_window_data <- mutate(event_window_data, voltage = as.numeric(v), vmin = as.numeric(vmin), vmax = as.numeric(vmax))
-    event_window_data <- mutate(event_window_data, frequency = as.numeric(f), fmin = as.numeric(fmin), fmax = as.numeric(fmax))
+    event_window_data <- mutate(event_window_data, voltage = as.numeric(v), frequency = as.numeric(f))
+    event_window_data <- mutate(event_window_data, vmin=if(all(is.na(event_window_data$vmin))) v else vmin,
+                                                   vmax=if(all(is.na(event_window_data$vmax))) v else vmax,
+                                                   fmin=if(all(is.na(event_window_data$fmin))) f else fmin,
+                                                   fmax=if(all(is.na(event_window_data$fmax))) f else fmax)
+    
     event_window_data <- group_by(event_window_data, c_id, clean)
     event_window_data <- summarise(event_window_data, 
                                    max_f=max(fmax), min_f=min(fmin), 
@@ -64,6 +64,8 @@ assess_islands <- function(event_window_data){
     event_window_data <- mutate(event_window_data, 
                                 island_assessment=ifelse(island_assessment=="Undefined",
                                                          "PV disconnect", island_assessment))
+  } else{
+    event_window_data <- mutate(event_window_data, island_assessment = "NA")
   }
   event_window_data <- select(event_window_data, "c_id", "clean", "island_assessment")
   return(event_window_data)

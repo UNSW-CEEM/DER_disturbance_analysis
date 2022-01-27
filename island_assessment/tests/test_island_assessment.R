@@ -37,11 +37,11 @@ test_that("Test identify_islanded_sites for a site with SYNC_a038_DoOpenArgument
   expect_equal(out, expected_output, tolerance=0.001)
 })
 
-test_that("Test identify_islanded_sites for a site that islanded more than 30s after the event" ,{
+test_that("Test identify_islanded_sites for a site that islanded more than 60s after the event" ,{
   # Test input data
   c_id <- c(3000)
   combined_data <- data.frame(c_id)
-  first_timestamp <- c(1611470790257)
+  first_timestamp <- c(1611470850257)
   GridFaultContactorTrip <- c(1)
   SYNC_a038_DoOpenArguments <- c(0)
   SYNC_a005_vfCheckUnderVoltage <- c(1)
@@ -79,7 +79,7 @@ test_that("Test identify_islanded_sites for a site with no SYNC_a005_vfCheckUnde
   # Test input data
   c_id <- c(3000)
   combined_data <- data.frame(c_id)
-  first_timestamp <- c(1611470790257)
+  first_timestamp <- c(1611470760257)
   GridFaultContactorTrip <- c(1)
   SYNC_a038_DoOpenArguments <- c(0)
   SYNC_a005_vfCheckUnderVoltage <- c(NA)
@@ -89,7 +89,7 @@ test_that("Test identify_islanded_sites for a site with no SYNC_a005_vfCheckUnde
   event_time <- as.POSIXct("2021-01-24 16:46:00", tz = "Australia/Brisbane")
   
   out <- identify_islanded_sites(combined_data, alert_data, event_time)
-  Islanded <- c(0)
+  Islanded <- c(1)
   SYNC_a005_vfCheckUnderVoltage <- c(0)
   expected_output <- data.frame(c_id, Islanded, SYNC_a005_vfCheckUnderVoltage, SYNC_a010_vfCheckFreqWobble)
   expect_equal(out, expected_output, tolerance=0.001)
@@ -102,9 +102,9 @@ test_that("Test assess_islands with response_category = 'NED'" ,{
   clean <- c(1)
   Islanded <- c(1)
   response_category <- c('NED')
-  frequency <- c(55)
-  voltage <- c(240)
-  combined_data <- data.frame(c_id, ts, clean, Islanded, response_category, frequency, voltage, stringsAsFactors = FALSE)
+  f <- c(55)
+  v <- c(240)
+  combined_data <- data.frame(c_id, ts, clean, Islanded, response_category, f, v, stringsAsFactors = FALSE)
   
   out <- assess_islands(combined_data)
   c_id <- c(numeric())
@@ -121,9 +121,9 @@ test_that("Test assess_islands with max_freq = 55Hz" ,{
   clean <- c(1)
   Islanded <- c(1)
   response_category <- c('3 Drop to Zero')
-  frequency <- c(55)
-  voltage <- c(240)
-  combined_data <- data.frame(c_id, ts, clean, Islanded, response_category, frequency, voltage, stringsAsFactors = FALSE)
+  f <- c(55)
+  v <- c(240)
+  combined_data <- data.frame(c_id, ts, clean, Islanded, response_category, f, v, stringsAsFactors = FALSE)
 
   out <- assess_islands(combined_data)
   island_assessment <- c('Gateway curtailed')
@@ -138,9 +138,27 @@ test_that("Test assess_islands with min_freq = 49Hz" ,{
   clean <- c(1)
   Islanded <- c(1)
   response_category <- c('3 Drop to Zero')
-  frequency <- c(49)
-  voltage <- c(240)
-  combined_data <- data.frame(c_id, ts, clean, Islanded, response_category, frequency, voltage, stringsAsFactors = FALSE)
+  f <- c(49)
+  v <- c(240)
+  combined_data <- data.frame(c_id, ts, clean, Islanded, response_category, f, v, stringsAsFactors = FALSE)
+  
+  out <- assess_islands(combined_data)
+  island_assessment <- c('Frequency disruption')
+  expected_output <- data.frame(c_id, clean, island_assessment, stringsAsFactors = FALSE)
+  expect_equal(out, expected_output, tolerance=0.001)
+})
+
+test_that("Test assess_islands with fmin = 48Hz but minimum f = 50 Hz" ,{
+  # Test input data
+  c_id <- c(3000)
+  ts <- c('2021-05-25 13:05')
+  clean <- c(1)
+  Islanded <- c(1)
+  response_category <- c('3 Drop to Zero')
+  f <- c(50)
+  fmin <- c(48)
+  v <- c(240)
+  combined_data <- data.frame(c_id, ts, clean, Islanded, response_category, f, fmin, v, stringsAsFactors = FALSE)
   
   out <- assess_islands(combined_data)
   island_assessment <- c('Frequency disruption')
@@ -155,9 +173,9 @@ test_that("Test assess_islands with max_voltage = 270Hz" ,{
   clean <- c(1)
   Islanded <- c(1)
   response_category <- c('3 Drop to Zero')
-  frequency <- c(50)
-  voltage <- c(270)
-  combined_data <- data.frame(c_id, ts, clean, Islanded, response_category, frequency, voltage, stringsAsFactors = FALSE)
+  f <- c(50)
+  v <- c(270)
+  combined_data <- data.frame(c_id, ts, clean, Islanded, response_category, f, v, stringsAsFactors = FALSE)
   
   out <- assess_islands(combined_data)
   island_assessment <- c('Voltage disruption')
@@ -172,9 +190,9 @@ test_that("Test assess_islands for site with no other disruptions" ,{
   clean <- c(1)
   Islanded <- c(1)
   response_category <- c('4 Disconnect')
-  frequency <- c(50)
-  voltage <- c(241)
-  combined_data <- data.frame(c_id, ts, clean, Islanded, response_category, frequency, voltage, stringsAsFactors = FALSE)
+  f <- c(50)
+  v <- c(241)
+  combined_data <- data.frame(c_id, ts, clean, Islanded, response_category, f, v, stringsAsFactors = FALSE)
   
   out <- assess_islands(combined_data)
   island_assessment <- c('PV disconnect')
@@ -240,9 +258,9 @@ test_that("Test high level classify_islands fn" ,{
   ts <- as.POSIXct("2021-01-24 16:47:00", tz = "Australia/Brisbane")
   clean <- c(1)
   response_category <- c('3 Drop to Zero')
-  frequency <- c(52)
-  voltage <- c(240)
-  combined_data <- data.frame(c_id, ts, clean, response_category, frequency, voltage, stringsAsFactors = FALSE)
+  f <- c(52)
+  v <- c(240)
+  combined_data <- data.frame(c_id, ts, clean, response_category, f, v, stringsAsFactors = FALSE)
   
   first_timestamp <- c(1611470760257)
   GridFaultContactorTrip <- c(1)
@@ -258,7 +276,7 @@ test_that("Test high level classify_islands fn" ,{
   Islanded <- c(1)
   island_assessment <- c('Frequency disruption')
   islanding_alert <- c('Islanded - Freq Wobble')
-  expected_output <- data.frame(c_id, ts, clean, response_category, frequency, voltage, Islanded,
+  expected_output <- data.frame(c_id, ts, clean, response_category, f, v, Islanded,
                                 island_assessment, islanding_alert, stringsAsFactors = FALSE)
   expect_equal(out, expected_output, tolerance=0.001)
 })
@@ -270,9 +288,9 @@ test_that("Test high level classify_islands fn for a non-islanded site" ,{
   ts <- as.POSIXct("2021-01-24 16:47:00", tz = "Australia/Brisbane")
   clean <- c(1)
   response_category <- c('3 Drop to Zero')
-  frequency <- c(52)
-  voltage <- c(240)
-  combined_data <- data.frame(c_id, ts, clean, response_category, frequency, voltage, stringsAsFactors = FALSE)
+  f <- c(52)
+  v <- c(240)
+  combined_data <- data.frame(c_id, ts, clean, response_category, f, v, stringsAsFactors = FALSE)
   
   first_timestamp <- c(1611470760257)
   GridFaultContactorTrip <- c(0)
@@ -288,7 +306,7 @@ test_that("Test high level classify_islands fn for a non-islanded site" ,{
   Islanded <- c(0)
   island_assessment <- c(NA_character_)
   islanding_alert <- c("NA")
-  expected_output <- data.frame(c_id, ts, clean, response_category, frequency, voltage, Islanded,
+  expected_output <- data.frame(c_id, ts, clean, response_category, f, v, Islanded,
                                 island_assessment, islanding_alert, stringsAsFactors = FALSE)
   expect_equal(out, expected_output, tolerance=0.001)
 })
