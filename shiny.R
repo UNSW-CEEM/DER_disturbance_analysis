@@ -1015,6 +1015,7 @@ server <- function(input,output,session){
                                       reconnection_time, ramp_above_threshold, max_power, ufls_status,
                                       pre_event_sampled_seconds, post_event_sampled_seconds, 
                                       ufls_status_v, pre_event_v_mean, post_event_v_mean)
+          v$circuit_summary$tool_hash <-git2r::revparse_single(revision="HEAD")$sha
           
           # Summarise and upscale disconnections on a manufacturer basis.
           if (exclude_solar_edge()){
