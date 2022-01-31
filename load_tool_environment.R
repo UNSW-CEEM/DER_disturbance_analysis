@@ -23,6 +23,7 @@ library(padr)
 library(sqldf)
 library(gridExtra)
 library(rjson)
+library(logging)
 
 source("process_input_data/process_input_data_functions.R")
 source("aggregation/aggregate_functions.R")

@@ -1240,7 +1240,6 @@ server <- function(input,output,session){
     data <- reactiveValuesToList(v)
     settings <- get_current_settings()
     data <- run_analysis(data, settings)
-    browser()
     for (d_name in names(data)) {
       v[[d_name]] <- data[[d_name]]
     }
