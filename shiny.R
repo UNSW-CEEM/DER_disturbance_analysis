@@ -205,7 +205,8 @@ ui <- fluidPage(
                             h3("Misc settings"),
                             numericInput("disconnecting_threshold", 
                                          label = strong('Disconnecting threshold, level below which circuit is considered to
-                                                      have disconnected.'), 
+                                                      have disconnected. Note that this value is used in the compliance
+                                                        calculations but NOT the response categorisation.'), 
                                          value = 0.05, max = 1, min = 0),
                             numericInput("NED_threshold", 
                                          label = strong('Minimum proportion of sampled seconds allowed within post event interval to not have a 6 Not enough data response'), 
@@ -866,7 +867,8 @@ server <- function(input,output,session){
                                         pre_event_interval = pre_event_interval(), 
                                         pre_event_window_length = pre_event_ufls_window_length(),
                                         post_event_window_length = post_event_ufls_window_length(), 
-                                        pre_pct_sample_seconds_threshold = pre_event_ufls_stability_threshold())
+                                        pre_pct_sample_seconds_threshold = pre_event_ufls_stability_threshold(),
+                                        post_event_delay = 60)
         
         ufls_statuses_v <- ufls_detection_voltage(combined_data_f, pre_event_interval(), window_length(), fill_nans = FALSE)
         combined_data_f <- left_join(combined_data_f, ufls_statuses_ts, by = c("c_id"))
