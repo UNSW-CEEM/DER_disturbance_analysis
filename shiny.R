@@ -342,7 +342,10 @@ ideal_response_from_frequency <- function(frequency_data, region_to_load) {
   } else {
     ideal_response_to_plot <- data.frame()
   }
-  return(ideal_response_to_plot)
+  results <- list()
+  results$region_frequency <- temp_f_data
+  results$ideal_response_to_plot <- ideal_response_to_plot
+  return(results)
 }
 
 #' Apply user filters to combined data
@@ -500,9 +503,11 @@ run_analysis <- function(data, settings) {
     logging::logdebug("error checks passed", logger="shinyapp")
     id <- showNotification("Updating plots", duration=1000)
 
-    data$ideal_response_to_plot <- ideal_response_from_frequency(
+    response_data <- ideal_response_from_frequency(
       data$frequency_data, settings$region_to_load
     )
+    data$ideal_response_to_plot <- response_data$ideal_response_to_plot
+    data$region_frequency <- response_data$region_frequency
 
     # -------- filter combined data by user filters --------
     combined_data_f <- filter_combined_data(
@@ -878,6 +883,7 @@ server <- function(input,output,session){
                       frequency_data = data.frame(),
                       unique_offsets = c(),
                       circuit_summary = data.frame(),
+                      region_frequency = data.frame(),
                       trigger_update_manual_compliance_tab = FALSE
                       )
   
@@ -1349,7 +1355,7 @@ server <- function(input,output,session){
         if(dim(v$frequency_data)[1]>0){
           output$Frequency <- renderPlotly({
             plot_ly(v$agg_power, x=~Time, y=~Frequency, color=~series, type="scattergl")%>% 
-              add_trace(x=~temp_f_data$ts, y=~temp_f_data$f, name='High Speed Data', 
+              add_trace(x=~v$region_frequency$ts, y=~v$region_frequency$f, name='High Speed Data', 
                         mode='markers', inherit=FALSE) %>% 
               layout(yaxis=list(title="Average frequency (Hz)"))
             })
