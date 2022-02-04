@@ -340,6 +340,7 @@ ideal_response_from_frequency <- function(frequency_data, region_to_load) {
     temp_f_data <- mutate(temp_f_data, f = as.numeric(f))
     ideal_response_to_plot <- ideal_response(temp_f_data)
   } else {
+    temp_f_data <- data.frame()
     ideal_response_to_plot <- data.frame()
   }
   results <- list()
