@@ -213,6 +213,8 @@ ui <- fluidPage(
                                          value = 0.8, max = 1, min = 0),
                             materialSwitch("exclude_solar_edge", label = strong("Exclude solar edge from reconnection summary."), 
                                            status = "primary", value = FALSE),
+                            materialSwitch("exclude_islanded_circuits", label = strong("Exclude islanded circuits from reconnection summary."), 
+                                           status = "primary", value = TRUE),
                             actionButton("load_backend_settings", "Load from settings file")
                             ),
                mainPanel()
@@ -416,6 +418,7 @@ server <- function(input,output,session){
   NED_threshold <- reactive({input$NED_threshold})
   disconnecting_threshold <- reactive({input$disconnecting_threshold})
   exclude_solar_edge <- reactive({input$exclude_solar_edge})
+  exclude_islanded_circuits <- reactive({input$exclude_islanded_circuits})
   
   
   # Store the main data table in a reactive value so it is accessable outside 
@@ -868,7 +871,7 @@ server <- function(input,output,session){
                                         pre_event_window_length = pre_event_ufls_window_length(),
                                         post_event_window_length = post_event_ufls_window_length(), 
                                         pre_pct_sample_seconds_threshold = pre_event_ufls_stability_threshold(),
-                                        post_event_delay = 60)
+                                        post_event_delay = as.numeric(duration()))
         
         ufls_statuses_v <- ufls_detection_voltage(combined_data_f, pre_event_interval(), window_length(), fill_nans = FALSE)
         combined_data_f <- left_join(combined_data_f, ufls_statuses_ts, by = c("c_id"))
@@ -1028,14 +1031,21 @@ server <- function(input,output,session){
           v$circuit_summary <- v$circuit_summary[, circ_sum_cols]
           
           # Summarise and upscale disconnections on a manufacturer basis.
+          # TODO: toggle to remove islanded sites from circuits_to_summarise?
+          
+          circuits_to_summarise <- v$circuit_summary
+          manufacturer_install_data <- v$manufacturer_install_data
+          
           if (exclude_solar_edge()){
-            circuits_to_summarise <- filter(v$circuit_summary, manufacturer != "SolarEdge" | 
+            circuits_to_summarise <- filter(circuits_to_summarise, manufacturer != "SolarEdge" | 
                                             is.na(manufacturer))
-            manufacturer_install_data <- filter(v$manufacturer_install_data, manufacturer != "SolarEdge" | 
+            manufacturer_install_data <- filter(manufacturer_install_data, manufacturer != "SolarEdge" | 
                                                   is.na(manufacturer))
-          } else {
-            circuits_to_summarise <- v$circuit_summary
-            manufacturer_install_data <- v$manufacturer_install_data
+          }
+          #exclude_islanded_circuits = TRUE
+          if (exclude_islanded_circuits()){
+            circuits_to_summarise <- filter(circuits_to_summarise, !Islanded)
+            #TODO: also replace response with island assessment
           }
           upscaling_results <- get_upscaling_results(circuits_to_summarise, manufacturer_install_data, load_date(), 
                                                      region_to_load(), sample_threshold = 30)
@@ -1613,6 +1623,7 @@ server <- function(input,output,session){
     settings$NED_threshold <- NED_threshold()
     settings$disconnecting_threshold <- disconnecting_threshold()
     settings$exclude_solar_edge <- exclude_solar_edge()
+    settings$exclude_islanded_circuits <- exclude_islanded_circuits()
     
     settings_as_json <- toJSON(settings, indent = 1)
     
@@ -1728,6 +1739,7 @@ server <- function(input,output,session){
       updateNumericInput(session,"NED_threshold", value = settings$NED_threshold)
       updateNumericInput(session, "disconnecting_threshold", value = settings$disconnecting_threshold)
       updateMaterialSwitch(session, "exclude_solar_edge", value = settings$exclude_solar_edge)
+      updateMaterialSwitch(session, "exclude_islanded_circuits", value = settings$exclude_islanded_circuits)
     }
   })
   
