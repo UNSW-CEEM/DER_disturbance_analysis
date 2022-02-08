@@ -213,7 +213,7 @@ ui <- fluidPage(
                                          value = 0.8, max = 1, min = 0),
                             materialSwitch("exclude_solar_edge", label = strong("Exclude solar edge from reconnection summary."), 
                                            status = "primary", value = FALSE),
-                            materialSwitch("exclude_islanded_circuits", label = strong("Exclude islanded circuits from reconnection summary."), 
+                            materialSwitch("exclude_islanded_circuits", label = strong("Exclude islanded circuits from figures and results"), 
                                            status = "primary", value = TRUE),
                             actionButton("load_backend_settings", "Load from settings file")
                             ),
@@ -887,6 +887,15 @@ server <- function(input,output,session){
         }
       }
       
+      # Remove sites that islanded due to the battery controller
+      if ("Islanded" %in% names(combined_data_f) & exclude_islanded_circuits()){
+        combined_data_f <- filter(combined_data_f, !Islanded)
+        combined_data_f <- subset(combined_data_f, select = -c(Islanded, island_assessment, islanding_alert))
+      } else if ("Islanded" %in% names(combined_data_f)){
+        combined_data_f <- mutate(combined_data_f, response_category=ifelse(island_assessment %in% 
+                c("Frequency disruption", "Voltage disruption", "Gateway curtailed"), "Undefined", response_category))
+      }
+      
       # Filter data by user selected time window
       if(length(combined_data_f$ts) > 0){
         combined_data_f <- get_distance_from_event(combined_data_f, v$postcode_data, event_latitude(), event_longitude())
@@ -986,22 +995,28 @@ server <- function(input,output,session){
         }
         
       }
-      # Procced to  aggregation and plotting only if there is less than 1000 data series to plot, else stop and notify the
+      # Procced to aggregation and plotting only if there is less than 1000 data series to plot, else stop and notify the
       # user.
       if ((sum(v$sample_count_table$sample_count)<1000 & no_grouping) | 
           (length(v$sample_count_table$sample_count)<1000 & !no_grouping)){
         if(length(combined_data_f$ts) > 0){
-        # Copy data for saving
-        v$combined_data_f <- select(combined_data_f, ts, site_id, c_id, power_kW, c_id_norm_power, v, f, s_state, s_postcode, 
-                                    pv_installation_year_month, Standard_Version, Grouping, sum_ac, clean, manufacturer, model,
-                                    site_performance_factor, response_category, zone, distance, lat, lon, e, con_type,
-                                    first_ac, polarity, compliance_status, reconnection_compliance_status, 
-                                    manual_droop_compliance, manual_reconnect_compliance, reconnection_time, 
-                                    ramp_above_threshold, c_id_daily_norm_power, max_power, ufls_status,
-                                    pre_event_sampled_seconds, post_event_sampled_seconds)
-        # Create copy of filtered data to use in upscaling
-        combined_data_f2 <- combined_data_f
-          if(raw_upscale()){combined_data_f2 <- upscale(combined_data_f2, v$install_data)}
+          # Copy data for saving
+          combined_data_cols <- c("ts", "site_id", "c_id", "power_kW", "c_id_norm_power", "v", "f", "s_state", 
+                                  "s_postcode", "pv_installation_year_month", "Standard_Version", "Grouping", "sum_ac", 
+                                  "clean", "manufacturer", "model", "site_performance_factor", "response_category", 
+                                  "zone", "distance", "lat", "lon", "e", "con_type", "first_ac", "polarity", 
+                                  "compliance_status", "reconnection_compliance_status", 
+                                  "manual_droop_compliance", "manual_reconnect_compliance", "reconnection_time", 
+                                  "ramp_above_threshold", "c_id_daily_norm_power", "max_power", "ufls_status",
+                                  "pre_event_sampled_seconds", "post_event_sampled_seconds", "ufls_status_v", 
+                                  "pre_event_v_mean", "post_event_v_mean")
+          if("Islanded" %in% names(combined_data_f)){
+            combined_data_cols <- append(combined_data_cols, c("Islanded", "island_assessment", "islanding_alert"), 34)
+          }
+          v$combined_data_f <- combined_data_f[, combined_data_cols]
+          # Create copy of filtered data to use in upscaling
+          combined_data_f2 <- combined_data_f
+            if(raw_upscale()){combined_data_f2 <- upscale(combined_data_f2, v$install_data)}
         }
         # Check that the filter does not result in an empty dataframe.
         if(length(combined_data_f$ts) > 0){
@@ -1042,12 +1057,6 @@ server <- function(input,output,session){
                                                   is.na(manufacturer))
           }
 
-          if ("Islanded" %in% names(v$circuit_summary) & exclude_islanded_circuits()){
-            circuits_to_summarise <- filter(circuits_to_summarise, !Islanded)
-          } else if ("Islanded" %in% names(v$circuit_summary)){
-            circuits_to_summarise <- mutate(circuits_to_summarise, response_category=ifelse(island_assessment %in% 
-              c("Frequency disruption", "Voltage disruption", "Gateway curtailed"), "Undefined", response_category))
-          }
           upscaling_results <- get_upscaling_results(circuits_to_summarise, manufacturer_install_data, load_date(), 
                                                      region_to_load(), sample_threshold = 30)
           upscaling_results_with_separate_ufls_counts <- get_upscaling_results_excluding_ufls_affected_circuits(

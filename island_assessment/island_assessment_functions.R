@@ -10,9 +10,6 @@ classify_islands <- function(combined_data, alert_data, event_time, window_lengt
   return(combined_data)
 }
 
-# TODO: determine and apply hierarchy of responses
-# TODO: figure out which other functions rely on the responses/ need islanded sites removed
-
 identify_islanded_sites <- function(combined_data, alert_data, event_time){
   if (!all(is.na(alert_data$first_timestamp))){
     alert_data <- mutate(alert_data, first_timestamp = as.POSIXct((first_timestamp)/1000, tz="Australia/Brisbane", 
@@ -40,7 +37,7 @@ identify_islanded_sites <- function(combined_data, alert_data, event_time){
 }
 
 assess_islands <- function(event_window_data){
-  event_window_data <- filter(event_window_data, Islanded==1)  # & response_category %in% c('3 Drop to Zero', '4 Disconnect'))
+  event_window_data <- filter(event_window_data, Islanded==1)
   if(length(event_window_data$c_id) > 0){
     event_window_data <- mutate(event_window_data, voltage = as.numeric(v), frequency = as.numeric(f))
     event_window_data <- mutate(event_window_data, vmin=if(all(is.na(event_window_data$vmin))) v else vmin,
