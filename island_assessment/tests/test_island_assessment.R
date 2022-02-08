@@ -95,21 +95,19 @@ test_that("Test identify_islanded_sites for a site with no SYNC_a005_vfCheckUnde
   expect_equal(out, expected_output, tolerance=0.001)
 })
 
-test_that("Test assess_islands with response_category = 'NED'" ,{
+test_that("Test assess_islands with response_category = 'NED' and v, f are normal" ,{
   # Test input data
   c_id <- c(3000)
   ts <- c('2021-05-25 13:05')
   clean <- c(1)
   Islanded <- c(1)
   response_category <- c('NED')
-  f <- c(55)
+  f <- c(50)
   v <- c(240)
   combined_data <- data.frame(c_id, ts, clean, Islanded, response_category, f, v, stringsAsFactors = FALSE)
   
   out <- assess_islands(combined_data)
-  c_id <- c(numeric())
-  clean <- c(numeric())
-  island_assessment <- c(character())
+  island_assessment <- c("Otherwise normal")
   expected_output <- data.frame(c_id, clean, island_assessment, stringsAsFactors = FALSE)
   expect_equal(out, expected_output, tolerance=0.001)
 })

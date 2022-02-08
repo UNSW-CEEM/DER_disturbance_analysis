@@ -1031,7 +1031,6 @@ server <- function(input,output,session){
           v$circuit_summary <- v$circuit_summary[, circ_sum_cols]
           
           # Summarise and upscale disconnections on a manufacturer basis.
-          # TODO: toggle to remove islanded sites from circuits_to_summarise?
           
           circuits_to_summarise <- v$circuit_summary
           manufacturer_install_data <- v$manufacturer_install_data
@@ -1042,10 +1041,12 @@ server <- function(input,output,session){
             manufacturer_install_data <- filter(manufacturer_install_data, manufacturer != "SolarEdge" | 
                                                   is.na(manufacturer))
           }
-          #exclude_islanded_circuits = TRUE
-          if (exclude_islanded_circuits()){
+
+          if ("Islanded" %in% names(v$circuit_summary) & exclude_islanded_circuits()){
             circuits_to_summarise <- filter(circuits_to_summarise, !Islanded)
-            #TODO: also replace response with island assessment
+          } else if ("Islanded" %in% names(v$circuit_summary)){
+            circuits_to_summarise <- mutate(circuits_to_summarise, response_category=ifelse(island_assessment %in% 
+              c("Frequency disruption", "Voltage disruption", "Gateway curtailed"), "Undefined", response_category))
           }
           upscaling_results <- get_upscaling_results(circuits_to_summarise, manufacturer_install_data, load_date(), 
                                                      region_to_load(), sample_threshold = 30)

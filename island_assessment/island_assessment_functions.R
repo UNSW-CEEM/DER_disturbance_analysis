@@ -40,7 +40,7 @@ identify_islanded_sites <- function(combined_data, alert_data, event_time){
 }
 
 assess_islands <- function(event_window_data){
-  event_window_data <- filter(event_window_data, Islanded & response_category %in% c('3 Drop to Zero', '4 Disconnect'))
+  event_window_data <- filter(event_window_data, Islanded==1)  # & response_category %in% c('3 Drop to Zero', '4 Disconnect'))
   if(length(event_window_data$c_id) > 0){
     event_window_data <- mutate(event_window_data, voltage = as.numeric(v), frequency = as.numeric(f))
     event_window_data <- mutate(event_window_data, vmin=if(all(is.na(event_window_data$vmin))) v else vmin,
@@ -49,7 +49,8 @@ assess_islands <- function(event_window_data){
                                                    fmax=if(all(is.na(event_window_data$fmax))) f else fmax)
     
     event_window_data <- group_by(event_window_data, c_id, clean)
-    event_window_data <- summarise(event_window_data, 
+    event_window_data <- summarise(event_window_data,
+                                   response_category=first(response_category),
                                    max_f=max(fmax), min_f=min(fmin), 
                                    max_v=(max(vmax) - 240) / 240, min_v=(240 - min(vmin)) / 240)
     
@@ -62,8 +63,12 @@ assess_islands <- function(event_window_data){
                                 island_assessment=ifelse(island_assessment=="Undefined" & (max_v > 0.1 | min_v > 0.1), 
                                                          "Voltage disruption", island_assessment))
     event_window_data <- mutate(event_window_data, 
-                                island_assessment=ifelse(island_assessment=="Undefined",
+                                island_assessment=ifelse(island_assessment=="Undefined" & response_category %in% 
+                                                           c('3 Drop to Zero', '4 Disconnect'),
                                                          "PV disconnect", island_assessment))
+    event_window_data <- mutate(event_window_data, 
+                                island_assessment=ifelse(island_assessment=="Undefined",
+                                                         "Otherwise normal", island_assessment))
   } else{
     event_window_data <- mutate(event_window_data, island_assessment = "NA")
   }
