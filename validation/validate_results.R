@@ -1,16 +1,23 @@
 # Validate benchmarking dataset results
 # Step 1: Ensure you have read the README in this directory and followed the instructions on creating the reference
 #         and test data
-# Step 2: Set tool_directory to the root directory of the DER disturbance analysis repo in your file system
-# Step 3: Run this script from the "validation" sub-directory of the tool repo
-# Step 4: Review the results printed to the console. Investigate any differences identified to ensure that only
+# Step 2: Run this script from DER disturbance analysis directory
+#         OR change tool_directory to the location of the DER disturbance analysis repo
+# Step 3: Review the results printed to the console. Investigate any differences identified to ensure that only
 #         expected changes are present.
-tool_directory <- "~/UNSW/MATCH/DER_disturbance_analysis"
 
-source(sprintf("%s/BDInterface/interface.R", tool_directory))
 logging::basicConfig()
 
-data_dirs <- list.dirs('data', recursive=FALSE)
+base_directory_name <- basename(getwd())
+if (base_directory_name == "DER_disturbance_analysis") {
+    tool_directory <- getwd()
+} else {
+    print("Script is not being run in DER_disturbance_analysis folder, make sure that tool directory ahs been set")
+    tool_directory <- "~/UNSW/MATCH/DER_disturbance_analysis"
+}
+source(sprintf("%s/BDInterface/interface.R", tool_directory))
+
+data_dirs <- list.dirs('validation/data', recursive=FALSE)
 
 ref_db_name <- "ref.db"
 test_db_name <- "test.db"
@@ -155,6 +162,9 @@ if (length(data_dirs) > 0){
             compare_dfs(ref_circuit_summary, test_circuit_summary, event_name=dir)
             # check underlying data
             compare_dfs(ref_underlying_data, test_underlying_data, event_name=dir)
+
+            RSQLite::dbDisconnect(ref_db_con)
+            RSQLite::dbDisconnect(test_db_con)
         }
     }
 }

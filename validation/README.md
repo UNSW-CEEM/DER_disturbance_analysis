@@ -27,7 +27,7 @@ A representative set of validation data is required. In order to capture this we
 For each event the following process will need to be followed:
 
 1. Build database from raw data for event
-2. Run normal tool analysis with appropriate settings for that event. Ensure that frequency data is included if necessary, and all category filterts other than "raw" are checked
+2. Run normal tool analysis with appropriate settings for that event. Ensure that frequency data is included if necessary, and all category filters other than "raw" are checked
 3. Batch save the results under a memorable name
 4. Identify appropriate sample circuits based on the results in the circuit summary. Currently the following columns are being used to identify unique circuits:
     * `response_category`, `reconnection_compliance_status`, `ufls_status`, `compliance_status`, `Standard_Version`

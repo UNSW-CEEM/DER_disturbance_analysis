@@ -1,13 +1,22 @@
-# To use this file, run it as an R script in the validation directory
-# Ensure that the output databse is set to "ref" if building reference DBs, or "test" if building test DBs
+# To use this file, run it as an R script
+# If you are not running this from the tool top level directory ensure that you have set tool_directory to the root
+# directory of the DER tool repository'
+# Ensure that the output database is set to "ref" if building reference DBs, or "test" if building test DBs
 
-tool_directory <- "~/UNSW/MATCH/DER_disturbance_analysis"
-source(sprintf("%s/BDInterface/interface.R", tool_directory))
 library("logging")
 library("rjson")
 logging::basicConfig()
 
-data_dirs <- list.dirs('data', recursive=FALSE)
+base_directory_name <- basename(getwd())
+if (base_directory_name == "DER_disturbance_analysis") {
+    tool_directory <- getwd()
+} else {
+    print("Script is not being run in DER_disturbance_analysis folder, make sure that tool directory ahs been set")
+    tool_directory <- "~/UNSW/MATCH/DER_disturbance_analysis"
+}
+source(sprintf("%s/BDInterface/interface.R", tool_directory))
+
+data_dirs <- list.dirs('validation/data', recursive=FALSE)
 output_database <- "ref" # "test"
 required_file_names <- c("ref_circuit_details.csv", "ref_meta_data.json", "ref_raw_data.csv", "ref_site_details.csv")
 
