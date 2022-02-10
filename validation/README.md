@@ -10,7 +10,7 @@ Validation datasets will be made available on cloudstor once they are finalised.
     1. Checkout reference version of tool (currently latest master branch)
     2. Build database for the events in the `DER_disturbance_analysis/validation/data` directory using `build_validation_databases.R`
     3. Run tool using metadata from the event directory as config json
-    4. Batch save results in the same directory as the data, entering `reference` as the file name
+    4. Batch save results in the same directory as the data, entering `ref` as the file name
 2. Run analysis on sample data with version of tool to be tested
     1. Checkout target branch
     2. Build database for the events in the `DER_disturbance_analysis/validation/data` directory using `build_validation_databases.R`

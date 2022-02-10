@@ -47,6 +47,7 @@ difference_between_lists <- function(reference_list, test_list) {
 
 
 compare_dbs <- function(ref_db_con, test_db_con, compare_values=FALSE, event_name=NA){
+    diff_found <- FALSE
     # compare tables
     ref_tables <- RSQLite::dbGetQuery(ref_db_con, table_name_query)$name
     test_tables <- RSQLite::dbGetQuery(test_db_con, table_name_query)$name
@@ -55,10 +56,12 @@ compare_dbs <- function(ref_db_con, test_db_con, compare_values=FALSE, event_nam
     if (length(table_diffs$reference_only) > 0) {
         logging::loginfo(sprintf("%s - The following tables exist only in the REFERENCE database:\n%s",
                                  event_name, table_diffs$reference_only))
+        diff_found <- TRUE
     }
     if (length(table_diffs$test_only) > 0) {
         logging::loginfo(sprintf("%s - The following tables exist only in the TEST database:\n%s",
                                  event_name, table_diffs$test_only))
+        diff_found <- TRUE
     }
 
     # compare columns in tables
@@ -70,10 +73,12 @@ compare_dbs <- function(ref_db_con, test_db_con, compare_values=FALSE, event_nam
         if (length(column_diffs$reference_only) > 0) {
             logging::loginfo(sprintf("%s - Table %s: the following columns exist only in the REFERENCE data:\n%s",
                                      event_name, table, column_diffs$reference_only))
+            diff_found <- TRUE
         }
         if (length(column_diffs$test_only) > 0) {
             logging::loginfo(sprintf("%s - Table %s: the following columns exist only in the TEST data:\n%s",
                                      event_name,  table, column_diffs$test_only))
+            diff_found <- TRUE
         }
 
         # compare volume of data in columns
@@ -85,6 +90,7 @@ compare_dbs <- function(ref_db_con, test_db_con, compare_values=FALSE, event_nam
                 "%s - Table %s has differing lengths in reference and test data\nref: %s; test: %s",
                 event_name, table, ref_table_length$length[[1]], test_table_length$length[[1]]
                 ))
+            diff_found <- TRUE
         }
  
         # compare values in table
@@ -99,8 +105,12 @@ compare_dbs <- function(ref_db_con, test_db_con, compare_values=FALSE, event_nam
                         event_name, toString(diffs)
                     )
                 )
+                diff_found <- TRUE
             }
         }
+    }
+    if (!diff_found) {
+        logging::loginfo(sprintf("%s - No differences found between databases", event_name))
     }
 }
 
@@ -132,39 +142,55 @@ compare_dfs <- function(reference, test, event_name=NA){
     diffs <- all.equal(reference[column_diff$common], test[column_diff$common])
     if (!isTRUE(diffs)){
         logging::loginfo(
-            sprintf(
-                "%s - Differences found in column values:\n%s",
-                event_name, toString(diffs)
-            )
+            sprintf("%s - Differences found in column values:\n%s", event_name, toString(diffs))
+        )
+    } else {
+        logging::loginfo(
+            sprintf("%s - No differences found between dataframes", event_name)
         )
     }
     return(diffs)
 }
 
 
-if (length(data_dirs) > 0){
+if (length(data_dirs) > 0) {
     for (dir in data_dirs){
         all_files_in_dir <- list.files(dir)
         required_files_in_dir <- required_files %in% all_files_in_dir
         if (all(required_files_in_dir)){
             # check databases
-            ref_db_con <- RSQLite::dbConnect(RSQLite::SQLite(), sprintf("%s/%s", dir, ref_db_name))
-            test_db_con <- RSQLite::dbConnect(RSQLite::SQLite(), sprintf("%s/%s", dir, test_db_name))
-            compare_dbs(ref_db_con, test_db_con, TRUE, dir)
+            ref_db_path <- sprintf("%s/%s", dir, ref_db_name)
+            test_db_path <- sprintf("%s/%s", dir, test_db_name)
+            if (file.exists(ref_db_path) & file.exists(test_db_path)) {
+                ref_db_con <- RSQLite::dbConnect(RSQLite::SQLite(), sprintf("%s/%s", dir, ref_db_name))
+                test_db_con <- RSQLite::dbConnect(RSQLite::SQLite(), sprintf("%s/%s", dir, test_db_name))
+                compare_dbs(ref_db_con, test_db_con, TRUE, dir)
+                
+                # check csvs
+                ref_circuit_summary <- read.csv(sprintf("%s/%s", dir, ref_circuit_summary_fname))
+                ref_underlying_data <- read.csv(sprintf("%s/%s", dir, ref_underlying_data_fname))
+                test_circuit_summary <- read.csv(sprintf("%s/%s", dir, test_circuit_summary_fname))
+                test_underlying_data <- read.csv(sprintf("%s/%s", dir, test_underlying_data_fname))
+                
+                # check circuit summary
+                logging::loginfo(sprintf("%s - Comparing circuit summaries...", dir))
+                compare_dfs(ref_circuit_summary, test_circuit_summary, event_name=dir)
+                # check underlying data
+                logging::loginfo(sprintf("%s - Comparing underlying data...", dir))
+                compare_dfs(ref_underlying_data, test_underlying_data, event_name=dir)
 
-            # check csvs
-            ref_circuit_summary <- read.csv(sprintf("%s/%s", dir, ref_circuit_summary_fname))
-            ref_underlying_data <- read.csv(sprintf("%s/%s", dir, ref_underlying_data_fname))
-            test_circuit_summary <- read.csv(sprintf("%s/%s", dir, test_circuit_summary_fname))
-            test_underlying_data <- read.csv(sprintf("%s/%s", dir, test_underlying_data_fname))
-
-            # check circuit summary
-            compare_dfs(ref_circuit_summary, test_circuit_summary, event_name=dir)
-            # check underlying data
-            compare_dfs(ref_underlying_data, test_underlying_data, event_name=dir)
-
-            RSQLite::dbDisconnect(ref_db_con)
-            RSQLite::dbDisconnect(test_db_con)
+                RSQLite::dbDisconnect(ref_db_con)
+                RSQLite::dbDisconnect(test_db_con)
+            } else {
+                if (!file.exists(ref_db_path)) {
+                    logging::loginfo(sprintf("Reference database not found, expected at %s", ref_db_path))
+                }
+                if (!file.exists(test_db_path)) {
+                    logging::loginfo(sprintf("Test database not found, expected at %s", test_db_path))
+                }
+            }
         }
     }
+} else {
+    logging::logerror("No data found in directory")
 }
