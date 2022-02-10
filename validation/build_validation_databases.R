@@ -10,13 +10,11 @@ logging::basicConfig()
 data_dirs <- list.dirs('data', recursive=FALSE)
 output_database <- "ref" # "test"
 required_file_names <- c("ref_circuit_details.csv", "ref_meta_data.json", "ref_raw_data.csv", "ref_site_details.csv")
-required_files <- list()
-# for (fn in required_file_names) {c(required_files, paste(file_prefix, fn, sep=""))}
 
 if (length(data_dirs) > 0){
     for (dir in data_dirs){
         all_files_in_dir <- list.files(dir)
-        required_files_in_dir <- required_files %in% all_files_in_dir
+        required_files_in_dir <- required_file_names %in% all_files_in_dir
         if (all(required_files_in_dir)){
             site_details_path_name <- paste(dir, "/", "ref_site_details.csv", sep="")
             circuit_details_path_name <- paste(dir, "/", "ref_circuit_details.csv", sep="")
@@ -55,7 +53,7 @@ if (length(data_dirs) > 0){
                 close(metadata_conn)
             }
         } else {
-            logging::logerror(sprintf("Required files missing from directory: %s/%s", dir, required_files[!required_files_in_dir]))
+            logging::logerror(sprintf("Required files missing from directory: %s/%s", dir, required_file_names[!required_files_in_dir]))
         }
     }
 } else {
