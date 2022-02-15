@@ -120,6 +120,16 @@ DBInterface <- R6::R6Class("DBInterface",
       
       con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)
       
+      # create DB history table
+      RSQLite::dbExecute(con, "DROP TABLE IF EXISTS db_history")
+      RSQLite::dbExecute(con, "CREATE TABLE db_history(event TEXT, utc_timestamp TEXT, tool_git_hash TEXT)")
+      event <- "built"
+      created_at <- lubridate::now("UTC")
+      tool_git_hash <- git2r::revparse_single(revision="HEAD")$sha
+      RSQLite::dbExecute(con, "INSERT INTO db_history VALUES (:event, :timestamp, :hash)",
+                         params = list(event=event, timestamp=created_at, hash=tool_git_hash))
+
+      # insert timeseries data
       RSQLite::dbExecute(con, "DROP TABLE IF EXISTS timeseries")
       
       RSQLite::dbExecute(con, "CREATE TABLE timeseries(
