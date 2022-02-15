@@ -11,7 +11,7 @@ base_directory_name <- basename(getwd())
 if (base_directory_name == "DER_disturbance_analysis") {
     tool_directory <- getwd()
 } else {
-    print("Script is not being run in DER_disturbance_analysis folder, make sure that tool directory ahs been set")
+    print("Script is not being run in DER_disturbance_analysis folder, make sure that tool directory has been set")
     tool_directory <- "~/UNSW/MATCH/DER_disturbance_analysis"
 }
 source(sprintf("%s/BDInterface/interface.R", tool_directory))
@@ -58,7 +58,7 @@ if (length(data_dirs) > 0){
                 metadata <- rjson::fromJSON(file=metadata_path_name)
                 metadata$database_name <- sprintf("%s/validation/%s/%s.db", tool_directory, dir, output_database)
                 output_metadata_path <- paste(dir, "/", output_database, "_meta_data.json", sep="")
-                metadata_conn <- file(metadata_path_name)
+                metadata_conn <- file(output_metadata_path)
                 writeLines(rjson::toJSON(metadata, indent=4), metadata_conn)
                 close(metadata_conn)
             }
