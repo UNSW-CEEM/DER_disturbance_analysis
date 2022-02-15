@@ -570,6 +570,7 @@ DBInterface <- R6::R6Class("DBInterface",
       circuit_in_state = filter(circuit_details, site_id %in% site_in_state$site_id)
       query <- "select ts, c_id, d, e, v, f from timeseries 
                         where c_id in (select c_id from circuit_in_state)
+                        and e != ''
                         and datetime(ts) >= datetime('start_time')
                         and datetime(ts) <= datetime('end_time')"
       query <- gsub('start_time', start_time, query)
