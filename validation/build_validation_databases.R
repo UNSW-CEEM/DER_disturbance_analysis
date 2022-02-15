@@ -28,7 +28,7 @@ if (length(data_dirs) > 0){
             site_details_path_name <- paste(dir, "/", "ref_site_details.csv", sep="")
             circuit_details_path_name <- paste(dir, "/", "ref_circuit_details.csv", sep="")
             timeseries_path_name <- paste(dir, "/", "ref_raw_data.csv", sep="")
-            metadata_path_name <- paste(dir, "/", output_database, "_meta_data.json", sep="")
+            metadata_path_name <- paste(dir, "/", "ref_meta_data.json", sep="")
             db_path_name <- paste(dir, "/", output_database, ".db", sep="")
 
             db <- DBInterface$new()
@@ -57,6 +57,7 @@ if (length(data_dirs) > 0){
             if (file.exists(metadata_path_name)){
                 metadata <- rjson::fromJSON(file=metadata_path_name)
                 metadata$database_name <- sprintf("%s/validation/%s/%s.db", tool_directory, dir, output_database)
+                output_metadata_path <- paste(dir, "/", output_database, "_meta_data.json", sep="")
                 metadata_conn <- file(metadata_path_name)
                 writeLines(rjson::toJSON(metadata, indent=4), metadata_conn)
                 close(metadata_conn)
