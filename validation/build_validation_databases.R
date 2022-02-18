@@ -40,9 +40,10 @@ if (length(data_dirs) > 0){
                 logging::loginfo(paste("Replacing existing database", db_path_name))
             }
 
-            db$default_timeseries_column_aliases <- list(utc_tstamp='_ts', c_id='_c_id', voltage='_v', frequency='_f', energy='_e',
-                                                         duration='_d', power='_p', vmin='vmin', vmax='vmax',
-                                                         vmean='vmean')
+            db$default_timeseries_column_aliases <- list(utc_tstamp='_ts', c_id='_c_id', voltage='_voltage', 
+                                                         frequency='_frequency', energy='_e', duration='_d', power='_p',
+                                                         batt_power='_bp', site_power='_sp', vmin='_vmin', vmax='_vmax', 
+                                                         vmean='_vmean', fmin='_fmin', fmax='_fmax')
             db$build_database(timeseries = timeseries_path_name,
                               circuit_details = circuit_details_path_name,
                               site_details = site_details_path_name)
@@ -56,14 +57,15 @@ if (length(data_dirs) > 0){
             # update metadata
             if (file.exists(metadata_path_name)){
                 metadata <- rjson::fromJSON(file=metadata_path_name)
-                metadata$database_name <- sprintf("%s/validation/%s/%s.db", tool_directory, dir, output_database)
+                metadata$database_name <- sprintf("%s/%s/%s.db", tool_directory, dir, output_database)
                 output_metadata_path <- paste(dir, "/", output_database, "_meta_data.json", sep="")
                 metadata_conn <- file(output_metadata_path)
                 writeLines(rjson::toJSON(metadata, indent=4), metadata_conn)
                 close(metadata_conn)
             }
         } else {
-            logging::logerror(sprintf("Required files missing from directory: %s/%s", dir, required_file_names[!required_files_in_dir]))
+            logging::logerror(sprintf("Required files missing from directory: %s/%s", dir, 
+                                      required_file_names[!required_files_in_dir]))
         }
     }
 } else {
