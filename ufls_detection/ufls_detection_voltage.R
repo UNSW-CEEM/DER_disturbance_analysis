@@ -1,14 +1,14 @@
 
 ufls_detection_voltage <- function(combined_data, event_time, window_length, 
-                                   fill_nans=FALSE){
+                                   fill_nans = FALSE, post_event_delay = 0){
   pre_event_window_start <- event_time - 60 * window_length
   post_event_window_end <- event_time + 60 * window_length
   pre_event_window <- filter(combined_data, 
                              ts >= pre_event_window_start, 
                              ts < event_time)
   post_event_window <- filter(combined_data, 
-                              ts > event_time, 
-                              ts <= post_event_window_end)
+                              ts > event_time + post_event_delay, 
+                              ts <= post_event_window_end + post_event_delay)
 
   pre_event_voltage <- calc_average_voltage_per_circuit(pre_event_window)
   names(pre_event_voltage)[names(pre_event_voltage) == 'v_mean'] <- 'pre_event_v_mean'

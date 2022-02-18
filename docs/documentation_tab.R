@@ -38,6 +38,11 @@ documentation_panel <- function(){
         skipped. This method calculates the average voltage at the site for a set window size before and after the event 
         time, and a drop from a pre event average > 180 to post event average < 180 is classified as UFLS Dropout.
         If a circuit is classified as dropout by either of these tests then its response category is changed to UFLS Dropout'),
+    h4('Islanded site assessment'),
+    div('Sites with PV and battery may island from the grid due to the action of the battery inverter/ gateway rather
+        than the PV inverter. The columns \'Islanded\', \'island_assessment\', and \'islanding_alert\' in the circuit
+        summary are created based on a provided alerts file and additional analysis of the voltage and frequency signals 
+        during window after the event.'),
     h4('Zone category definition'),
     div('Circuits can be assigned one of 5 zone categories:'), 
     tags$ul(tags$li('zones 1 to 3 are assigned to circuits between the outer radius of zone and the outer radius 

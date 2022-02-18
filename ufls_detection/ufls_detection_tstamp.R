@@ -1,15 +1,17 @@
 
-ufls_detection_tstamp <- function(db, region, pre_event_interval, pre_event_window_length, post_event_window_length,pre_pct_sample_seconds_threshold){
+ufls_detection_tstamp <- function(db, region, pre_event_interval, pre_event_window_length, post_event_window_length, pre_pct_sample_seconds_threshold, post_event_delay = 0){
   start_pre_event_window_obj <- pre_event_interval - 60 * pre_event_window_length
   start_pre_event_window_str <- format(start_pre_event_window_obj, tz = 'GMT')
-  end_event_window_obj <- pre_event_interval + 60 * post_event_window_length
+  start_post_event_window_obj <- pre_event_interval + post_event_delay
+  start_post_event_window_str <- format(start_post_event_window_obj, tz = 'GMT')
+  end_event_window_obj <- start_post_event_window_obj + 60 * post_event_window_length
   end_event_window_str <- format(end_event_window_obj, tz = 'GMT')
   pre_event_interval_str <- format(pre_event_interval - 0, tz = 'GMT')
   pre_event_sample_counts <- db$get_filtered_time_series_data_all_durations(region, start_pre_event_window_str, pre_event_interval_str)
   pre_event_sample_counts <- calc_sampled_time_per_circuit(pre_event_sample_counts, start_pre_event_window_obj, pre_event_interval)
   names(pre_event_sample_counts)[names(pre_event_sample_counts) == 'sampled_seconds'] <- 'pre_event_sampled_seconds'
-  post_event_sample_counts <- db$get_filtered_time_series_data_all_durations(region, pre_event_interval_str, end_event_window_str)
-  post_event_sample_counts <- calc_sampled_time_per_circuit(post_event_sample_counts, pre_event_interval, end_event_window_obj)
+  post_event_sample_counts <- db$get_filtered_time_series_data_all_durations(region, start_post_event_window_str, end_event_window_str)
+  post_event_sample_counts <- calc_sampled_time_per_circuit(post_event_sample_counts, start_post_event_window_obj, end_event_window_obj)
   names(post_event_sample_counts)[names(post_event_sample_counts) == 'sampled_seconds'] <- 'post_event_sampled_seconds'
   sample_counts_by_c_id <- merge(pre_event_sample_counts, post_event_sample_counts, 
                                  by = c('c_id', 'c_id'), all = TRUE)
