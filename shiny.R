@@ -209,13 +209,16 @@ ui <- fluidPage(
                             h3("Misc settings"),
                             numericInput("disconnecting_threshold", 
                                          label = strong('Disconnecting threshold, level below which circuit is considered to
-                                                      have disconnected.'), 
+                                                      have disconnected. Note that this value is used in the compliance
+                                                        calculations but NOT the response categorisation.'),
                                          value = 0.05, max = 1, min = 0),
                             numericInput("NED_threshold", 
                                          label = strong('Minimum proportion of sampled seconds allowed within post event interval to not have a 6 Not enough data response'), 
                                          value = 0.8, max = 1, min = 0),
                             materialSwitch("exclude_solar_edge", label = strong("Exclude solar edge from reconnection summary."), 
                                            status = "primary", value = FALSE),
+                            materialSwitch("exclude_islanded_circuits", label = strong("Exclude islanded circuits from figures and results"),
+                                           status = "primary", value = TRUE),
                             actionButton("load_backend_settings", "Load from settings file")
                             ),
                mainPanel()
@@ -378,14 +381,15 @@ filter_combined_data <- function(combined_data, off_grid_postcodes, clean, size_
 #' @return An updated dataframe with columns for UFLS check results
 ufls_detection <- function(
   db_interface, combined_data_f, region_to_load, pre_event_interval, window_length, pre_event_ufls_window_length,
-  post_event_ufls_window_length, pre_event_ufls_stability_threshold
+  post_event_ufls_window_length, pre_event_ufls_stability_threshold, post_event_delay
 ) {
   logdebug("run ufls detection", logger = "shinyapp")
   ufls_statuses_ts <- ufls_detection_tstamp(db = db_interface, region = region_to_load, 
                                   pre_event_interval = pre_event_interval, 
                                   pre_event_window_length = pre_event_ufls_window_length,
                                   post_event_window_length = post_event_ufls_window_length, 
-                                  pre_pct_sample_seconds_threshold = pre_event_ufls_stability_threshold)
+                                  pre_pct_sample_seconds_threshold = pre_event_ufls_stability_threshold,
+                                  post_event_delay = post_event_delay)
   
   ufls_statuses_v <- ufls_detection_voltage(combined_data_f, pre_event_interval, window_length, fill_nans = FALSE)
   combined_data_f <- left_join(combined_data_f, ufls_statuses_ts, by = c("c_id"))
@@ -527,8 +531,24 @@ run_analysis <- function(data, settings) {
       combined_data_f <- ufls_detection(
         data$db, combined_data_f, settings$region_to_load, settings$pre_event_interval, settings$window_length,
         settings$pre_event_ufls_window_length, settings$post_event_ufls_window_length,
-        settings$pre_event_ufls_stability_threshold
+        settings$pre_event_ufls_stability_threshold, as.numeric(settings$duration)
       )
+
+      # process alerts where they exist
+      alert_data <- data$db$get_alerts_data()
+      if(length(alert_data$c_id) > 0){
+        # run islanded site assessment
+        combined_data_f <- classify_islands(combined_data_f, alert_data, settings$pre_event_interval,
+                                            settings$window_length)
+      }
+    }
+
+    if ("Islanded" %in% names(combined_data_f) & settings$exclude_islanded_circuits){
+      combined_data_f <- filter(combined_data_f, !Islanded)
+      combined_data_f <- subset(combined_data_f, select = -c(Islanded, island_assessment, islanding_alert))
+    } else if ("Islanded" %in% names(combined_data_f)){
+      combined_data_f <- mutate(combined_data_f, response_category=ifelse(island_assessment %in%
+              c("Frequency disruption", "Voltage disruption", "Gateway curtailed"), "Undefined", response_category))
     }
 
     combined_data_f <- determine_distance_zones(
@@ -633,13 +653,20 @@ run_analysis <- function(data, settings) {
       if(length(combined_data_f$ts) > 0){
       # Copy data for saving
       logdebug('Copy data for saving', logger="shinyapp")
-      data$combined_data_f <- select(combined_data_f, ts, site_id, c_id, power_kW, c_id_norm_power, v, f, s_state, s_postcode, 
-                                  pv_installation_year_month, Standard_Version, Grouping, sum_ac, clean, manufacturer, model,
-                                  site_performance_factor, response_category, zone, distance, lat, lon, e, con_type,
-                                  first_ac, polarity, compliance_status, reconnection_compliance_status, 
-                                  manual_droop_compliance, manual_reconnect_compliance, reconnection_time, 
-                                  ramp_above_threshold, c_id_daily_norm_power, max_power, ufls_status,
-                                  pre_event_sampled_seconds, post_event_sampled_seconds)
+      combined_data_cols <- c("ts", "site_id", "c_id", "power_kW", "c_id_norm_power", "v", "f", "s_state",
+                              "s_postcode", "pv_installation_year_month", "Standard_Version", "Grouping", "sum_ac",
+                              "clean", "manufacturer", "model", "site_performance_factor", "response_category",
+                              "zone", "distance", "lat", "lon", "e", "con_type", "first_ac", "polarity",
+                              "compliance_status", "reconnection_compliance_status",
+                              "manual_droop_compliance", "manual_reconnect_compliance", "reconnection_time",
+                              "ramp_above_threshold", "c_id_daily_norm_power", "max_power", "ufls_status",
+                              "pre_event_sampled_seconds", "post_event_sampled_seconds", "ufls_status_v",
+                              "pre_event_v_mean", "post_event_v_mean")
+      if("Islanded" %in% names(combined_data_f)){
+        combined_data_cols <- append(combined_data_cols, c("Islanded", "island_assessment", "islanding_alert"), 34)
+      }
+      data$combined_data_f <- combined_data_f[, combined_data_cols]
+
       # Create copy of filtered data to use in upscaling
       combined_data_f2 <- combined_data_f
         if(settings$raw_upscale){combined_data_f2 <- upscale(combined_data_f2, data$install_data)}
@@ -668,13 +695,19 @@ run_analysis <- function(data, settings) {
         data$distance_response <- vector_groupby_cumulative_distance(combined_data_f, grouping_cols)
         data$geo_data <- vector_groupby_system(combined_data_f, grouping_cols)
         data$circuit_summary <- distinct(combined_data_f, c_id, clean, .keep_all = TRUE)
-        data$circuit_summary <- select(data$circuit_summary, site_id, c_id, s_state, s_postcode, pv_installation_year_month, 
-                                    Standard_Version, Grouping, sum_ac, clean, manufacturer, model, response_category, 
-                                    zone, distance, lat, lon, con_type, first_ac, polarity, compliance_status, 
-                                    reconnection_compliance_status, manual_droop_compliance, manual_reconnect_compliance, 
-                                    reconnection_time, ramp_above_threshold, max_power, ufls_status,
-                                    pre_event_sampled_seconds, post_event_sampled_seconds, 
-                                    ufls_status_v, pre_event_v_mean, post_event_v_mean)
+        circ_sum_cols <- c("site_id", "c_id", "s_state", "s_postcode", "pv_installation_year_month",
+                            "Standard_Version", "Grouping", "sum_ac", "clean", "manufacturer", "model",
+                            "response_category", "zone", "distance", "lat", "lon", "con_type", "first_ac", "polarity",
+                            "compliance_status", "reconnection_compliance_status", "manual_droop_compliance",
+                            "manual_reconnect_compliance", "reconnection_time", "ramp_above_threshold", "max_power",
+                            "ufls_status", "pre_event_sampled_seconds", "post_event_sampled_seconds", "ufls_status_v",
+                            "pre_event_v_mean", "post_event_v_mean")
+        if("Islanded" %in% names(data$circuit_summary)){
+          circ_sum_cols <- append(circ_sum_cols, c("Islanded", "island_assessment", "islanding_alert"), 26)
+        }
+        data$circuit_summary <- data$circuit_summary[, circ_sum_cols]
+        data$circuit_summary$tool_hash <-git2r::revparse_single(revision="HEAD")$sha
+
         # Combine data sets that have the same grouping so they can be saved in a single file
         if (no_grouping){
           et <- settings$pre_event_interval
@@ -856,6 +889,7 @@ server <- function(input,output,session){
   NED_threshold <- reactive({input$NED_threshold})
   disconnecting_threshold <- reactive({input$disconnecting_threshold})
   exclude_solar_edge <- reactive({input$exclude_solar_edge})
+  exclude_islanded_circuits <- reactive({input$exclude_islanded_circuits})
   
   
   # Store the main data table in a reactive value so it is accessable outside 
@@ -1790,6 +1824,7 @@ server <- function(input,output,session){
     settings$NED_threshold <- NED_threshold()
     settings$disconnecting_threshold <- disconnecting_threshold()
     settings$exclude_solar_edge <- exclude_solar_edge()
+    settings$exclude_islanded_circuits <- exclude_islanded_circuits()
     
     return(settings)
   }
@@ -1910,6 +1945,7 @@ server <- function(input,output,session){
       updateNumericInput(session,"NED_threshold", value = settings$NED_threshold)
       updateNumericInput(session, "disconnecting_threshold", value = settings$disconnecting_threshold)
       updateMaterialSwitch(session, "exclude_solar_edge", value = settings$exclude_solar_edge)
+      updateMaterialSwitch(session, "exclude_islanded_circuits", value = settings$exclude_islanded_circuits)
     }
   })
   
@@ -2027,4 +2063,3 @@ server <- function(input,output,session){
 }
 
 shinyApp(ui = ui, server = server)
-

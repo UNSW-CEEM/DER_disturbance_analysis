@@ -17,7 +17,8 @@ setwd(wd)
 DBInterface <- R6::R6Class("DBInterface",
   public = list(
     db_path_name = NULL,
-    default_timeseries_column_aliases = list(ts='_ts', time_stamp='_ts', c_id='_c_id', v='_v', f='_f', e='_e', d='_d', 
+    default_timeseries_column_aliases = list(ts='_ts', time_stamp='_ts', c_id='_c_id', v='_voltage', vmin='_vmin', 
+                                             vmax='_vmax', f='_frequency', fmin='_fmin', fmax='_fmax', e='_e', d='_d', 
                                              p='_p'),
     connect_to_new_database = function(db_path_name){
       if (file.exists(db_path_name)){
@@ -38,7 +39,8 @@ DBInterface <- R6::R6Class("DBInterface",
       }
     },
     check_tables_have_expected_columns = function() {
-      self$check_table_has_expected_columns('timeseries', c("ts", "c_id", "d", "d_key", "e", "f", "v"))
+      self$check_table_has_expected_columns('timeseries', c("ts", "c_id", "d", "d_key", "e", "f", "fmin", "fmax", "v", 
+                                                            "vmin", "vmax"))
       self$check_table_has_expected_columns('circuit_details_raw', c("c_id", "site_id", "con_type", "polarity", 
                                                                      "manual_droop_compliance", 
                                                                      "manual_reconnect_compliance"))
@@ -81,7 +83,7 @@ DBInterface <- R6::R6Class("DBInterface",
         RSQLite::dbDisconnect(con)
       }
     },
-    build_database = function(timeseries, circuit_details, site_details, check_disk_space=TRUE, 
+    build_database = function(timeseries, circuit_details, site_details, alerts_file=NULL, check_disk_space=TRUE, 
                               check_dataset_ids_match=TRUE) {
       
       if (!file.exists(timeseries)){
@@ -93,7 +95,12 @@ DBInterface <- R6::R6Class("DBInterface",
       if (!file.exists(site_details)){
         stop("Specified site_details file not found. Please check the filepath provided.")
       }
-      
+      if (!is.null(alerts_file)){
+        if (!file.exists(alerts_file)){
+          stop("Specified alerts file not found. Please check the filepath provided.")
+          } 
+      }
+
       #free_space_gigabytes <- get_free_disk_space_in_working_directory()
       #time_series_size_gigabytes <- file.size(timeseries) / 1073741824
       #extimated_database_size <- time_series_size_gigabytes * 2.5
@@ -107,9 +114,22 @@ DBInterface <- R6::R6Class("DBInterface",
       time_series_build_query <- self$get_time_series_build_query(timeseries)
       circuit_details_build_query <- self$get_circuit_details_build_query(circuit_details)
       site_details_build_query <- self$get_site_details_build_query(site_details)
+      if (!is.null(alerts_file)){
+        alerts_build_query <- self$get_alerts_build_query(alerts_file)
+      }
       
       con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)
       
+      # create DB history table
+      RSQLite::dbExecute(con, "DROP TABLE IF EXISTS db_history")
+      RSQLite::dbExecute(con, "CREATE TABLE db_history(event TEXT, utc_timestamp TEXT, tool_git_hash TEXT)")
+      event <- "built"
+      created_at <- lubridate::now("UTC")
+      tool_git_hash <- git2r::revparse_single(revision="HEAD")$sha
+      RSQLite::dbExecute(con, "INSERT INTO db_history VALUES (:event, :timestamp, :hash)",
+                         params = list(event=event, timestamp=created_at, hash=tool_git_hash))
+
+      # insert timeseries data
       RSQLite::dbExecute(con, "DROP TABLE IF EXISTS timeseries")
       
       RSQLite::dbExecute(con, "CREATE TABLE timeseries(
@@ -118,7 +138,11 @@ DBInterface <- R6::R6Class("DBInterface",
                          d_key INT,
                          e REAL,
                          v REAL,
+                         vmin REAL DEFAULT NULL,
+                         vmax REAL DEFAULT NULL,
                          f REAL,
+                         fmin REAL DEFAULT NULL,
+                         fmax REAL DEFAULT NULL,
                          PRIMARY KEY (ts, c_id, d_key))")
       
       # Suppress warning
@@ -131,6 +155,13 @@ DBInterface <- R6::R6Class("DBInterface",
         if (startsWith(conditionMessage(w), "Don't need to call dbFetch()"))
           invokeRestart("muffleWarning")
       })
+      RSQLite::dbExecute(con, "UPDATE timeseries SET e = NULL WHERE e = ''")
+      RSQLite::dbExecute(con, "UPDATE timeseries SET v = NULL WHERE v = ''")
+      RSQLite::dbExecute(con, "UPDATE timeseries SET vmin = NULL WHERE vmin = ''")
+      RSQLite::dbExecute(con, "UPDATE timeseries SET vmax = NULL WHERE vmax = ''")
+      RSQLite::dbExecute(con, "UPDATE timeseries SET f = NULL WHERE f = ''")
+      RSQLite::dbExecute(con, "UPDATE timeseries SET fmin = NULL WHERE fmin = ''")
+      RSQLite::dbExecute(con, "UPDATE timeseries SET fmax = NULL WHERE fmax = ''")
       
       self$drop_repeated_headers()
       
@@ -177,6 +208,36 @@ DBInterface <- R6::R6Class("DBInterface",
           invokeRestart("muffleWarning")
       })
       
+      
+      RSQLite::dbExecute(con, "DROP TABLE IF EXISTS alerts")
+      
+      RSQLite::dbExecute(con, "CREATE TABLE alerts(
+                         c_id INT, GridFaultContactorTrip INT, SYNC_a038_DoOpenArguments INT, count_times_open INT, 
+                         first_timestamp INT, SYNC_a010_vfCheckFreqWobble INT, SYNC_a005_vfCheckUnderVoltage INT)")
+      
+      if (!is.null(alerts_file)){
+        # Suppress warning
+        withCallingHandlers({
+          file_con <- base::file(alerts_file)
+          sqldf::read.csv.sql(sql = alerts_build_query, eol = '\n',
+                              dbname = self$db_path_name)
+          base::close(file_con)
+        }, warning=function(w) {
+          if (startsWith(conditionMessage(w), "Don't need to call dbFetch()"))
+            invokeRestart("muffleWarning")
+        })
+      }
+      
+      RSQLite::dbExecute(con, "UPDATE alerts SET GridFaultContactorTrip = NULL WHERE GridFaultContactorTrip = ''")
+      RSQLite::dbExecute(con, "UPDATE alerts SET SYNC_a038_DoOpenArguments = NULL 
+                         WHERE SYNC_a038_DoOpenArguments = ''")
+      RSQLite::dbExecute(con, "UPDATE alerts SET count_times_open = NULL WHERE count_times_open = ''")
+      RSQLite::dbExecute(con, "UPDATE alerts SET first_timestamp = NULL WHERE first_timestamp = ''")
+      RSQLite::dbExecute(con, "UPDATE alerts SET SYNC_a010_vfCheckFreqWobble = NULL 
+                         WHERE SYNC_a010_vfCheckFreqWobble = ''")
+      RSQLite::dbExecute(con, "UPDATE alerts SET SYNC_a005_vfCheckUnderVoltage = NULL 
+                         WHERE SYNC_a005_vfCheckUnderVoltage = ''")
+        
       if (check_dataset_ids_match) {
         self$check_ids_match_between_datasets()
       }
@@ -186,14 +247,29 @@ DBInterface <- R6::R6Class("DBInterface",
     get_time_series_build_query = function(timeseries){
       column_names <- names(read.csv(timeseries, nrows=3, header = TRUE))
       
-      query <- "REPLACE INTO timeseries 
+      if (all(c("vmin", "vmax", "fmin", "fmax") %in% column_names)){
+        query <- "REPLACE INTO timeseries(ts, c_id, d_key, e, v, vmin, vmax, f, fmin, fmax)
       SELECT _ts as ts, 
              cast(_c_id as integer) as c_id, 
              cast(IFNULL(_d, 0) as integer) as d_key, 
              _e as e, 
-             _v as v,
-             _f as f 
+             _voltage as v,
+             _vmin as vmin,
+             _vmax as vmax,
+             _frequency as f,
+             _fmin as fmin,
+             _fmax as fmax
         from file_con"
+      } else{
+        query <- "REPLACE INTO timeseries(ts, c_id, d_key, e, v, f)
+      SELECT _ts as ts, 
+             cast(_c_id as integer) as c_id, 
+             cast(IFNULL(_d, 0) as integer) as d_key, 
+             _e as e, 
+             _voltage as v,
+             _frequency as f
+        from file_con"
+      }
       
       for (name in column_names){
         if (name %in% names(self$default_timeseries_column_aliases)){
@@ -254,6 +330,35 @@ DBInterface <- R6::R6Class("DBInterface",
           stop("The provided site details file should have the columns site_id, s_postcode, s_state,
                ac, dc, manufacturer, model and pv_installation_year_month. The ac column should be in
                kW and the the dc in W. Please check this file and try again.")
+        }
+      }
+      return(query)
+    },
+    get_alerts_build_query = function(alerts_file){
+      column_names <- names(read.csv(alerts_file, nrows=3, header = TRUE))
+      
+      column_aliases <- list(c_id='_c_id', GridFaultContactorTrip='_GridFaultContactorTrip', 
+                             SYNC_a038_DoOpenArguments='_SYNC_a038_DoOpenArguments', 
+                             count_times_open='_count_times_open', 
+                             first_timestamp='_first_timestamp', 
+                             SYNC_a010_vfCheckFreqWobble='_SYNC_a010_vfCheckFreqWobble', 
+                             SYNC_a005_vfCheckUnderVoltage='_SYNC_a005_vfCheckUnderVoltage')
+      
+      query <- "REPLACE INTO alerts 
+      SELECT cast(_c_id as integer) as c_id, _GridFaultContactorTrip as GridFaultContactorTrip, 
+      _SYNC_a038_DoOpenArguments as SYNC_a038_DoOpenArguments, 
+      _count_times_open as count_times_open, _first_timestamp as first_timestamp, 
+      _SYNC_a010_vfCheckFreqWobble as SYNC_a010_vfCheckFreqWobble,
+      _SYNC_a005_vfCheckUnderVoltage as SYNC_a005_vfCheckUnderVoltage
+      from file_con"
+      
+      for (name in column_names){
+        if (name %in% names(column_aliases)){
+          query <- gsub(column_aliases[[name]], name, query)
+        } else {
+          stop("The provided alerts file should have the columns c_id, GridFaultContactorTrip, 
+          SYNC_a038_DoOpenArguments, count_times_open, first_timestamp, SYNC_a010_vfCheckFreqWobble and 
+          SYNC_a005_vfCheckUnderVoltage. Please check this file and try again.")
         }
       }
       return(query)
@@ -395,6 +500,11 @@ DBInterface <- R6::R6Class("DBInterface",
                                               dbname = self$db_path_name)
       return(circuit_details_cleaned)
     },
+    get_alerts_data = function(){
+      alerts_data <- sqldf::sqldf("select * from alerts", 
+                                           dbname = self$db_path_name)
+      return(alerts_data)
+    },
     get_site_details_cleaning_report = function(){
       site_details_cleaned <- sqldf::sqldf("select * from site_details_cleaned", 
                                            dbname = self$db_path_name)
@@ -412,25 +522,26 @@ DBInterface <- R6::R6Class("DBInterface",
     },
     get_time_series_data_by_c_id = function(c_ids){
       time_series <- sqldf::sqldf(
-        "select ts, c_id, d, e, v, f from timeseries where c_id in (select c_id from c_ids)", 
+        "select ts, c_id, d, e, v, vmin, vmax, f, fmin, fmax from timeseries where c_id in (select c_id from c_ids)", 
         dbname = self$db_path_name)
       return(time_series)
     },
     get_time_series_data_by_c_id_full_row = function(c_ids){
       time_series <- sqldf::sqldf(
-        "select ts, c_id, d_key, d, e, v, f from timeseries where c_id in (select c_id from c_ids)", 
+        "select ts, c_id, d_key, d, e, v, vmin, vmax, f, fmin, fmax from timeseries where c_id in 
+        (select c_id from c_ids)", 
         dbname = self$db_path_name)
       return(time_series)
     },
     get_time_series_data = function(){
-      time_series <- sqldf::sqldf("select ts, c_id, d, e, v, f from timeseries", 
+      time_series <- sqldf::sqldf("select ts, c_id, d, e, v, vmin, vmax, f, fmin, fmax from timeseries", 
                                   dbname = self$db_path_name)
       time_series <- time_series[with(time_series, order(c_id, ts)), ]
       rownames(time_series) <- NULL
       return(time_series)
     },
     get_time_series_data_all = function(){
-      time_series <- sqldf::sqldf("select ts, c_id, d_key, d, e, v, f from timeseries", 
+      time_series <- sqldf::sqldf("select ts, c_id, d_key, d, e, v, vmin, vmax, f, fmin, fmax from timeseries", 
                                   dbname = self$db_path_name)
       return(time_series)
     },
@@ -439,9 +550,11 @@ DBInterface <- R6::R6Class("DBInterface",
       site_details = self$get_site_details_raw()
       site_in_state = filter(site_details, s_state==state)
       circuit_in_state = filter(circuit_details, site_id %in% site_in_state$site_id)
-      query <- "select ts, c_id, d, e, v, f from timeseries 
+      # TODO: check validity of e != ''
+      query <- "select ts, c_id, d, e, v, vmin, vmax, f, fmin, fmax from timeseries 
                         where c_id in (select c_id from circuit_in_state)
                         and d = duration
+                        and e != ''
                         and datetime(ts) >= datetime('start_time')
                         and datetime(ts) <= datetime('end_time')"
       query <- gsub('duration', duration, query)
@@ -457,6 +570,7 @@ DBInterface <- R6::R6Class("DBInterface",
       circuit_in_state = filter(circuit_details, site_id %in% site_in_state$site_id)
       query <- "select ts, c_id, d, e, v, f from timeseries 
                         where c_id in (select c_id from circuit_in_state)
+                        and e != ''
                         and datetime(ts) >= datetime('start_time')
                         and datetime(ts) <= datetime('end_time')"
       query <- gsub('start_time', start_time, query)
@@ -528,7 +642,7 @@ DBInterface <- R6::R6Class("DBInterface",
     },
     filter_out_unchanged_records = function(time_series){
       time_series <- dplyr::filter(time_series, d_change)
-      time_series <- select(time_series, ts, c_id, d_key, d, e, v, f)
+      time_series <- select(time_series, ts, c_id, d_key, d, e, v, vmin, vmax, f, fmin, fmax)
       return(time_series)
     },
     replace_duration_value_with_calced_interval = function(time_series){
@@ -543,7 +657,7 @@ DBInterface <- R6::R6Class("DBInterface",
       # Suppress warning
       withCallingHandlers({
         sqldf::sqldf(
-          "REPLACE INTO timeseries SELECT ts, c_id, d_key, e, v, f, d FROM time_series", 
+          "REPLACE INTO timeseries SELECT ts, c_id, d_key, e, v, vmin, vmax, f, fmin, fmax, d FROM time_series", 
           dbname = self$db_path_name)
       }, warning=function(w) {
         if (startsWith(conditionMessage(w), "Don't need to call dbFetch()"))
@@ -552,6 +666,7 @@ DBInterface <- R6::R6Class("DBInterface",
     },
     perform_power_calculations = function(time_series){
       time_series <- mutate(time_series, d = as.numeric(d))
+      time_series <- mutate(time_series, e = as.numeric(e))
       time_series <- mutate(time_series, e_polarity=e*polarity)
       time_series <- mutate(time_series, power_kW = e_polarity/(d * 1000))
       return(time_series)
