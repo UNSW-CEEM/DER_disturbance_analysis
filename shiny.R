@@ -447,6 +447,9 @@ normalise_c_id_power_by_daily_max <- function(combined_data, max_power, pre_even
   return(combined_data_f)
 }
 
+#' Calculate performance factor and pre-event normalised performance factor
+#' Performance factor is calculated as power/ac_capacity at a site level
+#' @return An updated dataframe with site_performance_factor and event_normalised_performance_factor
 determine_performance_factors <- function(combined_data_f, pre_event_interval) {
   logdebug('Calc site peformance factors', logger="shinyapp")
   combined_data_f <- calc_site_performance_factors(combined_data_f)
@@ -460,6 +463,7 @@ determine_performance_factors <- function(combined_data_f, pre_event_interval) {
 }
 
 #' Upscale disconnections
+#' @return A list of data objects summarising disconnections upscaled by manufacturer
 upscale_and_summarise_disconnections <- function(circuit_summary, manufacturer_install_data, load_date, region_to_load, exclude_solar_edge) {
   logdebug('Summarise and upscale disconnections on a manufacturer basis.', logger="shinyapp")
   if (exclude_solar_edge){
@@ -484,6 +488,8 @@ upscale_and_summarise_disconnections <- function(circuit_summary, manufacturer_i
   return(upscaling_results)
 }
 
+#' Check if grouping is occuring
+#' @return boolean no_grouping, TRUE when no grouping is occuring
 check_grouping <- function(settings) {
   if (settings$standard_agg==FALSE & settings$pst_agg==FALSE & settings$grouping_agg==FALSE &
       settings$manufacturer_agg==FALSE & settings$model_agg==FALSE & settings$zone_agg==FALSE &
@@ -495,6 +501,9 @@ check_grouping <- function(settings) {
   return(no_grouping)
 }
 
+#' Run a complete analysis of the data, based onf the current toll settings
+#' data and settings should be provided as list of objects
+#' @return list of data with analysis performed, many fields are update or added.
 run_analysis <- function(data, settings) {
   error_check_passed = validate_pre_event_interval(
     settings$pre_event_interval,
@@ -590,7 +599,6 @@ run_analysis <- function(data, settings) {
       if (length(settings$compliance) < 8) {
         combined_data_f <- filter(combined_data_f, compliance_status %in% settings$compliance)
       }
-      # --------
       
       # -------- determine reconnection compliace --------
       logdebug('Set reconnection compliance values', logger="shinyapp")
@@ -611,13 +619,8 @@ run_analysis <- function(data, settings) {
                                                                 settings$ramp_rate_change_resource_limit_threshold)
       combined_data_f <- left_join(combined_data_f, reconnection_categories, by = 'c_id')
       removeNotification(id2)
-      # --------
       
       # -------- calculate summary stats --------
-      # inputs: combined_data_f
-      # outputs: v$sample_count_table
-      # dependencies: too many to list for  find_grouping_cols()
-      # Count samples in each data series to be displayed
       logdebug('Count samples in each data series to be displayed', logger="shinyapp")
       grouping_cols <- find_grouping_cols(settings)
       
@@ -636,7 +639,6 @@ run_analysis <- function(data, settings) {
         data$sample_count_table$width <- data$sample_count_table$upper_95_CI - data$sample_count_table$lower_95_CI
       }
     }
-    # --------
 
     no_grouping <- check_grouping(settings)
 
@@ -645,43 +647,33 @@ run_analysis <- function(data, settings) {
     logdebug('Proceed to aggregation and plotting', logger="shinyapp")
     if ((sum(data$sample_count_table$sample_count)<1000 & no_grouping) | 
         (length(data$sample_count_table$sample_count)<1000 & !no_grouping)){
-      
-      # -------- Create copies of data? --------
-      # inputs: combined_data_f
-      # outputs: v$combined_data_f, combined_data_f2
-      # dependencies: raw_upscale()
       if(length(combined_data_f$ts) > 0){
-      # Copy data for saving
-      logdebug('Copy data for saving', logger="shinyapp")
-      combined_data_cols <- c("ts", "site_id", "c_id", "power_kW", "c_id_norm_power", "v", "f", "s_state",
-                              "s_postcode", "pv_installation_year_month", "Standard_Version", "Grouping", "sum_ac",
-                              "clean", "manufacturer", "model", "site_performance_factor", "response_category",
-                              "zone", "distance", "lat", "lon", "e", "con_type", "first_ac", "polarity",
-                              "compliance_status", "reconnection_compliance_status",
-                              "manual_droop_compliance", "manual_reconnect_compliance", "reconnection_time",
-                              "ramp_above_threshold", "c_id_daily_norm_power", "max_power", "ufls_status",
-                              "pre_event_sampled_seconds", "post_event_sampled_seconds", "ufls_status_v",
-                              "pre_event_v_mean", "post_event_v_mean")
-      if("Islanded" %in% names(combined_data_f)){
-        combined_data_cols <- append(combined_data_cols, c("Islanded", "island_assessment", "islanding_alert"), 34)
-      }
-      data$combined_data_f <- combined_data_f[, combined_data_cols]
+        # Copy data for saving
+        logdebug('Copy data for saving', logger="shinyapp")
+        combined_data_cols <- c("ts", "site_id", "c_id", "power_kW", "c_id_norm_power", "v", "f", "s_state",
+                                "s_postcode", "pv_installation_year_month", "Standard_Version", "Grouping", "sum_ac",
+                                "clean", "manufacturer", "model", "site_performance_factor", "response_category",
+                                "zone", "distance", "lat", "lon", "e", "con_type", "first_ac", "polarity",
+                                "compliance_status", "reconnection_compliance_status",
+                                "manual_droop_compliance", "manual_reconnect_compliance", "reconnection_time",
+                                "ramp_above_threshold", "c_id_daily_norm_power", "max_power", "ufls_status",
+                                "pre_event_sampled_seconds", "post_event_sampled_seconds", "ufls_status_v",
+                                "pre_event_v_mean", "post_event_v_mean")
+        if("Islanded" %in% names(combined_data_f)){
+          combined_data_cols <- append(combined_data_cols, c("Islanded", "island_assessment", "islanding_alert"), 34)
+        }
+        data$combined_data_f <- combined_data_f[, combined_data_cols]
 
-      # Create copy of filtered data to use in upscaling
-      combined_data_f2 <- combined_data_f
-        if(settings$raw_upscale){combined_data_f2 <- upscale(combined_data_f2, data$install_data)}
+        # Create copy of filtered data to use in upscaling
+        combined_data_f2 <- combined_data_f
+          if(settings$raw_upscale){combined_data_f2 <- upscale(combined_data_f2, data$install_data)}
       }
-      # -------- 
 
       # Check that the filter does not result in an empty dataframe.
       logdebug('Check that the filter does not result in an empty dataframe.', logger="shinyapp")
       if(length(combined_data_f$ts) > 0){
         
         # -------- Initialise aggregate dataframes  --------
-        # inputs: combined_data_f, combined_data_f2, grouping_cols
-        # outputs: agg_norm_power, agg_f_and_v, v$agg_power, v$response_count, v$zone_count, v$distance_response, geo_data, v$circuit_summary
-        # dependencies: vector_groupby_norm_power(), vector_groupby_f_and_v(), vector_groupby_power(), vector_groupby_count_response(),
-        #   vector_groupby_count_zones(), vector_groupby_cumulative_distance(), vector_groupby_system()
         if (settings$norm_power_filter_off_at_t0){
           combined_data_for_norm_power <- filter(combined_data_f,  response_category != "5 Off at t0")
         } else {
@@ -722,12 +714,7 @@ run_analysis <- function(data, settings) {
         }
         data$agg_power <- left_join(data$agg_power, agg_f_and_v[, c("Time", "series", "Voltage", "Frequency")], 
                                   by=c("Time", "series"))
-        # --------
-        
-        # -------- Create disconnection_sumaries --------
-        # inputs: v$circuit_summary, v$manufacturer_install_data, 
-        # outputs: circuits_to_summarise, v$disconnection_summary, v$upscaled_disconnection
-        # dependencies: load_date(), region_to_load(), exclude_solar_edge()
+
         # Summarise and upscale disconnections on a manufacturer basis.
         upscaling_results <- upscale_and_summarise_disconnections(
           data$circuit_summary, data$manufacturer_install_data, settings$load_date, settings$region_to_load, settings$exclude_solar_edge
