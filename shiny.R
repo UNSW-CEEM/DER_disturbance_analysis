@@ -4,6 +4,12 @@ source("load_tool_environment.R")
 basicConfig(level = 10)
 addHandler(writeToFile, logger="shinyapp", file="logging/applogs.log")
 
+INSTALL_DATA_FILE <- "inbuilt_data/cer_cumulative_capacity_and_number.csv"
+CER_MANUFACTURER_DATA <- "inbuilt_data/cer_cumulative_capacity_and_number_by_manufacturer.csv"
+OFF_GRID_POSTCODES <- "inbuilt_data/off_grid_postcodes.csv"
+POSTCODE_DATA_FILE <- "inbuilt_data/PostcodesLatLongQGIS.csv"
+
+
 ui <- fluidPage(
   tags$head(
     tags$style(HTML("hr {border-top: 1px solid #000000;}"))
@@ -749,6 +755,181 @@ run_analysis <- function(data, settings) {
   return(data)
 }
 
+#' Validate csv inputs
+#' 
+validate_load_times <- function(settings, errors) {
+  if (missing(errors)) {
+    errors <- list(warnings=list(), errors=list())
+  }
+  if (is.na(as.character(settings$load_start_date)) | is.na(as.character(settings$load_end_date))) {
+    shinyalert("Please provide a valid start and end date.", '')
+    error_check_passed = FALSE
+  } else {
+    start_time <- format(as.POSIXct(settings$load_start_time, tz = "Australia/Brisbane"), tz = 'GMT')
+    end_time <- format(as.POSIXct(settings$load_end_time, tz = "Australia/Brisbane"), tz = 'GMT')
+    if (difftime(end_time, start_time, units = 'hours') > 2) {
+      long_error_message <- c("A time window of greater than 2 hours was provided, it might take a while to load.")
+      long_error_message <- paste(long_error_message, collapse = '')
+      shinyalert("Warning long time window", long_error_message)
+      errors$warnings[[length(errors$warnings) + 1]] <- list(title="Warning long time window", body=long_error_message)
+    }
+    if (!(settings$load_end_time > settings$load_start_time)) {
+      long_error_message <- c("The start time must be before the end time.")
+      long_error_message <- paste(long_error_message, collapse = '')
+      errors$errors[[length(errors$errors) + 1]] <- list(title="Error in time window", body=long_error_message)
+    }
+  }
+  return(errors)
+}
+
+validate_required_files <- function(errors) {
+  if (missing(errors)) {
+    errors <- list(warnings=list(), errors=list())
+  }
+  if (!file.exists(INSTALL_DATA_FILE)){
+    long_error_message <- c("The required file cer_cumulative_capacity_and_number.csv could ",
+                            "not be found. Please add it to the inbuilt_data directory.")
+    long_error_message <- paste(long_error_message, collapse = '')
+    errors$errors[[length(errors$errors) + 1]] <- list(title="Error loading install data", body=long_error_message)
+  }
+  if (!file.exists(CER_MANUFACTURER_DATA)){
+    long_error_message <- c("The required file cer_manufacturer_data could ",
+                            "not be found. Please add it to the inbuilt_data directory.")
+    long_error_message <- paste(long_error_message, collapse = '')
+    shinyalert("Error loading manufacturer install data", long_error_message)
+    errors$errors[[length(errors$errors) + 1]] <- list(title="Error loading manufacturer install data", body=long_error_message)
+  }
+  if (!file.exists(OFF_GRID_POSTCODES)){
+    long_error_message <- c("The required file off_grid_postcodes could ",
+                            "not be found. Please add it to the inbuilt_data directory.")
+    long_error_message <- paste(long_error_message, collapse = '')
+    errors$errors[[length(errors$errors) + 1]] <- list(title="Error loading off grid post code data", body=long_error_message)
+  }
+  return(errors)
+}
+
+validate_frequency_data <- function(settings, errors) {
+  if (missing(errors)) {
+    errors <- list(warnings=list(), errors=list())
+  }
+  if(settings$frequency_data_file != '') {
+    frequency_data <- read.csv(file=settings$frequency_data_file, header=TRUE, stringsAsFactors = FALSE)
+    expected_columns_names <- c("ts", "QLD", "NSW", "VIC", "SA", "TAS", "WA")
+    column_names <- names(frequency_data)
+    for (col_name in column_names){ 
+      if (!(col_name %in% expected_columns_names)){
+        long_error_message <- c("The frequency data csv should only contain the following columns, ", 
+                                "ts, QLD, NSW, VIC, SA, TAS, WA. If this error persists after checking ",
+                                "the columns names, then the file may be incorrectly incoded, please ", 
+                                "re-save it using the CSV (Comma delimited) (*.csv) option in excel.")
+        long_error_message <- paste(long_error_message, collapse = '')
+        errors$errors[[length(errors$errors) + 1]] <- list(title="Error loading frequency data", body=long_error_message)
+      }
+    }
+    if (!(settings$region_to_load %in% column_names)){
+      long_error_message <- c("The frequency data csv must contain a column for the region being loaded. ", 
+                              "Either choose to load no frequency data or ensure it containts data for the ",
+                              "selected region.")
+      long_error_message <- paste(long_error_message, collapse = '')
+      errors$errors[[length(errors$errors) + 1]] <- list(title="Error loading frequency data", body=long_error_message)
+    }
+  }
+  return(errors)
+}
+
+validate_timeseries_data <- function(time_series_data, errors) {
+  if (missing(errors)) {
+    errors <- list(warnings=list(), errors=list())
+  }
+  if (dim(time_series_data)[1] == 0){
+    long_error_message <- c("The region and duration selected resulted in an empty dataset, please try another selection")
+    long_error_message <- paste(long_error_message, collapse = '')
+    errors$errors[[length(errors$errors) + 1]] <- list(title="Error loading timeseries data", body=long_error_message)
+  }
+  return(errors)
+}
+
+#' Load input from csvs specified in settings
+#' @returns data object updated to included data from csvs if successful, else errors
+load_data <- function(data, settings) {
+  error_check_passed <- TRUE
+
+  # Peform error checking before loading data.
+  errors <- validate_load_times(settings)
+  errors <- validate_required_files(errors)
+  errors <- validate_frequency_data(settings, errors)
+
+  # Check timerseries for errors
+  start_time <- format(as.POSIXct(settings$load_start_time, tz = "Australia/Brisbane"), tz = 'GMT')
+  end_time <- format(as.POSIXct(settings$load_end_time, tz = "Australia/Brisbane"), tz = 'GMT')
+  time_series_data <- data$db$get_filtered_time_series_data(state = settings$region_to_load, duration = settings$duration, 
+                                                          start_time = start_time, end_time = end_time)
+  errors <- validate_timeseries_data(time_series_data, errors)
+
+# -------- data loading --------
+  if (length(errors$errors) == 0) {
+    site_details_raw <- data$db$get_site_details_raw()
+    site_details_raw <- process_raw_site_details(site_details_raw)
+    data$site_details <- mutate(site_details_raw, clean = 'raw')
+    
+    if (data$db$check_if_table_exists('site_details_cleaned')){
+      site_details_clean <- data$db$get_site_details_cleaned()
+      site_details_clean <- process_raw_site_details(site_details_clean)
+      site_details_clean <- mutate(site_details_clean, clean = 'clean')
+      data$site_details <- bind_rows(data$site_details, site_details_clean)
+    }
+    
+    data$site_details <- site_categorisation(data$site_details)
+    data$site_details <- size_grouping(data$site_details)
+
+    circuit_details_raw <- data$db$get_circuit_details_raw()
+    data$circuit_details <- mutate(circuit_details_raw, clean = 'raw')
+    data$circuit_details_raw <- data$circuit_details
+    
+    if (data$db$check_if_table_exists('circuit_details_cleaned')){
+      circuit_details_clean <- data$db$get_circuit_details_cleaned()
+      circuit_details_clean <- mutate(circuit_details_clean, clean = 'clean')
+      data$circuit_details <- bind_rows(data$circuit_details, circuit_details_clean)
+    }
+
+    time_series_data <- process_time_series_data(time_series_data)
+
+    data$combined_data <- inner_join(time_series_data, data$circuit_details, by = "c_id")
+    data$combined_data <- inner_join(data$combined_data, data$site_details, by = c("site_id", "clean"))
+    
+    data$combined_data <- perform_power_calculations(data$combined_data)
+
+    # Load in the install data from CSV.
+    install_data <- read.csv(file = INSTALL_DATA_FILE, header = TRUE, stringsAsFactors = FALSE)
+    data$install_data <- process_install_data(install_data)
+    
+    manufacturer_install_data <- read.csv(file = CER_MANUFACTURER_DATA, header = TRUE, stringsAsFactors = FALSE)
+    data$manufacturer_install_data <- calc_installed_capacity_by_standard_and_manufacturer(manufacturer_install_data)
+    
+    postcode_data <- read.csv(file=POSTCODE_DATA_FILE, header=TRUE, stringsAsFactors = FALSE)
+    data$postcode_data <- process_postcode_data(postcode_data)
+    
+    data$off_grid_postcodes <- read.csv(file=OFF_GRID_POSTCODES, header=TRUE, stringsAsFactors = FALSE)
+    data$off_grid_postcodes <- data$off_grid_postcodes$postcodes
+    
+    if(settings$frequency_data_file != ''){
+      data$frequency_data <- read.csv(file=settings$frequency_data_file, header=TRUE, stringsAsFactors = FALSE)
+      data$frequency_data <- mutate(data$frequency_data, 
+                                  ts=as.POSIXct(strptime(ts, "%Y-%m-%d %H:%M:%S", tz="Australia/Brisbane")))
+    } else {
+      data$frequency_data <- data.frame()
+    }
+    
+    # Get offset filter options and label
+    data$combined_data <- get_time_offsets(data$combined_data)
+    data$unique_offsets <- get_time_series_unique_offsets(data$combined_data)
+  }
+  results <- list()
+  results$data <- data
+  results$errors <- errors
+  return(results)
+}
+
 
 server <- function(input,output,session){
   # Create radio button dyamically so label can be updated
@@ -817,6 +998,12 @@ server <- function(input,output,session){
   reconnection_compliance_agg <- reactive({input$reconnection_compliance_agg})
   load_date <- reactive({
     date_as_str <- as.character(input$load_date[1])
+  })
+  load_start_date <- reactive({
+    date_as_str <- as.character(input$load_date[1])
+  })
+  load_end_date <- reactive({
+    date_as_str <- as.character(input$load_date[2])
   })
   load_start_time <- reactive({
     date_as_str <- as.character(input$load_date[1])
@@ -956,308 +1143,196 @@ server <- function(input,output,session){
   # Clicked. 
   observeEvent(input$load_data, {
     id <- showNotification("Loading data", duration = 1000)
-    error_check_passed = TRUE
-    
-    # Peform error checking before loading data.
-    if (is.na(as.character(input$load_date[1])) | is.na(as.character(input$load_date[2]))) {
-      shinyalert("Please provide a valid start and end date.", '')
-      error_check_passed = FALSE
+  
+    # setup loading inputs
+    data <- reactiveValuesToList(v)
+    settings <- get_current_settings()
+
+    # load data
+    loaded <- load_data(data, settings)
+    data <- loaded$data
+    errors <- loaded$errors
+    for (d_name in names(data)) {
+      v[[d_name]] <- data[[d_name]]
+    }    
+    removeNotification(id)
+
+# -------- UI Code --------
+    # show errors & warnings on tool dash
+    if (length(errors$warnings) > 0) {
+      for (warning in errors$warnings) {
+        shinyalert(warning$title, warning$body)
+      }
+    }
+    # do not proceed if erros have been raised
+    if (length(errors$errors) > 0) {
+      for (error in errors$errors) {
+        shinyalert(error$title, error$body)
+      }
     } else {
-      start_time <- format(as.POSIXct(load_start_time(), tz = "Australia/Brisbane"), tz = 'GMT')
-      end_time <- format(as.POSIXct(load_end_time(), tz = "Australia/Brisbane"), tz = 'GMT')
-      if (difftime(end_time, start_time, units = 'hours') > 2) {
-        long_error_message <- c("A time window of greater than 2 hours was provided, it might take a while to load.")
-        long_error_message <- paste(long_error_message, collapse = '')
-        shinyalert("Warning long time window", long_error_message)
+      if (data$db$check_if_table_exists('site_details_cleaned')){
+        data$site_details_for_editing <- data$db$get_site_details_cleaning_report()
+        data$site_details_for_editing <- filter(data$site_details_for_editing, s_state == settings$region_to_load)
+        output$site_details_editor <- renderDT(isolate(data$site_details_for_editing), selection='single', rownames=FALSE, 
+                                                editable=TRUE)
+        data$proxy_site_details_editor <- dataTableProxy('site_details_editor')
       }
-      if (!(load_end_time() > load_start_time())) {
-        long_error_message <- c("The start time must be before the end time.")
-        long_error_message <- paste(long_error_message, collapse = '')
-        shinyalert("Error in time window", long_error_message)
-        error_check_passed = FALSE
-      }
-    }
-    if(frequency_data_file() != '') {
-      v$frequency_data <- read.csv(file=frequency_data_file(), header=TRUE, stringsAsFactors = FALSE)
-      expected_columns_names <- c("ts", "QLD", "NSW", "VIC", "SA", "TAS", "WA")
-      column_names <- names(v$frequency_data)
-      for (col_name in column_names){ 
-        if (!(col_name %in% expected_columns_names)){
-          long_error_message <- c("The frequency data csv should only contain the following columns, ", 
-                                  "ts, QLD, NSW, VIC, SA, TAS, WA. If this error persists after checking ",
-                                  "the columns names, then the file may be incorrectly incoded, please ", 
-                                  "re-save it using the CSV (Comma delimited) (*.csv) option in excel.")
-          long_error_message <- paste(long_error_message, collapse = '')
-          shinyalert("Error loading frequency data", long_error_message)
-          error_check_passed = FALSE
-        }
-      }
-      if (!(region_to_load() %in% column_names)){
-        long_error_message <- c("The frequency data csv must contain a column for the region being loaded. ", 
-                                "Either choose to load no frequency data or ensure it containts data for the ",
-                                "selected region.")
-        long_error_message <- paste(long_error_message, collapse = '')
-        shinyalert("Error loading frequency data", long_error_message)
-        error_check_passed = FALSE
-      }
-    }
-    
-    install_data_file <- "inbuilt_data/cer_cumulative_capacity_and_number.csv"
-    if (!file.exists(install_data_file)){
-      long_error_message <- c("The required file cer_cumulative_capacity_and_number.csv could ",
-                              "not be found. Please add it to the inbuilt_data directory.")
-      long_error_message <- paste(long_error_message, collapse = '')
-      shinyalert("Error loading install data", long_error_message)
-      error_check_passed = FALSE
-    }
-    time_series_data <- v$db$get_filtered_time_series_data(state = region_to_load(), duration = duration(), 
-                                                           start_time = start_time, end_time = end_time)
-    if (dim(time_series_data)[1] == 0){
-      long_error_message <- c("The region and duration selected resulted in an empty dataset, please try another selection")
-      long_error_message <- paste(long_error_message, collapse = '')
-      shinyalert("Error loading timeseries data", long_error_message)
-      error_check_passed = FALSE
-    }
-    cer_manufacturer_data <- "inbuilt_data/cer_cumulative_capacity_and_number_by_manufacturer.csv"
-    if (!file.exists(cer_manufacturer_data)){
-      long_error_message <- c("The required file cer_manufacturer_data could ",
-                              "not be found. Please add it to the inbuilt_data directory.")
-      long_error_message <- paste(long_error_message, collapse = '')
-      shinyalert("Error loading manufacturer install data", long_error_message)
-      error_check_passed = FALSE
-    }
-    off_grid_postcodes <- "inbuilt_data/off_grid_postcodes.csv"
-    if (!file.exists(off_grid_postcodes)){
-      long_error_message <- c("The required file off_grid_postcodes could ",
-                              "not be found. Please add it to the inbuilt_data directory.")
-      long_error_message <- paste(long_error_message, collapse = '')
-      shinyalert("Error loading off grid post code data", long_error_message)
-      error_check_passed = FALSE
-    }
 
-      if (error_check_passed){
-        site_details_raw <- v$db$get_site_details_raw()
-        site_details_raw <- process_raw_site_details(site_details_raw)
-        v$site_details <- mutate(site_details_raw, clean = 'raw')
-        
-        if (v$db$check_if_table_exists('site_details_cleaned')){
-          site_details_clean <- v$db$get_site_details_cleaned()
-          site_details_clean <- process_raw_site_details(site_details_clean)
-          site_details_clean <- mutate(site_details_clean, clean = 'clean')
-          v$site_details <- bind_rows(v$site_details, site_details_clean)
-          
-          v$site_details_for_editing <- v$db$get_site_details_cleaning_report()
-          v$site_details_for_editing <- filter(v$site_details_for_editing, s_state == region_to_load())
-          output$site_details_editor <- renderDT(isolate(v$site_details_for_editing), selection='single', rownames=FALSE, 
-                                                 editable=TRUE)
-          v$proxy_site_details_editor <- dataTableProxy('site_details_editor')
-        }
-        
-        v$site_details <- site_categorisation(v$site_details)
-        v$site_details <- size_grouping(v$site_details)
+      if (data$db$check_if_table_exists('circuit_details_cleaned')){
+        data$circuit_details_for_editing <- data$db$get_circuit_details_cleaning_report()
+        data$circuit_details_for_editing <- filter(data$circuit_details_for_editing, site_id %in% data$site_details_for_editing$site_id)
+        output$circuit_details_editor <- renderDT(isolate(data$circuit_details_for_editing), selection='single', 
+                                                  rownames=FALSE, editable=TRUE)
+        data$proxy_circuit_details_editor <- dataTableProxy('circuit_details_editor')
+      }
 
-        circuit_details_raw <- v$db$get_circuit_details_raw()
-        v$circuit_details <- mutate(circuit_details_raw, clean = 'raw')
-        v$circuit_details_raw <- v$circuit_details
-        
-        if (v$db$check_if_table_exists('circuit_details_cleaned')){
-          circuit_details_clean <- v$db$get_circuit_details_cleaned()
-          circuit_details_clean <- mutate(circuit_details_clean, clean = 'clean')
-          v$circuit_details <- bind_rows(v$circuit_details, circuit_details_clean)
-          
-          v$circuit_details_for_editing <- v$db$get_circuit_details_cleaning_report()
-          v$circuit_details_for_editing <- filter(v$circuit_details_for_editing, site_id %in% v$site_details_for_editing$site_id)
-          
-          output$circuit_details_editor <- renderDT(isolate(v$circuit_details_for_editing), selection='single', 
-                                                    rownames=FALSE, editable=TRUE)
-          v$proxy_circuit_details_editor <- dataTableProxy('circuit_details_editor')
-        }
-  
-        time_series_data <- process_time_series_data(time_series_data)
-  
-        v$combined_data <- inner_join(time_series_data, v$circuit_details, by = "c_id")
-        v$combined_data <- inner_join(v$combined_data, v$site_details, by = c("site_id", "clean"))
-        
-        v$combined_data <- perform_power_calculations(v$combined_data)
-        
-        removeNotification(id)
-  
-  
-        # Load in the install data from CSV.
-        install_data <- read.csv(file = install_data_file, header = TRUE, stringsAsFactors = FALSE)
-        v$install_data <- process_install_data(install_data)
-        
-        manufacturer_install_data <- read.csv(file = cer_manufacturer_data, header = TRUE, stringsAsFactors = FALSE)
-        v$manufacturer_install_data <- calc_installed_capacity_by_standard_and_manufacturer(manufacturer_install_data)
-        
-        postcode_data_file <- "inbuilt_data/PostcodesLatLongQGIS.csv"
-        postcode_data <- read.csv(file=postcode_data_file, header=TRUE, stringsAsFactors = FALSE)
-        v$postcode_data <- process_postcode_data(postcode_data)
-        
-        off_grid_postcodes <- "inbuilt_data/off_grid_postcodes.csv"
-        v$off_grid_postcodes <- read.csv(file=off_grid_postcodes, header=TRUE, stringsAsFactors = FALSE)
-        v$off_grid_postcodes <- v$off_grid_postcodes$postcodes
-        
-        if(frequency_data_file()!=''){
-          v$frequency_data <- read.csv(file=frequency_data_file(), header=TRUE, stringsAsFactors = FALSE)
-          v$frequency_data <- mutate(v$frequency_data, 
-                                     ts=as.POSIXct(strptime(ts, "%Y-%m-%d %H:%M:%S", tz="Australia/Brisbane")))
-        } else {
-          v$frequency_data <- data.frame()
-        }
-        
-        # Get offset filter options and label
-        v$combined_data <- get_time_offsets(v$combined_data)
-        v$unique_offsets <- get_time_series_unique_offsets(v$combined_data)
-        sample_counts <- get_offset_sample_counts(v$combined_data, v$unique_offsets)
-        unique_offsets_filter_label <- make_offset_filter_label(sample_counts, v$unique_offsets)
-        
-        
-        # Filtering option widgets are rendered after the data is loaded, this is 
-        # because they are only usable once there is data to filter. Additionally
-        # The data loaded can then be used to create the appropraite options for 
-        # filtering.
-        output$postcodes <- renderUI({
-          selectizeInput("postcodes", label=strong("Select postcodes"), choices = sort(unique(v$site_details$s_postcode)), 
+      # Filtering option widgets are rendered after the data is loaded, this is 
+      # because they are only usable once there is data to filter. Additionally
+      # The data loaded can then be used to create the appropraite options for 
+      # filtering.
+      output$postcodes <- renderUI({
+        selectizeInput("postcodes", label=strong("Select postcodes"), choices = sort(unique(v$site_details$s_postcode)), 
+                      multiple=TRUE)  
+        })
+      output$manufacturers <- renderUI({
+        selectizeInput("manufacturers", label=strong("Select manufacturers"), 
+                        choices = sort(unique(v$site_details$manufacturer)), multiple=TRUE)  
+      })
+      output$models <- renderUI({
+        selectizeInput("models", label=strong("Select models"), choices = sort(unique(v$site_details$model)), multiple=TRUE)  
+      })
+      output$sites <- renderUI({
+        selectizeInput("sites", label=strong("Select Sites"), choices = sort(unique(v$site_details$site_id)), multiple=TRUE)  
+      })
+      output$circuits <- renderUI({
+        selectizeInput("circuits", label=strong("Select Circuits"), choices = sort(unique(v$circuit_details$c_id)), 
                         multiple=TRUE)  
-          })
-        output$manufacturers <- renderUI({
-          selectizeInput("manufacturers", label=strong("Select manufacturers"), 
-                         choices = sort(unique(v$site_details$manufacturer)), multiple=TRUE)  
+      })
+      shinyjs::show("standard_agg")
+      output$size_groupings <- renderUI({
+        checkboxGroupButtons(inputId="size_groupings", label=strong("Size Groupings"),
+                              choices=list("30-100kW", "<30 kW"), selected=list("30-100kW", "<30 kW"),
+                              justified=TRUE, status="primary", individual=TRUE,
+                              checkIcon=list(yes=icon("ok", lib="glyphicon"),no=icon("remove", lib="glyphicon")),
+                              direction = "vertical")
+      })
+      output$cleaned <- renderUI({
+        checkboxGroupButtons(inputId="cleaned", 
+                              label=strong("Data sets"), choices=list("clean", "raw"),
+                              selected=list("clean"),
+                              justified=TRUE, status="primary", individual=TRUE,
+                              checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")),
+                              direction = "vertical")
+      })
+      output$StdVersion <- renderUI({
+        checkboxGroupButtons(inputId="StdVersion", 
+                              label=strong("AS47777 Version:"), choices=list("AS4777.3:2005", "Transition", 
+                                                                            "AS4777.2:2015", "AS4777.2:2015 VDRT"),
+                              selected=list("AS4777.3:2005", "Transition", "AS4777.2:2015", "AS4777.2:2015 VDRT"),
+                              justified=TRUE, status="primary", individual=TRUE,
+                              checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")),
+                              direction = "vertical")
         })
-        output$models <- renderUI({
-          selectizeInput("models", label=strong("Select models"), choices = sort(unique(v$site_details$model)), multiple=TRUE)  
-        })
-        output$sites <- renderUI({
-          selectizeInput("sites", label=strong("Select Sites"), choices = sort(unique(v$site_details$site_id)), multiple=TRUE)  
-        })
-        output$circuits <- renderUI({
-          selectizeInput("circuits", label=strong("Select Circuits"), choices = sort(unique(v$circuit_details$c_id)), 
-                         multiple=TRUE)  
-        })
-        shinyjs::show("standard_agg")
-        output$size_groupings <- renderUI({
-          checkboxGroupButtons(inputId="size_groupings", label=strong("Size Groupings"),
-                               choices=list("30-100kW", "<30 kW"), selected=list("30-100kW", "<30 kW"),
-                               justified=TRUE, status="primary", individual=TRUE,
-                               checkIcon=list(yes=icon("ok", lib="glyphicon"),no=icon("remove", lib="glyphicon")),
-                               direction = "vertical")
-        })
-        output$cleaned <- renderUI({
-          checkboxGroupButtons(inputId="cleaned", 
-                               label=strong("Data sets"), choices=list("clean", "raw"),
-                               selected=list("clean"),
-                               justified=TRUE, status="primary", individual=TRUE,
-                               checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")),
-                               direction = "vertical")
-        })
-        output$StdVersion <- renderUI({
-          checkboxGroupButtons(inputId="StdVersion", 
-                               label=strong("AS47777 Version:"), choices=list("AS4777.3:2005", "Transition", 
-                                                                              "AS4777.2:2015", "AS4777.2:2015 VDRT"),
-                               selected=list("AS4777.3:2005", "Transition", "AS4777.2:2015", "AS4777.2:2015 VDRT"),
-                               justified=TRUE, status="primary", individual=TRUE,
-                               checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")),
-                               direction = "vertical")
-          })
-        output$responses <- renderUI({
-          checkboxGroupButtons(inputId="responses", 
-                               label=strong("Select Responses:"),
-                               choices=list("1 Ride Through", "2 Curtail", "3 Drop to Zero", "4 Disconnect","5 Off at t0", 
-                                            "6 Not enough data", "7 UFLS Dropout", "Undefined", NA),
-                               selected=list("1 Ride Through", "2 Curtail", "3 Drop to Zero", "4 Disconnect",
-                                             "5 Off at t0", "6 Not enough data", "7 UFLS Dropout", "Undefined", NA),
-                               justified=TRUE, status="primary", individual=TRUE,
-                               checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")),
-                               direction = "vertical")
-        })
-        output$zones <- renderUI({
-          checkboxGroupButtons(inputId="zones", label=strong("Zones"), 
-                               choices=list("1 Zone", "2 Zone", "3 Zone", "Undefined", NA),
-                               selected=list("1 Zone", "2 Zone", "3 Zone", "Undefined", NA), 
-                               justified=TRUE, status="primary", individual=TRUE,
-                               checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")),
-                               direction = "vertical")
-        })
-        output$compliance <- renderUI({
-          checkboxGroupButtons(inputId="compliance", label=strong("Compliance"), 
-                               choices=list("Compliant", "Non-compliant Responding", 
+      output$responses <- renderUI({
+        checkboxGroupButtons(inputId="responses", 
+                              label=strong("Select Responses:"),
+                              choices=list("1 Ride Through", "2 Curtail", "3 Drop to Zero", "4 Disconnect","5 Off at t0", 
+                                          "6 Not enough data", "7 UFLS Dropout", "Undefined", NA),
+                              selected=list("1 Ride Through", "2 Curtail", "3 Drop to Zero", "4 Disconnect",
+                                            "5 Off at t0", "6 Not enough data", "7 UFLS Dropout", "Undefined", NA),
+                              justified=TRUE, status="primary", individual=TRUE,
+                              checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")),
+                              direction = "vertical")
+      })
+      output$zones <- renderUI({
+        checkboxGroupButtons(inputId="zones", label=strong("Zones"), 
+                              choices=list("1 Zone", "2 Zone", "3 Zone", "Undefined", NA),
+                              selected=list("1 Zone", "2 Zone", "3 Zone", "Undefined", NA), 
+                              justified=TRUE, status="primary", individual=TRUE,
+                              checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")),
+                              direction = "vertical")
+      })
+      output$compliance <- renderUI({
+        checkboxGroupButtons(inputId="compliance", label=strong("Compliance"), 
+                              choices=list("Compliant", "Non-compliant Responding", 
+                                          "Non-compliant", "UFLS Dropout", "Disconnect/Drop to Zero",
+                                          "Off at t0", "Not enough data", "Undefined", NA),
+                              selected=list("Compliant", "Non-compliant Responding", 
                                             "Non-compliant", "UFLS Dropout", "Disconnect/Drop to Zero",
-                                            "Off at t0", "Not enough data", "Undefined", NA),
-                               selected=list("Compliant", "Non-compliant Responding", 
-                                             "Non-compliant", "UFLS Dropout", "Disconnect/Drop to Zero",
-                                             "Off at t0", "Not enough data", "Undefined", NA), 
-                               justified=TRUE, status="primary", individual=TRUE,
-                               checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")),
-                               direction = "vertical")
-        })
-        output$reconnection_compliance <- renderUI({
-          checkboxGroupButtons(inputId="reconnection_compliance", label=strong("Reconnection Compliance"), 
-                               choices=list("Compliant", "Non Compliant", 
+                                            "Off at t0", "Not enough data", "Undefined", NA), 
+                              justified=TRUE, status="primary", individual=TRUE,
+                              checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")),
+                              direction = "vertical")
+      })
+      output$reconnection_compliance <- renderUI({
+        checkboxGroupButtons(inputId="reconnection_compliance", label=strong("Reconnection Compliance"), 
+                              choices=list("Compliant", "Non Compliant", 
+                                          "Unsure", "Cannot be set", NA),
+                              selected=list("Compliant", "Non Compliant", 
                                             "Unsure", "Cannot be set", NA),
-                               selected=list("Compliant", "Non Compliant", 
-                                             "Unsure", "Cannot be set", NA),
-                               justified=TRUE, status="primary", individual=TRUE,
-                               checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")),
-                               direction = "vertical")
-        })
-        output$offsets <- renderUI({
-          checkboxGroupButtons(inputId="offsets", label=unique_offsets_filter_label, 
-                               choices=v$unique_offsets, selected=c(v$unique_offsets[which.max(sample_counts)]) ,
-                               justified=TRUE, status="primary", individual=TRUE,
-                               checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")),
-                               direction = "vertical")
-        })
-        shinyjs::show("raw_upscale")
-        shinyjs::show("pst_agg")
-        shinyjs::show("grouping_agg")
-        shinyjs::show("grouping_agg")
-        shinyjs::show("manufacturer_agg")
-        shinyjs::show("response_agg")
-        shinyjs::show("circuit_agg")
-        shinyjs::show("zone_agg")
-        shinyjs::show("compliance_agg")
-        shinyjs::show("reconnection_compliance_agg")
-        shinyjs::show("save_settings")
-        shinyjs::show("load_second_filter_settings")
-        shinyjs::show("norm_power_filter_off_at_t0")
-        shinyjs::show("confidence_category")
-        output$event_date <- renderUI({
-          dateInput("event_date", label=strong('Event date (yyyy-mm-dd):'), 
-                    value=strftime(floor_date(get_mode(v$combined_data$ts), "day"), format="%Y-%m-%d"), startview="year")
-        })
-        output$pre_event_interval <- renderUI({
-          timeInput("pre_event_interval", label=strong('Pre-event time interval (Needs to match exactly to data timestamp)'), 
-                    value = as.POSIXct("12:13:55",format="%H:%M:%S"))
-        })
-        output$window_length <- renderUI({
-          numericInput("window_length", label=strong('Set window length (min),
-                                                     Only data in this window is used for response analysis.'), 
-                       value=5, min = 1, max = 100, step = 1)
-        })
-        output$post_event_ufls_window_length <- renderUI({
-          numericInput("post_event_ufls_window_length", label=strong('Set post event UFLS window length (min)'), 
-                       value=5, min = 1, max = 100, step = 1)
-        })
-        output$event_latitude <- renderUI({
-          numericInput("event_latitude", label=strong('Set event latitude'), value=-28.838132)
-        })
-        output$event_longitude <- renderUI({
-          numericInput("event_longitude", label=strong('Set event longitude'), value=151.096832)
-        })
-        output$zone_one_radius <- renderUI({
-          numericInput("zone_one_radius", label=strong('Set zone one outer radius (km)'), value=200)
-        })
-        output$zone_two_radius <- renderUI({
-          numericInput("zone_two_radius", label=strong('Set zone two outer radius (km)'), value=600)
-        })
-        output$zone_three_radius <- renderUI({
-          numericInput("zone_three_radius", label=strong('Set zone three outer radius (km)'), value=1000)
-        })
-        output$update_plots <- renderUI({
-          actionButton("update_plots", "Update plots")
-        })
-      }
+                              justified=TRUE, status="primary", individual=TRUE,
+                              checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")),
+                              direction = "vertical")
+      })
+      sample_counts <- get_offset_sample_counts(data$combined_data, data$unique_offsets)
+      unique_offsets_filter_label <- make_offset_filter_label(sample_counts, data$unique_offsets)
+      output$offsets <- renderUI({
+        checkboxGroupButtons(inputId="offsets", label=unique_offsets_filter_label, 
+                              choices=v$unique_offsets, selected=c(v$unique_offsets[which.max(sample_counts)]) ,
+                              justified=TRUE, status="primary", individual=TRUE,
+                              checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")),
+                              direction = "vertical")
+      })
+      shinyjs::show("raw_upscale")
+      shinyjs::show("pst_agg")
+      shinyjs::show("grouping_agg")
+      shinyjs::show("grouping_agg")
+      shinyjs::show("manufacturer_agg")
+      shinyjs::show("response_agg")
+      shinyjs::show("circuit_agg")
+      shinyjs::show("zone_agg")
+      shinyjs::show("compliance_agg")
+      shinyjs::show("reconnection_compliance_agg")
+      shinyjs::show("save_settings")
+      shinyjs::show("load_second_filter_settings")
+      shinyjs::show("norm_power_filter_off_at_t0")
+      shinyjs::show("confidence_category")
+      output$event_date <- renderUI({
+        dateInput("event_date", label=strong('Event date (yyyy-mm-dd):'), 
+                  value=strftime(floor_date(get_mode(v$combined_data$ts), "day"), format="%Y-%m-%d"), startview="year")
+      })
+      output$pre_event_interval <- renderUI({
+        timeInput("pre_event_interval", label=strong('Pre-event time interval (Needs to match exactly to data timestamp)'), 
+                  value = as.POSIXct("12:13:55",format="%H:%M:%S"))
+      })
+      output$window_length <- renderUI({
+        numericInput("window_length", label=strong('Set window length (min),
+                                                    Only data in this window is used for response analysis.'), 
+                      value=5, min = 1, max = 100, step = 1)
+      })
+      output$post_event_ufls_window_length <- renderUI({
+        numericInput("post_event_ufls_window_length", label=strong('Set post event UFLS window length (min)'), 
+                      value=5, min = 1, max = 100, step = 1)
+      })
+      output$event_latitude <- renderUI({
+        numericInput("event_latitude", label=strong('Set event latitude'), value=-28.838132)
+      })
+      output$event_longitude <- renderUI({
+        numericInput("event_longitude", label=strong('Set event longitude'), value=151.096832)
+      })
+      output$zone_one_radius <- renderUI({
+        numericInput("zone_one_radius", label=strong('Set zone one outer radius (km)'), value=200)
+      })
+      output$zone_two_radius <- renderUI({
+        numericInput("zone_two_radius", label=strong('Set zone two outer radius (km)'), value=600)
+      })
+      output$zone_three_radius <- renderUI({
+        numericInput("zone_three_radius", label=strong('Set zone three outer radius (km)'), value=1000)
+      })
+      output$update_plots <- renderUI({
+        actionButton("update_plots", "Update plots")
+      })
+    }
     removeNotification(id)
   })
 
@@ -1784,6 +1859,8 @@ server <- function(input,output,session){
     settings$confidence_category <- confidence_category()
     settings$raw_upscale <- raw_upscale()
     settings$load_date <- load_date()
+    settings$load_start_date <- load_start_date()
+    settings$load_end_date <- load_end_date()
     
     settings$pre_event_interval <- pre_event_interval()
     settings$window_length <- window_length()
