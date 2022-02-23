@@ -353,12 +353,12 @@ ideal_response_from_frequency <- function(frequency_data, region_to_load) {
 }
 
 #' Apply user filters to combined data
-filter_combined_data <- function(combined_data, off_grid_postcodes, clean, size_groupings, standards, postcodes,
+filter_combined_data <- function(combined_data, off_grid_postcodes, cleaned, size_groupings, standards, postcodes,
                                 manufacturers, models, sites, circuits) {
   logdebug("Apply user filters to combined data", logger="shinyapp")
   combined_data_f <- combined_data
   site_types <- c("pv_site_net", "pv_site", "pv_inverter_net", "pv_inverter")
-  if (length(clean) > 0) {combined_data_f <- filter(combined_data_f, clean %in% clean)}
+  if (length(cleaned) > 0) {combined_data_f <- filter(combined_data_f, clean %in% cleaned)}
   combined_data_f <- filter(combined_data_f, sum_ac<=100)
   if (length(site_types) > 0 ) {combined_data_f <- filter(combined_data_f, con_type %in% site_types)}
   if (length(off_grid_postcodes) > 0 ) {
@@ -525,7 +525,7 @@ run_analysis <- function(data, settings) {
 
     # -------- filter combined data by user filters --------
     combined_data_f <- filter_combined_data(
-      data$combined_data, data$off_grid_postcodes, settings$clean, settings$size_groupings, settings$standards,
+      data$combined_data, data$off_grid_postcodes, settings$cleaned, settings$size_groupings, settings$standards,
       settings$postcodes, settings$manufacturers, settings$models, settings$sites, settings$circuits
     )
 
