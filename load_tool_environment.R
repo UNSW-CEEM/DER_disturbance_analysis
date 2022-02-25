@@ -47,3 +47,5 @@ source("preprocess_cer_data/calc_installed_capacity_by_standard_and_manufacturer
 source("ufls_detection/ufls_detection_tstamp.R")
 source("ufls_detection/ufls_detection_voltage.R")
 source("island_assessment/island_assessment_functions.R")
+source("load_data/load_data.R")
+source("run_analysis/run_analysis.R")
