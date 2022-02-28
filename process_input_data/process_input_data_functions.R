@@ -102,7 +102,7 @@ process_install_data <- function(install_data){
   install_data <- site_categorisation(install_data)
   # Convert column names to same format as solar analytics data.
   install_data <- setnames(install_data, c("pv_installation_year_month"), c("date"))
-  # For each inverter standard group find the intall capacity when the standard
+  # For each inverter standard group find the install capacity when the standard
   # came into force.
   start_date =min(install_data$date)
   installed_start_standard <- group_by(install_data, Standard_Version, Grouping, s_state)
@@ -188,15 +188,31 @@ site_categorisation <- function(combined_data){
                     paste0(pv_installation_year_month, "-28"))) %>% 
     mutate(pv_installation_year_month = ymd(pv_installation_year_month)) %>% 
     mutate(Standard_Version=ifelse(pv_installation_year_month < "2015-10-01", "AS4777.3:2005", "")) %>%
+    # Assumes that systems installed during October 2015 are "transition"
     mutate(Standard_Version=ifelse(pv_installation_year_month >= "2015-10-01" & 
                                    pv_installation_year_month < "2016-11-01", "Transition", Standard_Version)) %>%
-    mutate(Standard_Version=ifelse(pv_installation_year_month >= "2016-11-01" & s_state != 'SA',
+    # Assumes that systems installed during October 2016 are "transition", systems installed in Nov 2016 are "2015 std"
+    # Also assumes that standards installed during December 2020 are "transition 2"
+    mutate(Standard_Version=ifelse(pv_installation_year_month >= "2016-11-01" & s_state != 'SA' & 
+                                     pv_installation_year_month < "2020-12-01",
                                    "AS4777.2:2015", Standard_Version)) %>%
+    # Treat SA systems separately to identify VDRT
     mutate(Standard_Version=ifelse(pv_installation_year_month >= "2016-11-01" & 
                                    pv_installation_year_month < "2020-10-01" & s_state == 'SA',
                                    "AS4777.2:2015", Standard_Version)) %>%
-    mutate(Standard_Version=ifelse(pv_installation_year_month >= "2020-10-01" & s_state == 'SA',
-                                   "AS4777.2:2015 VDRT", Standard_Version))
+    # Systems installed in SA during October 2020
+    # New assumption: systems installed during December 2020 are "transition 2". This means the VDRT group will be small
+    mutate(Standard_Version=ifelse(pv_installation_year_month >= "2020-10-01" & s_state == 'SA' &
+                                     pv_installation_year_month < "2020-12-01",
+                                   "AS4777.2:2015 VDRT", Standard_Version)) %>%
+    # Assumes systems installed during December 2020 are "transition 2", and during December 2021 are "transition 2"
+    mutate(Standard_Version=ifelse(pv_installation_year_month >= "2020-12-01" &
+                                     pv_installation_year_month < "2022-01-01", 
+                                   "Transition 2020-21", Standard_Version)) %>%
+    # Assumes systems installed during January 2022 (and onwards) are 
+    mutate(Standard_Version=ifelse(pv_installation_year_month >= "2022-01-01",
+                                   "AS4777.2:2020", Standard_Version))
+    
   return(combined_data)
 }
 
