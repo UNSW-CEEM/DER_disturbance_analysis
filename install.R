@@ -1,5 +1,4 @@
 install.packages("versions")
-install.packages("logging")
 library("versions")
 install_type <- 'binary'
 install.versions(c('shiny'), c('1.4.0.2'), type=install_type)
