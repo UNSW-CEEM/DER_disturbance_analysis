@@ -1,7 +1,7 @@
 install.packages("versions")
 install.packages("logging")
 library("versions")
-install_type = 'binary'
+install_type <- 'binary'
 install.versions(c('shiny'), c('1.4.0.2'), type=install_type)
 install.versions(c('shinyalert'), c('2.0.0'), type=install_type)
 install.versions(c('shinyTime'), c('1.0.1'), type=install_type)
@@ -26,5 +26,6 @@ install.versions(c('padr'), c('0.5.1'), type=install_type)
 install.versions(c('sqldf'), c('0.4-11'), type=install_type)
 install.versions(c('gridExtra'), c('2.3'), type=install_type)
 install.versions(c('rjson'), c('0.2.20'), type=install_type)
-install.versions(c('R6'), c('2.5.0'), type=install_type)install.versions(c('git2r'), c('0.29.0'), type=install_type)
+install.versions(c('R6'), c('2.5.0'), type=install_type)
+install.versions(c('git2r'), c('0.29.0'), type=install_type)
 install.versions(c('logging'), c('0.10-108'), type=install_type)
