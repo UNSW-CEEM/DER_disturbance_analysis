@@ -200,8 +200,8 @@ site_categorisation <- function(combined_data){
     mutate(Standard_Version=ifelse(pv_installation_year_month >= "2016-11-01" & 
                                    pv_installation_year_month < "2020-10-01" & s_state == 'SA',
                                    "AS4777.2:2015", Standard_Version)) %>%
-    # Systems installed in SA during October 2020
-    # New assumption: systems installed during December 2020 are "transition 2". This means the VDRT group will be small
+    # Assumes systems installed in SA during October 2020 are 2015 VDRT" and systems installed during December 2020 
+    # are "transition 2". This means the VDRT group will be small (only 2mon).
     mutate(Standard_Version=ifelse(pv_installation_year_month >= "2020-10-01" & s_state == 'SA' &
                                      pv_installation_year_month < "2020-12-01",
                                    "AS4777.2:2015 VDRT", Standard_Version)) %>%
