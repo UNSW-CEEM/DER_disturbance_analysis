@@ -534,11 +534,11 @@ server <- function(input,output,session){
         logging::logwarn(paste(warning$title, warning$body), logger=app_logger)
       }
     }
-    # do not proceed if erros have been raised
+    # do not proceed if errors have been raised
     if (length(errors$errors) > 0) {
       for (error in errors$errors) {
         shinyalert(error$title, error$body)
-        logging::logerror(paste(warning$title, warning$body), logger=app_logger)
+        logging::logerror(paste(error$title, error$body), logger=app_logger)
       }
     } else {
       if (v$db$check_if_table_exists('site_details_cleaned')){
@@ -709,6 +709,7 @@ server <- function(input,output,session){
 
   # Create plots when update plots button is clicked.
   observeEvent(input$update_plots, {
+    id <- showNotification("Updating plots", duration=1000)
     logdebug("update_plots event triggered", logger=app_logger)
 
     data <- reactiveValuesToList(v)
@@ -731,7 +732,7 @@ server <- function(input,output,session){
     if (length(errors$errors) > 0) {
       for (error in errors$errors) {
         shinyalert(error$title, error$body)
-        logging::logerror(paste(warning$title, warning$body), logger=app_logger)
+        logging::logerror(paste(error$title, error$body), logger=app_logger)
       }
     }
 
