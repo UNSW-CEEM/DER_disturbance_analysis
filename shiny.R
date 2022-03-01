@@ -598,8 +598,10 @@ server <- function(input,output,session){
       output$StdVersion <- renderUI({
         checkboxGroupButtons(inputId="StdVersion", 
                               label=strong("AS47777 Version:"), choices=list("AS4777.3:2005", "Transition", 
-                                                                            "AS4777.2:2015", "AS4777.2:2015 VDRT"),
-                              selected=list("AS4777.3:2005", "Transition", "AS4777.2:2015", "AS4777.2:2015 VDRT"),
+                                                                            "AS4777.2:2015", "AS4777.2:2015 VDRT", 
+                                                                            "Transition 2020-21", "AS4777.2:2020"),
+                              selected=list("AS4777.3:2005", "Transition", "AS4777.2:2015", "AS4777.2:2015 VDRT", 
+                                            "Transition 2020-21", "AS4777.2:2020"),
                               justified=TRUE, status="primary", individual=TRUE,
                               checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")),
                               direction = "vertical")
