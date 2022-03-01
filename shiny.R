@@ -541,20 +541,20 @@ server <- function(input,output,session){
         logging::logerror(paste(warning$title, warning$body), logger=app_logger)
       }
     } else {
-      if (data$db$check_if_table_exists('site_details_cleaned')){
-        data$site_details_for_editing <- data$db$get_site_details_cleaning_report()
-        data$site_details_for_editing <- filter(data$site_details_for_editing, s_state == settings$region_to_load)
-        output$site_details_editor <- renderDT(isolate(data$site_details_for_editing), selection='single', rownames=FALSE, 
+      if (v$db$check_if_table_exists('site_details_cleaned')){
+        v$site_details_for_editing <- v$db$get_site_details_cleaning_report()
+        v$site_details_for_editing <- filter(v$site_details_for_editing, s_state == settings$region_to_load)
+        output$site_details_editor <- renderDT(isolate(v$site_details_for_editing), selection='single', rownames=FALSE, 
                                                 editable=TRUE)
-        data$proxy_site_details_editor <- dataTableProxy('site_details_editor')
+        v$proxy_site_details_editor <- dataTableProxy('site_details_editor')
       }
 
-      if (data$db$check_if_table_exists('circuit_details_cleaned')){
-        data$circuit_details_for_editing <- data$db$get_circuit_details_cleaning_report()
-        data$circuit_details_for_editing <- filter(data$circuit_details_for_editing, site_id %in% data$site_details_for_editing$site_id)
-        output$circuit_details_editor <- renderDT(isolate(data$circuit_details_for_editing), selection='single', 
+      if (v$db$check_if_table_exists('circuit_details_cleaned')){
+        v$circuit_details_for_editing <- v$db$get_circuit_details_cleaning_report()
+        v$circuit_details_for_editing <- filter(v$circuit_details_for_editing, site_id %in% v$site_details_for_editing$site_id)
+        output$circuit_details_editor <- renderDT(isolate(v$circuit_details_for_editing), selection='single', 
                                                   rownames=FALSE, editable=TRUE)
-        data$proxy_circuit_details_editor <- dataTableProxy('circuit_details_editor')
+        v$proxy_circuit_details_editor <- dataTableProxy('circuit_details_editor')
       }
 
       # Filtering option widgets are rendered after the data is loaded, this is 
@@ -645,8 +645,8 @@ server <- function(input,output,session){
                               checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")),
                               direction = "vertical")
       })
-      sample_counts <- get_offset_sample_counts(data$combined_data, data$unique_offsets)
-      unique_offsets_filter_label <- make_offset_filter_label(sample_counts, data$unique_offsets)
+      sample_counts <- get_offset_sample_counts(v$combined_data, v$unique_offsets)
+      unique_offsets_filter_label <- make_offset_filter_label(sample_counts, v$unique_offsets)
       output$offsets <- renderUI({
         checkboxGroupButtons(inputId="offsets", label=unique_offsets_filter_label, 
                               choices=v$unique_offsets, selected=c(v$unique_offsets[which.max(sample_counts)]) ,
