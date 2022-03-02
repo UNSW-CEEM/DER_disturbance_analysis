@@ -1,5 +1,10 @@
 
-ideal_response <- function(frequency_data){
+ideal_response <- function(frequency_data, f_ulco, f_hyst, t_hyst, f_upper){
+  # f_ulco = upper limit of continuous operation, i.e. the point at which f-W droop should start. 
+  # f_hyst = the hysteresis frequency value and 
+  # t_hyst = the hysteresis time in seconds, 
+  # i.e. once the frequency has been within f_hyst of f_ulco for t_hyst then the system should end f-W and ramp back up.
+  # f_upper is the frequency droop response upper limit. Default 52Hz in most cases.
   frequency_data <- frequency_data[order(frequency_data$ts),]
   start_times <- c()
   end_times <- c()
@@ -7,26 +12,38 @@ ideal_response <- function(frequency_data){
   f <- c()
   norm_power <- c()
   for(i in 1:length(frequency_data$ts)){
-    last_60_seconds_of_data <- filter(frequency_data, (ts>frequency_data$ts[i]-60) & (ts<=frequency_data$ts[i]))
-    if(frequency_data$f[i]>=50.25 & length(start_times)==length(end_times)){
+    # Look at last t_hyst seconds of data, the 2015 std default is 60s
+    last_60_seconds_of_data <- filter(frequency_data, (ts>frequency_data$ts[i]-t_hyst) & (ts<=frequency_data$ts[i]))
+    # If there is a new over-frequency event (i.e. frequency goes above 50.25Hz and we're not already in a f-W droop) 
+    # then record this as a new start time.
+    if(frequency_data$f[i]>=f_ulco & length(start_times)==length(end_times)){
       start_times <- c(start_times, frequency_data$ts[i])
+      # And if we don't have any data yet in the ts, then it's the first event, so record this ts. Else append this ts.
       if(length(ts)==0){
         ts <- c(frequency_data$ts[i])
       }else{
           ts <- c(ts, frequency_data$ts[i])
       }
+      # Also record this frequency.
       f <- c(f, frequency_data$f[i])
+      # Ideal response profile at this time (when frequency is > 50.25Hz for the first time) is set to 1
       norm_power <- c(norm_power, 1)
-    } else if(max(last_60_seconds_of_data$f)<=50.15 & length(start_times)>length(end_times)){
+    # Check for whether the frequency has been below 50.15Hz for at least 60s for the first time since the droop start
+    } else if(max(last_60_seconds_of_data$f)<=(f_ulco-f_hyst) & length(start_times)>length(end_times)){
+      # If so, then add this time to end_times, record the ts, set norm_power to the last value in the norm power list
       end_times <- c(end_times, frequency_data$ts[i])
       ts <- c(ts, frequency_data$ts[i])
       norm_power <- c(norm_power, tail(norm_power, n=1))
       f <- c(f, frequency_data$f[i])
+    # If this interval is during a f-W droop window (may be the first interval!), then copy across these ts and 
+    # frequency data points
     } else if(length(start_times)>length(end_times)){
       ts <- c(ts, frequency_data$ts[i])
       f <- c(f, frequency_data$f[i])
-      if(frequency_data$f[i]>=50.25){
-        norm_power <- c(norm_power, min(norm_p_over_frequency(frequency_data$f[i]),tail(norm_power, n=1)))
+      # Check if frequency has reached a new maximum above 50.25Hz, else norm power is based on the previous norm power
+      if(frequency_data$f[i]>=f_ulco){
+        norm_power <- c(norm_power, min(norm_p_over_frequency(frequency_data$f[i], f_ulco, f_upper),
+                                        tail(norm_power, n=1)))
       } else {
         norm_power <- c(norm_power, tail(norm_power, n=1))
       }
@@ -36,10 +53,10 @@ ideal_response <- function(frequency_data){
   return(response_data)
 }
 
-norm_p_over_frequency <- function(f){
-  if(f>=50.25 & f<=52.00){
-    norm_p <- 1 - ((f-50.25)/(52-50.25))
-  } else if (f>52){
+norm_p_over_frequency <- function(f, f_ulco, f_upper){
+  if(f>=f_ulco & f<=f_upper){
+    norm_p <- 1 - ((f-f_ulco)/(f_upper-f_ulco))
+  } else if (f>f_upper){
     norm_p <- 0.0
   } else {
     norm_p = 1.0

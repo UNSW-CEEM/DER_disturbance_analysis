@@ -48,7 +48,7 @@ ideal_response_from_frequency <- function(frequency_data, region_to_load) {
     temp_f_data <- select(frequency_data, ts, region_to_load) 
     temp_f_data <- setnames(temp_f_data, c(region_to_load), c("f"))
     temp_f_data <- mutate(temp_f_data, f = as.numeric(f))
-    ideal_response_to_plot <- ideal_response(temp_f_data)
+    ideal_response_to_plot <- ideal_response(temp_f_data, f_ulco=50.25, f_hyst=0.1, t_hyst=60, f_upper=52.00)
   } else {
     temp_f_data <- data.frame()
     ideal_response_to_plot <- data.frame()
