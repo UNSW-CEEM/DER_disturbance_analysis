@@ -6,10 +6,13 @@ documentation_panel <- function(){
         provided in the corresponding site details record. If there are two or more records for any given site then
         the install date provided in the first record is used. Installation dates before 2015-10-01 are asigned to
         the AS4777.3:2005 standard, dates on or after 2015-10-01 and before 2016-11-01 are asigned to the Transition 
-        standard and dates on or after the 2016-11-01 are asigned to the AS4777.2:2015 standard. Where only a 
-        month and year are given for the installation date then an installation day of the 28th of the month is 
-        assumed. Where no date is given or the date cannot be converted to a datetime object then a date of 
-        2015-11-28 is assumed, placing the date in the Transition standard.'),
+        standard. Dates on or after the 2016-11-01 and before 2020-12-01 are asigned to the AS4777.2:2015 standard, 
+        except for South Australia where dates on or after 2020-10-01 are assigned to AS4777.2:2015 VDRT. Dates on or 
+        after 2020-12-01 and before 2022-01-01 are assigned to AS4777.2:2020. This means that only a small fraction of 
+        dates will be assigned to AS4777.2:2015 VDRT (i.e. install dates for South Australian systems during 2020-10 and 
+        2020-11). Dates Where only a month and year are given for the installation date then an installation day of the 
+        28th of the month is assumed. Where no date is given or the date cannot be converted to a datetime object then 
+        a date of 2015-11-28 is assumed, placing the date in the Transition standard.'),
     h4('Response category definition'),
     div('Circuits can be assigned one of 8 response types, 4 of which represent actual response types and 4 which
         provided a reason a circuit could not be categorised. The actual response categories are:'),
