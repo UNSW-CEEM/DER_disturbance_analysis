@@ -10,8 +10,9 @@ CER_MANUFACTURER_DATA <- "inbuilt_data/cer_cumulative_capacity_and_number_by_man
 OFF_GRID_POSTCODES <- "inbuilt_data/off_grid_postcodes.csv"
 POSTCODE_DATA_FILE <- "inbuilt_data/PostcodesLatLongQGIS.csv"
 
-#' Validate csv inputs
-#' 
+#' Ensure that load times are valid
+#' Optional errors argument will append errors & warnings to existing error list
+#' @return list of errors & warnings
 validate_load_times <- function(settings, errors) {
   if (missing(errors)) {
     errors <- list(warnings=list(), errors=list())
@@ -35,6 +36,9 @@ validate_load_times <- function(settings, errors) {
   return(errors)
 }
 
+#' Validate requried CSVs
+#' Optional errors argument will append errors & warnings to existing error list
+#' @return list of errors & warnings
 validate_required_files <- function(errors) {
   if (missing(errors)) {
     errors <- list(warnings=list(), errors=list())
@@ -60,6 +64,9 @@ validate_required_files <- function(errors) {
   return(errors)
 }
 
+#' Validates frequency csv columns
+#' Optional errors argument will append errors & warnings to existing error list
+#' @return list of errors & warnings
 validate_frequency_data <- function(settings, errors) {
   if (missing(errors)) {
     errors <- list(warnings=list(), errors=list())
@@ -89,6 +96,9 @@ validate_frequency_data <- function(settings, errors) {
   return(errors)
 }
 
+#' Validates timeseries data
+#' Optional errors argument will append errors & warnings to existing error list
+#' @return list of errors & warnings
 validate_timeseries_data <- function(time_series_data, errors) {
   if (missing(errors)) {
     errors <- list(warnings=list(), errors=list())
@@ -102,7 +112,7 @@ validate_timeseries_data <- function(time_series_data, errors) {
 }
 
 #' Load input from csvs specified in settings
-#' @returns data object updated to included data from csvs if successful, else errors
+#' @return data object updated to included data from csvs and any errors
 load_data <- function(data, settings) {
   error_check_passed <- TRUE
 
