@@ -12,7 +12,7 @@ ideal_response <- function(frequency_data, f_ulco, f_hyst, t_hyst, f_upper){
   f <- c()
   norm_power <- c()
   for(i in 1:length(frequency_data$ts)){
-    # Look at last t_hyst seconds of data, the 2015 std default is 60s
+    # Look at last t_hyst seconds of data (the 2015 std default is 60s, the 2020 std default is 20s)
     last_60_seconds_of_data <- filter(frequency_data, (ts>frequency_data$ts[i]-t_hyst) & (ts<=frequency_data$ts[i]))
     # If there is a new over-frequency event (i.e. frequency goes above 50.25Hz and we're not already in a f-W droop) 
     # then record this as a new start time.
@@ -24,7 +24,6 @@ ideal_response <- function(frequency_data, f_ulco, f_hyst, t_hyst, f_upper){
       }else{
           ts <- c(ts, frequency_data$ts[i])
       }
-      # Also record this frequency.
       f <- c(f, frequency_data$f[i])
       # Ideal response profile at this time (when frequency is > 50.25Hz for the first time) is set to 1
       norm_power <- c(norm_power, 1)
