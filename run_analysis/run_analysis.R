@@ -18,7 +18,7 @@ validate_pre_event_interval <- function(pre_event_interval, load_start_time, loa
   start_time <- as.POSIXct(load_start_time, tz = "Australia/Brisbane")
   end_time <- as.POSIXct(load_end_time, tz = "Australia/Brisbane")
   pre_event_interval <- as.POSIXct(pre_event_interval, tz = "Australia/Brisbane")
-  data_at_set_pre_event_interval = filter(data, ts == pre_event_interval)
+  data_at_set_pre_event_interval = filter(data, ts > pre_event_interval - d & ts <= pre_event_interval)
   if (dim(data_at_set_pre_event_interval)[1] == 0) {
     long_error_message <- c("The pre-event time interval does not match any time step in the time series data.")
     long_error_message <- paste(long_error_message, collapse = '')
@@ -104,7 +104,7 @@ ufls_detection <- function(
   combined_data_f <- mutate(combined_data_f, response_category =
                             if_else((ufls_status == "UFLS Dropout") |
                                       (ufls_status_v == "UFLS Dropout"),
-                                    "UFLS Dropout", response_category))
+                                    "UFLS Dropout", response_category, missing=response_category))
   return(combined_data_f)
 }
 
@@ -130,7 +130,7 @@ determine_distance_zones <- function(
 #' @return An updated dataframe with the column c_id_norm_power added
 normalise_c_id_power_by_pre_event <- function(combined_data_f, pre_event_interval) {
   logdebug('Calc event normalised power', logger=logger)
-  event_powers <- filter(combined_data_f, ts == pre_event_interval)
+  event_powers <- filter(combined_data_f, ts > pre_event_interval - d & ts <= pre_event_interval)
   event_powers <- mutate(event_powers, event_power=power_kW)
   event_powers <- select(event_powers, c_id, clean, event_power)
   combined_data_f <- left_join(combined_data_f, event_powers, by=c("c_id", "clean"))
@@ -146,7 +146,7 @@ normalise_c_id_power_by_daily_max <- function(combined_data, max_power, pre_even
   combined_data_f <- left_join(combined_data, max_power, by=c("c_id", "clean"))
   combined_data_f <- mutate(combined_data_f, c_id_daily_norm_power=power_kW/max_power)
   if (!missing(pre_event_interval)){
-    pre_event_daily_norm_power <- filter(combined_data_f, ts == pre_event_interval)
+    pre_event_daily_norm_power <- filter(combined_data_f, ts > pre_event_interval - d & ts <= pre_event_interval)
     pre_event_daily_norm_power <- mutate(pre_event_daily_norm_power, pre_event_norm_power = c_id_daily_norm_power)
     pre_event_daily_norm_power <- select(pre_event_daily_norm_power, clean, c_id, pre_event_norm_power)
     combined_data_f <- left_join(combined_data_f, pre_event_daily_norm_power, by=c("c_id", "clean"))
@@ -311,7 +311,7 @@ run_analysis <- function(data, settings) {
       combined_data_f <- normalise_c_id_power_by_daily_max(
         combined_data_f, max_power, settings$pre_event_interval
       )
-      event_window_data <- filter(combined_data_f, ts >= settings$pre_event_interval)
+      event_window_data <- filter(combined_data_f, ts > settings$pre_event_interval - d)
       reconnection_categories <- create_reconnection_summary(event_window_data, settings$pre_event_interval,
                                                               settings$disconnecting_threshold,
                                                               reconnect_threshold = settings$reconnection_threshold,
@@ -406,12 +406,12 @@ run_analysis <- function(data, settings) {
 
         # Combine data sets that have the same grouping so they can be saved in a single file
         if (no_grouping){
-          et <- settings$pre_event_interval
+          #et <- settings$pre_event_interval
           # agg_norm_power <- event_normalised_power(agg_norm_power, et, keep_site_id=TRUE)
           data$agg_power <- left_join(data$agg_power, data$agg_norm_power[, c("c_id_norm_power", "c_id", "Time")], 
                                     by=c("Time", "c_id"))
         } else {
-          et <- settings$pre_event_interval
+          #et <- settings$pre_event_interval
           # agg_norm_power <- event_normalised_power(agg_norm_power, et,  keep_site_id=FALSE)
           data$agg_power <- left_join(data$agg_power, data$agg_norm_power[, c("c_id_norm_power", "series", "Time")], 
                                     by=c("Time", "series"))
