@@ -1,6 +1,6 @@
 install.packages("versions")
 library("versions")
-install_type = 'binary'
+install_type <- 'binary'
 install.versions(c('shiny'), c('1.4.0.2'), type=install_type)
 install.versions(c('shinyalert'), c('2.0.0'), type=install_type)
 install.versions(c('shinyTime'), c('1.0.1'), type=install_type)
