@@ -2,7 +2,7 @@ classify_islands <- function(combined_data, alert_data, event_time, window_lengt
   # add col to circ_sum with islanded flags, also for freqwobble and undervoltage. 
   combined_data <- identify_islanded_sites(combined_data, alert_data, event_time)
   # determine which islanded sites can be classified as disconnect
-  event_window_data <- filter(combined_data, ts >= event_time & ts <= event_time + 60 * window_length)
+  event_window_data <- filter(combined_data, ts > event_time - d & ts <= event_time + 60 * window_length)
   event_window_data <- assess_islands(event_window_data)
   combined_data <- left_join(combined_data, event_window_data, on=c("c_id", "clean"))
   # replace response_category with island_assessment response

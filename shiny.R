@@ -808,7 +808,7 @@ server <- function(input,output,session){
     end_time <- as.POSIXct(load_end_time(), tz = "Australia/Brisbane")
 
     # check pre-event interval is on the selected time offset
-    data_at_set_pre_event_interval = filter(v$combined_data, ts == pre_event_interval())
+    data_at_set_pre_event_interval = filter(v$combined_data, ts > pre_event_interval() - d & ts <= pre_event_interval())
     if (dim(data_at_set_pre_event_interval)[1] == 0) {
       long_error_message <- c("The pre-event time interval does not match any time step in the time series data.")
       long_error_message <- paste(long_error_message, collapse = '')
@@ -879,7 +879,7 @@ server <- function(input,output,session){
         combined_data_f <- mutate(combined_data_f, response_category =
                                   if_else((ufls_status == 'UFLS Dropout') |
                                             (ufls_status_v == 'UFLS Dropout'),
-                                          'UFLS Dropout', response_category))
+                                          'UFLS Dropout', response_category, missing=response_category))
         alert_data <- v$db$get_alerts_data()
         if(length(alert_data$c_id) > 0){
           # run islanded site assessment
@@ -916,7 +916,7 @@ server <- function(input,output,session){
       }
 
       # Calc event normalised power
-      event_powers <- filter(combined_data_f, ts == pre_event_interval())
+      event_powers <- filter(combined_data_f, ts > pre_event_interval() - d & ts <= pre_event_interval())
       event_powers <- mutate(event_powers, event_power=power_kW)
       event_powers <- select(event_powers, c_id, clean, event_power)
       combined_data_f <- left_join(combined_data_f, event_powers, by=c("c_id", "clean"))
@@ -952,11 +952,11 @@ server <- function(input,output,session){
         max_power <- v$db$get_max_circuit_powers(region_to_load())
         combined_data_f <- left_join(combined_data_f, max_power, by=c("c_id", "clean"))
         combined_data_f <- mutate(combined_data_f, c_id_daily_norm_power=power_kW/max_power)
-        pre_event_daily_norm_power <- filter(combined_data_f, ts == pre_event_interval())
+        pre_event_daily_norm_power <- filter(combined_data_f, ts > pre_event_interval() - d & ts <= pre_event_interval())
         pre_event_daily_norm_power <- mutate(pre_event_daily_norm_power, pre_event_norm_power = c_id_daily_norm_power)
         pre_event_daily_norm_power <- select(pre_event_daily_norm_power, clean, c_id, pre_event_norm_power)
         combined_data_f <- left_join(combined_data_f, pre_event_daily_norm_power, by=c("c_id", "clean"))
-        event_window_data <- filter(combined_data_f, ts >= pre_event_interval())
+        event_window_data <- filter(combined_data_f, ts > pre_event_interval() - d)
         reconnection_categories <- create_reconnection_summary(event_window_data, pre_event_interval(),
                                                                disconnecting_threshold(),
                                                                reconnect_threshold = reconnection_threshold(),
@@ -1096,12 +1096,12 @@ server <- function(input,output,session){
 
           # Combine data sets that have the same grouping so they can be saved in a single file
           if (no_grouping){
-            et <- pre_event_interval()
+            #et <- pre_event_interval()
             # agg_norm_power <- event_normalised_power(agg_norm_power, et, keep_site_id=TRUE)
             v$agg_power <- left_join( v$agg_power, agg_norm_power[, c("c_id_norm_power", "c_id", "Time")],
                                       by=c("Time", "c_id"))
           } else {
-            et <- pre_event_interval()
+            #et <- pre_event_interval()
             # agg_norm_power <- event_normalised_power(agg_norm_power, et,  keep_site_id=FALSE)
             v$agg_power <- left_join(v$agg_power, agg_norm_power[, c("c_id_norm_power", "series", "Time")],
                                      by=c("Time", "series"))

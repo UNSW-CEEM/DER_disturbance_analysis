@@ -2,7 +2,7 @@ context("Testing the DER event analysis UFLS detection based on voltage")
 
 # Define constants
 window_length <- 5
-event_time <- "2018-01-01 13:11:55"
+event_time <- "2018-01-01 13:11:50"
 event_time <- as.POSIXct(strptime(event_time, "%Y-%m-%d %H:%M:%S", 
                                   tz="Australia/Brisbane"))
 ts_3_times <- c("2018-01-01 13:10:55", "2018-01-01 13:11:55", 
@@ -70,7 +70,7 @@ test_that("Test a UFLS example with no pre-event timesteps", {
   out <- ufls_detection_voltage(input_data, event_time, window_length)
   c_id <- c(1)
   pre_event_v_mean <- c(NA_integer_)
-  post_event_v_mean <- c(240)
+  post_event_v_mean <- c(239)
   ufls_status_v <- c(NA_character_)
   expected_output <- data.frame(c_id, pre_event_v_mean, post_event_v_mean, ufls_status_v, stringsAsFactors = FALSE)
   expect_equal(out, expected_output, tolerance=0.001)
