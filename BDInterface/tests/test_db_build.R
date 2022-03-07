@@ -1,10 +1,13 @@
 # Do not run this file directly, run testthat.R
 
 testthat::context("Testing the creation of a database from csv files.")
+is.nan.data.frame <- function(x)
+do.call(cbind, lapply(x, is.nan))
 
 
 load_test_file <- function(path_name){
   data <- read.csv(file = path_name, header = TRUE, stringsAsFactors = FALSE)
+  data[is.nan(data)] <- "NaN"
   return(data)
 }
 
