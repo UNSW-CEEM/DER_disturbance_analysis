@@ -159,23 +159,26 @@ test_that("Test the power calculations",{
 
 test_that("Test the standard categorisation function",{
   # Test input data
-  site_id <- c(101, 50, 10002, 89, 567, 111, 1)
-  s_state <- c("NSW", "NSW", "SA", "VIC", "QLD", "SA", "TAS")
-  sum_dc <- c(60, 60, 10, 60, 60, 10, 11)
-  first_ac <- c(60, 60, 10, 60, 60, 10, 11)
-  pv_installation_year_month <- c("", NA, "2015-01", "2015-10-09", "2015-11", "2016-10-09", "2017-10")
+  site_id <- c(101, 50, 10002, 89, 567, 111, 1, 88, 4, 155, 40)
+  s_state <- c("NSW", "NSW", "SA", "VIC", "QLD", "SA", "TAS", "SA", "SA", "QLD", "NSW")
+  sum_dc <- c(60, 60, 10, 60, 60, 10, 11, 12, 20, 5, 6)
+  first_ac <- c(60, 60, 10, 60, 60, 10, 11, 12, 20, 5, 6)
+  pv_installation_year_month <- c("", NA, "2015-01", "2015-10-09", "2015-11", "2016-10-09", "2017-10", "2020-10", 
+                                  "2020-12-08", "2021-02", "2022-01-14")
   test_site_details <- data.frame(site_id, s_state, sum_dc, first_ac,
                                   pv_installation_year_month,
                                   stringsAsFactors = FALSE)
   # Test output data
-  site_id <- c(101, 50, 10002, 89, 567, 111, 1)
-  s_state <- c("NSW", "NSW", "SA", "VIC", "QLD", "SA", "TAS")
-  sum_dc <- c(60, 60, 10, 60, 60, 10, 11)
-  first_ac <- c(60, 60, 10, 60, 60, 10, 11)
+  site_id <- c(101, 50, 10002, 89, 567, 111, 1, 88, 4, 155, 40)
+  s_state <- c("NSW", "NSW", "SA", "VIC", "QLD", "SA", "TAS", "SA", "SA", "QLD", "NSW")
+  sum_dc <- c(60, 60, 10, 60, 60, 10, 11, 12, 20, 5, 6)
+  first_ac <- c(60, 60, 10, 60, 60, 10, 11, 12, 20, 5, 6)
   pv_installation_year_month <- c(ymd("2015-11-28"), ymd("2015-11-28"), ymd("2015-01-28"), ymd("2015-10-09"),
-                                  ymd("2015-11-28"), ymd("2016-10-09"), ymd("2017-10-28"))
-  Standard_Version <- c("Transition", "Transition", "AS4777.3:2005", "Transition", "Transition", "Transition", 
-                        "AS4777.2:2015")
+                                  ymd("2015-11-28"), ymd("2016-10-09"), ymd("2017-10-28"), ymd("2020-10-28"), 
+                                  ymd("2020-12-08"), ymd("2021-02-28"), ymd("2022-01-14"))
+  Standard_Version <- c("Transition", "Transition", "AS4777.3:2005", "Transition", "Transition", 
+                        "Transition", "AS4777.2:2015", "AS4777.2:2015 VDRT", "Transition 2020-21", "Transition 2020-21", 
+                        "AS4777.2:2020")
   expected_answer <- data.frame(site_id, s_state, sum_dc, first_ac, pv_installation_year_month, Standard_Version,
                                 stringsAsFactors = FALSE)
   # Call processing function
