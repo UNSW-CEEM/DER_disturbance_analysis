@@ -184,6 +184,20 @@ ui <- fluidPage(
                             numericInput("end_buffer_responding", 
                                          label = strong('Response time, window length for systems to be considered Non Compliant Responding, in seconds.'), 
                                          value = 120),
+                            h3("Over-frequency droop response compliance settings AS4777.2:2020"),
+                            numericInput("compliance_threshold_2020", 
+                                         label = strong('Compliance threshold'), 
+                                         value = 0.5, max=1, min=0),
+                            numericInput("start_buffer_2020", 
+                                         label = strong('Start buffer, allowed time to reach compliance threshold, in seconds.'), 
+                                         value = 10),
+                            numericInput("end_buffer_2020", 
+                                         label = strong('End buffer, allowed time for system ending response early, in seconds. 
+                                                        Note, AS4777.2:2020 ideal response profile is calculated separately to the 2015 response profile.'), 
+                                         value = 0),
+                            numericInput("end_buffer_responding_2020", 
+                                         label = strong('Response time, window length for systems to be considered Non Compliant Responding, in seconds.'), 
+                                         value = 120),
                             h3("Reconnection compliance settings"),
                             numericInput("reconnection_threshold", 
                                          label = strong('The level at which a circuit is considered to have reconnected.'), 
@@ -420,6 +434,10 @@ server <- function(input,output,session){
   start_buffer <- reactive({input$start_buffer})
   end_buffer <- reactive({input$end_buffer})
   end_buffer_responding <- reactive({input$end_buffer_responding})
+  compliance_threshold_2020 <- reactive({input$compliance_threshold_2020})
+  start_buffer_2020 <- reactive({input$start_buffer_2020})
+  end_buffer_2020 <- reactive({input$end_buffer_2020})
+  end_buffer_responding_2020 <- reactive({input$end_buffer_responding_2020})
   reconnection_threshold <- reactive({input$reconnection_threshold})
   reconnection_time_threshold_for_compliance <- reactive({input$reconnection_time_threshold_for_compliance})
   ramp_rate_threshold <- reactive({input$ramp_rate_threshold})
@@ -716,6 +734,7 @@ server <- function(input,output,session){
 
     data <- reactiveValuesToList(v)
     settings <- get_current_settings()
+    browser()
     analysis_results <- run_analysis(data, settings)
     data <- analysis_results$data
     errors <- analysis_results$errors
@@ -1268,6 +1287,10 @@ server <- function(input,output,session){
     settings$start_buffer <- start_buffer()
     settings$end_buffer <- end_buffer()
     settings$end_buffer_responding <- end_buffer_responding()
+    settings$compliance_threshold_2020 <- compliance_threshold_2020()
+    settings$start_buffer_2020 <- start_buffer_2020()
+    settings$end_buffer_2020 <- end_buffer_2020()
+    settings$end_buffer_responding_2020 <- end_buffer_responding_2020()
     settings$reconnection_threshold <- reconnection_threshold()
     settings$reconnection_time_threshold_for_compliance <- reconnection_time_threshold_for_compliance()
     settings$ramp_rate_threshold <- ramp_rate_threshold()
@@ -1388,6 +1411,10 @@ server <- function(input,output,session){
       updateNumericInput(session, "start_buffer", value = settings$start_buffer)
       updateNumericInput(session, "end_buffer", value = settings$end_buffer)
       updateNumericInput(session, "end_buffer_responding", value = settings$end_buffer_responding)
+      updateNumericInput(session, "compliance_threshold_2020", value = settings$compliance_threshold_2020)
+      updateNumericInput(session, "start_buffer_2020", value = settings$start_buffer_2020)
+      updateNumericInput(session, "end_buffer_2020", value = settings$end_buffer_2020)
+      updateNumericInput(session, "end_buffer_responding_2020", value = settings$end_buffer_responding_2020)
       updateNumericInput(session, "reconnection_threshold", value = settings$reconnection_threshold)
       updateNumericInput(session, "reconnection_time_threshold_for_compliance", value = settings$reconnection_time_threshold_for_compliance)
       updateNumericInput(session, "ramp_rate_threshold", value = settings$ramp_rate_threshold)

@@ -135,6 +135,18 @@ calc_error_metric_and_compliance_2 <- function(combined_data, ideal_response_dow
   end_buffer <- max(ideal_response$ts) - end_buffer
   end_buffer_responding <- min(ideal_response$ts) + end_buffer_responding
   disconnecting_threshold <- disconnecting_threshold
+  # If checking both 2015 and 2020 compliance status, then we need to store the first compliance assessment that's  
+  # already happened before embarking on the next assessment.
+  browser()
+  if('compliance_status' %in% colnames(combined_data)){
+    browser()
+    combined_data <- dplyr::rename(combined_data, "compliance_status_2015" = "compliance_status")
+    
+    # combined_data_original <- subset(combined_data, select(c_id, compliance_status, clean))
+    # browser()
+    # combined_data <- subset(combined_data, select = -c(compliance_status))
+    browser()
+  }
   # First pass compliance
   ideal_response_downsampled <- filter(ideal_response_downsampled, time_group >= start_buffer_t)
   ideal_response_downsampled <- filter(ideal_response_downsampled, time_group <= end_buffer)
@@ -157,6 +169,8 @@ calc_error_metric_and_compliance_2 <- function(combined_data, ideal_response_dow
   combined_data <- left_join(subset(combined_data, select = -c(compliance_status)), error_by_c_id, by=c("c_id","clean"))
   
   # Set disconnecting categories 
+  # First check that the ideal response doesn't drop low (to close to zero), since many sites would therefore remain as 
+  # 'compliant' rather than 'Disconnect' etc.
   min_ideal_response <- min(ideal_response_downsampled$norm_power)
   if (min_ideal_response > disconnecting_threshold) {
     combined_data <- mutate(combined_data, compliance_status=ifelse(response_category=='4 Disconnect', 'Disconnect/Drop to Zero', compliance_status))
@@ -166,6 +180,18 @@ calc_error_metric_and_compliance_2 <- function(combined_data, ideal_response_dow
   combined_data <- mutate(combined_data, compliance_status=ifelse(response_category=='7 UFLS Dropout', 'UFLS Dropout', compliance_status))
   combined_data <- mutate(combined_data, compliance_status=ifelse(response_category=='5 Off at t0', 'Off at t0', compliance_status))
   combined_data <- mutate(combined_data, compliance_status=ifelse(response_category=='6 Not enough data', 'Not enough data', compliance_status))
+  
+  # Now check for whether there was already a compliance_status col when the function was called, rename the new one to 
+  # 2020 std, and keep both in the output combined_data.
+  browser()
+  if('compliance_status_2015' %in% colnames(combined_data)){
+    browser()
+    combined_data <- dplyr::rename(combined_data, "compliance_status_2020" = "compliance_status")
+    browser()
+    combined_data <- dplyr::rename(combined_data, "compliance_status" = "compliance_status_2015")
+    # combined_data <- left_join(combined_data, combined_data_original, by=c("c_id","clean"))
+    browser()
+  }
   
   return(combined_data)
 }
