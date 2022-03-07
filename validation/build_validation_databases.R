@@ -1,11 +1,27 @@
 # To use this file, run it as an R script
 # If you are not running this from the tool top level directory ensure that you have set tool_directory to the root
-# directory of the DER tool repository'
+# directory of the DER tool repository
 # Ensure that the output database is set to "ref" if building reference DBs, or "test" if building test DBs
 
 library("logging")
 library("rjson")
 logging::basicConfig()
+
+# MANUALLY SET HERE IF USING RSTUDIO
+OUTPUT_DATABASE_INTERACTIVE <- "ref" # "test"
+
+# Handle command line calls
+if (!interactive()) {
+    args <- commandArgs(TRUE)
+    if (is.na(args[1])) {
+        output_database <- "ref"
+    } else {
+        output_database <- args[1]
+    }
+} else {
+    output_database <- OUTPUT_DATABASE_INTERACTIVE
+}
+print(sprintf('Output files will have \"%s\" prefix', output_database))
 
 base_directory_name <- basename(getwd())
 if (base_directory_name == "DER_disturbance_analysis") {
@@ -17,7 +33,6 @@ if (base_directory_name == "DER_disturbance_analysis") {
 source(sprintf("%s/BDInterface/interface.R", tool_directory))
 
 data_dirs <- list.dirs('validation/data', recursive=FALSE)
-output_database <- "ref" # "test"
 required_file_names <- c("ref_circuit_details.csv", "ref_meta_data.json", "ref_raw_data.csv", "ref_site_details.csv")
 
 if (length(data_dirs) > 0){
@@ -28,7 +43,8 @@ if (length(data_dirs) > 0){
             site_details_path_name <- paste(dir, "/", "ref_site_details.csv", sep="")
             circuit_details_path_name <- paste(dir, "/", "ref_circuit_details.csv", sep="")
             timeseries_path_name <- paste(dir, "/", "ref_raw_data.csv", sep="")
-            metadata_path_name <- paste(dir, "/", "ref_meta_data.json", sep="")
+            ref_metadata_path_name <- paste(dir, "/", "ref_meta_data.json", sep="")
+            metadata_path_name <- paste(dir, "/", output_database, "_meta_data.json", sep="")
             db_path_name <- paste(dir, "/", output_database, ".db", sep="")
 
             db <- DBInterface$new()
@@ -54,12 +70,17 @@ if (length(data_dirs) > 0){
 
             db$run_data_cleaning_loop(500)
 
-            # update metadata
+            # update metadata - if test metadata doesn't exist, use ref as template
             if (file.exists(metadata_path_name)){
                 metadata <- rjson::fromJSON(file=metadata_path_name)
                 metadata$database_name <- sprintf("%s/%s/%s.db", tool_directory, dir, output_database)
-                output_metadata_path <- paste(dir, "/", output_database, "_meta_data.json", sep="")
-                metadata_conn <- file(output_metadata_path)
+                metadata_conn <- file(metadata_path_name)
+                writeLines(rjson::toJSON(metadata, indent=4), metadata_conn)
+                close(metadata_conn)
+            } else if (file.exists(ref_metadata_path_name)) {
+                metadata <- rjson::fromJSON(file=ref_metadata_path_name)
+                metadata$database_name <- sprintf("%s/%s/%s.db", tool_directory, dir, output_database)
+                metadata_conn <- file(metadata_path_name)
                 writeLines(rjson::toJSON(metadata, indent=4), metadata_conn)
                 close(metadata_conn)
             }
