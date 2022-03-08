@@ -8,23 +8,46 @@
 
 logging::basicConfig()
 
+# MANUALLY SET HERE IF USING RSTUDIO
+REFERENCE_PREFIX_INTERACTIVE <- "ref"
+TEST_PREFIX_INTERACTIVE <- "test"
+
+# Handle command line calls
+if (!interactive()) {
+    args <- commandArgs(TRUE)
+    if (is.na(args[1])) {
+        ref_prefix <- "ref"
+    } else {
+        ref_prefix <- args[1]
+    }
+    if (is.na(args[2])) {
+        test_prefix <- "test"
+    } else {
+        test_prefix <- args[2]
+    }
+} else {
+    ref_prefix <- REFERENCE_PREFIX_INTERACTIVE
+    test_prefix <- TEST_PREFIX_INTERACTIVE
+}
+print(sprintf('Comparing files with \"%s\" prefix to \"%s\" prefix', test_prefix, ref_prefix))
+
 base_directory_name <- basename(getwd())
 if (base_directory_name == "DER_disturbance_analysis") {
     tool_directory <- getwd()
 } else {
-    print("Script is not being run in DER_disturbance_analysis folder, make sure that tool directory ahs been set")
+    print("Script is not being run in DER_disturbance_analysis folder, make sure that tool directory has been set")
     tool_directory <- "~/UNSW/MATCH/DER_disturbance_analysis"
 }
 source(sprintf("%s/BDInterface/interface.R", tool_directory))
 
 data_dirs <- list.dirs('validation/data', recursive=FALSE)
 
-ref_db_name <- "ref.db"
-test_db_name <- "test.db"
-ref_circuit_summary_fname <- "ref_circ_sum.csv"
-ref_underlying_data_fname <- "ref_underlying.csv"
-test_circuit_summary_fname <- "test_circ_sum.csv"
-test_underlying_data_fname <- "test_underlying.csv"
+ref_db_name <- sprintf("%s.db", ref_prefix)
+test_db_name <- sprintf("%s.db", test_prefix)
+ref_circuit_summary_fname <- sprintf("%s_circ_sum.csv", ref_prefix)
+ref_underlying_data_fname <- sprintf("%s_underlying.csv", ref_prefix)
+test_circuit_summary_fname <- sprintf("%s_circ_sum.csv", test_prefix)
+test_underlying_data_fname <- sprintf("%s_underlying.csv", test_prefix)
 
 required_files <- c(
     ref_circuit_summary_fname, ref_underlying_data_fname,
@@ -189,6 +212,9 @@ if (length(data_dirs) > 0) {
                     logging::loginfo(sprintf("Test database not found, expected at %s", test_db_path))
                 }
             }
+        } else {
+            logging::logerror("Required files not found in directory. Check that the analysis has been run and saved 
+                              with the input prefixes")
         }
     }
 } else {

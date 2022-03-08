@@ -26,7 +26,7 @@ TEST_PREFIX="test"
 # Build databases and run analysis for reference branch
 git checkout $REF_BRANCH
 if [ $? -eq 0 ]
-then 
+then
     Rscript validation/build_validation_databases.R $REF_PREFIX
     Rscript validation/run_validation_analysis.R $REF_PREFIX
 else
@@ -37,7 +37,7 @@ fi
 # Build databases and run analysis for test branch
 git checkout $TEST_BRANCH
 if [ $? -eq 0 ]
-then 
+then
     Rscript validation/build_validation_databases.R $TEST_PREFIX
     Rscript validation/run_validation_analysis.R $TEST_PREFIX
 else
@@ -46,4 +46,4 @@ else
 fi
 
 # Compare results
-Rscript validation/validate_results.R
+Rscript validation/validate_results.R $REF_PREFIX $TEST_PREFIX
