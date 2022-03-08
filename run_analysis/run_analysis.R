@@ -231,9 +231,25 @@ run_analysis <- function(data, settings) {
     data$region_frequency <- response_data$region_frequency
     
     # Next, get ideal response profile for 2020 standard, AS4777.2:2020 (uses different settings based on region).
-    # TODO add logic to identify settings based on settings$region_to_load
+    # Currently, WA (Western Power) uses "Australia B", TAS uses "Australia C", all other NEM regions use "Australia A".
+    if(settings$region_to_load == "WA"){
+      f_ulco <- 50.15
+      f_hyst <- 0.1
+      t_hyst <- 20
+      f_upper <- 52.00
+    } else if(settings$region_to_load == "TAS"){
+      f_ulco <- 50.5
+      f_hyst <- 0.05
+      t_hyst <- 20
+      f_upper <- 55.00
+    } else{
+      f_ulco <- 50.25
+      f_hyst <- 0.1
+      t_hyst <- 20
+      f_upper <- 52.00
+    }
     response_data_2020 <- ideal_response_from_frequency(
-      data$frequency_data, settings$region_to_load, f_ulco=50.25, f_hyst=0.1, t_hyst=20, f_upper=52.00
+      data$frequency_data, settings$region_to_load, f_ulco, f_hyst, t_hyst, f_upper
     )
     data$ideal_response_to_plot_2020 <- response_data_2020$ideal_response_to_plot
     data$region_frequency_2020 <- response_data_2020$region_frequency
