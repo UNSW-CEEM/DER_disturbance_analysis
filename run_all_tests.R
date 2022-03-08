@@ -1,6 +1,7 @@
 library(testthat)
 source("load_tool_environment.R")
 test_dir("BDInterface/tests")
+test_dir("island_assessment/tests")
 test_dir("location_analysis/tests")
 test_dir("preprocess_cer_data/tests")
 test_dir("process_input_data/tests")

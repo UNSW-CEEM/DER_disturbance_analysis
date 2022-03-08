@@ -1,0 +1,3 @@
+# Ensure shell scripts and .csv end in \n ONLY
+*.sh text eol=lf
+*.csv text eol=lf
