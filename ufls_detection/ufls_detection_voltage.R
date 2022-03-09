@@ -4,8 +4,8 @@ ufls_detection_voltage <- function(combined_data, event_time, window_length,
   pre_event_window_start <- event_time - 60 * window_length
   post_event_window_end <- event_time + 60 * window_length
   pre_event_window <- filter(combined_data, 
-                             ts >= pre_event_window_start, 
-                             ts < event_time)
+                             ts > pre_event_window_start, 
+                             ts <= event_time)
   post_event_window <- filter(combined_data, 
                               ts > event_time + post_event_delay, 
                               ts <= post_event_window_end + post_event_delay)

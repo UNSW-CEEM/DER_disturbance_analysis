@@ -675,7 +675,7 @@ server <- function(input,output,session){
                   value=strftime(floor_date(get_mode(v$combined_data$ts), "day"), format="%Y-%m-%d"), startview="year")
       })
       output$pre_event_interval <- renderUI({
-        timeInput("pre_event_interval", label=strong('Pre-event time interval (Needs to match exactly to data timestamp)'), 
+        timeInput("pre_event_interval", label=strong('Pre-event time interval'), 
                   value = as.POSIXct("12:13:55",format="%H:%M:%S"))
       })
       output$window_length <- renderUI({

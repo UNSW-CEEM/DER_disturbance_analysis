@@ -254,11 +254,12 @@ test_that("Test high level classify_islands fn" ,{
 
   c_id <- c(3000)
   ts <- as.POSIXct("2021-01-24 16:47:00", tz = "Australia/Brisbane")
+  d <- 60
   clean <- c(1)
   response_category <- c('3 Drop to Zero')
   f <- c(52)
   v <- c(240)
-  combined_data <- data.frame(c_id, ts, clean, response_category, f, v, stringsAsFactors = FALSE)
+  combined_data <- data.frame(c_id, ts, d, clean, response_category, f, v, stringsAsFactors = FALSE)
   
   first_timestamp <- c(1611470760257)
   GridFaultContactorTrip <- c(1)
@@ -274,7 +275,7 @@ test_that("Test high level classify_islands fn" ,{
   Islanded <- c(1)
   island_assessment <- c('Frequency disruption')
   islanding_alert <- c('Islanded - Freq Wobble')
-  expected_output <- data.frame(c_id, ts, clean, response_category, f, v, Islanded,
+  expected_output <- data.frame(c_id, ts, d, clean, response_category, f, v, Islanded,
                                 island_assessment, islanding_alert, stringsAsFactors = FALSE)
   expect_equal(out, expected_output, tolerance=0.001)
 })
@@ -284,11 +285,12 @@ test_that("Test high level classify_islands fn for a non-islanded site" ,{
   
   c_id <- c(3000)
   ts <- as.POSIXct("2021-01-24 16:47:00", tz = "Australia/Brisbane")
+  d <- 60
   clean <- c(1)
   response_category <- c('3 Drop to Zero')
   f <- c(52)
   v <- c(240)
-  combined_data <- data.frame(c_id, ts, clean, response_category, f, v, stringsAsFactors = FALSE)
+  combined_data <- data.frame(c_id, ts, d, clean, response_category, f, v, stringsAsFactors = FALSE)
   
   first_timestamp <- c(1611470760257)
   GridFaultContactorTrip <- c(0)
@@ -304,7 +306,7 @@ test_that("Test high level classify_islands fn for a non-islanded site" ,{
   Islanded <- c(0)
   island_assessment <- c(NA_character_)
   islanding_alert <- c("NA")
-  expected_output <- data.frame(c_id, ts, clean, response_category, f, v, Islanded,
+  expected_output <- data.frame(c_id, ts, d, clean, response_category, f, v, Islanded,
                                 island_assessment, islanding_alert, stringsAsFactors = FALSE)
   expect_equal(out, expected_output, tolerance=0.001)
 })
