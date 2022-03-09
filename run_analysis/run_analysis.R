@@ -336,7 +336,7 @@ run_analysis <- function(data, settings) {
         data$sample_count_table <- left_join(population_count_table, data$sample_count_table, by=population_groups)
         data$sample_count_table$percentage_of_sub_pop <- data$sample_count_table$sample_count / data$sample_count_table$sub_population_size
         data$sample_count_table$percentage_of_sub_pop <- round(data$sample_count_table$percentage_of_sub_pop, digits = 4)
-        result <- mapply(ConfidenceInterval, data$sample_count_table$sample_count, 
+        result <- mapply(confidence_interval, data$sample_count_table$sample_count, 
                           data$sample_count_table$sub_population_size, 0.95)
         data$sample_count_table$lower_95_CI <- round(result[1,], digits = 4)
         data$sample_count_table$upper_95_CI <- round(result[2,], digits = 4)

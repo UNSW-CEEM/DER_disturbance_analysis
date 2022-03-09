@@ -800,9 +800,8 @@ server <- function(input,output,session){
         } else {
           sample_count_table <- v$sample_count_table
         }
-        
-        output$sample_count_table <- renderDataTable({sample_count_table})
 
+        output$sample_count_table <- renderDataTable({sample_count_table})
         output$save_sample_count <- renderUI({shinySaveButton("save_sample_count", "Save data", "Save file as ...", 
                                                               filetype=list(xlsx="csv"))
         })
