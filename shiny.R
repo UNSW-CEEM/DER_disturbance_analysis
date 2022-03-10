@@ -734,7 +734,6 @@ server <- function(input,output,session){
 
     data <- reactiveValuesToList(v)
     settings <- get_current_settings()
-    browser()
     analysis_results <- run_analysis(data, settings)
     data <- analysis_results$data
     errors <- analysis_results$errors

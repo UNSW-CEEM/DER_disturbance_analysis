@@ -136,16 +136,9 @@ calc_error_metric_and_compliance_2 <- function(combined_data, ideal_response_dow
   end_buffer_responding <- min(ideal_response$ts) + end_buffer_responding
   disconnecting_threshold <- disconnecting_threshold
   # If checking both 2015 and 2020 compliance status, then we need to store the first compliance assessment that's  
-  # already happened before embarking on the next assessment.
-  browser()
+  # already happened under a different col name before embarking on the next assessment.
   if('compliance_status' %in% colnames(combined_data)){
-    browser()
     combined_data <- dplyr::rename(combined_data, "compliance_status_2015" = "compliance_status")
-    
-    # combined_data_original <- subset(combined_data, select(c_id, compliance_status, clean))
-    # browser()
-    # combined_data <- subset(combined_data, select = -c(compliance_status))
-    browser()
   }
   # First pass compliance
   ideal_response_downsampled <- filter(ideal_response_downsampled, time_group >= start_buffer_t)
@@ -183,14 +176,9 @@ calc_error_metric_and_compliance_2 <- function(combined_data, ideal_response_dow
   
   # Now check for whether there was already a compliance_status col when the function was called, rename the new one to 
   # 2020 std, and keep both in the output combined_data.
-  browser()
   if('compliance_status_2015' %in% colnames(combined_data)){
-    browser()
     combined_data <- dplyr::rename(combined_data, "compliance_status_2020" = "compliance_status")
-    browser()
     combined_data <- dplyr::rename(combined_data, "compliance_status" = "compliance_status_2015")
-    # combined_data <- left_join(combined_data, combined_data_original, by=c("c_id","clean"))
-    browser()
   }
   
   return(combined_data)
