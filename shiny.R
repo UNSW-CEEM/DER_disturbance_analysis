@@ -346,7 +346,7 @@ server <- function(input,output,session){
   hide("circuit_agg")
   hide("zone_agg")
   hide("compliance_agg")
-  hide("compliance_agg_2020")
+  hide("compliance_2020_agg")
   hide("reconnection_compliance_agg")
   hide("save_settings")
   hide("load_second_filter_settings")

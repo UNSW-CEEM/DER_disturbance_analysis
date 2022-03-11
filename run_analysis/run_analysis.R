@@ -200,7 +200,8 @@ upscale_and_summarise_disconnections <- function(circuit_summary, manufacturer_i
 check_grouping <- function(settings) {
   if (settings$standard_agg==FALSE & settings$pst_agg==FALSE & settings$grouping_agg==FALSE &
       settings$manufacturer_agg==FALSE & settings$model_agg==FALSE & settings$zone_agg==FALSE &
-      settings$circuit_agg==TRUE & settings$compliance_agg==TRUE & settings$reconnection_compliance_agg){
+      settings$circuit_agg==TRUE & settings$compliance_agg==TRUE & settings$compliance_2020_agg==TRUE
+      & settings$reconnection_compliance_agg){
     no_grouping=TRUE
   } else {
     no_grouping=FALSE
@@ -349,10 +350,9 @@ run_analysis <- function(data, settings) {
       } else {
         combined_data_f <- mutate(combined_data_f, compliance_status_2020="Undefined")  
       }
-      # # TODO - what do these two lines of code do? Check / update if necessary. I think it is to do with filtering/displaying data.
-      # if (length(settings$compliance) < 8) {
-      #   combined_data_f <- filter(combined_data_f, compliance_status_2020 %in% settings$compliance)
-      # }
+      if (length(settings$compliance_2020) < 8) {
+        combined_data_f <- filter(combined_data_f, compliance_status_2020 %in% settings$compliance_2020)
+      }
             
       # -------- determine reconnection compliace --------
       logdebug('Set reconnection compliance values', logger=logger)
