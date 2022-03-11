@@ -56,6 +56,7 @@ ui <- fluidPage(
           uiOutput("responses"),
           uiOutput("zones"),
           uiOutput("compliance"),
+          uiOutput("compliance_2020"),
           uiOutput("reconnection_compliance"),
           uiOutput("postcodes"),
           uiOutput("manufacturers"),
@@ -79,12 +80,14 @@ ui <- fluidPage(
           materialSwitch("circuit_agg", label=strong("Circuits:"), status="primary", value=FALSE),
           materialSwitch("zone_agg", label=strong("Zones:"), status="primary", value=FALSE),
           materialSwitch("compliance_agg", label=strong("Compliance:"), status="primary", value=FALSE),
+          materialSwitch("compliance_2020_agg", label=strong("Compliance 2020:"), status="primary", value=FALSE),
           materialSwitch("reconnection_compliance_agg", label=strong("Reconnection Compliance:"), status="primary", value=FALSE),
           tags$hr(),
           h4("Additional Processing"),
           radioButtons("confidence_category", label = strong("Grouping category to calculate confidence interval for, 
                                                               must be a Grouping Category"), 
-                       choices = list("none", "response_category", "compliance_status", "reconnection_compliance_status"), selected = "none", inline = TRUE),
+                       choices = list("none", "response_category", "compliance_status", "compliance_status_2020", 
+                                      "reconnection_compliance_status"), selected = "none", inline = TRUE),
           materialSwitch(inputId="raw_upscale", label=strong("Upscaled Data"), status="primary", right=FALSE),
           tags$hr(),
           h4("Event information"),
@@ -116,6 +119,10 @@ ui <- fluidPage(
           uiOutput("save_ideal_response"),
           HTML("<br>"),
           uiOutput("save_ideal_response_downsampled"),
+          HTML("<br>"),
+          uiOutput("save_ideal_response_2020"),
+          HTML("<br>"),
+          uiOutput("save_ideal_response_downsampled_2020"),
           HTML("<br>"),
           uiOutput("save_manufacturer_disconnection_summary"),
           HTML("<br>"),
@@ -257,6 +264,7 @@ reset_sidebar <- function(input, output, session, stringsAsFactors) {
   output$responses <- renderUI({})
   output$zones <- renderUI({})
   output$compliance <- renderUI({}) 
+  output$compliance_2020 <- renderUI({})
   output$reconnection_compliance <- renderUI({}) 
   output$offsets <- renderUI({})
   shinyjs::hide("norm_power_filter_off_at_t0")
@@ -270,6 +278,7 @@ reset_sidebar <- function(input, output, session, stringsAsFactors) {
   shinyjs::hide("circuit_agg")
   shinyjs::hide("zone_agg")
   shinyjs::hide("compliance_agg")
+  shinyjs::hide("compliance_2020_agg")
   shinyjs::hide("reconnection_compliance_agg")
   shinyjs::hide("save_settings")
   shinyjs::hide("load_second_filter_settings")
@@ -337,6 +346,7 @@ server <- function(input,output,session){
   hide("circuit_agg")
   hide("zone_agg")
   hide("compliance_agg")
+  hide("compliance_agg_2020")
   hide("reconnection_compliance_agg")
   hide("save_settings")
   hide("load_second_filter_settings")
@@ -377,6 +387,7 @@ server <- function(input,output,session){
   circuit_agg <- reactive({input$circuit_agg})
   zone_agg <- reactive({input$zone_agg})
   compliance_agg <- reactive({input$compliance_agg})
+  compliance_2020_agg <- reactive({input$compliance_2020_agg})
   reconnection_compliance_agg <- reactive({input$reconnection_compliance_agg})
   load_date <- reactive({
     date_as_str <- as.character(input$load_date[1])
@@ -655,6 +666,18 @@ server <- function(input,output,session){
                               checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")),
                               direction = "vertical")
       })
+      output$compliance_2020 <- renderUI({
+        checkboxGroupButtons(inputId="compliance_2020", label=strong("Compliance 2020"), 
+                             choices=list("Compliant", "Non-compliant Responding", 
+                                          "Non-compliant", "UFLS Dropout", "Disconnect/Drop to Zero",
+                                          "Off at t0", "Not enough data", "Undefined", NA),
+                             selected=list("Compliant", "Non-compliant Responding", 
+                                           "Non-compliant", "UFLS Dropout", "Disconnect/Drop to Zero",
+                                           "Off at t0", "Not enough data", "Undefined", NA), 
+                             justified=TRUE, status="primary", individual=TRUE,
+                             checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")),
+                             direction = "vertical")
+      })
       output$reconnection_compliance <- renderUI({
         checkboxGroupButtons(inputId="reconnection_compliance", label=strong("Reconnection Compliance"), 
                               choices=list("Compliant", "Non Compliant", 
@@ -683,6 +706,7 @@ server <- function(input,output,session){
       shinyjs::show("circuit_agg")
       shinyjs::show("zone_agg")
       shinyjs::show("compliance_agg")
+      shinyjs::show("compliance_2020_agg")
       shinyjs::show("reconnection_compliance_agg")
       shinyjs::show("save_settings")
       shinyjs::show("load_second_filter_settings")
@@ -792,6 +816,14 @@ server <- function(input,output,session){
           shinySaveButton("save_ideal_response_downsampled", "Save downsampled response", 
                           "Choose directory for report files ...", filetype=list(xlsx="csv"))
         })
+        output$save_ideal_response_2020 <- renderUI({
+          shinySaveButton("save_ideal_response_2020", "Save response 2020", "Choose directory for report files ...", 
+                          filetype=list(xlsx="csv"))
+        })
+        output$save_ideal_response_downsampled_2020 <- renderUI({
+          shinySaveButton("save_ideal_response_downsampled_2020", "Save downsampled response 2020", 
+                          "Choose directory for report files ...", filetype=list(xlsx="csv"))
+        })
         output$save_manufacturer_disconnection_summary <- renderUI({
           shinySaveButton("save_manufacturer_disconnection_summary", "Save manufacturer disconnection summary", 
                           "Choose directory for report files ...", filetype=list(xlsx="csv"))
@@ -831,6 +863,10 @@ server <- function(input,output,session){
                         mode='markers', inherit=FALSE) %>%
               add_trace(x=~v$ideal_response_downsampled$time_group, y=~v$ideal_response_downsampled$norm_power, 
                         name='Ideal Response Downsampled', mode='markers', inherit=FALSE) %>%
+              add_trace(x=~v$ideal_response_to_plot_2020$ts, y=~v$ideal_response_to_plot_2020$norm_power, name='Ideal Response 2020', 
+                        mode='markers', inherit=FALSE) %>%
+              add_trace(x=~v$ideal_response_downsampled_2020$time_group, y=~v$ideal_response_downsampled_2020$norm_power, 
+                        name='Ideal Response Downsampled 2020', mode='markers', inherit=FALSE) %>%
               layout(yaxis=list(title="Circuit power normalised to value of pre-event interval, \n aggregated by averaging"))
           })
         } else {
@@ -1187,6 +1223,28 @@ server <- function(input,output,session){
   })
   
   
+  # Save ideal response curve 2020
+  observeEvent(input$save_ideal_response_2020,{
+    volumes <- c(home=getwd())
+    shinyFileSave(input, "save_ideal_response_2020", roots=volumes, session=session)
+    fileinfo <- parseSavePath(volumes, input$save_ideal_response_2020)
+    if (nrow(fileinfo) > 0) {
+      write.csv(v$ideal_response_to_plot_2020, as.character(fileinfo$datapath), row.names=FALSE)
+    }
+  })
+  
+  
+  # Save downsampled ideal response curve 2020
+  observeEvent(input$save_ideal_response_downsampled_2020,{
+    volumes <- c(home=getwd())
+    shinyFileSave(input, "save_ideal_response_downsampled_2020", roots=volumes, session=session)
+    fileinfo <- parseSavePath(volumes, input$save_ideal_response_downsampled_2020)
+    if (nrow(fileinfo) > 0) {
+      write.csv(v$ideal_response_downsampled_2020, as.character(fileinfo$datapath), row.names=FALSE)
+    }
+  })
+  
+  
   observeEvent(input$save_manufacturer_disconnection_summary,{
     volumes <- c(home=getwd())
     shinyFileSave(input, "save_manufacturer_disconnection_summary", roots=volumes, session=session)
@@ -1250,6 +1308,7 @@ server <- function(input,output,session){
     settings$circuits <- circuits()
     settings$zones <- zones()
     settings$compliance <- compliance()
+    settings$compliance_2020 <- compliance_2020()
     settings$reconnection_compliance <- reconnection_compliance()
     settings$offsets <- offsets()
     settings$size_groupings <- size_groupings()
@@ -1264,6 +1323,7 @@ server <- function(input,output,session){
     settings$zone_agg <- zone_agg()
     settings$reconnection_compliance_agg <- reconnection_compliance_agg()
     settings$compliance_agg <- compliance_agg()
+    settings$compliance_2020_agg <- compliance_2020_agg()
     
     settings$confidence_category <- confidence_category()
     settings$raw_upscale <- raw_upscale()
@@ -1362,6 +1422,7 @@ server <- function(input,output,session){
       updateCheckboxGroupButtons(session, "responses", selected = settings$responses)
       updateCheckboxGroupButtons(session, "zones", selected = settings$zones)
       updateCheckboxGroupButtons(session, "compliance", selected = settings$compliance)
+      updateCheckboxGroupButtons(session, "compliance_2020", selected = settings$compliance_2020)
       if ("reconnection_compliance" %in% names(settings)) {
         updateCheckboxGroupButtons(session, "reconnection_compliance", selected = settings$reconnection_compliance)
       }
@@ -1382,6 +1443,7 @@ server <- function(input,output,session){
       updateMaterialSwitch(session, "circuit_agg", value = settings$circuit_agg)
       updateMaterialSwitch(session, "zone_agg", value = settings$zone_agg)
       updateMaterialSwitch(session, "compliance_agg", value = settings$compliance_agg)
+      updateMaterialSwitch(session, "compliance_2020_agg", value = settings$compliance_2020_agg)
       if ("reconnection_compliance_agg" %in% names(settings)) {
         updateMaterialSwitch(session, "reconnection_compliance_agg", value = settings$reconnection_compliance_agg)
       }
@@ -1487,6 +1549,7 @@ server <- function(input,output,session){
       updateMaterialSwitch(session=session, "circuit_agg", value = FALSE)
       updateMaterialSwitch(session=session, "zone_agg", value = FALSE)
       updateMaterialSwitch(session=session, "compliance_agg", value = FALSE)
+      updateMaterialSwitch(session=session, "compliance_2020_agg", value = FALSE)
       updateMaterialSwitch(session=session, "reconnection_compliance_agg", value = FALSE)
       updateMaterialSwitch(session=session, "response_agg", value = FALSE)
       updateMaterialSwitch(session=session, "grouping_agg", value = FALSE)
