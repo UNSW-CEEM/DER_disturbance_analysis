@@ -1536,7 +1536,7 @@ server <- function(input,output,session){
   # Inforce mutual exclusivity of Aggregation settings
   observe({
     if(manufacturer_agg() | model_agg() | pst_agg() | circuit_agg() | circuit_agg() | response_agg() | zone_agg()
-       | compliance_agg() | reconnection_compliance_agg() | grouping_agg()){
+       | compliance_agg() | compliance_2020_agg() | reconnection_compliance_agg() | grouping_agg()){
       updateMaterialSwitch(session=session, "raw_upscale", value = FALSE)
     }
   })
