@@ -372,6 +372,7 @@ server <- function(input,output,session){
   circuits <- reactive({input$circuits})
   zones <- reactive({input$zones})
   compliance <- reactive({input$compliance})
+  compliance_2020 <- reactive({input$compliance_2020})
   reconnection_compliance <- reactive({input$reconnection_compliance})
   offsets <- reactive({input$offsets})
   size_groupings <- reactive({input$size_groupings})
