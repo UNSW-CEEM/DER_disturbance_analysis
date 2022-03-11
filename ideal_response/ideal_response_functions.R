@@ -141,9 +141,9 @@ calc_error_metric_and_compliance_2 <- function(combined_data, ideal_response_dow
     combined_data <- dplyr::rename(combined_data, "compliance_status_2015" = "compliance_status")
   }
   # First pass compliance
-  ideal_response_downsampled <- filter(ideal_response_downsampled, time_group >= start_buffer_t)
-  ideal_response_downsampled <- filter(ideal_response_downsampled, time_group <= end_buffer)
-  error_by_c_id <- inner_join(combined_data, ideal_response_downsampled, by=c("ts"="time_group"))
+  ideal_response_downsampled_f <- filter(ideal_response_downsampled, time_group >= start_buffer_t)
+  ideal_response_downsampled_f <- filter(ideal_response_downsampled_f, time_group <= end_buffer)
+  error_by_c_id <- inner_join(combined_data, ideal_response_downsampled_f, by=c("ts"="time_group"))
   error_by_c_id <- mutate(error_by_c_id, error=(1 - c_id_norm_power) - ((1 - norm_power) * threshold))
   error_by_c_id <- group_by(error_by_c_id, c_id, clean)
   error_by_c_id <- summarise(error_by_c_id, min_error=min(error))
@@ -152,8 +152,8 @@ calc_error_metric_and_compliance_2 <- function(combined_data, ideal_response_dow
   combined_data <- left_join(combined_data, error_by_c_id, by=c("c_id","clean"))
   
   # Change 'Non compliant' to 'Non Compliant Responding' where complaint at start
-  ideal_response_downsampled <- filter(ideal_response_downsampled, time_group <= end_buffer_responding)
-  error_by_c_id <- inner_join(combined_data, ideal_response_downsampled, by=c("ts"="time_group"))
+  ideal_response_downsampled_f <- filter(ideal_response_downsampled, time_group <= end_buffer_responding)
+  error_by_c_id <- inner_join(combined_data, ideal_response_downsampled_f, by=c("ts"="time_group"))
   error_by_c_id <- mutate(error_by_c_id, error=(1 - c_id_norm_power) - ((1 - norm_power) * threshold))
   error_by_c_id <- group_by(error_by_c_id, c_id, clean)
   error_by_c_id <- summarise(error_by_c_id, max_error=max(error), compliance_status=first(compliance_status))
