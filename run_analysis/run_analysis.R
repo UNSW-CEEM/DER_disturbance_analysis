@@ -235,6 +235,12 @@ run_analysis <- function(data, settings) {
       settings$postcodes, settings$manufacturers, settings$models, settings$sites, settings$circuits
     )
 
+    # -------- check voltage threshold excursions --------
+    voltage_data <- detect_voltage_thresholds(
+      combined_data_f
+    )
+    browser()
+
     if(length(combined_data_f$ts) > 0){
       # -------- categorise response --------
       combined_data_f <- categorise_response(
