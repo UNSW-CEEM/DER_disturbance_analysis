@@ -1,7 +1,16 @@
 # this script will run the tool based on the settings files in validation/data/...
 # results are output to CSV based on the given settings files
 
+# MANUALLY SET HERE IF USING RSTUDIO
 OUTPUT_PREFIX <- "ref" # "test"
+
+# Handle command line calls to overwrite prefix
+if (!interactive()) {
+    args <- commandArgs(TRUE)
+    if (!is.na(args[1])) {
+        OUTPUT_PREFIX <- args[1]
+    }
+}
 
 logging::basicConfig()
 

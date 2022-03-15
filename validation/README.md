@@ -22,6 +22,14 @@ Validation datasets will be made available on cloudstor once they are finalised.
     1. Identify if results match
     2. Check any discrepencies against expected impact of test version of tool
 
+### Automated validation
+
+Run `full_validation.sh` in your terminal program of choice from the tool base directory.
+Pass positional arguments of test and reference branch e.g.
+```bash
+./full_validation.sh branch_to_validate master
+```
+
 ## Choosing validation datasets
 
 A representative set of validation data is required. In order to capture this we are currently planning to use the data from 2021-05-25 from QLD, 2020-01-31 from SA, and at least one event using Tesla data (TBD)
