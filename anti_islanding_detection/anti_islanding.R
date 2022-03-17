@@ -15,6 +15,7 @@ UNDERVOLTAGE_1_2020 <- 180
 OVERVOLTAGE_1_2020 <- 265
 OVERVOLTAGE_2_2020 <- 275
 
+#' Run anti-islanding voltage threshold checks
 detect_voltage_thresholds <- function(combined_data) {
     voltage_data <- select(combined_data, ts, c_id, Standard_Version, v, vmin, vmax, d)
     voltage_data <- arrange(voltage_data, c_id, ts)
@@ -23,14 +24,41 @@ detect_voltage_thresholds <- function(combined_data) {
     voltage_data <- mutate(voltage_data, vmax=ifelse(is.na(vmax), v, vmax))
 
     voltage_data <- mutate(voltage_data, voltage_antiislanding_2015=ifelse(
-        vmin < UNDERVOLTAGE_2015, "undervoltage", NA))
+        vmax < UNDERVOLTAGE_2015, "undervoltage", NA))
     voltage_data <- mutate(voltage_data, voltage_antiislanding_2015=ifelse(
-        vmax > OVERVOLTAGE_1_2015, "overvoltage_1", voltage_antiislanding_2015))
+        vmin > OVERVOLTAGE_1_2015, "overvoltage_1", voltage_antiislanding_2015))
     voltage_data <- mutate(voltage_data, voltage_antiislanding_2015=ifelse(
-        vmax > OVERVOLTAGE_2_2015, "overvoltage_2", voltage_antiislanding_2015))
+        vmin > OVERVOLTAGE_2_2015, "overvoltage_2", voltage_antiislanding_2015))
     voltage_data <- mutate(voltage_data, va_2015_recurrances=sequence(rle(voltage_antiislanding_2015)$length))
-    voltage_data <- mutate(voltage_data, va_2015_duration_upper=ifelse(
-        va_2015_recurrances > 1, (va_2015_recurrances-1)*d+d*2, NA))
+    voltage_data <- mutate(voltage_data, is_final=(
+        (voltage_antiislanding_2015 != lead(voltage_antiislanding_2015)) |
+            (!is.na(voltage_antiislanding_2015) & is.na(lead(voltage_antiislanding_2015)))
+    ))
+    voltage_data <- mutate(voltage_data, is_initial=(
+        (voltage_antiislanding_2015 != lag(voltage_antiislanding_2015)) |
+            (!is.na(voltage_antiislanding_2015) & is.na(lag(voltage_antiislanding_2015)))
+    ))
 
     return(voltage_data)
+}
+
+antiislanding_summary <- function(voltage_data) {
+    voltage_data <- mutate(voltage_data, is_initial=(
+        (voltage_antiislanding_2015 != lag(voltage_antiislanding_2015)) |
+            (!is.na(voltage_antiislanding_2015) & is.na(lag(voltage_antiislanding_2015)))
+    ))
+    voltage_data <- mutate(voltage_data, is_final=(
+        (voltage_antiislanding_2015 != lead(voltage_antiislanding_2015)) |
+        (!is.na(voltage_antiislanding_2015) & is.na(lead(voltage_antiislanding_2015)))
+    ))
+    voltage_data <- ungroup(group_by(voltage_data, va_event_id=cumsum(!is.na(is_initial) & is_initial)))
+    voltage_data <- mutate(voltage_data, va_event_id=ifelse(is.na(voltage_antiislanding_2015), NA, va_event_id))
+    voltage_summary <- voltage_data %>%
+        group_by(va_event_id) %>%
+        drop_na() %>%
+        summarise(c_id=first(c_id), v=mean(v), vmin=min(vmin), vmax=max(vmax), d=last(d),
+                  voltage_antiislanding_2015=first(voltage_antiislanding_2015),
+                  va_2015_recurrances=max(va_2015_recurrances), Standard_Version=first(Standard_Version)
+                  )
+    return(voltage_summary)
 }
