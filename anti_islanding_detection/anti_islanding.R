@@ -30,17 +30,10 @@ detect_voltage_thresholds <- function(combined_data) {
     voltage_data <- mutate(voltage_data, voltage_antiislanding_2015=ifelse(
         vmin > OVERVOLTAGE_2_2015, "overvoltage_2", voltage_antiislanding_2015))
     voltage_data <- mutate(voltage_data, va_2015_recurrances=sequence(rle(voltage_antiislanding_2015)$length))
-    voltage_data <- mutate(voltage_data, is_final=(
-        (voltage_antiislanding_2015 != lead(voltage_antiislanding_2015)) |
-            (!is.na(voltage_antiislanding_2015) & is.na(lead(voltage_antiislanding_2015)))
-    ))
-    voltage_data <- mutate(voltage_data, is_initial=(
-        (voltage_antiislanding_2015 != lag(voltage_antiislanding_2015)) |
-            (!is.na(voltage_antiislanding_2015) & is.na(lag(voltage_antiislanding_2015)))
-    ))
 
     return(voltage_data)
 }
+
 
 antiislanding_summary <- function(voltage_data) {
     voltage_data <- mutate(voltage_data, is_initial=(
