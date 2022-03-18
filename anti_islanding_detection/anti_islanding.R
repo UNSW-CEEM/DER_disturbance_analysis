@@ -16,12 +16,15 @@ OVERVOLTAGE_1_2020 <- 265
 OVERVOLTAGE_2_2020 <- 275
 
 #' Run anti-islanding voltage threshold checks
-detect_voltage_thresholds <- function(combined_data) {
-    voltage_data <- select(combined_data, ts, c_id, Standard_Version, v, vmin, vmax, d)
+detect_voltage_threshold_excursions <- function(combined_data) {
+    voltage_data <- select(combined_data, ts, c_id, Standard_Version, v, vmin, vmax, vmean, d)
     voltage_data <- arrange(voltage_data, c_id, ts)
+    voltage_data <- mutate(voltage_data, vmin_exists=!is.na(vmin))
+    
     # substitute vmin/vmax if they are NA
     voltage_data <- mutate(voltage_data, vmin=ifelse(is.na(vmin), v, vmin))
     voltage_data <- mutate(voltage_data, vmax=ifelse(is.na(vmax), v, vmax))
+    voltage_data <- mutate(voltage_data, vmean=ifelse(is.na(vmean), v, vmean))
 
     voltage_data <- mutate(voltage_data, voltage_antiislanding_2015=ifelse(
         vmax < UNDERVOLTAGE_2015, "undervoltage", NA))
@@ -49,9 +52,22 @@ antiislanding_summary <- function(voltage_data) {
     voltage_summary <- voltage_data %>%
         group_by(va_event_id) %>%
         drop_na() %>%
-        summarise(c_id=first(c_id), v=mean(v), vmin=min(vmin), vmax=max(vmax), d=last(d),
+        summarise(c_id=first(c_id), v=mean(v), vmin=min(vmin), vmax=max(vmax), vmean=mean(vmean), d=last(d),
                   voltage_antiislanding_2015=first(voltage_antiislanding_2015),
                   va_2015_recurrances=max(va_2015_recurrances), Standard_Version=first(Standard_Version)
                   )
     return(voltage_summary)
+}
+
+summarise_voltage_data <- function(voltage_data) {
+    summarised_voltage_data <- voltage_data %>%
+        group_by(c_id) %>%
+        summarise(
+            vmax=max(vmax), vmin=min(vmin), vmean=mean(vmean),
+            vmin_exists=all(vmin_exists),
+            voltage_antiislanding_2015=any(!is.na(voltage_antiislanding_2015))
+        )
+    summarised_voltage_data <- select(
+        summarised_voltage_data, c_id, vmax, vmin, vmean, voltage_antiislanding_2015)
+    return(summarised_voltage_data)
 }
