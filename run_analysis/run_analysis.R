@@ -236,10 +236,10 @@ run_analysis <- function(data, settings) {
     )
 
     # -------- check voltage threshold excursions --------
-    voltage_data <- detect_voltage_thresholds(
-      combined_data_f
-    )
-    browser()
+    combined_data_f <- detect_voltage_threshold_excursions(combined_data_f)
+    voltage_data_summary <- summarise_voltage_data(combined_data_f)
+    combined_data_f <- left_join(combined_data_f, voltage_data_summary, by="c_id")
+    data$antiislanding_summary <- antiislanding_summary(combined_data_f)
 
     if(length(combined_data_f$ts) > 0){
       # -------- categorise response --------
@@ -360,7 +360,7 @@ run_analysis <- function(data, settings) {
       if(length(combined_data_f$ts) > 0){
         # Copy data for saving
         logdebug('Copy data for saving', logger=logger)
-        combined_data_cols <- c("ts", "site_id", "c_id", "power_kW", "c_id_norm_power", "v", "f", "s_state",
+        combined_data_cols <- c("ts", "site_id", "c_id", "power_kW", "c_id_norm_power", "v", "vmin", "vmax", "vmin", "f", "s_state",
                                 "s_postcode", "pv_installation_year_month", "Standard_Version", "Grouping", "sum_ac",
                                 "clean", "manufacturer", "model", "site_performance_factor", "response_category",
                                 "zone", "distance", "lat", "lon", "e", "con_type", "first_ac", "polarity",
@@ -368,7 +368,7 @@ run_analysis <- function(data, settings) {
                                 "manual_droop_compliance", "manual_reconnect_compliance", "reconnection_time",
                                 "ramp_above_threshold", "c_id_daily_norm_power", "max_power", "ufls_status",
                                 "pre_event_sampled_seconds", "post_event_sampled_seconds", "ufls_status_v",
-                                "pre_event_v_mean", "post_event_v_mean")
+                                "pre_event_v_mean", "post_event_v_mean", "vmin_na", "vmax_na", "vmean_na", "antiislanding_v_excursion_2015")
         if("Islanded" %in% names(combined_data_f)){
           combined_data_cols <- append(combined_data_cols, c("Islanded", "island_assessment", "islanding_alert"), 34)
         }
@@ -403,7 +403,9 @@ run_analysis <- function(data, settings) {
                             "compliance_status", "reconnection_compliance_status", "manual_droop_compliance",
                             "manual_reconnect_compliance", "reconnection_time", "ramp_above_threshold", "max_power",
                             "ufls_status", "pre_event_sampled_seconds", "post_event_sampled_seconds", "ufls_status_v",
-                            "pre_event_v_mean", "post_event_v_mean")
+                            "pre_event_v_mean", "post_event_v_mean", "vmax_max", "vmin_min", "vmean_mean",
+                            "vmin_na_all", "vmax_na_all", "vmean_na_all",
+                            "antiislanding_v_excursion_2015_triggered")
         if("Islanded" %in% names(data$circuit_summary)){
           circ_sum_cols <- append(circ_sum_cols, c("Islanded", "island_assessment", "islanding_alert"), 26)
         }
