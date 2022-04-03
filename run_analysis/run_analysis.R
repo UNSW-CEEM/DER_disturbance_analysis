@@ -360,7 +360,7 @@ run_analysis <- function(data, settings) {
       if(length(combined_data_f$ts) > 0){
         # Copy data for saving
         logdebug('Copy data for saving', logger=logger)
-        combined_data_cols <- c("ts", "site_id", "c_id", "power_kW", "c_id_norm_power", "v", "vmin", "vmax", "vmin", "f", "s_state",
+        combined_data_cols <- c("ts", "site_id", "c_id", "power_kW", "c_id_norm_power", "v", "vmin", "vmax", "vmean", "f", "s_state",
                                 "s_postcode", "pv_installation_year_month", "Standard_Version", "Grouping", "sum_ac",
                                 "clean", "manufacturer", "model", "site_performance_factor", "response_category",
                                 "zone", "distance", "lat", "lon", "e", "con_type", "first_ac", "polarity",

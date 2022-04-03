@@ -249,7 +249,6 @@ DBInterface <- R6::R6Class("DBInterface",
     get_time_series_build_query = function(timeseries){
       column_names <- names(read.csv(timeseries, nrows=3, header = TRUE))
       optional_columns <- c("vmin", "vmax", "vmean", "fmin", "fmax")
-      browser()
       replace_columns <- paste(optional_columns[optional_columns %in% column_names], collapse=", ")
       select_columns <- c()
       for (col in optional_columns[optional_columns %in% column_names]) {

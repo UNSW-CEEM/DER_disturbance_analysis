@@ -62,7 +62,8 @@ antiislanding_summary <- function(combined_data) {
         group_by(va_event_id) %>%
         summarise(c_id=first(c_id), v=mean(v), vmin=min(vmin), vmax=max(vmax), vmean=mean(vmean), d=last(d),
                   antiislanding_v_excursion_2015=first(antiislanding_v_excursion_2015),
-                  va_2015_recurrances=max(va_2015_recurrances), Standard_Version=first(Standard_Version)
+                  va_2015_recurrances=max(va_2015_recurrances), Standard_Version=first(Standard_Version),
+                  start_tstamp <- min(ts), end_tstamp <- max(ts)
                   )
     return(voltage_summary)
 }
