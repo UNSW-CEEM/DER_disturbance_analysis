@@ -184,7 +184,7 @@ upscale_and_summarise_disconnections <- function(circuit_summary, manufacturer_i
   }
   upscaling_results <- get_upscaling_results(circuits_to_summarise, manufacturer_install_data, load_date, 
                                               region_to_load, sample_threshold = 30)
-  upscaling_results$with_separaute_ufls_counts <- get_upscaling_results_excluding_ufls_affected_circuits(
+  upscaling_results$with_separate_ufls_counts <- get_upscaling_results_excluding_ufls_affected_circuits(
     circuits_to_summarise, manufacturer_install_data, load_date, region_to_load, sample_threshold = 30)
 
   write.csv(upscaling_results$manufacturers_missing_from_cer, 
