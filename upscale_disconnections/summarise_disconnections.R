@@ -46,9 +46,9 @@ get_upscaling_results_excluding_ufls_affected_circuits <- function(circuit_summa
 group_disconnections_by_manufacturer <- function(circuit_summary, exclude_ufls_circuits=FALSE){
   # Don't count circuits without a well defined response type.
   if (exclude_ufls_circuits) {
-    bad_categories <- c("6 Not enough data", "Undefined", "UFLS Dropout")
+    bad_categories <- c("6 Not enough data", "Undefined", "NA", "UFLS Dropout")
   } else {
-    bad_categories <- c("6 Not enough data", "Undefined")
+    bad_categories <- c("6 Not enough data", "Undefined", "NA")
   }
   circuit_summary <- filter(circuit_summary, !(response_category %in% bad_categories | is.na(response_category)))
   
@@ -69,7 +69,7 @@ get_number_of_disconnections <- function(response_categories){
 get_number_of_ufls_disconnections <- function(response_categories){
   # Find the number of circuits identified as UFLS Dropout and the sample size to use for the UFLS proportion
   ufls_stats <- list()
-  bad_categories <- c("6 Not enough data", "Undefined")
+  bad_categories <- c("6 Not enough data", "Undefined", "NA")
   response_categories <- response_categories[!(response_categories %in% bad_categories | is.na(response_categories))]
   ufls_stats$sample_size <- length(response_categories)
   disconnection_categories <- c("UFLS Dropout")
