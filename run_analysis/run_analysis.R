@@ -236,7 +236,8 @@ run_analysis <- function(data, settings) {
     )
 
     # -------- check voltage threshold excursions --------
-    combined_data_f <- detect_voltage_threshold_excursions(combined_data_f)
+    combined_data_f <- detect_voltage_threshold_excursions(
+      combined_data_f, settings$pre_event_interval, settings$window_length)
     voltage_data_summary <- summarise_voltage_data(combined_data_f)
     combined_data_f <- left_join(combined_data_f, voltage_data_summary, by="c_id")
     data$antiislanding_summary <- antiislanding_summary(combined_data_f)
