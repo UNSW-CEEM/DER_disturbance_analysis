@@ -75,6 +75,7 @@ summarise_antiislanding_recurrances <- function(combined_data, antiislanding_col
             !!recurrances_column:=max(!!sym(recurrances_column)), Standard_Version=first(Standard_Version),
             start_tstamp=min(ts), end_tstamp=max(ts)
     )
+    summary <- filter(summary, !is.na(!!sym(id_column)))
     return(summary)
 }
 
@@ -83,6 +84,7 @@ antiislanding_summary <- function(combined_data) {
         combined_data, 'antiislanding_v_excursion_2015', 'va_2015_recurrances')
     voltage_summary_2020 <- summarise_antiislanding_recurrances(
         combined_data, 'antiislanding_v_excursion_2020', 'va_2020_recurrances')
+    voltage_summary <- bind_rows(voltage_summary_2015, voltage_summary_2020)
     return(voltage_summary_2015)
 }
 
