@@ -124,6 +124,8 @@ ui <- fluidPage(
           uiOutput("save_upscaled_disconnection_summary"),
           HTML("<br>"),
           uiOutput("save_upscaled_disconnection_summary_with_separate_ufls_counts"),
+          HTML("<br>"),
+          uiOutput("save_voltage_excursion_summary"),
           HTML("<br><br>"),
           plotlyOutput(outputId="NormPower"),
           plotlyOutput(outputId="Frequency"),
@@ -792,6 +794,11 @@ server <- function(input,output,session){
                           "Save upscaled disconnection summary with separate ufls counts", 
                           "Choose directory for report files ...", filetype=list(xlsx="csv"))
         })
+        output$save_voltage_excursion_summary <- renderUI({
+          shinySaveButton("save_voltage_excursion_summary", 
+                          "Save voltage excursion summary", 
+                          "Choose directory for report files ...", filetype=list(xlsx="csv"))
+        })
       
     
         if ("width" %in% names(v$sample_count_table)) {
@@ -1209,6 +1216,15 @@ server <- function(input,output,session){
     }
   })
   
+  observeEvent(input$save_voltage_excursion_summary,{
+    volumes <- c(home=getwd())
+    shinyFileSave(input, "save_voltage_excursion_summary", roots=volumes, 
+                  session=session)
+    fileinfo <- parseSavePath(volumes, input$save_voltage_excursion_summary)
+    if (nrow(fileinfo) > 0) {
+      write.csv(v$antiislanding_summary, as.character(fileinfo$datapath), row.names=FALSE)
+    }
+  })
   
   get_current_settings <- function(){
     settings <- vector(mode='list')
