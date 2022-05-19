@@ -97,3 +97,4 @@ test_upscaled_disconnections.csv
 access_database.R
 inbuilt_data/manufacturer_mapping_*
 *.log
+DERdat_results/*
