@@ -54,7 +54,7 @@ detect_voltage_threshold_excursions <- function(combined_data, pre_event_interva
 #' @param antiislanding_column: the column containing which threshold has been crossed
 #' @param recurrances_columm: the name of the column for the output count
 #' Note: this function is horrible to read thanks to a bunch of dereferencing(?)/symbol conversion
-#'       required to get use variable column names with DPLYR. Some of the sym() calls me be superfluous
+#'       required to get use variable column names with DPLYR. Some of the sym() calls may be superfluous
 #'       but I'm not going to fix them yet. Make changes at your own risk!
 summarise_antiislanding_recurrances <- function(combined_data, antiislanding_column, recurrances_column) {
     combined_data <- arrange(combined_data, c_id, ts)
@@ -97,11 +97,21 @@ summarise_voltage_data <- function(combined_data) {
             vmin_min=min(ifelse(vmin_na, v, vmin)),
             vmean_mean=mean(ifelse(vmean_na, v, vmean)),
             vmin_na_all=all(vmin_na), vmax_na_all=all(vmax_na), vmean_na_all=all(vmean_na),
-            antiislanding_v_excursion_2015_triggered=any(!is.na(antiislanding_v_excursion_2015))
+            antiislanding_v_excursion_2015_triggered=any(!is.na(antiislanding_v_excursion_2015)),
+            antiislanding_v_excursion_2020_triggered=any(!is.na(antiislanding_v_excursion_2020))
         )
+    summarised_voltage_data <- mutate(summarised_voltage_data,
+        voltage_excursion=case_when(
+            antiislanding_v_excursion_2015_triggered & antiislanding_v_excursion_2020_triggered ~ "V Excursion 2015 & 2020",
+            antiislanding_v_excursion_2015_triggered ~ "V Excursion 2015",
+            antiislanding_v_excursion_2020_triggered ~ "V Excursion 2020",
+            TRUE ~ "No V Excursion"
+    ))
     summarised_voltage_data <- select(
         summarised_voltage_data, c_id, vmax_max, vmin_min, vmean_mean,
         vmin_na_all, vmax_na_all, vmean_na_all,
-        antiislanding_v_excursion_2015_triggered)
+        antiislanding_v_excursion_2015_triggered,
+        antiislanding_v_excursion_2020_triggered,
+        voltage_excursion)
     return(summarised_voltage_data)
 }

@@ -80,6 +80,7 @@ ui <- fluidPage(
           materialSwitch("zone_agg", label=strong("Zones:"), status="primary", value=FALSE),
           materialSwitch("compliance_agg", label=strong("Compliance:"), status="primary", value=FALSE),
           materialSwitch("reconnection_compliance_agg", label=strong("Reconnection Compliance:"), status="primary", value=FALSE),
+          materialSwitch("v_excursion_agg", label=strong("Voltage excursion:"), status="primary", value=FALSE),
           tags$hr(),
           h4("Additional Processing"),
           radioButtons("confidence_category", label = strong("Grouping category to calculate confidence interval for, 
@@ -259,6 +260,7 @@ reset_sidebar <- function(input, output, session, stringsAsFactors) {
   shinyjs::hide("zone_agg")
   shinyjs::hide("compliance_agg")
   shinyjs::hide("reconnection_compliance_agg")
+  shinyjs::hide("v_excursion_agg")
   shinyjs::hide("save_settings")
   shinyjs::hide("load_second_filter_settings")
   shinyjs::hide("confidence_category")
@@ -326,6 +328,7 @@ server <- function(input,output,session){
   hide("zone_agg")
   hide("compliance_agg")
   hide("reconnection_compliance_agg")
+  hide("v_excursion_agg")
   hide("save_settings")
   hide("load_second_filter_settings")
   hide("norm_power_filter_off_at_t0")
@@ -366,6 +369,7 @@ server <- function(input,output,session){
   zone_agg <- reactive({input$zone_agg})
   compliance_agg <- reactive({input$compliance_agg})
   reconnection_compliance_agg <- reactive({input$reconnection_compliance_agg})
+  v_excursion_agg <- reactive({input$v_excursion_agg})
   load_date <- reactive({
     date_as_str <- as.character(input$load_date[1])
   })
@@ -668,6 +672,7 @@ server <- function(input,output,session){
       shinyjs::show("zone_agg")
       shinyjs::show("compliance_agg")
       shinyjs::show("reconnection_compliance_agg")
+      shinyjs::show("v_excursion_agg")
       shinyjs::show("save_settings")
       shinyjs::show("load_second_filter_settings")
       shinyjs::show("norm_power_filter_off_at_t0")
@@ -1260,6 +1265,7 @@ server <- function(input,output,session){
     settings$circuit_agg <- circuit_agg()
     settings$zone_agg <- zone_agg()
     settings$reconnection_compliance_agg <- reconnection_compliance_agg()
+    settings$v_excursion_agg <- v_excursion_agg()
     settings$compliance_agg <- compliance_agg()
     
     settings$confidence_category <- confidence_category()
@@ -1378,7 +1384,10 @@ server <- function(input,output,session){
       if ("reconnection_compliance_agg" %in% names(settings)) {
         updateMaterialSwitch(session, "reconnection_compliance_agg", value = settings$reconnection_compliance_agg)
       }
-      
+      if ("v_excursion_agg" %in% names(settings)) {
+        updateMaterialSwitch(session, "v_excursion_agg", value = settings$v_excursion_agg)
+      }
+
       updateRadioButtons(session, "confidence_category", selected = settings$confidence_category)
       updateMaterialSwitch(session, "raw_upscale", value = settings$raw_upscale)
       
@@ -1462,7 +1471,7 @@ server <- function(input,output,session){
   # Inforce mutual exclusivity of Aggregation settings
   observe({
     if(manufacturer_agg() | model_agg() | pst_agg() | circuit_agg() | circuit_agg() | response_agg() | zone_agg()
-       | compliance_agg() | reconnection_compliance_agg() | grouping_agg()){
+       | compliance_agg() | reconnection_compliance_agg() | v_excursion_agg() | grouping_agg()){
       updateMaterialSwitch(session=session, "raw_upscale", value = FALSE)
     }
   })
@@ -1477,6 +1486,7 @@ server <- function(input,output,session){
       updateMaterialSwitch(session=session, "zone_agg", value = FALSE)
       updateMaterialSwitch(session=session, "compliance_agg", value = FALSE)
       updateMaterialSwitch(session=session, "reconnection_compliance_agg", value = FALSE)
+      updateMaterialSwitch(session=session, "v_excursion_agg", value = FALSE)
       updateMaterialSwitch(session=session, "response_agg", value = FALSE)
       updateMaterialSwitch(session=session, "grouping_agg", value = FALSE)
     }

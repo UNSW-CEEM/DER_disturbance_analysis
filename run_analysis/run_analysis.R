@@ -200,7 +200,8 @@ upscale_and_summarise_disconnections <- function(circuit_summary, manufacturer_i
 check_grouping <- function(settings) {
   if (settings$standard_agg==FALSE & settings$pst_agg==FALSE & settings$grouping_agg==FALSE &
       settings$manufacturer_agg==FALSE & settings$model_agg==FALSE & settings$zone_agg==FALSE &
-      settings$circuit_agg==TRUE & settings$compliance_agg==TRUE & settings$reconnection_compliance_agg){
+      settings$circuit_agg==TRUE & settings$compliance_agg==TRUE & settings$reconnection_compliance_agg &
+      settings$v_excursion_agg==FALSE){
     no_grouping=TRUE
   } else {
     no_grouping=FALSE
