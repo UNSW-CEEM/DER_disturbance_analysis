@@ -36,8 +36,7 @@ jobs:
           r-version: ${{ matrix.r-version }}
       - name: Install dependencies
         run: |
-          touch .Rprofile
-          echo "options(repos=structure(c(CRAN=\"https://cran.csiro.au\")))" >> .Rprofile
+          echo 'options(repos=structure(c(CRAN="https://cran.csiro.au")))' >> .Rprofile
           Rscript install.R
       - name: Run all tests
         run: Rscript run_all_tests.R
