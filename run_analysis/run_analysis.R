@@ -370,7 +370,8 @@ run_analysis <- function(data, settings) {
                                 "manual_droop_compliance", "manual_reconnect_compliance", "reconnection_time",
                                 "ramp_above_threshold", "c_id_daily_norm_power", "max_power", "ufls_status",
                                 "pre_event_sampled_seconds", "post_event_sampled_seconds", "ufls_status_v",
-                                "pre_event_v_mean", "post_event_v_mean", "vmin_na", "vmax_na", "vmean_na", "antiislanding_v_excursion_2015")
+                                "pre_event_v_mean", "post_event_v_mean", "vmin_na", "vmax_na", "vmean_na",
+                                "antiislanding_v_excursion_2015", "antiislanding_v_excursion_2020")
         if("Islanded" %in% names(combined_data_f)){
           combined_data_cols <- append(combined_data_cols, c("Islanded", "island_assessment", "islanding_alert"), 34)
         }
@@ -407,7 +408,7 @@ run_analysis <- function(data, settings) {
                             "ufls_status", "pre_event_sampled_seconds", "post_event_sampled_seconds", "ufls_status_v",
                             "pre_event_v_mean", "post_event_v_mean", "vmax_max", "vmin_min", "vmean_mean",
                             "vmin_na_all", "vmax_na_all", "vmean_na_all",
-                            "antiislanding_v_excursion_2015_triggered")
+                            "antiislanding_v_excursion_2015_triggered", "antiislanding_v_excursion_2020_triggered")
         if("Islanded" %in% names(data$circuit_summary)){
           circ_sum_cols <- append(circ_sum_cols, c("Islanded", "island_assessment", "islanding_alert"), 26)
         }

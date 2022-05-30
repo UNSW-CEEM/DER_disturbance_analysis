@@ -52,27 +52,27 @@ detect_voltage_threshold_excursions <- function(combined_data, pre_event_interva
 
 #' Find the number of consecutive occurrences of each antiislanding threshold crossing
 #' @param antiislanding_column: the column containing which threshold has been crossed
-#' @param recurrances_columm: the name of the column for the output count
+#' @param recurrences_columm: the name of the column for the output count
 #' Note: this function is horrible to read thanks to a bunch of dereferencing(?)/symbol conversion
 #'       required to get use variable column names with DPLYR. Some of the sym() calls may be superfluous
 #'       but I'm not going to fix them yet. Make changes at your own risk!
-summarise_antiislanding_recurrances <- function(combined_data, antiislanding_column, recurrances_column) {
+summarise_antiislanding_recurrences <- function(combined_data, antiislanding_column, recurrences_column) {
     combined_data <- arrange(combined_data, c_id, ts)
-    id_column <- paste0(recurrances_column, '_id')
+    id_column <- paste0(recurrences_column, '_id')
     combined_data <- mutate(combined_data, is_initial=(
         (!!sym(antiislanding_column) != lag(!!sym(antiislanding_column))) |
             (!is.na(!!sym(antiislanding_column)) & is.na(lag(!!sym(antiislanding_column))))
     ))
     combined_data <- ungroup(group_by(combined_data, !!sym(id_column):=cumsum(!is.na(is_initial) & is_initial)))
     combined_data <- mutate(combined_data, !!id_column:=ifelse(is.na(!!sym(antiislanding_column)), NA, !!sym(id_column)))
-    combined_data <- mutate(combined_data, !!recurrances_column:=sequence(rle(!!sym(antiislanding_column))$length))
+    combined_data <- mutate(combined_data, !!recurrences_column:=sequence(rle(!!sym(antiislanding_column))$length))
 
     summary <- combined_data %>%
         group_by(!!sym(id_column)) %>%
         summarise(
             c_id=first(c_id), v=mean(v), vmin=min(vmin), vmax=max(vmax), vmean=mean(vmean), d=last(d),
             !!antiislanding_column:=first(!!sym(antiislanding_column)),
-            !!recurrances_column:=max(!!sym(recurrances_column)), Standard_Version=first(Standard_Version),
+            !!recurrences_column:=max(!!sym(recurrences_column)), Standard_Version=first(Standard_Version),
             start_tstamp=min(ts), end_tstamp=max(ts)
     )
     summary <- filter(summary, !is.na(!!sym(id_column)))
@@ -80,10 +80,10 @@ summarise_antiislanding_recurrances <- function(combined_data, antiislanding_col
 }
 
 antiislanding_summary <- function(combined_data) {
-    voltage_summary_2015 <- summarise_antiislanding_recurrances(
-        combined_data, 'antiislanding_v_excursion_2015', 'va_2015_recurrances')
-    voltage_summary_2020 <- summarise_antiislanding_recurrances(
-        combined_data, 'antiislanding_v_excursion_2020', 'va_2020_recurrances')
+    voltage_summary_2015 <- summarise_antiislanding_recurrences(
+        combined_data, 'antiislanding_v_excursion_2015', 'va_2015_recurrences')
+    voltage_summary_2020 <- summarise_antiislanding_recurrences(
+        combined_data, 'antiislanding_v_excursion_2020', 'va_2020_recurrences')
     voltage_summary <- bind_rows(voltage_summary_2015, voltage_summary_2020)
     return(voltage_summary_2015)
 }
