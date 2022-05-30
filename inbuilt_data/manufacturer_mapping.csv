@@ -2,9 +2,9 @@ sa,aemo
 1,Unknown
 ABB,ABB
 Aero-Sharp,Aero-Sharp
-Afore,Afore
-APS,APS
-Aurora,Aurora
+Afore,Afore New Energy
+APS,Altenergy
+Aurora,ABB
 Bosch Power Tec GmbH,Bosch Power Tec GmbH
 Canadian Solar,Canadian Solar
 CMS Group,CMS
@@ -19,11 +19,11 @@ Greenstar,Greenstar
 Growatt,Growatt
 Huawei,Huawei
 JFY,JFY
-KACO new energy,KACO new energy
+KACO new energy,KACO
 Macsolar,Macsolar
 Omnik,Omnik
 Rewatt,Rewatt
-Samil Power,Samil Power
+Samil Power,Samil
 Schneider Electric,Schneider Electric
 SMA,SMA
 SOFAR,SOFAR solar
@@ -35,3 +35,623 @@ Sungrow,Sungrow
 Sunteams,Sunteams
 Xantrex,Xantrex
 Zeversolar,Zeversolar
+Unknown,Unknown
+Fronius Australia,Fronius
+Huawei Technologies Co Ltd,Huawei
+Samil Power Co Ltd,Samil
+Huawei Tech Co Ltd,Huawei
+Power-One Energy Solutions,ABB
+Fronius Aus Pty Ltd,Fronius
+Power-One,ABB
+Growatt New Energy Co Ltd,Growatt
+Sungrow Power Supply Co Ltd,Sungrow
+Fronius Australia Pty Ltd,Fronius
+Shenzhen Growatt New Energy Technology Co Ltd,Growatt
+SolarEdge Tech,SolarEdge
+Power-One Italy S.p.A,ABB
+SMA Australia Pty Ltd,SMA
+SolarEdge Technologies,SolarEdge
+Sunny Roo Products,Sunny Roo
+(ABB) Power-One Italy S.p.A,ABB
+SolarEdge Technologies Ltd,SolarEdge
+Xiamen Kehua Hengsheng Co Ltd,Kehua Hengsheng
+Enphase Energy Inc,Enphase
+ZEN / APS,Altenergy
+Enphase Energy New Zealand Limited,Enphase
+JIANGSU GOODWE POWER SUPPLY TECHNOLOGY CO LTD,GoodWe
+Shenzhen JingFu Yuan Tech Co Ltd,JFY
+Jiangsu Zeversolar New Energy Co Ltd,Zeversolar
+SolaX Power Co Ltd,Solax Power
+Solar Energy Australia Pty Ltd,Solar Energy
+Beijing Kinglong New Energy Technology Co Ltd,Unknown
+SHENZHEN GROWATT NEW ENERGY TECHNOLOGY CO. LTD,Growatt
+Ginlong Technologies Co Ltd,Solis
+Shenzhen Growatt New Energy Tech Co Ltd,Growatt
+Delta Electronics Inc,Delta
+EnaSolar,EnaSolar
+SMA Solar Technology AG,SMA
+Solar Naturally Pty Ltd,Solar Naturally
+Delta Energy Systems,Delta
+Shenzhen JingFuYuan Tech Co Ltd,JFY
+Fronius/SunPower,Multiple
+Blueline Solar Pty Ltd,Blueline
+Diehl AKO Stiftung & Co KG / NeuTek Energy Pty Ltd,Multiple
+Altenergy Power System Inc,Altenergy
+SolarBridge Technologies,SolarBridge
+Sungrow Power Supply Co. Ltd.,Sungrow
+Redback Technologies Limited,Redback
+SMA/Solahart,SMA
+NV Nederlandsche Apparatenfabriek (Nedap),N.V. Nederlandsche
+Shenzhen Kstar New Energy Company Limited,Kstar New Energy
+Solar Juice Pty Ltd,Solar Juice
+SOLAX POWER NETWORK TECHNOLOGY ZHEJIANG CO LTD,Solax Power
+Shenzhen SOFARSOLAR Co Ltd,SOFAR solar
+HANGZHOU SUNNY ENERGY SCIENCE AND TECHNOLOGY CO LTD,Hangzhou Sunny Energy Science and Tech
+Solax Power Network Tech Zheijiang Co Ltd,Solax Power
+Sapphire Solar Limited,Sapphire Solar
+Fronius International GmbH,Fronius
+Eltek Valere,Eltek Valere
+Ningbo Ginlong Technologies Co Ltd,Solis
+SolaX Power Network Tech Zhe jiang,Solax Power
+Ningbo Ginlong Technologies Co Ltd / Solis Australasia,Solis
+Delta Electronics Inc.,Delta
+Conergy IPG,Conergy
+Shenzhen Litto New Energy Co. Ltd,Litto New Energy
+JIANGSU GOODWE POWER SUPPLY TECHNOLOGY CO.LTD,GoodWe
+Jiangsu Zeversol New E Co Ltd,Zeversolar
+Clenergy Australia,Clenergy
+Jiangsu GoodWe Power Supply Tech Co Ltd,GoodWe
+Growatt New Energy Technology Co Ltd,Growatt
+Jiangsu Zeversolar New Energy Co. Ltd,Zeversolar
+Zeus Appollo,Zues Appollo
+Shanghai Macsolar Power Pty Ltd,Macsolar
+Shanghai Trannergy Power Electronics Co Ltd,Trannergy Power
+Omnik New Energy Co Ltd,Omnik New Energy
+Hangzhou Sunny Energy Science and Technology Co.Ltd,Hangzhou Sunny Energy Science and Tech
+Sunna Tech Ltd,Sunna Tech
+Anhui EHE New Energy Tech Co Ltd,Anhui
+Latronics,Latronic Sunpower
+Solar Lord,Solar Lord
+Australia Zeversolar New Energy Pty Ltd,Zeversolar
+Shenzhen JingFuYuan Tech. Co. Ltd.,JFY
+Power-One Energy Solutions Pty Ltd,ABB
+Wuxi Xinqi Power New Energy Technology Co Ltd,Unknown
+B&B Power Co Ltd,B&B Power
+Fronius Intl GmbH,Fronius
+Ningbo Ginlong Tech Co Ltd,Solis
+Suzhou Hosola New Energy Co Ltd,Hosola
+SHENZHEN SINEXCEL ELECTRIC CO LTD,Sinexcel Electric
+Schneider Electric (Australia) Pty Ltd,Schneider Electric
+(ABB) Power-One Energy Solutions Pty Ltd,ABB
+SolaX Power Co.Ltd,Solax Power
+Sapphire Solar LTD,Sapphire Solar
+Oelmaier Industrieelektronik GmbH,Oelmaier Industrieelektronik
+Delta Energy Systems (Germany) GmbH,Delta
+Power-One(ABB),ABB
+Clenergy,Clenergy
+"JiangSu Solar Power Technology Co., Ltd",JiangSu Solar Power Technology
+The Trustee for ONE SOLAR UNIT TRUST t/as OneSolar International,One Solar
+SMA Australia,SMA
+Smart Power Technology Co Ltd,SMA
+Ningbo Ginlong Technologies Co Ltd/AGL Solar,Multiple
+"GROWATT NEW ENERGY TECHNOLOGY CO.,LTD",Growatt
+Shanghai Trannergy Power Electrnics Co. Ltd.,Trannergy Power
+SUZHOU SOLARWII MICRO GRID TECHNOLOGY CO LTD,Unknown
+Growatt New Energy Technology Co.Ltd,Growatt
+Shenzhen Litto New Energy Co Ltd,Litto New Energy
+Jiangsu Ever-Solar New Energy,Unknown
+"Samil Power Co.,Ltd.",Samil
+Power One Italy SpA,ABB
+"Wuxi Xinqi Power New Energy Technology Co., Ltd.",Unknown
+"SolaX Power Co.,LTD",Solax Power
+Zhejiang Growatt New Energy Co Ltd,Growatt
+Afore New Energy Technology (Shanghai) Co Ltd,Afore New Energy
+Enecsys Ltd,Enecsys
+"Growatt New Energy Co., Ltd",Growatt
+"Shenzhen Growatt New Energy Technology Co., Ltd",Growatt
+KACO / Selectronic,KACO
+SolaX Power Network Technology Zhe jiang,Solax Power
+Sputnik Engineering AG (SolarMax),SolarMax
+Enphase Energy,Enphase
+SMA/Conergy,Multiple
+SMA NEW ENERGY TECHNOLOGY JIANGSU CO LTD,SMA
+Guangzhou Sanjing Electric Co Ltd,Sanjing Electric
+"Shenzhen INVT Electric Co., Ltd.",INVT
+Power-One Energy Solutions Pty Ltd(ABB),ABB
+Flextronics International USA Inc,Flextronics
+Beijing Kinglong New Energy,Unknown
+JIANGSU GOODWE POWER SUPPLY TECHNOLOGY CO.LTD.,GoodWe
+ENATEL LIMITED,Enatel
+SolarEdge Technology Ltd,SolarEdge
+Shanghai Trannergy Power Electronics Co. Ltd.,Trannergy Power
+Solar Bos Pty Ltd,Unknown
+"Jiangsu Zeversolar New Energy Co., Ltd.",Zeversolar
+Afore New Energy Technology Shanghai Co Ltd,Afore New Energy
+SolarEdge Tech Ltd,SolarEdge
+"Jiangsu GoodWe Power Supply Technology Co., Ltd.",GoodWe
+Ningbo Ginlong Technologies Co Ltd / RezEko Pty Lt,Multiple
+Five Star Energy Pty Ltd,Five Star Energy
+Motech Industries / Solco Choice Electric,Multiple
+Five Star Energy,Five Star Energy
+Hangzhou Zhejiang University Sunny Energy Science and Technology Co Lt,Hangzhou Sunny Energy Science and Tech
+ReneSola Zhejiang System Integration Ltd,ReneSola
+Carbon Management Solutions,CMS
+Beijing Hua Xin Liu He Investment (Australia) Pty Ltd,Beijing Hua Xin Liu He Investment
+Sonnen GmbH,Sonnen
+ReneSola Zhejiang Ltd,ReneSola
+Suzhou Hypontech Co Ltd,Hypnotech
+Effekta Regeltechnik GmbH,Effekta Regeltechnik
+Solco Choice Electric,Solco Choice Electric
+Tesla Motors Australia Pty Ltd,Tesla
+Hangzhou Zhejiang University Sunny Energy Science and Technology Co Ltd,Hangzhou Sunny Energy Science and Tech
+Maitian Energy Co Ltd,Maitian
+Powerbox Australia,Powerbox
+Rich Electric Co Ltd,Rich Electric
+Yueqing Sandi Electric Co Ltd,Sandi
+Wuxi SLD Power Technology Co Ltd,Wuxi SLD
+Victek Co Ltd,Victek
+Diehl AKO Stiftung & Co KG,Diehl AKO Stiftung
+Sharp Corporation of Australia Pty Ltd,Sharp
+Hex Power System Co Ltd,Hex Power
+Stonestar Australia Pty Ltd,Stonestar
+Dass Tech Co Ltd,Dass Tech
+Samsung SDI Co. Ltd.,Samsung
+ECOfield Biotech Pty Ltd,ECOfield Biotech
+Eaton,Eaton
+Sputnik Engineering AG,SolarMax
+Victron Energy B.V.,Victron Energy
+Alpha ESS Co Ltd,Alpha ESS
+5000,Unknown
+ Nepad,Unknown
+ Solaredge ,SolarEdge
+ solax,Solax Power
+?,Unknown
+0ther,Unknown
+2x eversolar + 1x enphase,Multiple
+5kw,Unknown
+5kw Inverter,Unknown
+684-1030,Unknown
+Abb ,ABB
+ABB AURORA,ABB
+ABB ,ABB
+Ablerex Electronics,Ablerex Electronics
+Advanced Solar Photonics,Unknown
+AE Solar Energy,Unknown
+AERO SHARP,Aero-Sharp
+AFore ,Afore New Energy
+Afore New Energy Technology Shanghai Co,Afore New Energy
+Altenergy Power System,Altenergy
+Apparent power system,Unknown
+APS ,Altenergy
+Aps Micro,Altenergy
+Areosharp,Aero-Sharp
+AU Optronics,AU Optronics
+Aurora ,ABB
+Aurora One,ABB
+aurora ,ABB
+B & B,B&B Power
+B&B,B&B Power
+BK Presicion,Unknown
+Bocsh,Bosch Power Tec GmbH
+Bosch,Bosch Power Tec GmbH
+Bosch ,Bosch Power Tec GmbH
+Bosch & Growatt (2 inverters),Bosch Power Tec GmbH
+Bosche,Bosch Power Tec GmbH
+Bosh,Bosch Power Tec GmbH
+BP,Unknown
+BP Solar,Unknown
+BP SOLAR ,Unknown
+Carbon management solution ,CMS
+CFM Equipment Distributors,Unknown
+Clenergy ,Clenergy
+CMs,CMS
+CMS2000,CMS
+Conergy ,Conergy
+Conext ,Unknown
+Crm,Unknown
+Delta,Delta
+Delta ,Delta
+Delta and SMA,Delta
+Delta Electronics,Delta
+Delta. ,Delta
+ECLIPS,Unknown
+Effecta,Effekta Regeltechnik
+EKO ,EKO
+Eko 5000,EKO
+EKO ENERGY,EKO
+Eko inverter,EKO
+Eko2000 (has 2 of them),EKO
+eko3000,EKO
+EKO5000DB,EKO
+Eko5000-DB,EKO
+Eltek,Eltek Valere
+Emphase,Enphase
+Emphases Energy ,Enphase
+emphasis,Enphase
+ena,EnaSolar
+Ena solar,EnaSolar
+Ena Solar,EnaSolar
+Endphase ,Enphase
+Enecsys,Enecsys
+Enlight,Unknown
+Enlux,Unknown
+Enohase,Enphase
+Enphase ,Enphase
+Enphase  Energy ,Enphase
+Enphase energy ,Enphase
+Enphase Energy  ,Enphase
+Enphase energys,Enphase
+Enphase IQ,Enphase
+Enphase IQ7,Enphase
+enphase energy,Enphase
+Enphase Energy ,Enphase
+Enphase. ,Enphase
+Enphase.  ,Enphase
+enphase+powerone+solax,Multiple
+Envoy,Enphase
+Envoy ,Enphase
+Envoy enphase,Enphase
+Eoplly New Energy Technology,Unknown
+Ever solar,Eversolar
+Ever Solar,Eversolar
+Evershine,Ever-Shining New Tech
+Eversol,Eversolar
+Eversolar,Eversolar
+Ever-solar,Eversolar
+Flex,Flextronics
+Fnonius,Fronius
+Fonius,Fronius
+FOX ESS,Unknown
+Frinius,Fronius
+FRONIOUS,Fronius
+Fronis,Fronius
+FRONIUS ,Fronius
+Fronius 15000,Fronius
+Fronius AU,Fronius
+Fronius Australia ,Fronius
+Fronius ig plus,Fronius
+Fronius International,Fronius
+Fronius International ,Fronius
+fronius primo,Fronius
+Fronius symo,Fronius
+Fronius Symo 8.2,Fronius
+Fronius Symo 8.2-3-M,Fronius
+Fronius USA,Fronius
+FRONIUS ,Fronius
+Fronius Australia,Fronius
+fronius Australia ,Fronius
+Fronius international,Fronius
+Fronius international ,Fronius
+Fronius Primo,Fronius
+Fronius Symo,Fronius
+Fronius. ,Fronius
+Fronius.  ,Fronius
+Fronius/Enphase combo,Fronius
+Fronuis,Fronius
+Geoprotek,Unknown
+Ginlong,Solis
+Ginlong technologies,Solis
+Goodwe ,GoodWe
+goodwe ,GoodWe
+Goodwee,GoodWe
+grid tie solar inverter,Unknown
+Grow watt ,Growatt
+Growatt ,Growatt
+Growatt New Energy Technology,Growatt
+Growatt. ,Growatt
+growwatt,Growatt
+Guangzhou Sanjing Electric Co,Sanjing Electric
+Hangzhou Sunny Energy Science and Technology Co,Hangzhou Sunny Energy Science and Tech
+Hosola,Hosola
+Huawei ,Huawei
+Huawei Technologies,Huawei
+Huawei Technologies Co,Huawei
+Huawei. ,Huawei
+Huway,Huawei
+Ingeteam,Ingeteam Power
+Inspire Solar,Inspire Solar
+INVOLAR,Involar
+invt,INVT
+JFI,JFY
+JFK,JFY
+JFU,JFY
+Jfy ,JFY
+JFY-TECH ,JFY
+Jiangsu GoodWe ,GoodWe
+Jiangsu GoodWe Power Supply Technologies Co LTD,GoodWe
+Jiangsu GoodWe Power Supply Technology Co,GoodWe
+"Jiangsu GoodWe Power Supply Technology Co.,Ltd.",GoodWe
+Jiangsu Zever,Zeversolar
+Jiangsu Zeversolar New Energy,Zeversolar
+Jiangsu Zeversolar New Energy Co,Zeversolar
+Jingsu goodwe,GoodWe
+JSI,Unknown
+KACO,KACO
+kehau ,Kehua Hengsheng
+Kehu,Kehua Hengsheng
+kehua,Kehua Hengsheng
+Kehua Hengsheng Co,Kehua Hengsheng
+Kehua Tech,Kehua Hengsheng
+Kehua Tech ,Kehua Hengsheng
+Kehua tech,Kehua Hengsheng
+Kenua Tech,Kehua Hengsheng
+Klne,Unknown
+Kstar,Kstar New Energy
+Kstar ,Kstar New Energy
+LG Electronics,LG Electronics
+Litto,Litto New Energy
+Mac,Macsolar
+Mac solar ,Macsolar
+Macsolar ,Macsolar
+MACsolar ,Macsolar
+Mass,SOFAR solar
+Mass energy,SOFAR solar
+Mass energy ,SOFAR solar
+Mass Energy,SOFAR solar
+Mass Energy ,SOFAR solar
+Matrix solar ,Unknown
+Max Power,Unknown
+Max power solar,Unknown
+Mcsolar,Macsolar
+Meikai,Meikai Electronics
+MIL-Solar ,MIL-Systems
+Mni,Unknown
+Multiple,Multiple
+N,Unknown
+n phase,Enphase
+NARI,Nari Solar
+Narni,Nari Solar
+Nedap,Unknown
+Ningbo Ginlong Technologies,Solis
+Ningbo Ginlong Technologies Co,Solis
+No solar installed,Unknown
+No solar. ,Unknown
+No solar.   ,Unknown
+Non,Unknown
+None,Unknown
+Not,Unknown
+Not ,Unknown
+NOT INSTALLED,Unknown
+not listed,Unknown
+not ,Unknown
+Not listed,Unknown
+NotSMA,Unknown
+Oelmaier,Oelmaier Industrieelektronik
+Oelmaier technology,Oelmaier Industrieelektronik
+Oelmaier Technology,Oelmaier Industrieelektronik
+Olympia,Unknown
+Omni,Omnik New Energy
+Omni solar,Omnik New Energy
+Omnia,Omnik New Energy
+Omnic,Omnik New Energy
+Omnik new energy,Omnik New Energy
+Omnik New Energy,Omnik New Energy
+Omniksol,Omnik New Energy
+Omnyk,Omnik New Energy
+One solar,One Solar
+one solar,One Solar
+Onesolar,One Solar
+Opal,Unknown
+Opal Switch,Unknown
+OpalSwitch,Unknown
+Open Energy,Unknown
+OPTI-Solar,OPTI
+Orion,Unknown
+Oth,Unknown
+OTHER,Unknown
+Platinum ,Platinum
+Powador,Unknown
+Power One,Power One
+Power One Aurora ,Power One
+POWER ONE,Power One
+Poweron,Power One
+powerone,Power One
+Powerone ,Power One
+Power-One ,Power One
+RE WATT,Rewatt
+Redback ,Redback
+Renac Power Technology Co,Reaqua
+renesola,ReneSola
+Renesola Zhejiang,ReneSola
+Replus,Replus
+S m a,SMA
+saj,Saj
+Samil,Samil
+Samil ower,Samil
+SAMIL SOLAR,Samil
+Samil/ Enphase,Multiple
+SamilPower,Samil
+Samuel Power,Samil
+SAPPHIRE SOLAR,Sapphire Solar
+Sapphire Solar Pty,Sapphire Solar
+SatCon Technology,Unknown
+SB3.0-1AV-40,Unknown
+Schneider,Schneider Electric
+Schneider ,Schneider Electric
+Schneider Electric ,Schneider Electric
+Schneider Electric Solar Inverters USA,Schneider Electric
+Schneider electric ,Schneider Electric
+Schnieder,Schneider Electric
+Schuco,Schuco
+Schuco USA,Schuco
+Schuco/Enphase combo,Multiple
+Shanghai aero sharp,Aero-Sharp
+Shenzen,Unknown
+Shenzen JFY,JFY
+SHENZEN JFY-TECH,JFY
+Shenzen JSY-TECH.Co,JFY
+Shenzen Sofar Solar,Unknown
+Shenzhen,Unknown
+Shenzhen ,Unknown
+Shenzhen BYD,Unknown
+Shenzhen Growatt,Growatt
+Shenzhen Growatt Co,Growatt
+Shenzhen INVT Electric Co,Unknown
+shenzhen jfy,JFY
+Shenzhen jfy tech,JFY
+Shenzhen Jfy tech ,JFY
+Shenzhen JFY-Tech,JFY
+Shenzhen JFY-Tech ,JFY
+Shenzhen JFY-Tech Co Ltd,JFY
+Shenzhen Sinexcel Electric,Unknown
+Shenzhen SOFARSOLAR Co,Unknown
+ShenZhen ytl,Unknown
+Shenzhen JFY,JFY
+ShenZhen JFY-Tech,JFY
+Shenzhen. ,Unknown
+SMA ,SMA
+SMA  ,SMA
+SMA & ABB,Multiple
+SMA + Zever,Multiple
+SMA America,SMA
+SMA and APS,Multiple
+Sma and Growatt,Multiple
+SMA and SolarRiver,Multiple
+Sma enphase combination ,Multiple
+SMA Solar Technologies ,SMA
+SMA Solar Technology,SMA
+SMA Solar Technology ,SMA
+SMA SUNNY BOY,SMA
+SMA Sunny Tripower,SMA
+SMA Technologies,SMA
+Sma ,SMA
+SMA sunny boy,SMA
+SMA. ,SMA
+Sma. ,SMA
+SMA/Enphase Combination,Multiple
+SMC,Unknown
+smh,Unknown
+SMS,Unknown
+So far solar,SOFAR solar
+So Far Solar,SOFAR solar
+Sofar ,SOFAR solar
+SoFar solar,SOFAR solar
+SOFAR SOLAR,SOFAR solar
+sofax solar,SOFAR solar
+Sola power,Unknown
+Solac,Solax Power
+solapowa,Unknown
+Solar,Unknown
+Solar Bride Technologies,SolarBridge
+solar edge,SolarEdge
+Solar edge ,SolarEdge
+Solar edge 5000,SolarEdge
+Solar lake,Samil
+Solar max,SolarMax
+Solar Power,Unknown
+Solar river,Samil
+Solar River ,Samil
+Solar shop Australia ,Unknown
+Solar edge,SolarEdge
+Solar Lake,Samil
+solar river,Samil
+SolarEdge ,SolarEdge
+Solaredge Technologies ,SolarEdge
+Solaredge ,SolarEdge
+Solarland,Unknown
+SolarRiver,Samil
+SolarWorld,Unknown
+Solax,Solax Power
+Solax ,Solax Power
+Solax 5kw,Solax Power
+Solax power ,Solax Power
+SolaX Power Co,Solax Power
+SolaX Power Network Technology Zhejiang Co,Solax Power
+Solax SL -TL5000T,Solax Power
+Solax SL-TL3300TL,Solax Power
+Solax SL-TL5000T,Solax Power
+Solax x1,Solax Power
+Solax x1 3.0-TN,Solax Power
+Solax X3-10-0P-T-N,Solax Power
+SolaX ,Solax Power
+Solax power,Solax Power
+Solax Power Co,Solax Power
+Solax X1,Solax Power
+Solax.,Solax Power
+SolaxPower,Solax Power
+solaxpower ,Solax Power
+Solis ,Solis
+Solis 2.5k 4G,Solis
+Solis 3K 2G,Solis
+Soliva,Delta
+Solivia,Delta
+Solivia ,Delta
+Solpower,Unknown
+Soltaro,Soltaro
+Soltaro & oelmaier,Soltaro
+Solvia,Delta
+Sun Grow,Sungrow
+sun grow sun access,Sungrow
+Sun twins,JFY
+Sun twins ,JFY
+Sungrow ,Sungrow
+Sungrow Power Supply,Sungrow
+Sungrow Power Supply Co,Sungrow
+SUNGROW ,Sungrow
+Sungrow power supply,Sungrow
+Sunna Tech,Sunna Tech
+sunny boy,SMA
+Sunny boy ,SMA
+SUNNY MINI CENTRAL,SMA
+Sunny Roo,Sunny Roo
+Sunny Tripower,SMA
+Sunny boy,SMA
+SunnyBoy,SMA
+Sunnytrip power,SMA
+SunPower,SunPower
+Sunteam,Sunteams
+Sunteams ,Sunteams
+Suntelite,Unknown
+Suntellite,Unknown
+Suntellite ,Unknown
+Suntwin,JFY
+suntwin ,JFY
+Suntwinns,JFY
+Suntwins,JFY
+Suntwins ,JFY
+SUNTWINS 4000TL,JFY
+Suntwins JFY,JFY
+Surpass,Surpass Sun
+Surpasse,Surpass Sun
+TDG Solar,Unknown
+Test,Unknown
+Test ,Unknown
+Think Solar ,Unknown
+Tindo,Unknown
+Tindo ,Unknown
+Trannergy,Trannergy Power
+Trannergy ,Trannergy Power
+UFY,Unknown
+Unk,Unknown
+unkno,Unknown
+Unknow,Unknown
+Unknown ,Unknown
+Unknown - Micro Inverters,Unknown
+UNKNOWN MICROS,Unknown
+uno,Unknown
+UR Energy,UR Energy
+UREnergy,UR Energy
+w/ Rewatt CR,Rewatt
+Werner Solar,Unknown
+Xantrex Technology,Xantrex
+Xiamen Kehua Hengsheng Co,Kehua Hengsheng
+Zeler Solar,Zeversolar
+Zen,Zen
+Zen ,Zen
+Zen Energy Sytem,Zen
+Zerver,Zeversolar
+Zerver Solar,Zeversolar
+Zerver solar ,Zeversolar
+Zeues apollo,Zues Appollo
+Zeus,Zues Appollo
+Zeus Appollo ,Zues Appollo
+Zever,Zeversolar
+Zever ,Zeversolar
+Zever Solar,Zeversolar
+ZEVER SOLAR,Zeversolar
+Zeverlution,Zeversolar
+Zeversolar ,Zeversolar
+Zeversolar Zeverlution,Zeversolar
+Zeversolar.,Zeversolar
+Zeversolar. ,Zeversolar
+Mixed,Multiple
