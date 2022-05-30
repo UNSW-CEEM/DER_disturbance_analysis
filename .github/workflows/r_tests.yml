@@ -21,10 +21,14 @@ permissions:
 
 jobs:
   build:
-    runs-on: macos-latest
+    runs-on: ${{ matrix.config.os }}
     strategy:
       matrix:
         r-version: ['3.6.3']
+      config:
+        # Attempt to build and run all tests in macOS and Windows
+        - {os: macOS-latest,   r: 'release'}
+        - {os: windows-latest, r: 'release'}
 
     steps:
       - uses: actions/checkout@v3
