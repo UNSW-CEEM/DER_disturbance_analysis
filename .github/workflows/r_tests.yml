@@ -20,10 +20,12 @@ permissions:
   contents: read
 
 jobs:
-  build:
-    runs-on: macos-latest
+  test:
+    name: Run tests on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
+        os: ['macos-latest', 'windows-latest']
         r-version: ['3.6.3']
 
     steps:
