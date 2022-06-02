@@ -269,6 +269,7 @@ run_analysis <- function(data, settings) {
     if ("Islanded" %in% names(combined_data_f) & settings$exclude_islanded_circuits){
       combined_data_f <- filter(combined_data_f, !Islanded)
       combined_data_f <- subset(combined_data_f, select = -c(Islanded, island_assessment, islanding_alert))
+      data$antiislanding_summary <- antiislanding_summary(combined_data_f)
     } else if ("Islanded" %in% names(combined_data_f)){
       combined_data_f <- mutate(combined_data_f, response_category=ifelse(island_assessment %in%
               c("Frequency disruption", "Voltage disruption", "Gateway curtailed"), "Undefined", response_category))
