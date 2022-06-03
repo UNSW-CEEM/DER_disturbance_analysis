@@ -156,14 +156,10 @@ DBInterface <- R6::R6Class("DBInterface",
         if (startsWith(conditionMessage(w), "Don't need to call dbFetch()"))
           invokeRestart("muffleWarning")
       })
-      RSQLite::dbExecute(con, "UPDATE timeseries SET e = NULL WHERE e = ''")
-      RSQLite::dbExecute(con, "UPDATE timeseries SET v = NULL WHERE v = ''")
-      RSQLite::dbExecute(con, "UPDATE timeseries SET vmin = NULL WHERE vmin = ''")
-      RSQLite::dbExecute(con, "UPDATE timeseries SET vmax = NULL WHERE vmax = ''")
-      RSQLite::dbExecute(con, "UPDATE timeseries SET vmean = NULL WHERE vmean = ''")
-      RSQLite::dbExecute(con, "UPDATE timeseries SET f = NULL WHERE f = ''")
-      RSQLite::dbExecute(con, "UPDATE timeseries SET fmin = NULL WHERE fmin = ''")
-      RSQLite::dbExecute(con, "UPDATE timeseries SET fmax = NULL WHERE fmax = ''")
+      null_replace_columns <- c("e", "v", "vmin", "vmax", "vmean", "f", "fmin", "fmax")
+      for (col in null_replace_columns) {
+        RSQLite::dbExecute(con, sprintf("UPDATE timeseries SET %s = NULL WHERE %s = ''", col, col))
+      }
       
       self$drop_repeated_headers()
       
