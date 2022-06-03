@@ -249,33 +249,31 @@ DBInterface <- R6::R6Class("DBInterface",
     get_time_series_build_query = function(timeseries){
       column_names <- names(read.csv(timeseries, nrows=3, header = TRUE))
       optional_columns <- c("vmin", "vmax", "vmean", "fmin", "fmax")
-      replace_columns <- paste(optional_columns[optional_columns %in% column_names], collapse=", ")
-      select_columns <- c()
-      for (col in optional_columns[optional_columns %in% column_names]) {
-        select_columns <- c(select_columns, sprintf("_%s as %s", col, col))
-      }
-      select_columns <- paste(select_columns, collapse=",\n")
+  
       if (any(optional_columns %in% column_names)){
-        query <- sprintf("
-          REPLACE INTO timeseries(ts, c_id, d_key, e, v, f, %s)
-          SELECT _ts as ts, 
-                cast(_c_id as integer) as c_id, 
-                cast(IFNULL(_d, 0) as integer) as d_key, 
-                _e as e, 
-                _voltage as v,
-                _frequency as f,
-                %s
-          from file_con", replace_columns, select_columns)
+        replace_columns <- paste(optional_columns[optional_columns %in% column_names], collapse=", ")
+        select_columns <- c()
+        for (col in optional_columns[optional_columns %in% column_names]) {
+          select_columns <- c(select_columns, sprintf("_%s as %s", col, col))
+        }
+        select_columns <- paste(select_columns, collapse=",\n")
+        replace_columns <- paste(", ", replace_columns)
+        select_columns <- paste(", ", select_columns)
       } else {
-        query <- "REPLACE INTO timeseries(ts, c_id, d_key, e, v, f)
-      SELECT _ts as ts, 
-             cast(_c_id as integer) as c_id, 
-             cast(IFNULL(_d, 0) as integer) as d_key, 
-             _e as e, 
-             _voltage as v,
-             _frequency as f
-        from file_con"
+        replace_columns <- ''
+        select_columns <- ''
       }
+
+      query <- sprintf("
+        REPLACE INTO timeseries(ts, c_id, d_key, e, v, f %s)
+        SELECT _ts as ts, 
+              cast(_c_id as integer) as c_id, 
+              cast(IFNULL(_d, 0) as integer) as d_key, 
+              _e as e, 
+              _voltage as v,
+              _frequency as f
+              %s
+        from file_con", replace_columns, select_columns)
       
       for (name in column_names){
         if (name %in% names(self$default_timeseries_column_aliases)){
