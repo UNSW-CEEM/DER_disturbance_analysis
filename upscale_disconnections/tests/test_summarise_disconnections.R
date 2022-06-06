@@ -91,8 +91,12 @@ testthat::test_that("calc_confidence_intervals_for_disconnections",{
                            z,            x,              0,          30,           12,          0"
   
   expected_output <- "Standard_Version, manufacturer, disconnections, sample_size, cer_capacity, proportion, lower_bound, upper_bound
-                                     y,        Other,              5,           6,           21,  0.8333333,   0.3583333,   0.9963333
-                                     z,            x,              0,          30,           12,          0,         0.0,   0.1160000"
+                                     y,        Other,              5,           6,           21,  0.8333333,   0.3587654,   0.9957893
+                                     z,            x,              0,          30,           12,          0,         0.0,   0.1157033"
+  
+  # Clopper-Pearson confidence interval for n = 6, 5 succcesses is [0.3587654, 0.9957893]
+  # Clopper-Pearson confidence interval for  n = 30, 0 successes is [0, 0.1157033]
+  # Source: https://epitools.ausvet.com.au/ciproportion
   
   input <- load_test_file(input)
   expected_output <- load_test_file(expected_output)
@@ -103,12 +107,12 @@ testthat::test_that("calc_confidence_intervals_for_disconnections",{
 testthat::test_that("calc_upscale_kw_loss",{
   
   input <- "Standard_Version, manufacturer, disconnections, sample_size, cer_capacity, proportion, lower_bound, upper_bound
-                           y,        Other,              5,           6,           21,  0.8333333,   0.3583333,    0.996333  
-                           z,            x,              0,          30,           12,          0,         0.0,   0.1160000"
+                           y,        Other,              5,           6,           21,  0.8333333,   0.3587654,   0.9957893  
+                           z,            x,              0,          30,           12,          0,         0.0,   0.1157033"
   
   expected_output <- "Standard_Version, manufacturer, disconnections, sample_size, cer_capacity, proportion, lower_bound, upper_bound, predicted_kw_loss, lower_bound_kw_loss, upper_bound_kw_loss
-                                     y,        Other,              5,           6,           21,  0.8333333,   0.3583333,   0.9963333,              17.5,            7.524999,              20.923
-                                     z,            x,              0,          30,           12,          0,         0.0,   0.1160000,               0.0,                 0.0,               1.392"            
+                                     y,        Other,              5,           6,           21,  0.8333333,   0.3587654,   0.9957893,              17.5,           7.5340734,          20.9115753
+                                     z,            x,              0,          30,           12,          0,         0.0,   0.1157033,               0.0,                 0.0,           1.3884396"            
   
   input <- load_test_file(input)
   expected_output <- load_test_file(expected_output)

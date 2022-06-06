@@ -11,14 +11,24 @@ Validation datasets will be made available on cloudstor once they are finalised.
     2. Build database for the events in the `DER_disturbance_analysis/validation/data` directory using `build_validation_databases.R`
     3. Run tool using metadata from the event directory as config json
     4. Batch save results in the same directory as the data, entering `ref` as the file name
+    5. (optional) (work in progress) - Instead of steps 3 and 4, use `run_validation_analysis.R` to generate the files.
 2. Run analysis on sample data with version of tool to be tested
     1. Checkout target branch
     2. Build database for the events in the `DER_disturbance_analysis/validation/data` directory using `build_validation_databases.R`
-    3. Run tool using metadata from the event directory as config json
+    3. Run tool using metadata from the event directory as config json. __IMPORTANT__ - make sure any changes in configuration in the target branch (new fields/values etc.) are reflected in the test meta data.
     4. Batch save results in the same directory as the data, entering `test` as the file name
+    5. (optional) (work in progress) - Instead of steps 3 and 4, use `run_validation_analysis.R` to generate the files.
 3. Compare reference and test results using `validate_results.R`
     1. Identify if results match
     2. Check any discrepencies against expected impact of test version of tool
+
+### Automated validation
+
+Run `full_validation.sh` in your terminal program of choice from the tool base directory.
+Pass positional arguments of test and reference branch e.g.
+```bash
+./full_validation.sh branch_to_validate master
+```
 
 ## Choosing validation datasets
 

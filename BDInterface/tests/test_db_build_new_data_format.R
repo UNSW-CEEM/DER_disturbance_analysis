@@ -1,10 +1,13 @@
 # Do not run this file directly, run testthat.R
 
 testthat::context("Testing the creation of a database from csv files.")
+is.nan.data.frame <- function(x)
+do.call(cbind, lapply(x, is.nan))
 
 
 load_test_file <- function(path_name){
   data <- read.csv(file = path_name, header = TRUE, stringsAsFactors = FALSE)
+  data[is.nan(data)] <- "NaN"
   return(data)
 }
 
@@ -35,7 +38,7 @@ testthat::test_that("Building works when there are different duration values wit
   output_timeseries <- dp$get_time_series_data()
   output_site_details <- dp$get_site_details_raw()
   output_circuit_details <- dp$get_circuit_details_raw()
-  
+
   testthat::expect_equal(output_timeseries, expected_timeseries)
   testthat::expect_equal(output_site_details, expected_site_details)
   testthat::expect_equal(output_circuit_details, expected_circuit_details)

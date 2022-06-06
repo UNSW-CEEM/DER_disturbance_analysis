@@ -718,7 +718,7 @@ server <- function(input,output,session){
                   value=strftime(floor_date(get_mode(v$combined_data$ts), "day"), format="%Y-%m-%d"), startview="year")
       })
       output$pre_event_interval <- renderUI({
-        timeInput("pre_event_interval", label=strong('Pre-event time interval (Needs to match exactly to data timestamp)'), 
+        timeInput("pre_event_interval", label=strong('Pre-event time interval'), 
                   value = as.POSIXct("12:13:55",format="%H:%M:%S"))
       })
       output$window_length <- renderUI({
@@ -851,9 +851,8 @@ server <- function(input,output,session){
         } else {
           sample_count_table <- v$sample_count_table
         }
-        
-        output$sample_count_table <- renderDataTable({sample_count_table})
 
+        output$sample_count_table <- renderDataTable({sample_count_table})
         output$save_sample_count <- renderUI({shinySaveButton("save_sample_count", "Save data", "Save file as ...", 
                                                               filetype=list(xlsx="csv"))
         })

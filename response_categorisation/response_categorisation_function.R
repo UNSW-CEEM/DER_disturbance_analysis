@@ -1,14 +1,15 @@
 # if first ts != event_time -> NA (also lets count how many lose to this)
 
 categorise_response <- function(combined_data, event_time, window_length, NED_threshold_pct = 0.8){
-  event_window_data <- filter(combined_data, ts >= event_time & ts <= event_time + 60 * window_length)
+  event_window_data <- filter(combined_data, ts > event_time - d & ts <= event_time + 60 * window_length)
   event_window_data <- event_window_data[order(event_window_data$ts),]
   event_window_data <- group_by(event_window_data, c_id, clean)
   event_window_data <- summarise(event_window_data, d=first(d), event_power=first(power_kW),
                                  min_norm_power=min(power_kW/first(power_kW)),
                                  num_con_zeros=num_consecutive_zeros(power_kW),
                                  num_data_points=length(power_kW)-1,
-                                 first_ts = ifelse(first(ts)==event_time,"sampled","not sampled"))
+                                 first_ts = ifelse(first(ts) > event_time - d & first(ts) <= event_time,
+                                                   "sampled", "not sampled"))
   event_window_data <- categorise_by_response(event_window_data, window_length, NED_threshold_pct)
   event_window_data <- select(event_window_data, "c_id", "clean", "response_category")
   combined_data <- left_join(combined_data, event_window_data, on=c("c_id", "clean"))

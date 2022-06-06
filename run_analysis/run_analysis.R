@@ -18,7 +18,7 @@ validate_pre_event_interval <- function(pre_event_interval, load_start_time, loa
   start_time <- as.POSIXct(load_start_time, tz = "Australia/Brisbane")
   end_time <- as.POSIXct(load_end_time, tz = "Australia/Brisbane")
   pre_event_interval <- as.POSIXct(pre_event_interval, tz = "Australia/Brisbane")
-  data_at_set_pre_event_interval = filter(data, ts == pre_event_interval)
+  data_at_set_pre_event_interval = filter(data, ts > pre_event_interval - d & ts <= pre_event_interval)
   if (dim(data_at_set_pre_event_interval)[1] == 0) {
     long_error_message <- c("The pre-event time interval does not match any time step in the time series data.")
     long_error_message <- paste(long_error_message, collapse = '')
@@ -104,7 +104,7 @@ ufls_detection <- function(
   combined_data_f <- mutate(combined_data_f, response_category =
                             if_else((ufls_status == "UFLS Dropout") |
                                       (ufls_status_v == "UFLS Dropout"),
-                                    "UFLS Dropout", response_category))
+                                    "UFLS Dropout", response_category, missing=response_category))
   return(combined_data_f)
 }
 
@@ -130,7 +130,7 @@ determine_distance_zones <- function(
 #' @return An updated dataframe with the column c_id_norm_power added
 normalise_c_id_power_by_pre_event <- function(combined_data_f, pre_event_interval) {
   logdebug('Calc event normalised power', logger=logger)
-  event_powers <- filter(combined_data_f, ts == pre_event_interval)
+  event_powers <- filter(combined_data_f, ts > pre_event_interval - d & ts <= pre_event_interval)
   event_powers <- mutate(event_powers, event_power=power_kW)
   event_powers <- select(event_powers, c_id, clean, event_power)
   combined_data_f <- left_join(combined_data_f, event_powers, by=c("c_id", "clean"))
@@ -146,7 +146,7 @@ normalise_c_id_power_by_daily_max <- function(combined_data, max_power, pre_even
   combined_data_f <- left_join(combined_data, max_power, by=c("c_id", "clean"))
   combined_data_f <- mutate(combined_data_f, c_id_daily_norm_power=power_kW/max_power)
   if (!missing(pre_event_interval)){
-    pre_event_daily_norm_power <- filter(combined_data_f, ts == pre_event_interval)
+    pre_event_daily_norm_power <- filter(combined_data_f, ts > pre_event_interval - d & ts <= pre_event_interval)
     pre_event_daily_norm_power <- mutate(pre_event_daily_norm_power, pre_event_norm_power = c_id_daily_norm_power)
     pre_event_daily_norm_power <- select(pre_event_daily_norm_power, clean, c_id, pre_event_norm_power)
     combined_data_f <- left_join(combined_data_f, pre_event_daily_norm_power, by=c("c_id", "clean"))
@@ -184,7 +184,7 @@ upscale_and_summarise_disconnections <- function(circuit_summary, manufacturer_i
   }
   upscaling_results <- get_upscaling_results(circuits_to_summarise, manufacturer_install_data, load_date, 
                                               region_to_load, sample_threshold = 30)
-  upscaling_results$with_separaute_ufls_counts <- get_upscaling_results_excluding_ufls_affected_circuits(
+  upscaling_results$with_separate_ufls_counts <- get_upscaling_results_excluding_ufls_affected_circuits(
     circuits_to_summarise, manufacturer_install_data, load_date, region_to_load, sample_threshold = 30)
 
   write.csv(upscaling_results$manufacturers_missing_from_cer, 
@@ -360,7 +360,7 @@ run_analysis <- function(data, settings) {
       combined_data_f <- normalise_c_id_power_by_daily_max(
         combined_data_f, max_power, settings$pre_event_interval
       )
-      event_window_data <- filter(combined_data_f, ts >= settings$pre_event_interval)
+      event_window_data <- filter(combined_data_f, ts > settings$pre_event_interval - d)
       reconnection_categories <- create_reconnection_summary(event_window_data, settings$pre_event_interval,
                                                               settings$disconnecting_threshold,
                                                               reconnect_threshold = settings$reconnection_threshold,
@@ -385,7 +385,7 @@ run_analysis <- function(data, settings) {
         data$sample_count_table <- left_join(population_count_table, data$sample_count_table, by=population_groups)
         data$sample_count_table$percentage_of_sub_pop <- data$sample_count_table$sample_count / data$sample_count_table$sub_population_size
         data$sample_count_table$percentage_of_sub_pop <- round(data$sample_count_table$percentage_of_sub_pop, digits = 4)
-        result <- mapply(ConfidenceInterval, data$sample_count_table$sample_count, 
+        result <- mapply(confidence_interval, data$sample_count_table$sample_count, 
                           data$sample_count_table$sub_population_size, 0.95)
         data$sample_count_table$lower_95_CI <- round(result[1,], digits = 4)
         data$sample_count_table$upper_95_CI <- round(result[2,], digits = 4)
@@ -455,12 +455,12 @@ run_analysis <- function(data, settings) {
 
         # Combine data sets that have the same grouping so they can be saved in a single file
         if (no_grouping){
-          et <- settings$pre_event_interval
+          #et <- settings$pre_event_interval
           # agg_norm_power <- event_normalised_power(agg_norm_power, et, keep_site_id=TRUE)
           data$agg_power <- left_join(data$agg_power, data$agg_norm_power[, c("c_id_norm_power", "c_id", "Time")], 
                                     by=c("Time", "c_id"))
         } else {
-          et <- settings$pre_event_interval
+          #et <- settings$pre_event_interval
           # agg_norm_power <- event_normalised_power(agg_norm_power, et,  keep_site_id=FALSE)
           data$agg_power <- left_join(data$agg_power, data$agg_norm_power[, c("c_id_norm_power", "series", "Time")], 
                                     by=c("Time", "series"))
@@ -479,22 +479,20 @@ run_analysis <- function(data, settings) {
         data$upscaled_disconnections_with_separate_ufls_counts <- 
           upscaling_results$with_separate_ufls_counts$upscaled_disconnections
 
-        if(length(upscaling_results$manufacturers_missing_from_cer$manufacturer) > 0) {
-          long_error_message <- c("Some manufacturers present in the input data could not be ",
-                                  "matched to the cer data set. A list of these has been saved in the ",
-                                  "file logging/manufacturers_missing_from_cer.csv. You may want to review the ", 
-                                  "mapping used in processing the input data.")
-          long_error_message <- paste(long_error_message, collapse = '')
-          errors$warnings[[length(errors$warnings) + 1]] <- list(title="Manufacturers missing from CER data", body=long_error_message)
-        }
-        
-        if(length(upscaling_results$manufacturers_missing_from_input_db$manufacturer) > 0) {
-          long_error_message <- c("Some manufacturers present in the CER data could not be ",
-                                  "matched to the input data set. A list of these has been saved in the ",
-                                  "file logging/manufacturers_missing_from_input_db.csv. You may wish to review the ", 
-                                  "file to check the number and names of missing manufacturers. ")
-          long_error_message <- paste(long_error_message, collapse = '')
-          errors$warnings[[length(errors$warnings) + 1]] <- list(title="Manufacturers missing from input data", body=long_error_message)
+        if(length(upscaling_results$manufacturers_missing_from_cer$manufacturer) > 0 | 
+           length(upscaling_results$manufacturers_missing_from_input_db$manufacturer) > 0) {
+          num_missing_from_cer <- length(upscaling_results$manufacturers_missing_from_cer$manufacturer)
+          num_missing_from_input_db <- length(upscaling_results$manufacturers_missing_from_input_db$manufacturer)
+          long_error_message <- c("%s manufacturers present in the input data could not be ",
+                                  "matched to the CER data set. \n%s manufacturers present in the CER data could not be ",
+                                  "matched to the input data set. \nLists of each of these have been saved in the ",
+                                  "files logging/manufacturers_missing_from_[dataset].csv. You may want to review the ", 
+                                  "mapping used in processing the input data and check the number and names of ",
+                                  "missing manufacturers.")
+          long_error_message <- sprintf(paste(long_error_message, collapse = ''), num_missing_from_cer, 
+                                        num_missing_from_input_db)
+          errors$warnings[[length(errors$warnings) + 1]] <- list(title="Manufacturers missing from datasets", 
+                                                                 body=long_error_message)
         }
       }
     }
