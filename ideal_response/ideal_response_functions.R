@@ -1,10 +1,14 @@
 
+#' Calculate ideal f-W response
+#' 
+#' Once the frequency has been within f_hyst of f_ulco for t_hyst then the system should end f-W
+#' and ramp back up
+#' 
+#' @param f_ulco upper limit of continuous operation (the point at which f-W droop should start)
+#' @param f_hyst hysteresis frequency value
+#' @param t_hyst hysteresis time in seconds
+#' @param f_upper frequency droop response upper limit. Default 52Hz in most cases
 ideal_response <- function(frequency_data, f_ulco, f_hyst, t_hyst, f_upper){
-  # f_ulco = upper limit of continuous operation, i.e. the point at which f-W droop should start. 
-  # f_hyst = the hysteresis frequency value and 
-  # t_hyst = the hysteresis time in seconds, 
-  # i.e. once the frequency has been within f_hyst of f_ulco for t_hyst then the system should end f-W and ramp back up.
-  # f_upper is the frequency droop response upper limit. Default 52Hz in most cases.
   frequency_data <- frequency_data[order(frequency_data$ts),]
   start_times <- c()
   end_times <- c()
