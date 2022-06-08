@@ -1,3 +1,4 @@
+set -e
 # Execute validation scripts to compare two branches
 # Run from DER_disturbance_analysis base directory e.g.:
 # % ./validation/full_validation.sh branch_to_validate master
