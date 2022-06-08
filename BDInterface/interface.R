@@ -440,6 +440,7 @@ DBInterface <- R6::R6Class("DBInterface",
    
         time_series <- self$add_meta_data_to_time_series(time_series, circuit_details)
         time_series <- self$perform_power_calculations(time_series)
+        time_series <- remove_outlying_voltages(time_series)
         
         time_series <- filter(time_series, is.finite(power_kW))
         pv_time_series <- filter(time_series, con_type %in% c("pv_site_net", "pv_site", "pv_inverter_net", "pv_inverter"))

@@ -186,3 +186,32 @@ check_for_mixed_polarity <- function(combined_data){
                                                          "mixed", con_type))
   return(combined_data)
 }
+
+voltages_in_bounds <- function(v) {
+  MIN_VOLTAGE <- 10
+  MAX_VOLTAGE <- 1000
+
+  return(sum(v > MIN_VOLTAGE & v < MAX_VOLTAGE))
+}
+
+#' Replace outlier voltages with NA to avoid corrupting results
+#' 
+#' Only replaces voltages where ALL recorded voltages are outside bounds
+remove_outlying_voltages <- function(time_series) {
+  voltage_cols <- c("v", "vmin", "vmax", "vmean")
+  time_series[, voltage_cols] <- sapply(time_series[, voltage_cols], as.numeric)
+
+  voltage_extremes <- time_series %>%
+    select(c("c_id"), voltage_cols) %>%
+    group_by(c_id) %>%
+    summarise_all(voltages_in_bounds)
+  
+  voltage_extremes[, voltage_cols][voltage_extremes[, voltage_cols] > 0] <- 1
+  voltage_extremes[, voltage_cols][voltage_extremes[, voltage_cols] == 0] <- NaN
+
+  time_series[, voltage_cols] <- (
+    time_series[, voltage_cols] *
+    voltage_extremes[match(time_series$c_id, voltage_extremes$c_id), voltage_cols]
+  )
+  return(time_series)
+}
