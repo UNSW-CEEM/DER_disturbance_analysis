@@ -10,9 +10,11 @@ test_that("Test remove_outlying_voltages voltage too low", {
   vmin <- c(0, 0, 1)
   vmax <- c(0, 0, 1)
   vmean <- c(0, 0, 1)
+  v_changed <- c(TRUE, TRUE, TRUE)
 
   test_timeseries <- data.frame(c_id, ts, v, vmin, vmax, vmean, stringsAsFactors=FALSE)
   expected_timeseries <- mutate(test_timeseries, v=NaN, vmin=NaN, vmax=NaN, vmean=NaN)
+  expected_timeseries["v_changed"] <- v_changed
 
   # Call processing function
   output_timeseries <- remove_outlying_voltages(test_timeseries)
@@ -28,9 +30,11 @@ test_that("Test remove_outlying_voltages voltage too high", {
   vmin <- v
   vmax <- v
   vmean <- v
+  v_changed <- c(TRUE, TRUE, TRUE)
 
   test_timeseries <- data.frame(c_id, ts, v, vmin, vmax, vmean, stringsAsFactors=FALSE)
   expected_timeseries <- mutate(test_timeseries, v=NaN, vmin=NaN, vmax=NaN, vmean=NaN)
+  expected_timeseries["v_changed"] <- v_changed
 
   # Call processing function
   output_timeseries <- remove_outlying_voltages(test_timeseries)
@@ -47,9 +51,12 @@ test_that("Test remove_outlying_voltages voltage mixed", {
   vmin <- v
   vmax <- v
   vmean <- v
+  v_changed <- c(FALSE, FALSE, FALSE)
 
   test_timeseries <- data.frame(c_id, ts, v, vmin, vmax, vmean, stringsAsFactors=FALSE)
   expected_timeseries <- test_timeseries
+  expected_timeseries["v_changed"] <- v_changed
+
   # Call processing function
   output_timeseries <- remove_outlying_voltages(test_timeseries)
   expect_equal(output_timeseries, expected_timeseries)
@@ -64,10 +71,13 @@ test_that("Test remove_outlying_voltages including nans", {
   vmin <- c(NaN, NaN, NaN)
   vmax <- c(NaN, NaN, "NaN")
   vmean <- c("NaN", "NaN", "NaN")
+  v_changed <- c(FALSE, FALSE, FALSE)
 
   test_timeseries <- data.frame(c_id, ts, v, vmin, vmax, vmean, stringsAsFactors=FALSE)
   expected_timeseries <- data.frame(
     c_id, ts, v, vmin, vmax=as.numeric(vmax), vmean=as.numeric(vmean), stringsAsFactors=FALSE)
+  expected_timeseries["v_changed"] <- v_changed
+  
   # Call processing function
   output_timeseries <- remove_outlying_voltages(test_timeseries)
   expect_equal(output_timeseries, expected_timeseries)
@@ -88,7 +98,8 @@ test_that("Test remove_outlying_voltages voltage multiple circuits", {
   vmin <- v
   vmax <- v
   vmean <- c(NaN, NaN, NaN, NaN, NaN, NaN)
-  expected_timeseries <- data.frame(c_id, ts, v, vmin, vmax, vmean, stringsAsFactors=FALSE)
+  v_changed <- c(TRUE, TRUE, TRUE, TRUE, TRUE, TRUE)
+  expected_timeseries <- data.frame(c_id, ts, v, vmin, vmax, vmean, v_changed, stringsAsFactors=FALSE)
   # Call processing function
   output_timeseries <- remove_outlying_voltages(test_timeseries)
   expect_equal(output_timeseries, expected_timeseries)

@@ -527,27 +527,63 @@ DBInterface <- R6::R6Class("DBInterface",
     },
     get_time_series_data_by_c_id = function(c_ids){
       time_series <- sqldf::sqldf(
-        "select ts, c_id, d, e, v, vmin, vmax, vmean, f, fmin, fmax from timeseries where c_id in (select c_id from c_ids)", 
-        dbname = self$db_path_name)
+        "SELECT ts, c_id, d, e,
+        v AS v__numeric, 
+        vmin AS vmin__numeric,
+        vmax AS vmax__numeric, 
+        vmean AS vmean__numeric, 
+        f AS f__numeric,
+        fmin AS fmin__numeric,
+        fmax AS fmax__numeric
+        FROM timeseries
+        WHERE c_id IN (SELECT c_id FROM c_ids)", 
+        dbname = self$db_path_name, method="name__class")
       return(time_series)
     },
     get_time_series_data_by_c_id_full_row = function(c_ids){
       time_series <- sqldf::sqldf(
-        "select ts, c_id, d_key, d, e, v, vmin, vmax, vmean, f, fmin, fmax from timeseries where c_id in 
+        "SELECT ts, c_id, d_key, d, e,
+        v AS v__numeric, 
+        vmin AS vmin__numeric,
+        vmax AS vmax__numeric, 
+        vmean AS vmean__numeric, 
+        f AS f__numeric,
+        fmin AS fmin__numeric,
+        fmax AS fmax__numeric
+        FROM timeseries
+        where c_id in 
         (select c_id from c_ids)", 
-        dbname = self$db_path_name)
+        dbname = self$db_path_name, method="name__class")
       return(time_series)
     },
     get_time_series_data = function(){
-      time_series <- sqldf::sqldf("select ts, c_id, d, e, v, vmin, vmax, vmean, f, fmin, fmax from timeseries", 
-                                  dbname = self$db_path_name)
+      time_series <- sqldf::sqldf(
+        "SELECT ts, c_id, d, e,
+        v AS v__numeric, 
+        vmin AS vmin__numeric,
+        vmax AS vmax__numeric, 
+        vmean AS vmean__numeric, 
+        f AS f__numeric,
+        fmin AS fmin__numeric,
+        fmax AS fmax__numeric
+        FROM timeseries", 
+        dbname = self$db_path_name, method="name__class")
       time_series <- time_series[with(time_series, order(c_id, ts)), ]
       rownames(time_series) <- NULL
       return(time_series)
     },
     get_time_series_data_all = function(){
-      time_series <- sqldf::sqldf("select ts, c_id, d_key, d, e, v, vmin, vmax, vmean, f, fmin, fmax from timeseries", 
-                                  dbname = self$db_path_name)
+      time_series <- sqldf::sqldf(
+        "SELECT ts, c_id, d_key, d, e,
+        v AS v__numeric, 
+        vmin AS vmin__numeric,
+        vmax AS vmax__numeric, 
+        vmean AS vmean__numeric, 
+        f AS f__numeric,
+        fmin AS fmin__numeric,
+        fmax AS fmax__numeric
+        FROM timeseries", 
+        dbname = self$db_path_nam, method="name__class")
       return(time_series)
     },
     get_filtered_time_series_data = function(state, duration, start_time, end_time){
