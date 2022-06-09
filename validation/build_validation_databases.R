@@ -49,11 +49,12 @@ if (length(data_dirs) > 0){
 
             db <- DBInterface$new()
             if (!file.exists(db_path_name)){
-                db$connect_to_new_database(db_path_name)
                 logging::loginfo(paste("Creating new database", db_path_name))
+                db$connect_to_new_database(db_path_name)
             } else {
-                db$connect_to_existing_database(db_path_name)
                 logging::loginfo(paste("Replacing existing database", db_path_name))
+                file.remove(db_path_name)
+                db$connect_to_new_database(db_path_name)
             }
 
             db$default_timeseries_column_aliases <- list(utc_tstamp='_ts', c_id='_c_id', voltage='_voltage', 

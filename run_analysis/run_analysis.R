@@ -200,7 +200,8 @@ upscale_and_summarise_disconnections <- function(circuit_summary, manufacturer_i
 check_grouping <- function(settings) {
   if (settings$standard_agg==FALSE & settings$pst_agg==FALSE & settings$grouping_agg==FALSE &
       settings$manufacturer_agg==FALSE & settings$model_agg==FALSE & settings$zone_agg==FALSE &
-      settings$circuit_agg==TRUE & settings$compliance_agg==TRUE & settings$reconnection_compliance_agg){
+      settings$circuit_agg==TRUE & settings$compliance_agg==TRUE & settings$reconnection_compliance_agg &
+      settings$v_excursion_agg==FALSE){
     no_grouping=TRUE
   } else {
     no_grouping=FALSE
@@ -235,6 +236,13 @@ run_analysis <- function(data, settings) {
       settings$postcodes, settings$manufacturers, settings$models, settings$sites, settings$circuits
     )
 
+    # -------- check voltage threshold excursions --------
+    combined_data_f <- detect_voltage_threshold_excursions(
+      combined_data_f, settings$pre_event_interval, settings$window_length)
+    voltage_data_summary <- summarise_voltage_data(combined_data_f)
+    combined_data_f <- left_join(combined_data_f, voltage_data_summary, by="c_id")
+    data$antiislanding_summary <- antiislanding_summary(combined_data_f)
+
     if(length(combined_data_f$ts) > 0){
       # -------- categorise response --------
       combined_data_f <- categorise_response(
@@ -261,6 +269,7 @@ run_analysis <- function(data, settings) {
     if ("Islanded" %in% names(combined_data_f) & settings$exclude_islanded_circuits){
       combined_data_f <- filter(combined_data_f, !Islanded)
       combined_data_f <- subset(combined_data_f, select = -c(Islanded, island_assessment, islanding_alert))
+      data$antiislanding_summary <- antiislanding_summary(combined_data_f)
     } else if ("Islanded" %in% names(combined_data_f)){
       combined_data_f <- mutate(combined_data_f, response_category=ifelse(island_assessment %in%
               c("Frequency disruption", "Voltage disruption", "Gateway curtailed"), "Undefined", response_category))
@@ -354,7 +363,7 @@ run_analysis <- function(data, settings) {
       if(length(combined_data_f$ts) > 0){
         # Copy data for saving
         logdebug('Copy data for saving', logger=logger)
-        combined_data_cols <- c("ts", "site_id", "c_id", "power_kW", "c_id_norm_power", "v", "f", "s_state",
+        combined_data_cols <- c("ts", "site_id", "c_id", "power_kW", "c_id_norm_power", "v", "vmin", "vmax", "vmean", "f", "s_state",
                                 "s_postcode", "pv_installation_year_month", "Standard_Version", "Grouping", "sum_ac",
                                 "clean", "manufacturer", "model", "site_performance_factor", "response_category",
                                 "zone", "distance", "lat", "lon", "e", "con_type", "first_ac", "polarity",
@@ -362,7 +371,8 @@ run_analysis <- function(data, settings) {
                                 "manual_droop_compliance", "manual_reconnect_compliance", "reconnection_time",
                                 "ramp_above_threshold", "c_id_daily_norm_power", "max_power", "ufls_status",
                                 "pre_event_sampled_seconds", "post_event_sampled_seconds", "ufls_status_v",
-                                "pre_event_v_mean", "post_event_v_mean")
+                                "pre_event_v_mean", "post_event_v_mean", "vmin_na", "vmax_na", "vmean_na",
+                                "antiislanding_v_excursion_2015", "antiislanding_v_excursion_2020")
         if("Islanded" %in% names(combined_data_f)){
           combined_data_cols <- append(combined_data_cols, c("Islanded", "island_assessment", "islanding_alert"), 34)
         }
@@ -397,7 +407,9 @@ run_analysis <- function(data, settings) {
                             "compliance_status", "reconnection_compliance_status", "manual_droop_compliance",
                             "manual_reconnect_compliance", "reconnection_time", "ramp_above_threshold", "max_power",
                             "ufls_status", "pre_event_sampled_seconds", "post_event_sampled_seconds", "ufls_status_v",
-                            "pre_event_v_mean", "post_event_v_mean")
+                            "pre_event_v_mean", "post_event_v_mean", "vmax_max", "vmin_min", "vmean_mean",
+                            "vmin_na_all", "vmax_na_all", "vmean_na_all",
+                            "antiislanding_v_excursion_2015_triggered", "antiislanding_v_excursion_2020_triggered")
         if("Islanded" %in% names(data$circuit_summary)){
           circ_sum_cols <- append(circ_sum_cols, c("Islanded", "island_assessment", "islanding_alert"), 26)
         }
