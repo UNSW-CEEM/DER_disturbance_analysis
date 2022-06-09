@@ -200,6 +200,7 @@ voltages_in_bounds <- function(v) {
 remove_outlying_voltages <- function(time_series) {
   voltage_cols <- c("v", "vmin", "vmax", "vmean")
   time_series[, voltage_cols] <- sapply(time_series[, voltage_cols], as.numeric)
+  old_time_series <- time_series
 
   voltage_extremes <- time_series %>%
     select(c("c_id"), voltage_cols) %>%
@@ -213,5 +214,8 @@ remove_outlying_voltages <- function(time_series) {
     time_series[, voltage_cols] *
     voltage_extremes[match(time_series$c_id, voltage_extremes$c_id), voltage_cols]
   )
+  time_series['v_changed'] <- rowSums(
+    is.na(time_series[, voltage_cols]) & !is.na(old_time_series[, voltage_cols])
+  ) > 0
   return(time_series)
 }

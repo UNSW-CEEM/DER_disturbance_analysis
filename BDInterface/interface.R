@@ -428,9 +428,13 @@ DBInterface <- R6::R6Class("DBInterface",
       
       while (length(circuits$c_id) > 0){
         time_series <- self$get_time_series_data_by_c_id_full_row(circuits)
+        time_series <- remove_outlying_voltages(time_series)
+        records_to_update <- filter(time_series, v_changed)
+        records_to_update <- within(time_series, rm(v_changed))
+        self$update_timeseries_table_in_database(records_to_update)
+
         time_series <- mutate(time_series, d = as.numeric(d))
         time_series <- mutate(time_series, time = fastPOSIXct(ts, tz="Australia/Brisbane"))
-        time_series <- remove_outlying_voltages(time_series)
         time_series_5s_and_unknown_durations <- filter(time_series, (!d %in% c(30, 60)))
         time_series_30s_and_60s_data <- filter(time_series, (d %in% c(30, 60)))
         time_series_5s_and_unknown_durations <- self$clean_duration_values(time_series_5s_and_unknown_durations)
