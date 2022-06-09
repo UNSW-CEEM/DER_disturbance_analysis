@@ -430,6 +430,7 @@ DBInterface <- R6::R6Class("DBInterface",
         time_series <- self$get_time_series_data_by_c_id_full_row(circuits)
         time_series <- mutate(time_series, d = as.numeric(d))
         time_series <- mutate(time_series, time = fastPOSIXct(ts, tz="Australia/Brisbane"))
+        time_series <- remove_outlying_voltages(time_series)
         time_series_5s_and_unknown_durations <- filter(time_series, (!d %in% c(30, 60)))
         time_series_30s_and_60s_data <- filter(time_series, (d %in% c(30, 60)))
         time_series_5s_and_unknown_durations <- self$clean_duration_values(time_series_5s_and_unknown_durations)
@@ -440,7 +441,6 @@ DBInterface <- R6::R6Class("DBInterface",
    
         time_series <- self$add_meta_data_to_time_series(time_series, circuit_details)
         time_series <- self$perform_power_calculations(time_series)
-        time_series <- remove_outlying_voltages(time_series)
         
         time_series <- filter(time_series, is.finite(power_kW))
         pv_time_series <- filter(time_series, con_type %in% c("pv_site_net", "pv_site", "pv_inverter_net", "pv_inverter"))
