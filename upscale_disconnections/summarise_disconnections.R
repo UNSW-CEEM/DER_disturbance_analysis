@@ -99,9 +99,9 @@ join_circuit_summary_and_cer_manufacturer_data <- function(circuit_summary, cer_
 }
   
 impose_sample_size_threshold <- function(disconnection_summary, sample_threshold){
-  circuit_summary <- mutate(disconnection_summary, sample_threshold, manufacturer = ifelse(is.na(cer_capacity), 
+  disconnection_summary <- mutate(disconnection_summary, sample_threshold, manufacturer = ifelse(is.na(cer_capacity), 
                                                                                            'Other', manufacturer))
-  circuit_summary <- mutate(disconnection_summary, sample_threshold, manufacturer = ifelse(is.na(disconnections), 
+  disconnection_summary <- mutate(disconnection_summary, sample_threshold, manufacturer = ifelse(is.na(disconnections), 
                                                                                            'Other', manufacturer))
   
   # Create an Other group for manufacturers with a small sample size.
@@ -167,8 +167,22 @@ get_manufacturer_capacitys <- function(manufacturer_install_data, event_date, re
   manufacturer_install_data <- filter(manufacturer_install_data, s_state == region)
   manufacturer_install_data <- manufacturer_install_data[order(manufacturer_install_data$date), ]
   manufacturer_install_data <- filter(manufacturer_install_data, date <= event_date)
-  manufacturer_install_data <- group_by(manufacturer_install_data, Standard_Version, manufacturer,  s_state)
+  manufacturer_install_data <- group_by(manufacturer_install_data, Standard_Version, manufacturer, s_state)
   manufacturer_install_data <- summarise(manufacturer_install_data, capacity = last(standard_capacity))
+  manufacturer_install_data <- as.data.frame(manufacturer_install_data)
+  return(manufacturer_install_data)
+}
+
+get_manufacturer_capacitys_variable <- function(manufacturer_install_data, event_date, region, 
+                                                grouping_cols=c('Standard_Version', 'manufacturer')){
+  manufacturer_install_data <- filter(manufacturer_install_data, s_state == region)
+  manufacturer_install_data <- manufacturer_install_data[order(manufacturer_install_data$date), ]
+  manufacturer_install_data <- filter(manufacturer_install_data, date <= event_date)
+  manufacturer_install_data <- group_by_at(manufacturer_install_data, 
+                                           c('manufacturer', 'Standard_Version', 'Grouping', 's_postcode', 's_state'))
+  manufacturer_install_data <- summarise(manufacturer_install_data, capacity = last(standard_capacity))
+  manufacturer_install_data <- manufacturer_install_data %>% group_by_at(grouping_cols) %>% 
+    summarise(capacity=sum(capacity))
   manufacturer_install_data <- as.data.frame(manufacturer_install_data)
   return(manufacturer_install_data)
 }
