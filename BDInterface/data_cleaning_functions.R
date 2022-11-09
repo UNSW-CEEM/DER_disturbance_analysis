@@ -191,7 +191,7 @@ voltages_in_bounds <- function(v) {
   MIN_VOLTAGE <- 10
   MAX_VOLTAGE <- 1000
 
-  return(sum(v > MIN_VOLTAGE & v < MAX_VOLTAGE))
+  return(sum(v > MIN_VOLTAGE & v < MAX_VOLTAGE, na.rm=TRUE))
 }
 
 #' Replace outlier voltages with NA to avoid corrupting results

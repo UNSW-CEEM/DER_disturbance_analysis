@@ -93,9 +93,9 @@ summarise_voltage_data <- function(combined_data) {
     summarised_voltage_data <- combined_data %>%
         group_by(c_id) %>%
         summarise(
-            vmax_max=max(ifelse(vmax_na, v, vmax)),
-            vmin_min=min(ifelse(vmin_na, v, vmin)),
-            vmean_mean=mean(ifelse(vmean_na, v, vmean)),
+            vmax_max=max(ifelse(vmax_na, v, vmax), na.rm=TRUE),
+            vmin_min=min(ifelse(vmin_na, v, vmin), na.rm=TRUE),
+            vmean_mean=mean(ifelse(vmean_na, v, vmean), na.rm=TRUE),
             vmin_na_all=all(vmin_na), vmax_na_all=all(vmax_na), vmean_na_all=all(vmean_na),
             antiislanding_v_excursion_2015_triggered=any(!is.na(antiislanding_v_excursion_2015)),
             antiislanding_v_excursion_2020_triggered=any(!is.na(antiislanding_v_excursion_2020))
