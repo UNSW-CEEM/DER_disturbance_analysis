@@ -11,6 +11,7 @@ find_grouping_cols <- function(settings){
   if (settings$compliance_agg==TRUE){grouping_cols <- c(grouping_cols, "compliance_status")}
   if (settings$compliance_2020_agg==TRUE){grouping_cols <- c(grouping_cols, "compliance_status_2020")}
   if (settings$reconnection_compliance_agg==TRUE){grouping_cols <- c(grouping_cols, "reconnection_compliance_status")}
+  if (settings$v_excursion_agg==TRUE){grouping_cols <- c(grouping_cols, "voltage_excursion")}
   if (settings$circuit_agg==TRUE){grouping_cols <- c(grouping_cols, "site_id", "c_id")}
   return(grouping_cols)
 }
