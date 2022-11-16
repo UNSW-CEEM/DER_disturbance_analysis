@@ -18,8 +18,8 @@ DBInterface <- R6::R6Class("DBInterface",
   public = list(
     db_path_name = NULL,
     default_timeseries_column_aliases = list(ts='_ts', time_stamp='_ts', c_id='_c_id', v='_voltage', vmin='_vmin', 
-                                             vmax='_vmax', f='_frequency', fmin='_fmin', fmax='_fmax', e='_e', d='_d', 
-                                             p='_p'),
+                                             vmax='_vmax', vmean='_vmean', f='_frequency', fmin='_fmin', fmax='_fmax',
+                                             e='_e', d='_d', p='_p'),
     connect_to_new_database = function(db_path_name){
       if (file.exists(db_path_name)){
         stop("That database file already exits. If you want to create a new db with this name please delete the
@@ -40,7 +40,7 @@ DBInterface <- R6::R6Class("DBInterface",
     },
     check_tables_have_expected_columns = function() {
       self$check_table_has_expected_columns('timeseries', c("ts", "c_id", "d", "d_key", "e", "f", "fmin", "fmax", "v", 
-                                                            "vmin", "vmax"))
+                                                            "vmin", "vmax", "vmean"))
       self$check_table_has_expected_columns('circuit_details_raw', c("c_id", "site_id", "con_type", "polarity", 
                                                                      "manual_droop_compliance", 
                                                                      "manual_reconnect_compliance"))
@@ -140,6 +140,7 @@ DBInterface <- R6::R6Class("DBInterface",
                          v REAL,
                          vmin REAL DEFAULT NULL,
                          vmax REAL DEFAULT NULL,
+                         vmean REAL DEFAULT NULL,
                          f REAL,
                          fmin REAL DEFAULT NULL,
                          fmax REAL DEFAULT NULL,
@@ -155,13 +156,10 @@ DBInterface <- R6::R6Class("DBInterface",
         if (startsWith(conditionMessage(w), "Don't need to call dbFetch()"))
           invokeRestart("muffleWarning")
       })
-      RSQLite::dbExecute(con, "UPDATE timeseries SET e = NULL WHERE e = ''")
-      RSQLite::dbExecute(con, "UPDATE timeseries SET v = NULL WHERE v = ''")
-      RSQLite::dbExecute(con, "UPDATE timeseries SET vmin = NULL WHERE vmin = ''")
-      RSQLite::dbExecute(con, "UPDATE timeseries SET vmax = NULL WHERE vmax = ''")
-      RSQLite::dbExecute(con, "UPDATE timeseries SET f = NULL WHERE f = ''")
-      RSQLite::dbExecute(con, "UPDATE timeseries SET fmin = NULL WHERE fmin = ''")
-      RSQLite::dbExecute(con, "UPDATE timeseries SET fmax = NULL WHERE fmax = ''")
+      null_replace_columns <- c("e", "v", "vmin", "vmax", "vmean", "f", "fmin", "fmax")
+      for (col in null_replace_columns) {
+        RSQLite::dbExecute(con, sprintf("UPDATE timeseries SET %s = NULL WHERE %s = ''", col, col))
+      }
       
       self$drop_repeated_headers()
       
@@ -246,30 +244,32 @@ DBInterface <- R6::R6Class("DBInterface",
     },
     get_time_series_build_query = function(timeseries){
       column_names <- names(read.csv(timeseries, nrows=3, header = TRUE))
-      
-      if (all(c("vmin", "vmax", "fmin", "fmax") %in% column_names)){
-        query <- "REPLACE INTO timeseries(ts, c_id, d_key, e, v, vmin, vmax, f, fmin, fmax)
-      SELECT _ts as ts, 
-             cast(_c_id as integer) as c_id, 
-             cast(IFNULL(_d, 0) as integer) as d_key, 
-             _e as e, 
-             _voltage as v,
-             _vmin as vmin,
-             _vmax as vmax,
-             _frequency as f,
-             _fmin as fmin,
-             _fmax as fmax
-        from file_con"
-      } else{
-        query <- "REPLACE INTO timeseries(ts, c_id, d_key, e, v, f)
-      SELECT _ts as ts, 
-             cast(_c_id as integer) as c_id, 
-             cast(IFNULL(_d, 0) as integer) as d_key, 
-             _e as e, 
-             _voltage as v,
-             _frequency as f
-        from file_con"
+      optional_columns <- c("vmin", "vmax", "vmean", "fmin", "fmax")
+  
+      if (any(optional_columns %in% column_names)){
+        replace_columns <- paste(optional_columns[optional_columns %in% column_names], collapse=", ")
+        select_columns <- c()
+        for (col in optional_columns[optional_columns %in% column_names]) {
+          select_columns <- c(select_columns, sprintf("_%s as %s", col, col))
+        }
+        select_columns <- paste(select_columns, collapse=",\n")
+        replace_columns <- paste(", ", replace_columns)
+        select_columns <- paste(", ", select_columns)
+      } else {
+        replace_columns <- ''
+        select_columns <- ''
       }
+
+      query <- sprintf("
+        REPLACE INTO timeseries(ts, c_id, d_key, e, v, f %s)
+        SELECT _ts as ts, 
+              cast(_c_id as integer) as c_id, 
+              cast(IFNULL(_d, 0) as integer) as d_key, 
+              _e as e, 
+              _voltage as v,
+              _frequency as f
+              %s
+        from file_con", replace_columns, select_columns)
       
       for (name in column_names){
         if (name %in% names(self$default_timeseries_column_aliases)){
@@ -428,6 +428,11 @@ DBInterface <- R6::R6Class("DBInterface",
       
       while (length(circuits$c_id) > 0){
         time_series <- self$get_time_series_data_by_c_id_full_row(circuits)
+        time_series <- remove_outlying_voltages(time_series)
+        records_to_update <- filter(time_series, v_changed)
+        records_to_update <- within(time_series, rm(v_changed))
+        self$update_timeseries_table_in_database(records_to_update)
+
         time_series <- mutate(time_series, d = as.numeric(d))
         time_series <- mutate(time_series, time = fastPOSIXct(ts, tz="Australia/Brisbane"))
         time_series_5s_and_unknown_durations <- filter(time_series, (!d %in% c(30, 60)))
@@ -522,27 +527,63 @@ DBInterface <- R6::R6Class("DBInterface",
     },
     get_time_series_data_by_c_id = function(c_ids){
       time_series <- sqldf::sqldf(
-        "select ts, c_id, d, e, v, vmin, vmax, f, fmin, fmax from timeseries where c_id in (select c_id from c_ids)", 
-        dbname = self$db_path_name)
+        "SELECT ts, c_id, d, e,
+        v AS v__numeric, 
+        vmin AS vmin__numeric,
+        vmax AS vmax__numeric, 
+        vmean AS vmean__numeric, 
+        f AS f__numeric,
+        fmin AS fmin__numeric,
+        fmax AS fmax__numeric
+        FROM timeseries
+        WHERE c_id IN (SELECT c_id FROM c_ids)", 
+        dbname = self$db_path_name, method="name__class")
       return(time_series)
     },
     get_time_series_data_by_c_id_full_row = function(c_ids){
       time_series <- sqldf::sqldf(
-        "select ts, c_id, d_key, d, e, v, vmin, vmax, f, fmin, fmax from timeseries where c_id in 
+        "SELECT ts, c_id, d_key, d, e,
+        v AS v__numeric, 
+        vmin AS vmin__numeric,
+        vmax AS vmax__numeric, 
+        vmean AS vmean__numeric, 
+        f AS f__numeric,
+        fmin AS fmin__numeric,
+        fmax AS fmax__numeric
+        FROM timeseries
+        where c_id in 
         (select c_id from c_ids)", 
-        dbname = self$db_path_name)
+        dbname = self$db_path_name, method="name__class")
       return(time_series)
     },
     get_time_series_data = function(){
-      time_series <- sqldf::sqldf("select ts, c_id, d, e, v, vmin, vmax, f, fmin, fmax from timeseries", 
-                                  dbname = self$db_path_name)
+      time_series <- sqldf::sqldf(
+        "SELECT ts, c_id, d, e,
+        v AS v__numeric, 
+        vmin AS vmin__numeric,
+        vmax AS vmax__numeric, 
+        vmean AS vmean__numeric, 
+        f AS f__numeric,
+        fmin AS fmin__numeric,
+        fmax AS fmax__numeric
+        FROM timeseries", 
+        dbname = self$db_path_name, method="name__class")
       time_series <- time_series[with(time_series, order(c_id, ts)), ]
       rownames(time_series) <- NULL
       return(time_series)
     },
     get_time_series_data_all = function(){
-      time_series <- sqldf::sqldf("select ts, c_id, d_key, d, e, v, vmin, vmax, f, fmin, fmax from timeseries", 
-                                  dbname = self$db_path_name)
+      time_series <- sqldf::sqldf(
+        "SELECT ts, c_id, d_key, d, e,
+        v AS v__numeric, 
+        vmin AS vmin__numeric,
+        vmax AS vmax__numeric, 
+        vmean AS vmean__numeric, 
+        f AS f__numeric,
+        fmin AS fmin__numeric,
+        fmax AS fmax__numeric
+        FROM timeseries", 
+        dbname = self$db_path_nam, method="name__class")
       return(time_series)
     },
     get_filtered_time_series_data = function(state, duration, start_time, end_time){
@@ -551,7 +592,7 @@ DBInterface <- R6::R6Class("DBInterface",
       site_in_state = filter(site_details, s_state==state)
       circuit_in_state = filter(circuit_details, site_id %in% site_in_state$site_id)
       # TODO: check validity of e != ''
-      query <- "select ts, c_id, d, e, v, vmin, vmax, f, fmin, fmax from timeseries 
+      query <- "select ts, c_id, d, e, v, vmin, vmax, vmean, f, fmin, fmax from timeseries 
                         where c_id in (select c_id from circuit_in_state)
                         and d = duration
                         and e != ''
@@ -642,7 +683,7 @@ DBInterface <- R6::R6Class("DBInterface",
     },
     filter_out_unchanged_records = function(time_series){
       time_series <- dplyr::filter(time_series, d_change)
-      time_series <- select(time_series, ts, c_id, d_key, d, e, v, vmin, vmax, f, fmin, fmax)
+      time_series <- select(time_series, ts, c_id, d_key, d, e, v, vmin, vmax, vmean, f, fmin, fmax)
       return(time_series)
     },
     replace_duration_value_with_calced_interval = function(time_series){
@@ -657,7 +698,7 @@ DBInterface <- R6::R6Class("DBInterface",
       # Suppress warning
       withCallingHandlers({
         sqldf::sqldf(
-          "REPLACE INTO timeseries SELECT ts, c_id, d_key, e, v, vmin, vmax, f, fmin, fmax, d FROM time_series", 
+          "REPLACE INTO timeseries SELECT ts, c_id, d_key, e, v, vmin, vmax, vmean, f, fmin, fmax, d FROM time_series", 
           dbname = self$db_path_name)
       }, warning=function(w) {
         if (startsWith(conditionMessage(w), "Don't need to call dbFetch()"))

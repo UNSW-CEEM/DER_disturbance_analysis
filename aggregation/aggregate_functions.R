@@ -10,6 +10,7 @@ find_grouping_cols <- function(settings){
   if (settings$zone_agg==TRUE){grouping_cols <- c(grouping_cols, "zone")}
   if (settings$compliance_agg==TRUE){grouping_cols <- c(grouping_cols, "compliance_status")}
   if (settings$reconnection_compliance_agg==TRUE){grouping_cols <- c(grouping_cols, "reconnection_compliance_status")}
+  if (settings$v_excursion_agg==TRUE){grouping_cols <- c(grouping_cols, "voltage_excursion")}
   if (settings$circuit_agg==TRUE){grouping_cols <- c(grouping_cols, "site_id", "c_id")}
   return(grouping_cols)
 }
