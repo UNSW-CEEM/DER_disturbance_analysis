@@ -201,15 +201,15 @@ site_categorisation <- function(combined_data){
                                    pv_installation_year_month < "2020-10-01" & s_state == 'SA',
                                    "AS4777.2:2015", Standard_Version)) %>%
     # Assumes systems installed in SA during October 2020 are 2015 VDRT" and systems installed during December 2020 
-    # are "transition 2". This means the VDRT group will be small (only 2mon).
+    # are "Transition 2020-21". This means the VDRT group will be small (only 2mon).
     mutate(Standard_Version=ifelse(pv_installation_year_month >= "2020-10-01" & s_state == 'SA' &
                                      pv_installation_year_month < "2020-12-01",
                                    "AS4777.2:2015 VDRT", Standard_Version)) %>%
-    # Assumes systems installed during December 2020 are "transition 2", and during December 2021 are "transition 2"
+    # Assumes systems installed during December 2020, and during December 2021 are "Transition 2020-21"
     mutate(Standard_Version=ifelse(pv_installation_year_month >= "2020-12-01" &
                                      pv_installation_year_month < "2022-01-01", 
                                    "Transition 2020-21", Standard_Version)) %>%
-    # Assumes systems installed during January 2022 (and onwards) are 
+    # Assumes systems installed during January 2022 (and onwards) are "AS4777.2:2020"
     mutate(Standard_Version=ifelse(pv_installation_year_month >= "2022-01-01",
                                    "AS4777.2:2020", Standard_Version))
     

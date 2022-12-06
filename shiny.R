@@ -56,6 +56,7 @@ ui <- fluidPage(
           uiOutput("responses"),
           uiOutput("zones"),
           uiOutput("compliance"),
+          uiOutput("compliance_2020"),
           uiOutput("reconnection_compliance"),
           uiOutput("postcodes"),
           uiOutput("manufacturers"),
@@ -79,13 +80,15 @@ ui <- fluidPage(
           materialSwitch("circuit_agg", label=strong("Circuits:"), status="primary", value=FALSE),
           materialSwitch("zone_agg", label=strong("Zones:"), status="primary", value=FALSE),
           materialSwitch("compliance_agg", label=strong("Compliance:"), status="primary", value=FALSE),
+          materialSwitch("compliance_2020_agg", label=strong("Compliance 2020:"), status="primary", value=FALSE),
           materialSwitch("reconnection_compliance_agg", label=strong("Reconnection Compliance:"), status="primary", value=FALSE),
           materialSwitch("v_excursion_agg", label=strong("Voltage excursion:"), status="primary", value=FALSE),
           tags$hr(),
           h4("Additional Processing"),
           radioButtons("confidence_category", label = strong("Grouping category to calculate confidence interval for, 
                                                               must be a Grouping Category"), 
-                       choices = list("none", "response_category", "compliance_status", "reconnection_compliance_status"), selected = "none", inline = TRUE),
+                       choices = list("none", "response_category", "compliance_status", "compliance_status_2020", 
+                                      "reconnection_compliance_status"), selected = "none", inline = TRUE),
           materialSwitch(inputId="raw_upscale", label=strong("Upscaled Data"), status="primary", right=FALSE),
           tags$hr(),
           h4("Event information"),
@@ -117,6 +120,10 @@ ui <- fluidPage(
           uiOutput("save_ideal_response"),
           HTML("<br>"),
           uiOutput("save_ideal_response_downsampled"),
+          HTML("<br>"),
+          uiOutput("save_ideal_response_2020"),
+          HTML("<br>"),
+          uiOutput("save_ideal_response_downsampled_2020"),
           HTML("<br>"),
           uiOutput("save_manufacturer_disconnection_summary"),
           HTML("<br>"),
@@ -187,6 +194,20 @@ ui <- fluidPage(
                             numericInput("end_buffer_responding", 
                                          label = strong('Response time, window length for systems to be considered Non Compliant Responding, in seconds.'), 
                                          value = 120),
+                            h3("Over-frequency droop response compliance settings AS4777.2:2020"),
+                            numericInput("compliance_threshold_2020", 
+                                         label = strong('Compliance threshold'), 
+                                         value = 0.5, max=1, min=0),
+                            numericInput("start_buffer_2020", 
+                                         label = strong('Start buffer, allowed time to reach compliance threshold, in seconds.'), 
+                                         value = 10),
+                            numericInput("end_buffer_2020", 
+                                         label = strong('End buffer, allowed time for system ending response early, in seconds. 
+                                                        Note, AS4777.2:2020 ideal response profile is calculated separately to the 2015 response profile.'), 
+                                         value = 0),
+                            numericInput("end_buffer_responding_2020", 
+                                         label = strong('Response time, window length for systems to be considered Non Compliant Responding, in seconds.'), 
+                                         value = 120),
                             h3("Reconnection compliance settings"),
                             numericInput("reconnection_threshold", 
                                          label = strong('The level at which a circuit is considered to have reconnected.'), 
@@ -246,6 +267,7 @@ reset_sidebar <- function(input, output, session, stringsAsFactors) {
   output$responses <- renderUI({})
   output$zones <- renderUI({})
   output$compliance <- renderUI({}) 
+  output$compliance_2020 <- renderUI({})
   output$reconnection_compliance <- renderUI({}) 
   output$offsets <- renderUI({})
   shinyjs::hide("norm_power_filter_off_at_t0")
@@ -259,6 +281,7 @@ reset_sidebar <- function(input, output, session, stringsAsFactors) {
   shinyjs::hide("circuit_agg")
   shinyjs::hide("zone_agg")
   shinyjs::hide("compliance_agg")
+  shinyjs::hide("compliance_2020_agg")
   shinyjs::hide("reconnection_compliance_agg")
   shinyjs::hide("v_excursion_agg")
   shinyjs::hide("save_settings")
@@ -327,6 +350,7 @@ server <- function(input,output,session){
   hide("circuit_agg")
   hide("zone_agg")
   hide("compliance_agg")
+  hide("compliance_2020_agg")
   hide("reconnection_compliance_agg")
   hide("v_excursion_agg")
   hide("save_settings")
@@ -353,6 +377,7 @@ server <- function(input,output,session){
   circuits <- reactive({input$circuits})
   zones <- reactive({input$zones})
   compliance <- reactive({input$compliance})
+  compliance_2020 <- reactive({input$compliance_2020})
   reconnection_compliance <- reactive({input$reconnection_compliance})
   offsets <- reactive({input$offsets})
   size_groupings <- reactive({input$size_groupings})
@@ -368,6 +393,7 @@ server <- function(input,output,session){
   circuit_agg <- reactive({input$circuit_agg})
   zone_agg <- reactive({input$zone_agg})
   compliance_agg <- reactive({input$compliance_agg})
+  compliance_2020_agg <- reactive({input$compliance_2020_agg})
   reconnection_compliance_agg <- reactive({input$reconnection_compliance_agg})
   v_excursion_agg <- reactive({input$v_excursion_agg})
   load_date <- reactive({
@@ -426,6 +452,10 @@ server <- function(input,output,session){
   start_buffer <- reactive({input$start_buffer})
   end_buffer <- reactive({input$end_buffer})
   end_buffer_responding <- reactive({input$end_buffer_responding})
+  compliance_threshold_2020 <- reactive({input$compliance_threshold_2020})
+  start_buffer_2020 <- reactive({input$start_buffer_2020})
+  end_buffer_2020 <- reactive({input$end_buffer_2020})
+  end_buffer_responding_2020 <- reactive({input$end_buffer_responding_2020})
   reconnection_threshold <- reactive({input$reconnection_threshold})
   reconnection_time_threshold_for_compliance <- reactive({input$reconnection_time_threshold_for_compliance})
   ramp_rate_threshold <- reactive({input$ramp_rate_threshold})
@@ -643,6 +673,18 @@ server <- function(input,output,session){
                               checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")),
                               direction = "vertical")
       })
+      output$compliance_2020 <- renderUI({
+        checkboxGroupButtons(inputId="compliance_2020", label=strong("Compliance 2020"), 
+                             choices=list("Compliant", "Non-compliant Responding", 
+                                          "Non-compliant", "UFLS Dropout", "Disconnect/Drop to Zero",
+                                          "Off at t0", "Not enough data", "Undefined", NA),
+                             selected=list("Compliant", "Non-compliant Responding", 
+                                           "Non-compliant", "UFLS Dropout", "Disconnect/Drop to Zero",
+                                           "Off at t0", "Not enough data", "Undefined", NA), 
+                             justified=TRUE, status="primary", individual=TRUE,
+                             checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")),
+                             direction = "vertical")
+      })
       output$reconnection_compliance <- renderUI({
         checkboxGroupButtons(inputId="reconnection_compliance", label=strong("Reconnection Compliance"), 
                               choices=list("Compliant", "Non Compliant", 
@@ -671,6 +713,7 @@ server <- function(input,output,session){
       shinyjs::show("circuit_agg")
       shinyjs::show("zone_agg")
       shinyjs::show("compliance_agg")
+      shinyjs::show("compliance_2020_agg")
       shinyjs::show("reconnection_compliance_agg")
       shinyjs::show("v_excursion_agg")
       shinyjs::show("save_settings")
@@ -781,6 +824,14 @@ server <- function(input,output,session){
           shinySaveButton("save_ideal_response_downsampled", "Save downsampled response", 
                           "Choose directory for report files ...", filetype=list(xlsx="csv"))
         })
+        output$save_ideal_response_2020 <- renderUI({
+          shinySaveButton("save_ideal_response_2020", "Save response 2020", "Choose directory for report files ...", 
+                          filetype=list(xlsx="csv"))
+        })
+        output$save_ideal_response_downsampled_2020 <- renderUI({
+          shinySaveButton("save_ideal_response_downsampled_2020", "Save downsampled response 2020", 
+                          "Choose directory for report files ...", filetype=list(xlsx="csv"))
+        })
         output$save_manufacturer_disconnection_summary <- renderUI({
           shinySaveButton("save_manufacturer_disconnection_summary", "Save manufacturer disconnection summary", 
                           "Choose directory for report files ...", filetype=list(xlsx="csv"))
@@ -824,6 +875,10 @@ server <- function(input,output,session){
                         mode='markers', inherit=FALSE) %>%
               add_trace(x=~v$ideal_response_downsampled$time_group, y=~v$ideal_response_downsampled$norm_power, 
                         name='Ideal Response Downsampled', mode='markers', inherit=FALSE) %>%
+              add_trace(x=~v$ideal_response_to_plot_2020$ts, y=~v$ideal_response_to_plot_2020$norm_power, name='Ideal Response 2020', 
+                        mode='markers', inherit=FALSE) %>%
+              add_trace(x=~v$ideal_response_downsampled_2020$time_group, y=~v$ideal_response_downsampled_2020$norm_power, 
+                        name='Ideal Response Downsampled 2020', mode='markers', inherit=FALSE) %>%
               layout(yaxis=list(title="Circuit power normalised to value of pre-event interval, \n aggregated by averaging"))
           })
         } else {
@@ -1180,6 +1235,28 @@ server <- function(input,output,session){
   })
   
   
+  # Save ideal response curve 2020
+  observeEvent(input$save_ideal_response_2020,{
+    volumes <- c(home=getwd())
+    shinyFileSave(input, "save_ideal_response_2020", roots=volumes, session=session)
+    fileinfo <- parseSavePath(volumes, input$save_ideal_response_2020)
+    if (nrow(fileinfo) > 0) {
+      write.csv(v$ideal_response_to_plot_2020, as.character(fileinfo$datapath), row.names=FALSE)
+    }
+  })
+  
+  
+  # Save downsampled ideal response curve 2020
+  observeEvent(input$save_ideal_response_downsampled_2020,{
+    volumes <- c(home=getwd())
+    shinyFileSave(input, "save_ideal_response_downsampled_2020", roots=volumes, session=session)
+    fileinfo <- parseSavePath(volumes, input$save_ideal_response_downsampled_2020)
+    if (nrow(fileinfo) > 0) {
+      write.csv(v$ideal_response_downsampled_2020, as.character(fileinfo$datapath), row.names=FALSE)
+    }
+  })
+  
+  
   observeEvent(input$save_manufacturer_disconnection_summary,{
     volumes <- c(home=getwd())
     shinyFileSave(input, "save_manufacturer_disconnection_summary", roots=volumes, session=session)
@@ -1252,6 +1329,7 @@ server <- function(input,output,session){
     settings$circuits <- circuits()
     settings$zones <- zones()
     settings$compliance <- compliance()
+    settings$compliance_2020 <- compliance_2020()
     settings$reconnection_compliance <- reconnection_compliance()
     settings$offsets <- offsets()
     settings$size_groupings <- size_groupings()
@@ -1267,6 +1345,7 @@ server <- function(input,output,session){
     settings$reconnection_compliance_agg <- reconnection_compliance_agg()
     settings$v_excursion_agg <- v_excursion_agg()
     settings$compliance_agg <- compliance_agg()
+    settings$compliance_2020_agg <- compliance_2020_agg()
     
     settings$confidence_category <- confidence_category()
     settings$raw_upscale <- raw_upscale()
@@ -1289,6 +1368,10 @@ server <- function(input,output,session){
     settings$start_buffer <- start_buffer()
     settings$end_buffer <- end_buffer()
     settings$end_buffer_responding <- end_buffer_responding()
+    settings$compliance_threshold_2020 <- compliance_threshold_2020()
+    settings$start_buffer_2020 <- start_buffer_2020()
+    settings$end_buffer_2020 <- end_buffer_2020()
+    settings$end_buffer_responding_2020 <- end_buffer_responding_2020()
     settings$reconnection_threshold <- reconnection_threshold()
     settings$reconnection_time_threshold_for_compliance <- reconnection_time_threshold_for_compliance()
     settings$ramp_rate_threshold <- ramp_rate_threshold()
@@ -1361,6 +1444,7 @@ server <- function(input,output,session){
       updateCheckboxGroupButtons(session, "responses", selected = settings$responses)
       updateCheckboxGroupButtons(session, "zones", selected = settings$zones)
       updateCheckboxGroupButtons(session, "compliance", selected = settings$compliance)
+      updateCheckboxGroupButtons(session, "compliance_2020", selected = settings$compliance_2020)
       if ("reconnection_compliance" %in% names(settings)) {
         updateCheckboxGroupButtons(session, "reconnection_compliance", selected = settings$reconnection_compliance)
       }
@@ -1381,6 +1465,7 @@ server <- function(input,output,session){
       updateMaterialSwitch(session, "circuit_agg", value = settings$circuit_agg)
       updateMaterialSwitch(session, "zone_agg", value = settings$zone_agg)
       updateMaterialSwitch(session, "compliance_agg", value = settings$compliance_agg)
+      updateMaterialSwitch(session, "compliance_2020_agg", value = settings$compliance_2020_agg)
       if ("reconnection_compliance_agg" %in% names(settings)) {
         updateMaterialSwitch(session, "reconnection_compliance_agg", value = settings$reconnection_compliance_agg)
       }
@@ -1412,6 +1497,10 @@ server <- function(input,output,session){
       updateNumericInput(session, "start_buffer", value = settings$start_buffer)
       updateNumericInput(session, "end_buffer", value = settings$end_buffer)
       updateNumericInput(session, "end_buffer_responding", value = settings$end_buffer_responding)
+      updateNumericInput(session, "compliance_threshold_2020", value = settings$compliance_threshold_2020)
+      updateNumericInput(session, "start_buffer_2020", value = settings$start_buffer_2020)
+      updateNumericInput(session, "end_buffer_2020", value = settings$end_buffer_2020)
+      updateNumericInput(session, "end_buffer_responding_2020", value = settings$end_buffer_responding_2020)
       updateNumericInput(session, "reconnection_threshold", value = settings$reconnection_threshold)
       updateNumericInput(session, "reconnection_time_threshold_for_compliance", value = settings$reconnection_time_threshold_for_compliance)
       updateNumericInput(session, "ramp_rate_threshold", value = settings$ramp_rate_threshold)
@@ -1471,7 +1560,7 @@ server <- function(input,output,session){
   # Inforce mutual exclusivity of Aggregation settings
   observe({
     if(manufacturer_agg() | model_agg() | pst_agg() | circuit_agg() | circuit_agg() | response_agg() | zone_agg()
-       | compliance_agg() | reconnection_compliance_agg() | v_excursion_agg() | grouping_agg()){
+       | compliance_agg() | compliance_2020_agg() | reconnection_compliance_agg() | v_excursion_agg() | grouping_agg()){
       updateMaterialSwitch(session=session, "raw_upscale", value = FALSE)
     }
   })
@@ -1485,6 +1574,7 @@ server <- function(input,output,session){
       updateMaterialSwitch(session=session, "circuit_agg", value = FALSE)
       updateMaterialSwitch(session=session, "zone_agg", value = FALSE)
       updateMaterialSwitch(session=session, "compliance_agg", value = FALSE)
+      updateMaterialSwitch(session=session, "compliance_2020_agg", value = FALSE)
       updateMaterialSwitch(session=session, "reconnection_compliance_agg", value = FALSE)
       updateMaterialSwitch(session=session, "v_excursion_agg", value = FALSE)
       updateMaterialSwitch(session=session, "response_agg", value = FALSE)

@@ -1,5 +1,14 @@
 
-ideal_response <- function(frequency_data){
+#' Calculate ideal f-W response
+#' 
+#' Once the frequency has been within f_hyst of f_ulco for t_hyst then the system should end f-W
+#' and ramp back up
+#' 
+#' @param f_ulco upper limit of continuous operation (the point at which f-W droop should start)
+#' @param f_hyst hysteresis frequency value
+#' @param t_hyst hysteresis time in seconds
+#' @param f_upper frequency droop response upper limit. Default 52Hz in most cases
+ideal_response <- function(frequency_data, f_ulco, f_hyst, t_hyst, f_upper){
   frequency_data <- frequency_data[order(frequency_data$ts),]
   start_times <- c()
   end_times <- c()
@@ -7,26 +16,37 @@ ideal_response <- function(frequency_data){
   f <- c()
   norm_power <- c()
   for(i in 1:length(frequency_data$ts)){
-    last_60_seconds_of_data <- filter(frequency_data, (ts>frequency_data$ts[i]-60) & (ts<=frequency_data$ts[i]))
-    if(frequency_data$f[i]>=50.25 & length(start_times)==length(end_times)){
+    # Look at last t_hyst seconds of data (the 2015 std default is 60s, the 2020 std default is 20s)
+    last_60_seconds_of_data <- filter(frequency_data, (ts>frequency_data$ts[i]-t_hyst) & (ts<=frequency_data$ts[i]))
+    # If there is a new over-frequency event (i.e. frequency goes above 50.25Hz and we're not already in a f-W droop) 
+    # then record this as a new start time.
+    if(frequency_data$f[i]>=f_ulco & length(start_times)==length(end_times)){
       start_times <- c(start_times, frequency_data$ts[i])
+      # And if we don't have any data yet in the ts, then it's the first event, so record this ts. Else append this ts.
       if(length(ts)==0){
         ts <- c(frequency_data$ts[i])
       }else{
           ts <- c(ts, frequency_data$ts[i])
       }
       f <- c(f, frequency_data$f[i])
+      # Ideal response profile at this time (when frequency is > 50.25Hz for the first time) is set to 1
       norm_power <- c(norm_power, 1)
-    } else if(max(last_60_seconds_of_data$f)<=50.15 & length(start_times)>length(end_times)){
+    # Check for whether the frequency has been below 50.15Hz for at least 60s for the first time since the droop start
+    } else if(max(last_60_seconds_of_data$f)<=(f_ulco-f_hyst) & length(start_times)>length(end_times)){
+      # If so, then add this time to end_times, record the ts, set norm_power to the last value in the norm power list
       end_times <- c(end_times, frequency_data$ts[i])
       ts <- c(ts, frequency_data$ts[i])
       norm_power <- c(norm_power, tail(norm_power, n=1))
       f <- c(f, frequency_data$f[i])
+    # If this interval is during a f-W droop window (may be the first interval!), then copy across these ts and 
+    # frequency data points
     } else if(length(start_times)>length(end_times)){
       ts <- c(ts, frequency_data$ts[i])
       f <- c(f, frequency_data$f[i])
-      if(frequency_data$f[i]>=50.25){
-        norm_power <- c(norm_power, min(norm_p_over_frequency(frequency_data$f[i]),tail(norm_power, n=1)))
+      # Check if frequency has reached a new maximum above 50.25Hz, else norm power is based on the previous norm power
+      if(frequency_data$f[i]>=f_ulco){
+        norm_power <- c(norm_power, min(norm_p_over_frequency(frequency_data$f[i], f_ulco, f_upper),
+                                        tail(norm_power, n=1)))
       } else {
         norm_power <- c(norm_power, tail(norm_power, n=1))
       }
@@ -36,10 +56,10 @@ ideal_response <- function(frequency_data){
   return(response_data)
 }
 
-norm_p_over_frequency <- function(f){
-  if(f>=50.25 & f<=52.00){
-    norm_p <- 1 - ((f-50.25)/(52-50.25))
-  } else if (f>52){
+norm_p_over_frequency <- function(f, f_ulco, f_upper){
+  if(f>=f_ulco & f<=f_upper){
+    norm_p <- 1 - ((f-f_ulco)/(f_upper-f_ulco))
+  } else if (f>f_upper){
     norm_p <- 0.0
   } else {
     norm_p = 1.0
@@ -119,10 +139,15 @@ calc_error_metric_and_compliance_2 <- function(combined_data, ideal_response_dow
   end_buffer <- max(ideal_response$ts) - end_buffer
   end_buffer_responding <- min(ideal_response$ts) + end_buffer_responding
   disconnecting_threshold <- disconnecting_threshold
+  # If checking both 2015 and 2020 compliance status, then we need to store the first compliance assessment that's  
+  # already happened under a different col name before embarking on the next assessment.
+  if('compliance_status' %in% colnames(combined_data)){
+    combined_data <- dplyr::rename(combined_data, "compliance_status_2015" = "compliance_status")
+  }
   # First pass compliance
-  ideal_response_downsampled <- filter(ideal_response_downsampled, time_group >= start_buffer_t)
-  ideal_response_downsampled <- filter(ideal_response_downsampled, time_group <= end_buffer)
-  error_by_c_id <- inner_join(combined_data, ideal_response_downsampled, by=c("ts"="time_group"))
+  ideal_response_downsampled_f <- filter(ideal_response_downsampled, time_group >= start_buffer_t)
+  ideal_response_downsampled_f <- filter(ideal_response_downsampled_f, time_group <= end_buffer)
+  error_by_c_id <- inner_join(combined_data, ideal_response_downsampled_f, by=c("ts"="time_group"))
   error_by_c_id <- mutate(error_by_c_id, error=(1 - c_id_norm_power) - ((1 - norm_power) * threshold))
   error_by_c_id <- group_by(error_by_c_id, c_id, clean)
   error_by_c_id <- summarise(error_by_c_id, min_error=min(error))
@@ -131,8 +156,8 @@ calc_error_metric_and_compliance_2 <- function(combined_data, ideal_response_dow
   combined_data <- left_join(combined_data, error_by_c_id, by=c("c_id","clean"))
   
   # Change 'Non compliant' to 'Non Compliant Responding' where complaint at start
-  ideal_response_downsampled <- filter(ideal_response_downsampled, time_group <= end_buffer_responding)
-  error_by_c_id <- inner_join(combined_data, ideal_response_downsampled, by=c("ts"="time_group"))
+  ideal_response_downsampled_f <- filter(ideal_response_downsampled, time_group <= end_buffer_responding)
+  error_by_c_id <- inner_join(combined_data, ideal_response_downsampled_f, by=c("ts"="time_group"))
   error_by_c_id <- mutate(error_by_c_id, error=(1 - c_id_norm_power) - ((1 - norm_power) * threshold))
   error_by_c_id <- group_by(error_by_c_id, c_id, clean)
   error_by_c_id <- summarise(error_by_c_id, max_error=max(error), compliance_status=first(compliance_status))
@@ -141,6 +166,8 @@ calc_error_metric_and_compliance_2 <- function(combined_data, ideal_response_dow
   combined_data <- left_join(subset(combined_data, select = -c(compliance_status)), error_by_c_id, by=c("c_id","clean"))
   
   # Set disconnecting categories 
+  # First check that the ideal response doesn't drop low (to close to zero), since many sites would therefore remain as 
+  # 'compliant' rather than 'Disconnect' etc.
   min_ideal_response <- min(ideal_response_downsampled$norm_power)
   if (min_ideal_response > disconnecting_threshold) {
     combined_data <- mutate(combined_data, compliance_status=ifelse(response_category=='4 Disconnect', 'Disconnect/Drop to Zero', compliance_status))
@@ -150,6 +177,13 @@ calc_error_metric_and_compliance_2 <- function(combined_data, ideal_response_dow
   combined_data <- mutate(combined_data, compliance_status=ifelse(response_category=='7 UFLS Dropout', 'UFLS Dropout', compliance_status))
   combined_data <- mutate(combined_data, compliance_status=ifelse(response_category=='5 Off at t0', 'Off at t0', compliance_status))
   combined_data <- mutate(combined_data, compliance_status=ifelse(response_category=='6 Not enough data', 'Not enough data', compliance_status))
+  
+  # Now check for whether there was already a compliance_status col when the function was called, rename the new one to 
+  # 2020 std, and keep both in the output combined_data.
+  if('compliance_status_2015' %in% colnames(combined_data)){
+    combined_data <- dplyr::rename(combined_data, "compliance_status_2020" = "compliance_status")
+    combined_data <- dplyr::rename(combined_data, "compliance_status" = "compliance_status_2015")
+  }
   
   return(combined_data)
 }

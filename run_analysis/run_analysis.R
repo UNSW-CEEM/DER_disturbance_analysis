@@ -43,12 +43,12 @@ validate_pre_event_interval <- function(pre_event_interval, load_start_time, loa
 #' @param frequency_data The frequency data input to the tool
 #' @param region_to_load Which region (state) to pull from the frequency data
 #' @return Ideal response time series dataframe
-ideal_response_from_frequency <- function(frequency_data, region_to_load) {
+ideal_response_from_frequency <- function(frequency_data, region_to_load, f_ulco, f_hyst, t_hyst, f_upper) {
   if (dim(frequency_data)[1] > 0) {
     temp_f_data <- select(frequency_data, ts, region_to_load) 
     temp_f_data <- setnames(temp_f_data, c(region_to_load), c("f"))
     temp_f_data <- mutate(temp_f_data, f = as.numeric(f))
-    ideal_response_to_plot <- ideal_response(temp_f_data)
+    ideal_response_to_plot <- ideal_response(temp_f_data, f_ulco, f_hyst, t_hyst, f_upper)
   } else {
     temp_f_data <- data.frame()
     ideal_response_to_plot <- data.frame()
@@ -200,8 +200,8 @@ upscale_and_summarise_disconnections <- function(circuit_summary, manufacturer_i
 check_grouping <- function(settings) {
   if (settings$standard_agg==FALSE & settings$pst_agg==FALSE & settings$grouping_agg==FALSE &
       settings$manufacturer_agg==FALSE & settings$model_agg==FALSE & settings$zone_agg==FALSE &
-      settings$circuit_agg==TRUE & settings$compliance_agg==TRUE & settings$reconnection_compliance_agg &
-      settings$v_excursion_agg==FALSE){
+      settings$circuit_agg==TRUE & settings$compliance_agg==TRUE & settings$compliance_2020_agg==TRUE
+      & settings$reconnection_compliance_agg & settings$v_excursion_agg==FALSE){
     no_grouping=TRUE
   } else {
     no_grouping=FALSE
@@ -223,13 +223,38 @@ run_analysis <- function(data, settings) {
 
   if (length(errors$errors) == 0) {
     logging::logdebug("error checks passed", logger=logger)
-
+    
+    # First get ideal response profile for 2015 standard, AS4777.2:2015.
     response_data <- ideal_response_from_frequency(
-      data$frequency_data, settings$region_to_load
+      data$frequency_data, settings$region_to_load, f_ulco=50.25, f_hyst=0.1, t_hyst=60, f_upper=52.00
     )
     data$ideal_response_to_plot <- response_data$ideal_response_to_plot
     data$region_frequency <- response_data$region_frequency
-
+    
+    # Next, get ideal response profile for 2020 standard, AS4777.2:2020 (uses different settings based on region).
+    # Currently, WA (Western Power) uses "Australia B", TAS uses "Australia C", all other NEM regions use "Australia A".
+    if(settings$region_to_load == "WA"){
+      f_ulco <- 50.15
+      f_hyst <- 0.1
+      t_hyst <- 20
+      f_upper <- 52.00
+    } else if(settings$region_to_load == "TAS"){
+      f_ulco <- 50.5
+      f_hyst <- 0.05
+      t_hyst <- 20
+      f_upper <- 55.00
+    } else{
+      f_ulco <- 50.25
+      f_hyst <- 0.1
+      t_hyst <- 20
+      f_upper <- 52.00
+    }
+    response_data_2020 <- ideal_response_from_frequency(
+      data$frequency_data, settings$region_to_load, f_ulco, f_hyst, t_hyst, f_upper
+    )
+    data$ideal_response_to_plot_2020 <- response_data_2020$ideal_response_to_plot
+    data$region_frequency_2020 <- response_data_2020$region_frequency
+    
     # -------- filter combined data by user filters --------
     combined_data_f <- filter_combined_data(
       data$combined_data, data$off_grid_postcodes, settings$cleaned, settings$size_groupings, settings$standards,
@@ -291,7 +316,7 @@ run_analysis <- function(data, settings) {
     if(length(combined_data_f$ts) > 0){
       combined_data_f <- determine_performance_factors(combined_data_f, settings$pre_event_interval)
 
-      # -------- determine f-W compliance --------
+      # -------- determine AS4777.2:2015 over-frequency f-W compliance --------
       if(dim(data$ideal_response_to_plot)[1]>0){
         ideal_response_downsampled <- down_sample_1s(
           data$ideal_response_to_plot, settings$duration, min(combined_data_f$ts))
@@ -313,7 +338,30 @@ run_analysis <- function(data, settings) {
       if (length(settings$compliance) < 8) {
         combined_data_f <- filter(combined_data_f, compliance_status %in% settings$compliance)
       }
-      
+
+      # -------- determine AS4777.2:2020 over-frequency f-W compliance --------
+      if(dim(data$ideal_response_to_plot_2020)[1]>0){
+        ideal_response_downsampled_2020 <- down_sample_1s(
+          data$ideal_response_to_plot_2020, settings$duration, min(combined_data_f$ts))
+        data$ideal_response_downsampled_2020 <- ideal_response_downsampled_2020
+        combined_data_f <- 
+          calc_error_metric_and_compliance_2(combined_data_f, 
+                                             ideal_response_downsampled_2020,
+                                             data$ideal_response_to_plot_2020,
+                                             settings$compliance_threshold_2020,
+                                             settings$start_buffer_2020,
+                                             settings$end_buffer_2020,
+                                             settings$end_buffer_responding_2020,
+                                             settings$disconnecting_threshold)
+        combined_data_f <- mutate(
+          combined_data_f,  compliance_status_2020=ifelse(compliance_status_2020 %in% c(NA), "NA", compliance_status_2020))
+      } else {
+        combined_data_f <- mutate(combined_data_f, compliance_status_2020="Undefined")  
+      }
+      if (length(settings$compliance_2020) < 8) {
+        combined_data_f <- filter(combined_data_f, compliance_status_2020 %in% settings$compliance_2020)
+      }
+            
       # -------- determine reconnection compliace --------
       logdebug('Set reconnection compliance values', logger=logger)
       max_power <- data$db$get_max_circuit_powers(settings$region_to_load)
@@ -367,7 +415,7 @@ run_analysis <- function(data, settings) {
                                 "s_postcode", "pv_installation_year_month", "Standard_Version", "Grouping", "sum_ac",
                                 "clean", "manufacturer", "model", "site_performance_factor", "response_category",
                                 "zone", "distance", "lat", "lon", "e", "con_type", "first_ac", "polarity",
-                                "compliance_status", "reconnection_compliance_status",
+                                "compliance_status","compliance_status_2020", "reconnection_compliance_status",
                                 "manual_droop_compliance", "manual_reconnect_compliance", "reconnection_time",
                                 "ramp_above_threshold", "c_id_daily_norm_power", "max_power", "ufls_status",
                                 "pre_event_sampled_seconds", "post_event_sampled_seconds", "ufls_status_v",
@@ -404,7 +452,7 @@ run_analysis <- function(data, settings) {
         circ_sum_cols <- c("site_id", "c_id", "s_state", "s_postcode", "pv_installation_year_month",
                             "Standard_Version", "Grouping", "sum_ac", "clean", "manufacturer", "model",
                             "response_category", "zone", "distance", "lat", "lon", "con_type", "first_ac", "polarity",
-                            "compliance_status", "reconnection_compliance_status", "manual_droop_compliance",
+                            "compliance_status", "compliance_status_2020", "reconnection_compliance_status", "manual_droop_compliance",
                             "manual_reconnect_compliance", "reconnection_time", "ramp_above_threshold", "max_power",
                             "ufls_status", "pre_event_sampled_seconds", "post_event_sampled_seconds", "ufls_status_v",
                             "pre_event_v_mean", "post_event_v_mean", "vmax_max", "vmin_min", "vmean_mean",
