@@ -462,7 +462,11 @@ run_analysis <- function(data, settings) {
           circ_sum_cols <- append(circ_sum_cols, c("Islanded", "island_assessment", "islanding_alert"), 26)
         }
         data$circuit_summary <- data$circuit_summary[, circ_sum_cols]
-        data$circuit_summary$tool_hash <-git2r::revparse_single(revision="HEAD")$sha
+        if(is.null(git2r::discover_repository(path = ".", ceiling = NULL))){
+          data$circuit_summary$tool_hash <- Sys.Date()
+        } else {
+          data$circuit_summary$tool_hash <-git2r::revparse_single(revision="HEAD")$sha
+        }
 
         # Combine data sets that have the same grouping so they can be saved in a single file
         if (no_grouping){
