@@ -7,10 +7,10 @@ region <- 'QLD'
 event_date <- '2021-05-25'
 event_lat <- -24.350597
 event_long <- 150.620694
-circ_sum_file <- "DERdat_results/EQL-Luceo_report/20210525_Luceo_circ_sum_0504.csv"
+#circ_sum_file <- "DERdat_results/EQL-Luceo_report/20210525_Luceo_circ_sum_0504.csv"
 #circ_sum_file <- "DERdat_results/20210525_Tesla_QLD_30s_circ_sum_300822.csv"
 #circ_sum_file <- "DERdat_results/20210525_SolAn_QLD_30s_circ_sum_220722.csv"
-#circ_sum_file <- "DERdat_results/20210525_alldata_QLD_30s_circ_sum.csv"
+circ_sum_file <- "DERdat_results/20210525_alldata_QLD_30s_circ_sum.csv"
 circuit_summary <- read.csv(file = circ_sum_file, header = TRUE, stringsAsFactors = FALSE)
 #manufacturer_install_data <- read.csv(file = "inbuilt_data/cer_cumulative_capacity_and_number_by_manufacturer.csv",
 #header = TRUE, stringsAsFactors = FALSE)
@@ -21,27 +21,16 @@ manufacturer_install_data <- read.csv(file = "inbuilt_data/cer_installs_by_postc
 # Predictor options: 'manufacturer', 'Standard_Version', 'Grouping', one of: 's_postcode', 'zone', 'distance'.
 predictors_list = c('manufacturer', 'Standard_Version')
 
-manufacturer_capacitys <- get_manufacturer_capacitys_variable(manufacturer_install_data, event_date, region, 
-                                                              replace(predictors_list,
-                                                                      predictors_list %in% c('zone', 'distance'),
-                                                                      's_postcode'))
-if ('zone' %in% predictors_list | 'distance' %in% predictors_list){
-  postcode_data <- read.csv(file=POSTCODE_DATA_FILE, header=TRUE, stringsAsFactors = FALSE)
-  postcode_data <- process_postcode_data(postcode_data)
-  manufacturer_capacitys <- get_distance_from_event(manufacturer_capacitys, postcode_data, event_lat, event_long)
-  manufacturer_capacitys <- get_zones(manufacturer_capacitys, 200, 600, 1000)
-  manufacturer_capacitys <- mutate(manufacturer_capacitys,  zone=ifelse(zone %in% c(NA), "NA", zone))
-}
-
-manufacturer_capacitys <- manufacturer_capacitys %>% group_by_at(predictors_list) %>% 
-  summarise(capacity=sum(capacity))
-
 circuits_to_summarise <- circuit_summary
 circuits_data <- circuits_to_summarise %>% select(Standard_Version, Grouping, manufacturer, response_category, zone, sum_ac)
 disconnection_categories <- c("3 Drop to Zero", "4 Disconnect")
 bad_categories <- c("6 Not enough data", "Undefined", "NA")
 circuits_data <- filter(circuits_data, !(response_category %in% bad_categories | is.na(response_category)))
 circuits_data <- circuits_data %>% mutate("disconnected" = ifelse(response_category %in% disconnection_categories,1,0))
+
+# Testing out removing the transition standards
+circuits_data["Standard_Version"][circuits_data["Standard_Version"] == "Transition"] <- "AS4777.3:2005"
+circuits_data["Standard_Version"][circuits_data["Standard_Version"] == "Transition 2020-21"] <- "AS4777.2:2015"
 
 circuits_predictors_count <- circuits_data %>% group_by_at(predictors_list) %>% 
   summarise(disconnections = sum(disconnected), sample_size = length(response_category))
@@ -65,8 +54,8 @@ if('manufacturer' %in% predictors_list){
                                                                "Other", manufacturer))
 }
 
-#glm_formula <- reformulate(termlabels = predictors_list, response='disconnected')
-glm_formula <- disconnected ~ manufacturer:Standard_Version
+glm_formula <- reformulate(termlabels = predictors_list, response='disconnected')
+#glm_formula <- disconnected ~ manufacturer:Standard_Version
 print(glm_formula)
 
 cv_kfold_binary <- function(circuits_data, glm_formula, k_value=10){

@@ -181,7 +181,7 @@ get_manufacturer_capacitys_variable <- function(manufacturer_install_data, event
   manufacturer_install_data <- group_by_at(manufacturer_install_data, 
                                            c('manufacturer', 'Standard_Version', 'Grouping', 's_postcode', 's_state'))
   manufacturer_install_data <- summarise(manufacturer_install_data, capacity = last(standard_capacity))
-  manufacturer_install_data <- manufacturer_install_data %>% group_by_at(grouping_cols) %>% 
+  manufacturer_install_data <- manufacturer_install_data %>% group_by_at(append(grouping_cols, 's_state')) %>% 
     summarise(capacity=sum(capacity))
   manufacturer_install_data <- as.data.frame(manufacturer_install_data)
   return(manufacturer_install_data)
