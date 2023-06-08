@@ -2,7 +2,7 @@
 testthat::context("Testing calc_installed_capacity_by_standard_and_manufacturer.")
 
 
-load_test_file <- function(text){
+load_test_file <- function(text) {
   df <- read.table(text = gsub(" ", "", text), sep = ",", header = TRUE, stringsAsFactors = FALSE)
   return(df)
 }

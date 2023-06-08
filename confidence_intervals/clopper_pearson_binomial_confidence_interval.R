@@ -34,7 +34,7 @@ bisection_method <- function(func, lower_limit, upper_limit, TOL=0.001, N_max=10
   return (midpoint)
 }
 
-confidence_interval <- function(x, n, confidence=0.95){
+confidence_interval <- function(x, n, confidence=0.95) {
   # Computes Clopper-Pearson upper and lower bounds for a binomial proportion confidence interval
   
   # x: number of successful observations in sample

@@ -2,7 +2,7 @@
 testthat::context("Testing summarising disconnections when UFLS circuits are removed from sample sizes.")
 
 
-load_test_file <- function(text){
+load_test_file <- function(text) {
   text <- gsub(" ", "", text)
   text <- gsub("-", " ", text)
   df <- read.table(text = text, sep = ",", header = TRUE, stringsAsFactors = FALSE)

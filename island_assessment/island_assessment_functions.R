@@ -1,4 +1,4 @@
-classify_islands <- function(combined_data, alert_data, event_time, window_length){
+classify_islands <- function(combined_data, alert_data, event_time, window_length) {
   # add col to circ_sum with islanded flags, also for freqwobble and undervoltage. 
   combined_data <- identify_islanded_sites(combined_data, alert_data, event_time)
   # determine which islanded sites can be classified as disconnect
@@ -10,8 +10,8 @@ classify_islands <- function(combined_data, alert_data, event_time, window_lengt
   return(combined_data)
 }
 
-identify_islanded_sites <- function(combined_data, alert_data, event_time){
-  if (!all(is.na(alert_data$first_timestamp))){
+identify_islanded_sites <- function(combined_data, alert_data, event_time) {
+  if (!all(is.na(alert_data$first_timestamp))) {
     alert_data <- mutate(alert_data, first_timestamp = as.POSIXct((first_timestamp)/1000, tz="Australia/Brisbane", 
                                                                   origin="1970-01-01"))
     alert_data <- mutate(alert_data, Islanded = ifelse(is.na(first_timestamp),0,
@@ -36,9 +36,9 @@ identify_islanded_sites <- function(combined_data, alert_data, event_time){
   return(combined_data)
 }
 
-assess_islands <- function(event_window_data){
+assess_islands <- function(event_window_data) {
   event_window_data <- filter(event_window_data, Islanded==1)
-  if(length(event_window_data$c_id) > 0){
+  if(length(event_window_data$c_id) > 0) {
     event_window_data <- mutate(event_window_data, voltage = as.numeric(v), frequency = as.numeric(f))
     event_window_data <- mutate(event_window_data, vmin=if(all(is.na(event_window_data$vmin))) v else vmin,
                                                    vmax=if(all(is.na(event_window_data$vmax))) v else vmax,
@@ -73,7 +73,7 @@ assess_islands <- function(event_window_data){
   return(event_window_data)
 }
 
-replace_response_with_alert <- function(combined_data){
+replace_response_with_alert <- function(combined_data) {
   combined_data <- mutate(combined_data, islanding_alert=ifelse(Islanded, "Islanded - Other", "NA"))
   combined_data <- mutate(combined_data, islanding_alert=ifelse(Islanded & SYNC_a005_vfCheckUnderVoltage>=1, 
                                                                   "Islanded - Under Volt alert", islanding_alert))

@@ -1,5 +1,5 @@
 
-process_time_series_data <- function(time_series_data){
+process_time_series_data <- function(time_series_data) {
   time_series_data <- mutate(time_series_data, ts = fastPOSIXct(ts, tz="Australia/Brisbane"))
   time_series_data <- mutate(time_series_data, e = as.numeric(e))
   time_series_data <- mutate(time_series_data, v = as.numeric(v))
@@ -7,36 +7,36 @@ process_time_series_data <- function(time_series_data){
   return(time_series_data)
 }
 
-get_time_offsets <- function(time_series_data){
+get_time_offsets <- function(time_series_data) {
   time_series_data <- mutate(time_series_data, time_offset = as.numeric(format(ts, "%S")) %% d)
   return(time_series_data)
 }
 
-get_time_series_unique_offsets <- function(time_series_data){
+get_time_series_unique_offsets <- function(time_series_data) {
   unique_offsets <- unique(time_series_data$time_offset)
   return(unique_offsets)
 }
 
-make_offset_filter_label <- function(sample_counts, unique_offsets){
+make_offset_filter_label <- function(sample_counts, unique_offsets) {
   label <- "Select time offset data subset to use, ("
-  for(i in 1:length(unique_offsets)){
+  for(i in 1:length(unique_offsets)) {
     label <- paste(label, unique_offsets[i], ": n=", sample_counts[i], ", ",sep='')
   }
   label <- paste(label, ")",sep='')
   return(label)
 }
 
-get_offset_sample_counts <- function(time_series_data, unique_offsets){
+get_offset_sample_counts <- function(time_series_data, unique_offsets) {
   time_series_data <- distinct(time_series_data, c_id, .keep_all=TRUE)
   sample_counts <- c()
-  for(i in 1:length(unique_offsets)){
+  for(i in 1:length(unique_offsets)) {
     sample_counts <- c(sample_counts, length(filter(time_series_data, time_offset==unique_offsets[i])$c_id))
   }
   return(sample_counts)
 }
 
 
-process_raw_site_details <- function(site_details){
+process_raw_site_details <- function(site_details) {
   site_details <- filter(site_details, !is.na(ac) & ac != "")
   assert_raw_site_details_assumptions(site_details)
   # The data can contain duplicate site ids, these need to be sumarised so there
@@ -54,7 +54,7 @@ process_raw_site_details <- function(site_details){
   processed_site_details <- as.data.frame(processed_site_details)
   return(processed_site_details)}
 
-sum_manufacturers <- function(manufacturers){
+sum_manufacturers <- function(manufacturers) {
   unique_manufactuerers <- unique(manufacturers)
   if (anyNA(unique_manufactuerers)) {
     manufacturer <- 'NA'
@@ -66,7 +66,7 @@ sum_manufacturers <- function(manufacturers){
   return(manufacturer)
 }
 
-assert_raw_site_details_assumptions <- function(site_details){
+assert_raw_site_details_assumptions <- function(site_details) {
   # Check in coming site data for conformance to data processing assumptions
   # We assume that only possible s_state values are NSW, QLD, VIC, TAS, SA, WA, NT, ACT
   s_state <- site_details$s_state
@@ -86,7 +86,7 @@ assert_raw_site_details_assumptions <- function(site_details){
   #assert_that(all(!is.na(as.numeric(site_details$dc))))
 }
 
-perform_power_calculations <- function(master_data_table){
+perform_power_calculations <- function(master_data_table) {
   # Calculate the average power output over the sample time base on the 
   # cumulative energy and duration length.Assuming energy is joules and duration is in seconds.
   master_data_table <- mutate(master_data_table, e_polarity=e*polarity)
@@ -94,7 +94,7 @@ perform_power_calculations <- function(master_data_table){
   return(master_data_table)
 }
 
-process_install_data <- function(install_data){
+process_install_data <- function(install_data) {
   assert_install_data_assumptions(install_data)
   # Rename time column and catergorise data based on inverter standards.
   install_data <- setnames(install_data, c("state", "sizegroup", "date", "capacity"), 
@@ -124,7 +124,7 @@ process_install_data <- function(install_data){
   return(install_data)
 }
 
-assert_install_data_assumptions <- function(install_data){
+assert_install_data_assumptions <- function(install_data) {
   # Assert that the date column is convertable to a date object using the assumed format.
   assert_that(all(!is.na(as.Date(install_data$date, format="%Y-%m-%d"))), 
               msg="pv_installation_year_month has an unexpected format, should be YYYY-MM-DD")
@@ -143,20 +143,20 @@ assert_install_data_assumptions <- function(install_data){
   
 }
 
-size_grouping <- function(site_details){
+size_grouping <- function(site_details) {
   # Catergorise site by sample ac capacity.
   site_details <- mutate(site_details, Grouping=ifelse(first_ac>=30, "30-100kW" ,"<30 kW"))
   return(site_details)
 }
 
-process_postcode_data <-function(postcode_data){
+process_postcode_data <-function(postcode_data) {
   assert_postcode_data_assumptions(postcode_data)
   postcode_data <- mutate(postcode_data, postcode = as.integer(postcode))
   postcode_data <- filter(postcode_data, !is.na(lat) & !is.na(lon))
   return(postcode_data)
 }
 
-assert_postcode_data_assumptions <- function(postcode_data){
+assert_postcode_data_assumptions <- function(postcode_data) {
   # We assume that all values in the lat column can be safely converted to numeric type
   assert_that(all(!is.na(as.numeric(postcode_data$lat))), msg="Not all lat values could be interprested as numbers")
   # We assume that all values in the lon column can be safely converted to numeric type
@@ -165,7 +165,7 @@ assert_postcode_data_assumptions <- function(postcode_data){
   assert_that(all(!is.na(as.numeric(postcode_data$postcode))), msg="Not all s_postcode values could be interprested as numbers")
 }
 
-site_categorisation <- function(combined_data){
+site_categorisation <- function(combined_data) {
   # Processes installed month. Setting missing month values to jan 2005, and
   # using assumed day of month as the 28th. Then catergorising into stanard 
   # version based on date.
@@ -216,7 +216,7 @@ site_categorisation <- function(combined_data){
   return(combined_data)
 }
 
-assert_site_install_date_assumptions <- function(site_details){
+assert_site_install_date_assumptions <- function(site_details) {
   # Check in coming  data for conformance to data processing assumptions
   # We assume that the pv installation year month will be either of the form
   # YYYY-MM or YYYY-MM-DD

@@ -1,4 +1,4 @@
-calc_confidence_intervals_for_disconnections <- function(disconnection_summary){
+calc_confidence_intervals_for_disconnections <- function(disconnection_summary) {
   result <- mapply(confidence_interval, disconnection_summary$total, 
                    disconnection_summary$disconnections, 0.95)
   disconnection_summary$lower <- result[1,]

@@ -2,7 +2,7 @@
 testthat::context("Testing summarising disconnections.")
 
 
-load_test_file <- function(text){
+load_test_file <- function(text) {
   text <- gsub(" ", "", text)
   text <- gsub("-", " ", text)
   df <- read.table(text = text, sep = ",", header = TRUE, stringsAsFactors = FALSE)

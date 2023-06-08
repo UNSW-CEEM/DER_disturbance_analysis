@@ -14,7 +14,7 @@ manufacturer_install_data <- mutate(
 
 manufacturer_install_data <- calc_installed_capacity_by_standard_and_manufacturer(manufacturer_install_data)
 
-if (exclude_solar_edge){
+if (exclude_solar_edge) {
   circuits_to_summarise <- filter(circuit_summary, manufacturer != "SolarEdge")
   manufacturer_install_data <- filter(manufacturer_install_data, manufacturer != "SolarEdge")
 } else {

@@ -326,7 +326,7 @@ reset_data_cleaning_tab <- function(input, output, session, stringsAsFactors) {
 }
 
 
-server <- function(input,output,session){
+server <- function(input,output,session) {
   # Create radio button dyamically so label can be updated
   output$duration <- renderUI({radioButtons("duration", label=strong("Sampled duration (seconds), select one."), 
                                             choices = list("5","30","60"), 
@@ -577,7 +577,7 @@ server <- function(input,output,session){
         logging::logerror(paste(error$title, error$body), logger=app_logger)
       }
     } else {
-      if (v$db$check_if_table_exists('site_details_cleaned')){
+      if (v$db$check_if_table_exists('site_details_cleaned')) {
         v$site_details_for_editing <- v$db$get_site_details_cleaning_report()
         v$site_details_for_editing <- filter(v$site_details_for_editing, s_state == settings$region_to_load)
         output$site_details_editor <- renderDT(isolate(v$site_details_for_editing), selection='single', rownames=FALSE, 
@@ -585,7 +585,7 @@ server <- function(input,output,session){
         v$proxy_site_details_editor <- dataTableProxy('site_details_editor')
       }
 
-      if (v$db$check_if_table_exists('circuit_details_cleaned')){
+      if (v$db$check_if_table_exists('circuit_details_cleaned')) {
         v$circuit_details_for_editing <- v$db$get_circuit_details_cleaning_report()
         v$circuit_details_for_editing <- filter(v$circuit_details_for_editing, site_id %in% v$site_details_for_editing$site_id)
         output$circuit_details_editor <- renderDT(isolate(v$circuit_details_for_editing), selection='single', 
@@ -791,8 +791,8 @@ server <- function(input,output,session){
     no_grouping <- check_grouping(settings)
 
     if ((sum(v$sample_count_table$sample_count)<1000 & no_grouping) | 
-      (length(v$sample_count_table$sample_count)<1000 & !no_grouping)){
-      if(length(v$combined_data_f$ts) > 0){
+      (length(v$sample_count_table$sample_count)<1000 & !no_grouping)) {
+      if(length(v$combined_data_f$ts) > 0) {
         # Create plots on main tab
         logdebug('create plots', logger=app_logger)
         
@@ -868,7 +868,7 @@ server <- function(input,output,session){
         output$save_sample_count <- renderUI({shinySaveButton("save_sample_count", "Save data", "Save file as ...", 
                                                               filetype=list(xlsx="csv"))
         })
-        if(dim(v$ideal_response_to_plot)[1]>0){
+        if(dim(v$ideal_response_to_plot)[1]>0) {
           output$NormPower <- renderPlotly({
             plot_ly(v$agg_norm_power, x=~Time, y=~c_id_norm_power, color=~series, type="scattergl") %>% 
               add_trace(x=~v$ideal_response_to_plot$ts, y=~v$ideal_response_to_plot$norm_power, name='Ideal Response', 
@@ -906,7 +906,7 @@ server <- function(input,output,session){
         output$save_zone_count <- renderUI({
           shinySaveButton("save_zone_count", "Save data", "Save file as ...", filetype=list(xlsx="csv"))
           })
-        if(dim(v$frequency_data)[1]>0){
+        if(dim(v$frequency_data)[1]>0) {
           output$Frequency <- renderPlotly({
             plot_ly(v$agg_power, x=~Time, y=~Frequency, color=~series, type="scattergl")%>% 
               add_trace(x=~v$region_frequency$ts, y=~v$region_frequency$f, name='High Speed Data', 
@@ -1008,7 +1008,7 @@ server <- function(input,output,session){
   })
 
   observeEvent(c(input$compliance_circuits, input$manual_compliance_type), {
-    if (compliance_circuits() %in% v$c_id_vector){
+    if (compliance_circuits() %in% v$c_id_vector) {
       v$compliance_counter <- match(c(compliance_circuits()), v$c_id_vector)
       message <- paste0("Select circuit (now viewing circuit ", v$compliance_counter, ' of ', length(v$c_id_vector) ,")")
       circuit_to_view <- v$c_id_vector[[v$compliance_counter]]
@@ -1017,14 +1017,14 @@ server <- function(input,output,session){
                                                                      multiple=FALSE, selected=circuit_to_view)}))
       data_to_view <- filter(filter(v$combined_data_f, clean==compliance_cleaned_or_raw()), c_id==compliance_circuits())
       
-      if (manual_compliance_type() == "Over frequency"){
+      if (manual_compliance_type() == "Over frequency") {
         
         output$set_c_id_compliance <- renderUI({radioButtons("set_c_id_compliance", label = strong("Compliance"), 
                                                               choices = list("Not set","Compliant","Non-compliant", 
                                                                              "Non-compliant Responding", "Disconnect", 
                                                                              "Unsure"), 
                                                              selected = data_to_view$manual_droop_compliance[1], inline = TRUE)})
-        if (compliance_cleaned_or_raw() == 'clean'){
+        if (compliance_cleaned_or_raw() == 'clean') {
           circuit_data <- filter(v$circuit_details_for_editing, c_id == compliance_circuits())
           updateRadioButtons(session, "set_c_id_compliance", 
                              selected = circuit_data$manual_droop_compliance[1])
@@ -1042,7 +1042,7 @@ server <- function(input,output,session){
                                                                             "Too Slow", "Unsure"), 
                                                              selected = data_to_view$manual_reconnect_compliance[1], inline = TRUE)})
         
-        if (compliance_cleaned_or_raw() == 'clean'){
+        if (compliance_cleaned_or_raw() == 'clean') {
           circuit_data <- filter(v$circuit_details_for_editing, c_id == compliance_circuits())
           updateRadioButtons(session, "set_c_id_compliance", 
                              selected = circuit_data$manual_reconnect_compliance[1])
@@ -1057,9 +1057,9 @@ server <- function(input,output,session){
       
 
       data_to_view <- mutate(data_to_view, Time=ts)
-      if (manual_compliance_type() == "Over frequency"){
+      if (manual_compliance_type() == "Over frequency") {
         
-        if(dim(v$ideal_response_to_plot)[1]>0){
+        if(dim(v$ideal_response_to_plot)[1]>0) {
           output$compliance_plot <- renderPlotly({
             plot_ly(data_to_view, x=~Time, y=~c_id_norm_power, type="scatter") %>% 
               add_trace(x=v$ideal_response_to_plot$ts, y=v$ideal_response_to_plot$norm_power, name='Ideal Response', 
@@ -1093,8 +1093,8 @@ server <- function(input,output,session){
   
   observeEvent(input$set_c_id_compliance, {
     current_c_id <- v$c_id_vector[[v$compliance_counter]]
-    if (compliance_cleaned_or_raw() == "clean"){
-      if (manual_compliance_type() == "Over frequency"){
+    if (compliance_cleaned_or_raw() == "clean") {
+      if (manual_compliance_type() == "Over frequency") {
         v$circuit_details_for_editing <- mutate(v$circuit_details_for_editing, 
                                   manual_droop_compliance=
                                     ifelse((c_id==current_c_id),
@@ -1110,7 +1110,7 @@ server <- function(input,output,session){
       }
       v$db$update_circuit_details_cleaned(v$circuit_details_for_editing)
     } else {
-      if (manual_compliance_type() == "Over frequency"){
+      if (manual_compliance_type() == "Over frequency") {
         v$circuit_details_raw <- mutate(v$circuit_details_raw, 
                                     manual_droop_compliance=
                                       ifelse((c_id==current_c_id),
@@ -1128,7 +1128,7 @@ server <- function(input,output,session){
   })
   
   observeEvent(input$get_next_c_id,{
-    if (v$compliance_counter < length(v$c_id_vector)){
+    if (v$compliance_counter < length(v$c_id_vector)) {
       v$compliance_counter <- v$compliance_counter + 1
       circuit_to_view <- v$c_id_vector[[v$compliance_counter]]
       message <- paste0("Select circuit (now viewing circuit ", v$compliance_counter, ' of ', length(v$c_id_vector) ,")")
@@ -1138,7 +1138,7 @@ server <- function(input,output,session){
   })
   
   observeEvent(input$get_previous_c_id,{
-    if (v$compliance_counter > 1){
+    if (v$compliance_counter > 1) {
       v$compliance_counter <- v$compliance_counter - 1
       circuit_to_view <- v$c_id_vector[[v$compliance_counter]]
       message <- paste0("Select circuit (now viewing circuit ", v$compliance_counter, ' of ', length(v$c_id_vector) ,")")
@@ -1308,7 +1308,7 @@ server <- function(input,output,session){
     }
   })
   
-  get_current_settings <- function(){
+  get_current_settings <- function() {
     settings <- vector(mode='list')
     
     settings$database_name <- database_name()
@@ -1388,7 +1388,7 @@ server <- function(input,output,session){
     return(settings)
   }
 
-  get_settings_as_json <- function(){
+  get_settings_as_json <- function() {
     settings <- get_current_settings()
     settings$pre_event_interval <- as.character(settings$pre_event_interval)
     settings_as_json <- toJSON(settings, indent = 1)
@@ -1405,13 +1405,13 @@ server <- function(input,output,session){
     }
   })
   
-  load_settings <- function(){
+  load_settings <- function() {
     settings <- c()
     tryCatch(
       {
         settings <- fromJSON(file = settings_file())
       },
-      error = function(cond){
+      error = function(cond) {
         shinyalert("Opps", "Something went wrong loading the settings, please see the console for more details.")
       }
     )
@@ -1420,12 +1420,12 @@ server <- function(input,output,session){
   
   observeEvent(input$load_file_from_settings, {
     settings <- load_settings()
-    if (length(settings) > 0){updateTextInput(session, "database_name", value = settings$database_name)}
+    if (length(settings) > 0) {updateTextInput(session, "database_name", value = settings$database_name)}
   })
   
   observeEvent(input$load_first_filter_settings, {
     settings <- load_settings()
-    if (length(settings) > 0){
+    if (length(settings) > 0) {
       updateDateRangeInput(session, "load_date", start = strftime(settings$load_start_time, format="%Y-%m-%d"))
       updateDateRangeInput(session, "load_date", end = strftime(settings$load_end_time, format="%Y-%m-%d"))
       updateTimeInput(session, "load_time_start", value = settings$load_start_time)
@@ -1438,7 +1438,7 @@ server <- function(input,output,session){
   
   observeEvent(input$load_second_filter_settings, {
     settings <- load_settings()
-    if (length(settings) > 0){
+    if (length(settings) > 0) {
       updateCheckboxGroupButtons(session, "cleaned", selected = settings$cleaned)
       updateCheckboxGroupButtons(session, "StdVersion", selected = settings$standards)
       updateCheckboxGroupButtons(session, "responses", selected = settings$responses)
@@ -1492,7 +1492,7 @@ server <- function(input,output,session){
   
   observeEvent(input$load_backend_settings, {
     settings <- load_settings()
-    if (length(settings) > 0){
+    if (length(settings) > 0) {
       updateNumericInput(session, "compliance_threshold", value = settings$compliance_threshold)
       updateNumericInput(session, "start_buffer", value = settings$start_buffer)
       updateNumericInput(session, "end_buffer", value = settings$end_buffer)
@@ -1560,14 +1560,14 @@ server <- function(input,output,session){
   # Inforce mutual exclusivity of Aggregation settings
   observe({
     if(manufacturer_agg() | model_agg() | pst_agg() | circuit_agg() | circuit_agg() | response_agg() | zone_agg()
-       | compliance_agg() | compliance_2020_agg() | reconnection_compliance_agg() | v_excursion_agg() | grouping_agg()){
+       | compliance_agg() | compliance_2020_agg() | reconnection_compliance_agg() | v_excursion_agg() | grouping_agg()) {
       updateMaterialSwitch(session=session, "raw_upscale", value = FALSE)
     }
   })
   
   # Inforce mutual exclusivity of Aggregation settings
   observe({
-    if(raw_upscale()){
+    if(raw_upscale()) {
       updateMaterialSwitch(session=session, "manufacturer_agg", value = FALSE)
       updateMaterialSwitch(session=session, "model_agg", value = FALSE)
       updateMaterialSwitch(session=session, "pst_agg", value = FALSE)

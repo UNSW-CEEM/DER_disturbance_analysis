@@ -22,7 +22,7 @@ df.circuit_state <- distinct(df.circuit_state)
 row_count_file <- NULL
 row_count_region_file <- NULL
 
-for (i in temp.csv){
+for (i in temp.csv) {
   temp.df <- read.csv(i, header=TRUE, stringsAsFactors = FALSE)
   
   df.ts_state <- left_join(temp.df, df.circuit_state, by="c_id")
@@ -37,9 +37,9 @@ for (i in temp.csv){
   
   row_count_file <- rbind(row_count_file, temp.row_count)
   
-  for (ii in all_regions){
+  for (ii in all_regions) {
     
-    if(is.na(ii) ==TRUE){
+    if(is.na(ii) ==TRUE) {
       temp.NA.df <- filter(df.ts_state, is.na(s_state))
       
       na.c_id <- as.data.frame(unique(temp.NA.df$c_id))

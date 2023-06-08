@@ -2,7 +2,7 @@
 testthat::context("Testing creation of reconnect ramp up profile.")
 
 
-load_test_file <- function(text){
+load_test_file <- function(text) {
   df <- read.table(text = gsub(" ", "", text), sep = ",", header = TRUE, stringsAsFactors = FALSE)
   return(df)
 }

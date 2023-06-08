@@ -1,4 +1,4 @@
-calc_max_kw_per_site <- function(performance_data){
+calc_max_kw_per_site <- function(performance_data) {
   performance_data <- group_by(performance_data, ts, site_id)
   performance_data <- summarise(performance_data , power_kW=sum(power_kW, na.rm = TRUE))
   performance_data <- as.data.frame(performance_data)
@@ -9,7 +9,7 @@ calc_max_kw_per_site <- function(performance_data){
   return(site_max_power)
 }
 
-sum_manufacturers <- function(manufacturers){
+sum_manufacturers <- function(manufacturers) {
   unique_manufactuerers <- unique(manufacturers)
   if (anyNA(unique_manufactuerers)) {
     manufacturer <- 'NA'
@@ -21,7 +21,7 @@ sum_manufacturers <- function(manufacturers){
   return(manufacturer)
 }
 
-group_site_details_to_one_row_per_site <- function(site_details){
+group_site_details_to_one_row_per_site <- function(site_details) {
   site_details <- site_details %>% group_by(site_id)
   processed_site_details <- site_details %>%
     summarise(s_state=first(s_state), 
@@ -36,7 +36,7 @@ group_site_details_to_one_row_per_site <- function(site_details){
   return(processed_site_details)
 }
 
-site_details_data_cleaning_one <- function(site_details){
+site_details_data_cleaning_one <- function(site_details) {
   # Record old ac and dc values.
   site_details <- mutate(site_details, ac_old=ac)
   site_details <- mutate(site_details, dc_old=dc)
@@ -47,7 +47,7 @@ site_details_data_cleaning_one <- function(site_details){
 }
 
 
-site_details_data_cleaning_two <- function(time_series, site_details){
+site_details_data_cleaning_two <- function(time_series, site_details) {
   max_site_power <- calc_max_kw_per_site(time_series)
   site_details <- left_join(site_details, max_site_power, on=c("site_id"))
   site_details <- check_for_peak_power_greater_than_dc_capacity(site_details)
@@ -62,7 +62,7 @@ site_details_data_cleaning_two <- function(time_series, site_details){
   return(site_details)
 }
 
-check_for_peak_power_greater_than_dc_capacity <- function(site_details){
+check_for_peak_power_greater_than_dc_capacity <- function(site_details) {
   # If dc capacity value doesn't make sense given peak power value then scale
   # dc capacity up, based on nearest interger scaling value that makes dc
   # capacity higher than peak power.
@@ -72,7 +72,7 @@ check_for_peak_power_greater_than_dc_capacity <- function(site_details){
   return(site_details)
 }
 
-check_for_ac_value_in_watts <- function(site_details){
+check_for_ac_value_in_watts <- function(site_details) {
   # Calculate helper value
   site_details <- mutate(site_details, ac_dc_ratio=ac/dc)
   # Check if ac value is in watts, if so devide by 1000.
@@ -80,7 +80,7 @@ check_for_ac_value_in_watts <- function(site_details){
   return(site_details)
 }
 
-check_ac_capacity_less_than_peak_power <- function(site_details){
+check_ac_capacity_less_than_peak_power <- function(site_details) {
   # If ac value needs scaling to based on ratio to peak power and dc has not
   # been scaled, then scale to meet dc capacity, if dc was also scaled then 
   # scale to meet peak power value.
@@ -92,7 +92,7 @@ check_ac_capacity_less_than_peak_power <- function(site_details){
   return(site_details)
 }
 
-clean_connection_types <- function(combined_data, circuit_details, postcode_data){
+clean_connection_types <- function(combined_data, circuit_details, postcode_data) {
   postcode_data <- calc_sunrise_sunset_bounds(postcode_data, as.Date(combined_data$ts[1]))
   # Merge sunrise and sunset times onto the timeseries data frame.
   combined_data <- left_join(combined_data, select(postcode_data, postcode, sunrise, sunset, dis_sunrise, dis_sunset), 
@@ -117,7 +117,7 @@ clean_connection_types <- function(combined_data, circuit_details, postcode_data
   return(combined_data)
 }
 
-calc_sunrise_sunset_bounds <- function(postcode_data, event_date){
+calc_sunrise_sunset_bounds <- function(postcode_data, event_date) {
   # Need date of event to calaculate sunrise and sunset times.
   postcode_data$date <- event_date
   # Find sunrise and sunset times on a postcode basis.
@@ -135,7 +135,7 @@ calc_sunrise_sunset_bounds <- function(postcode_data, event_date){
   return(postcode_data)
 }
 
-clac_output_summary_values <- function(combined_data){
+clac_output_summary_values <- function(combined_data) {
   # Determine if a data point is during daylight hours or not.
   combined_data <- mutate(combined_data, comp_t=strftime(ts, tz="Australia/Brisbane", format="%H:%M:%S"))
   combined_data <- mutate(combined_data, sunrise=strftime(sunrise, tz="Australia/Brisbane", format="%H:%M:%S"))
@@ -157,7 +157,7 @@ clac_output_summary_values <- function(combined_data){
   combined_data <- mutate(combined_data, frac_day=round(energy_day/(energy_day+energy_night), digits=2))
 }
 
-check_day_vs_night_energy <- function(combined_data){
+check_day_vs_night_energy <- function(combined_data) {
   # Check for pv connection type, if the type is pv but more than 25% of the 
   # gen/load was outside daylight hours then change to type 'load'. Only change
   # if system has operated at above an avergae of 1% capacity
@@ -167,7 +167,7 @@ check_day_vs_night_energy <- function(combined_data){
   return(combined_data)
 }
 
-check_for_reversed_polarity <- function(combined_data){
+check_for_reversed_polarity <- function(combined_data) {
   # Check for peak power occuring as a negative value i.e. reversed polarity,
   # if this occurs for pv systems that have operated at above an avergae of 1%
   # capacity then swap polarity.
@@ -178,7 +178,7 @@ check_for_reversed_polarity <- function(combined_data){
   return(combined_data)
 }
 
-check_for_mixed_polarity <- function(combined_data){
+check_for_mixed_polarity <- function(combined_data) {
   # Check for power flowing in both negative and positive direction, if this 
   # occurs with values large than 10 % of the inverter capacity then change 
   # connection type to 'mixed'

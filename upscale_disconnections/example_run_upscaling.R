@@ -7,7 +7,7 @@ circuit_summary <- read.csv(file = "circuit_summary.csv", header = TRUE, strings
 manufacturer_install_data <- read.csv(file = "inbuilt_data/cer_cumulative_capacity_and_number_by_manufacturer.csv", 
                                       header = TRUE, stringsAsFactors = FALSE)
 
-if (exclude_solar_edge){
+if (exclude_solar_edge) {
   circuits_to_summarise <- filter(circuit_summary, manufacturer != "SolarEdge")
   manufacturer_install_data <- filter(manufacturer_install_data, manufacturer != "SolarEdge")
 } else {

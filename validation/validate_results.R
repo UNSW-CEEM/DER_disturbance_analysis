@@ -69,7 +69,7 @@ difference_between_lists <- function(reference_list, test_list) {
 }
 
 
-compare_dbs <- function(ref_db_con, test_db_con, compare_values=FALSE, event_name=NA){
+compare_dbs <- function(ref_db_con, test_db_con, compare_values=FALSE, event_name=NA) {
     diff_found <- FALSE
     # compare tables
     ref_tables <- RSQLite::dbGetQuery(ref_db_con, table_name_query)$name
@@ -121,7 +121,7 @@ compare_dbs <- function(ref_db_con, test_db_con, compare_values=FALSE, event_nam
             ref_data <- RSQLite::dbGetQuery(ref_db_con, sprintf(table_all_data_query, table))
             test_data <- RSQLite::dbGetQuery(test_db_con, sprintf(table_all_data_query, table))
             diffs <- all.equal(ref_data[column_diffs$common], ref_data[column_diffs$common])
-            if (!isTRUE(diffs)){
+            if (!isTRUE(diffs)) {
                 logging::loginfo(
                     sprintf(
                         "%s - Differences found in values:\n%s",
@@ -138,7 +138,7 @@ compare_dbs <- function(ref_db_con, test_db_con, compare_values=FALSE, event_nam
 }
 
 
-compare_dfs <- function(reference, test, event_name=NA){
+compare_dfs <- function(reference, test, event_name=NA) {
     # 1. check for new columns
     ref_columns <- names(reference)
     test_columns <- names(test)
@@ -163,7 +163,7 @@ compare_dfs <- function(reference, test, event_name=NA){
 
     # 2. check for different values in existing columns
     diffs <- all.equal(reference[column_diff$common], test[column_diff$common])
-    if (!isTRUE(diffs)){
+    if (!isTRUE(diffs)) {
         logging::loginfo(
             sprintf("%s - Differences found in column values:\n%s", event_name, toString(diffs))
         )
@@ -177,10 +177,10 @@ compare_dfs <- function(reference, test, event_name=NA){
 
 
 if (length(data_dirs) > 0) {
-    for (dir in data_dirs){
+    for (dir in data_dirs) {
         all_files_in_dir <- list.files(dir)
         required_files_in_dir <- required_files %in% all_files_in_dir
-        if (all(required_files_in_dir)){
+        if (all(required_files_in_dir)) {
             # check databases
             ref_db_path <- sprintf("%s/%s", dir, ref_db_name)
             test_db_path <- sprintf("%s/%s", dir, test_db_name)

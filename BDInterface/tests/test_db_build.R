@@ -5,7 +5,7 @@ is.nan.data.frame <- function(x)
 do.call(cbind, lapply(x, is.nan))
 
 
-load_test_file <- function(path_name){
+load_test_file <- function(path_name) {
   data <- read.csv(file = path_name, header = TRUE, stringsAsFactors = FALSE)
   return(data)
 }

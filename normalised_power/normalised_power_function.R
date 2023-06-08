@@ -1,7 +1,7 @@
-event_normalised_power <- function(combined_data, event_time, keep_site_id){
+event_normalised_power <- function(combined_data, event_time, keep_site_id) {
   event_time_data <- data.frame(filter(combined_data, Time > event_time - d & Time <= event_time))
   event_time_data <- setnames(event_time_data, c("site_performance_factor"), c("event_site_performance_factor"))
-  if (keep_site_id){
+  if (keep_site_id) {
     event_time_data <- select(event_time_data, site_id, event_site_performance_factor)
     event_time_data <- distinct(event_time_data)
     combined_data <- left_join(combined_data, event_time_data, by=c("site_id"))

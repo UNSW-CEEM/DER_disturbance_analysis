@@ -35,11 +35,11 @@ source(sprintf("%s/BDInterface/interface.R", tool_directory))
 data_dirs <- list.dirs('validation/data', recursive=FALSE)
 required_file_names <- c("ref_circuit_details.csv", "ref_meta_data.json", "ref_raw_data.csv", "ref_site_details.csv")
 
-if (length(data_dirs) > 0){
-    for (dir in data_dirs){
+if (length(data_dirs) > 0) {
+    for (dir in data_dirs) {
         all_files_in_dir <- list.files(dir)
         required_files_in_dir <- required_file_names %in% all_files_in_dir
-        if (all(required_files_in_dir)){
+        if (all(required_files_in_dir)) {
             site_details_path_name <- paste(dir, "/", "ref_site_details.csv", sep="")
             circuit_details_path_name <- paste(dir, "/", "ref_circuit_details.csv", sep="")
             timeseries_path_name <- paste(dir, "/", "ref_raw_data.csv", sep="")
@@ -48,7 +48,7 @@ if (length(data_dirs) > 0){
             db_path_name <- paste(dir, "/", output_database, ".db", sep="")
 
             db <- DBInterface$new()
-            if (!file.exists(db_path_name)){
+            if (!file.exists(db_path_name)) {
                 logging::loginfo(paste("Creating new database", db_path_name))
                 db$connect_to_new_database(db_path_name)
             } else {
@@ -72,7 +72,7 @@ if (length(data_dirs) > 0){
             db$run_data_cleaning_loop(500)
 
             # update metadata - if test metadata doesn't exist, use ref as template
-            if (file.exists(metadata_path_name)){
+            if (file.exists(metadata_path_name)) {
                 metadata <- rjson::fromJSON(file=metadata_path_name)
                 metadata$database_name <- sprintf("%s/%s/%s.db", tool_directory, dir, output_database)
                 metadata_conn <- file(metadata_path_name)

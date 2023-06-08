@@ -23,13 +23,13 @@ if (base_directory_name == "DER_disturbance_analysis") {
 }
 source(sprintf("%s/load_tool_environment.R", tool_directory))
 
-load_settings <- function(settings_file){
+load_settings <- function(settings_file) {
     settings <- c()
     tryCatch(
         {
         settings <- fromJSON(file = settings_file)
         },
-        error = function(cond){
+        error = function(cond) {
         logging::logerror("Something went wrong loading the settings, please see the console for more details.")
         }
     )
@@ -120,7 +120,7 @@ data_dirs <- list.dirs('validation/data', recursive=FALSE)
 
 # iterate across all validation data folders
 if (length(data_dirs) > 0) {
-    for (dir in data_dirs){
+    for (dir in data_dirs) {
         all_files_in_dir <- list.files(dir)
         settings_fname <- sprintf("%s/%s_meta_data.json", dir, OUTPUT_PREFIX)
         circuit_summary_fname <- sprintf("%s/%s_circ_sum.csv", dir, OUTPUT_PREFIX)

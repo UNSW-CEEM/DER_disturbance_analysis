@@ -35,13 +35,13 @@ data <- list(
     trigger_update_manual_compliance_tab = FALSE
 )
 
-load_settings <- function(settings_file){
+load_settings <- function(settings_file) {
     settings <- c()
     tryCatch(
         {
         settings <- fromJSON(file = settings_file)
         },
-        error = function(cond){
+        error = function(cond) {
         logging::logerror("Something went wrong loading the settings, please see the console for more details.")
         }
     )

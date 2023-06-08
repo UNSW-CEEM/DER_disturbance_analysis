@@ -1,11 +1,11 @@
 
-get_distance_from_event <- function(combined_data, postcode_data, event_lat, event_lon){
+get_distance_from_event <- function(combined_data, postcode_data, event_lat, event_lon) {
   distances <- get_postcode_distance_from_event(postcode_data, event_lat, event_lon)
   combined_data <- left_join(combined_data, distances, by=c("s_postcode" = "postcode"))
   return(combined_data)
 }
 
-get_postcode_distance_from_event <- function(postcode_data, event_lat, event_lon){
+get_postcode_distance_from_event <- function(postcode_data, event_lat, event_lon) {
   postcode_data <- mutate(postcode_data, event_lat=event_lat)
   postcode_data <- mutate(postcode_data, event_lon=event_lon)
   postcode_data <- mutate(postcode_data, 
@@ -15,7 +15,7 @@ get_postcode_distance_from_event <- function(postcode_data, event_lat, event_lon
   return(distances)
 }
 
-get_zones <- function(combined_data, radius_one, radius_two, radius_three){
+get_zones <- function(combined_data, radius_one, radius_two, radius_three) {
   combined_data <- mutate(combined_data, zone=ifelse(distance<radius_one,"1 Zone", "4 Undefined"))
   combined_data <- mutate(combined_data, zone=ifelse(distance<radius_two & zone=="4 Undefined","2 Zone", zone))
   combined_data <- mutate(combined_data, zone=ifelse(distance<radius_three & zone=="4 Undefined","3 Zone", zone))

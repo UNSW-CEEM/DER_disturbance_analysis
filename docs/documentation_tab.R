@@ -1,4 +1,4 @@
-documentation_panel <- function(){
+documentation_panel <- function() {
   panel <- mainPanel(
     h3('Categorisation of sites and circuits'),
     h4('Inverter standard definition'),

@@ -2,7 +2,7 @@
 testthat::context("Testing creating the reconnection summary.")
 
 
-load_test_df <- function(text){
+load_test_df <- function(text) {
   text <- gsub(" ", "", text)
   text <- gsub("~", " ", text)
   df <- read.table(text = text, sep = ",", header = TRUE, stringsAsFactors = FALSE)

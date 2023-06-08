@@ -1,5 +1,5 @@
 
-ufls_detection_tstamp <- function(db, region, pre_event_interval, pre_event_window_length, post_event_window_length, pre_pct_sample_seconds_threshold, post_event_delay = 0){
+ufls_detection_tstamp <- function(db, region, pre_event_interval, pre_event_window_length, post_event_window_length, pre_pct_sample_seconds_threshold, post_event_delay = 0) {
   start_pre_event_window_obj <- pre_event_interval - 60 * pre_event_window_length
   start_pre_event_window_str <- format(start_pre_event_window_obj, tz = 'GMT')
   start_post_event_window_obj <- pre_event_interval + post_event_delay
@@ -31,7 +31,7 @@ ufls_detection_tstamp <- function(db, region, pre_event_interval, pre_event_wind
   return(ufls_dropout)
 }
 
-calc_sampled_time_per_circuit <- function(ts_data, start_time, end_time){
+calc_sampled_time_per_circuit <- function(ts_data, start_time, end_time) {
   test_sampled_points <- seq(start_time, end_time, by = "sec")
   test_sampled_points <- test_sampled_points[2:length(test_sampled_points)]
   test_sampled_points <- data.frame(test_point = test_sampled_points)

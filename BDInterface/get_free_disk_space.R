@@ -1,4 +1,4 @@
-get_free_disk_space_in_working_directory <- function(){
+get_free_disk_space_in_working_directory <- function() {
   wd <- getwd()
   disk_name <- substr(wd,1,2)
   disk_space <- system("wmic logicaldisk get freespace, caption", intern = TRUE)

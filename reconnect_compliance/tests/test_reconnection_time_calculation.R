@@ -2,7 +2,7 @@
 testthat::context("Testing calculation of reconnection time.")
 
 
-load_test_df <- function(text){
+load_test_df <- function(text) {
   df <- read.table(text = gsub(" ", "", text), sep = ",", header = TRUE, stringsAsFactors = FALSE)
   return(df)
 }

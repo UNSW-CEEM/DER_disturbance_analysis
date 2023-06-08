@@ -1,6 +1,6 @@
 testthat::context("Testing the ulfs detection function based on missing timestamps.")
 
-load_test_df <- function(text){
+load_test_df <- function(text) {
   text <- gsub(" ", "", text)
   text <- gsub("~", " ", text)
   df <- read.table(text = text, sep = ",", header = TRUE, stringsAsFactors = FALSE)
@@ -12,7 +12,7 @@ testthat::test_that("test bad circuit signal ufls no dropout",{
   
   DBInterface <- R6::R6Class("DBInterface",
                              public = list(
-                               get_filtered_time_series_data_all_durations = function(state, start_time, end_time){
+                               get_filtered_time_series_data_all_durations = function(state, start_time, end_time) {
                                  pre_event_samples <- "                 ts, c_id,  d
                                                        2021-01-01~03:00:00,    1, 241
                                                        2021-01-01~03:00:00,    2, 241
@@ -21,7 +21,7 @@ testthat::test_that("test bad circuit signal ufls no dropout",{
                                                         2021-01-01~03:01:00,    1, 5"
                                  
                                  comp_time <- format(strptime('2021-01-01 13:00:00', format="%Y-%m-%d %H:%M:%S", tz="Australia/Brisbane") - 0, tz='GMT')
-                                 if (start_time < comp_time){
+                                 if (start_time < comp_time) {
                                    return(load_test_df(pre_event_samples))
                                  } else {
                                    return(load_test_df(post_event_samples))
@@ -48,14 +48,14 @@ testthat::test_that("test simple case no ufls dropout",{
   
   DBInterface <- R6::R6Class("DBInterface",
                              public = list(
-                               get_filtered_time_series_data_all_durations = function(state, start_time, end_time){
+                               get_filtered_time_series_data_all_durations = function(state, start_time, end_time) {
                                  pre_event_samples <- "                 ts, c_id,  d
                                                        2021-01-01~03:00:00,    1, 10"
                                  
                                  post_event_samples <- "                 ts, c_id, d
                                                         2021-01-01~03:01:00,    1, 5"
                                  comp_time <- format(strptime('2021-01-01 13:00:00', format="%Y-%m-%d %H:%M:%S", tz="Australia/Brisbane") - 0, tz='GMT')
-                                 if (start_time < comp_time){
+                                 if (start_time < comp_time) {
                                    return(load_test_df(pre_event_samples))
                                  } else {
                                    return(load_test_df(post_event_samples))
@@ -80,14 +80,14 @@ testthat::test_that("test simple case ufls dropout",{
   
   DBInterface <- R6::R6Class("DBInterface",
                              public = list(
-                               get_filtered_time_series_data_all_durations = function(state, start_time, end_time){
+                               get_filtered_time_series_data_all_durations = function(state, start_time, end_time) {
                                  pre_event_samples <- "                 ts, c_id,  d
                                                        2021-01-01~03:00:00,    1, 300
                                                        2021-01-01~03:00:00,    2, 300"
                                  post_event_samples <- "                 ts, c_id, d
                                                         2021-01-01~03:01:00,    1, 5"
                                  comp_time <- format(strptime('2021-01-01 13:00:00', format="%Y-%m-%d %H:%M:%S", tz="Australia/Brisbane") - 0, tz='GMT')
-                                 if (start_time < comp_time){
+                                 if (start_time < comp_time) {
                                    return(load_test_df(pre_event_samples))
                                  } else {
                                    return(load_test_df(post_event_samples))

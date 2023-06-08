@@ -1,4 +1,4 @@
-upscale <- function(performance_data, install_capacity){
+upscale <- function(performance_data, install_capacity) {
   performance_data <- distinct(performance_data, site_id, ts, clean, .keep_all=TRUE)
   performance_data <- group_by(performance_data, ts, s_state, Standard_Version, clean)
   performance_data <- summarise(performance_data , performance_factor=mean(site_performance_factor))
@@ -17,7 +17,7 @@ upscale <- function(performance_data, install_capacity){
   return(performance_and_install)
 }
 
-calc_site_performance_factors <- function(performance_data){
+calc_site_performance_factors <- function(performance_data) {
   performace_data_p <- group_by(performance_data, ts, site_id, clean)
   performace_data_p <- summarise(performace_data_p , site_performance_factor=sum(power_kW))
   performace_data_p <- as.data.frame(performace_data_p)

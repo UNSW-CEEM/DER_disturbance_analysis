@@ -1,4 +1,4 @@
-get_upscaling_results <- function(circuit_summary, manufacturer_install_data, event_date, region, sample_threshold){
+get_upscaling_results <- function(circuit_summary, manufacturer_install_data, event_date, region, sample_threshold) {
   # Upscale the proportion of disconnecting circuits by manufacturer to better represent the installed capacity.
   out <- list()
   disconnection_summary <- group_disconnections_by_manufacturer(circuit_summary)
@@ -14,7 +14,7 @@ get_upscaling_results <- function(circuit_summary, manufacturer_install_data, ev
 }
 
 get_upscaling_results_excluding_ufls_affected_circuits <- function(circuit_summary, manufacturer_install_data, event_date, region, 
-                                                 sample_threshold){
+                                                 sample_threshold) {
   # Upscale the proportion of disconnecting circuits based on sample sizes once UFLS circuits are removed.
   out <- list()
   disconnection_summary <- group_disconnections_by_manufacturer(circuit_summary, exclude_ufls_circuits = TRUE)
@@ -43,7 +43,7 @@ get_upscaling_results_excluding_ufls_affected_circuits <- function(circuit_summa
   return(out)
 }
 
-group_disconnections_by_manufacturer <- function(circuit_summary, exclude_ufls_circuits=FALSE){
+group_disconnections_by_manufacturer <- function(circuit_summary, exclude_ufls_circuits=FALSE) {
   # Don't count circuits without a well defined response type.
   if (exclude_ufls_circuits) {
     bad_categories <- c("6 Not enough data", "Undefined", "NA", "UFLS Dropout")
@@ -60,13 +60,13 @@ group_disconnections_by_manufacturer <- function(circuit_summary, exclude_ufls_c
   return(disconnection_summary)
 }
 
-get_number_of_disconnections <- function(response_categories){
+get_number_of_disconnections <- function(response_categories) {
   disconnection_categories <- c("3 Drop to Zero", "4 Disconnect")
   response_categories <- response_categories[response_categories %in% disconnection_categories]
   return(length(response_categories))
 }
 
-get_number_of_ufls_disconnections <- function(response_categories){
+get_number_of_ufls_disconnections <- function(response_categories) {
   # Find the number of circuits identified as UFLS Dropout and the sample size to use for the UFLS proportion
   ufls_stats <- list()
   bad_categories <- c("6 Not enough data", "Undefined", "NA")
@@ -78,7 +78,7 @@ get_number_of_ufls_disconnections <- function(response_categories){
   return(ufls_stats)
 }
 
-scale_manufacturer_capacities_by_ufls <- function(disconnection_summary, ufls_stats){
+scale_manufacturer_capacities_by_ufls <- function(disconnection_summary, ufls_stats) {
   # Reduce the CER capacities by the UFLS proportion
   ufls_proportion <- ufls_stats$disconnections / ufls_stats$sample_size
   disconnection_summary <- mutate(disconnection_summary, cer_capacity=cer_capacity*(1-ufls_proportion))
@@ -91,14 +91,14 @@ scale_manufacturer_capacities_by_ufls <- function(disconnection_summary, ufls_st
   return(disconnection_summary)
 }
 
-join_circuit_summary_and_cer_manufacturer_data <- function(circuit_summary, cer_manufacturer_data){
+join_circuit_summary_and_cer_manufacturer_data <- function(circuit_summary, cer_manufacturer_data) {
   circuit_summary <- merge(circuit_summary, cer_manufacturer_data, by = c('Standard_Version', 'manufacturer'), 
                            all = TRUE)
   circuit_summary <- rename(circuit_summary, cer_capacity = capacity)
   return(circuit_summary)
 }
   
-impose_sample_size_threshold <- function(disconnection_summary, sample_threshold){
+impose_sample_size_threshold <- function(disconnection_summary, sample_threshold) {
   circuit_summary <- mutate(disconnection_summary, sample_threshold, manufacturer = ifelse(is.na(cer_capacity), 
                                                                                            'Other', manufacturer))
   circuit_summary <- mutate(disconnection_summary, sample_threshold, manufacturer = ifelse(is.na(disconnections), 
@@ -127,7 +127,7 @@ impose_sample_size_threshold <- function(disconnection_summary, sample_threshold
   return(disconnection_summary)
 }
 
-calc_confidence_intervals_for_disconnections <- function(disconnection_summary){
+calc_confidence_intervals_for_disconnections <- function(disconnection_summary) {
   result <- mapply(CI_wrapper, disconnection_summary$disconnections, 
                    disconnection_summary$sample_size, 0.95)
   disconnection_summary$lower_bound <- result[1,]
@@ -135,7 +135,7 @@ calc_confidence_intervals_for_disconnections <- function(disconnection_summary){
   return(disconnection_summary)
 }
 
-CI_wrapper <- function(count, sample_size, ci){
+CI_wrapper <- function(count, sample_size, ci) {
   if (sample_size > 0) {
     result <- confidence_interval(count, sample_size, ci)
   } else {
@@ -145,7 +145,7 @@ CI_wrapper <- function(count, sample_size, ci){
   return(result)
 }
 
-calc_upscale_kw_loss <- function(disconnection_summary){
+calc_upscale_kw_loss <- function(disconnection_summary) {
   disconnection_summary <- mutate(disconnection_summary, 
                                   predicted_kw_loss = proportion * cer_capacity,
                                   lower_bound_kw_loss = lower_bound * cer_capacity,
@@ -153,17 +153,17 @@ calc_upscale_kw_loss <- function(disconnection_summary){
   return(disconnection_summary)
 }
 
-get_manufactures_in_input_db_but_not_cer <- function(disconnection_summary){
+get_manufactures_in_input_db_but_not_cer <- function(disconnection_summary) {
   disconnection_summary <- filter(disconnection_summary, is.na(cer_capacity))
   return(disconnection_summary)
 }
 
-get_manufactures_in_cer_but_not_input_db <- function(disconnection_summary){
+get_manufactures_in_cer_but_not_input_db <- function(disconnection_summary) {
   disconnection_summary <- filter(disconnection_summary, is.na(sample_size))
   return(disconnection_summary)
 }
 
-get_manufacturer_capacitys <- function(manufacturer_install_data, event_date, region){
+get_manufacturer_capacitys <- function(manufacturer_install_data, event_date, region) {
   manufacturer_install_data <- filter(manufacturer_install_data, s_state == region)
   manufacturer_install_data <- manufacturer_install_data[order(manufacturer_install_data$date), ]
   manufacturer_install_data <- filter(manufacturer_install_data, date <= event_date)
@@ -173,7 +173,7 @@ get_manufacturer_capacitys <- function(manufacturer_install_data, event_date, re
   return(manufacturer_install_data)
 }
 
-upscale_disconnections <- function(manufacturer_level_summary){
+upscale_disconnections <- function(manufacturer_level_summary) {
   upscaled_disconnections <- group_by(manufacturer_level_summary, Standard_Version)
   upscaled_disconnections <- summarise(upscaled_disconnections,
                                        sample_size = sum(sample_size),

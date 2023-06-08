@@ -1,6 +1,6 @@
 # if first ts != event_time -> NA (also lets count how many lose to this)
 
-categorise_response <- function(combined_data, event_time, window_length, NED_threshold_pct = 0.8){
+categorise_response <- function(combined_data, event_time, window_length, NED_threshold_pct = 0.8) {
   event_window_data <- filter(combined_data, ts > event_time - d & ts <= event_time + 60 * window_length)
   event_window_data <- event_window_data[order(event_window_data$ts),]
   event_window_data <- group_by(event_window_data, c_id, clean)
@@ -16,7 +16,7 @@ categorise_response <- function(combined_data, event_time, window_length, NED_th
   return(combined_data)
 }
 
-categorise_by_response <- function(event_window_data, window_length, NED_threshold_pct){
+categorise_by_response <- function(event_window_data, window_length, NED_threshold_pct) {
   event_window_data <- mutate(event_window_data, response_category=ifelse(
     event_power < 0.1, '5 Off at t0', 'Undefined'))
   
@@ -46,17 +46,17 @@ categorise_by_response <- function(event_window_data, window_length, NED_thresho
   return(event_window_data)
 }
 
-num_consecutive_zeros <- function(event_power_vector){
+num_consecutive_zeros <- function(event_power_vector) {
   num_con_zeros <- 0
   pt0 <- event_power_vector[1]
-  if (length(event_power_vector) > 1 & pt0 > 0.1){
-    for (i in 2:length(event_power_vector)){
-      if (num_con_zeros == 0){
-        if((event_power_vector[i]/pt0) < 0.05){
+  if (length(event_power_vector) > 1 & pt0 > 0.1) {
+    for (i in 2:length(event_power_vector)) {
+      if (num_con_zeros == 0) {
+        if((event_power_vector[i]/pt0) < 0.05) {
           num_con_zeros <- num_con_zeros + 1
         }
       } else {
-        if(((event_power_vector[i]/pt0) < 0.05) & ((event_power_vector[i - 1]/pt0) < 0.05)){
+        if(((event_power_vector[i]/pt0) < 0.05) & ((event_power_vector[i - 1]/pt0) < 0.05)) {
           num_con_zeros <- num_con_zeros + 1
         }
       }

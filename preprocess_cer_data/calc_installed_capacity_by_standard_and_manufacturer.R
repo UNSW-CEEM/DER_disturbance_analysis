@@ -1,4 +1,4 @@
-calc_installed_capacity_by_standard_and_manufacturer <- function(install_data){
+calc_installed_capacity_by_standard_and_manufacturer <- function(install_data) {
   # Rename time column and catergorise data based on inverter standards.
   install_data <- setnames(install_data, c("state", "date"), 
                            c("s_state", "pv_installation_year_month"))
@@ -23,11 +23,11 @@ calc_installed_capacity_by_standard_and_manufacturer <- function(install_data){
   return(install_data)
 }
 
-get_initial_cap <- function(install_data, min_date, state, man){
+get_initial_cap <- function(install_data, min_date, state, man) {
   install_data <- filter(install_data, manufacturer == man)
   install_data <- filter(install_data, s_state == state)
   install_data <- filter(install_data, date < min_date)
-  if (length(install_data$capacity) == 0){
+  if (length(install_data$capacity) == 0) {
     initial_cap <- 0.0
   } else {
     initial_cap <-max(install_data$capacity)

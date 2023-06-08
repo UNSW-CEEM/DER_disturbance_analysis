@@ -43,19 +43,19 @@ validate_required_files <- function(errors) {
   if (missing(errors)) {
     errors <- list(warnings=list(), errors=list())
   }
-  if (!file.exists(INSTALL_DATA_FILE)){
+  if (!file.exists(INSTALL_DATA_FILE)) {
     long_error_message <- c("The required file cer_cumulative_capacity_and_number.csv could ",
                             "not be found. Please add it to the inbuilt_data directory.")
     long_error_message <- paste(long_error_message, collapse = '')
     errors$errors[[length(errors$errors) + 1]] <- list(title="Error loading install data", body=long_error_message)
   }
-  if (!file.exists(CER_MANUFACTURER_DATA)){
+  if (!file.exists(CER_MANUFACTURER_DATA)) {
     long_error_message <- c("The required file cer_manufacturer_data could ",
                             "not be found. Please add it to the inbuilt_data directory.")
     long_error_message <- paste(long_error_message, collapse = '')
     errors$errors[[length(errors$errors) + 1]] <- list(title="Error loading manufacturer install data", body=long_error_message)
   }
-  if (!file.exists(OFF_GRID_POSTCODES)){
+  if (!file.exists(OFF_GRID_POSTCODES)) {
     long_error_message <- c("The required file off_grid_postcodes could ",
                             "not be found. Please add it to the inbuilt_data directory.")
     long_error_message <- paste(long_error_message, collapse = '')
@@ -75,8 +75,8 @@ validate_frequency_data <- function(settings, errors) {
     frequency_data <- read.csv(file=settings$frequency_data_file, header=TRUE, stringsAsFactors = FALSE)
     expected_columns_names <- c("ts", "QLD", "NSW", "VIC", "SA", "TAS", "WA")
     column_names <- names(frequency_data)
-    for (col_name in column_names){ 
-      if (!(col_name %in% expected_columns_names)){
+    for (col_name in column_names) { 
+      if (!(col_name %in% expected_columns_names)) {
         long_error_message <- c("The frequency data csv should only contain the following columns, ", 
                                 "ts, QLD, NSW, VIC, SA, TAS, WA. If this error persists after checking ",
                                 "the columns names, then the file may be incorrectly incoded, please ", 
@@ -85,7 +85,7 @@ validate_frequency_data <- function(settings, errors) {
         errors$errors[[length(errors$errors) + 1]] <- list(title="Error loading frequency data", body=long_error_message)
       }
     }
-    if (!(settings$region_to_load %in% column_names)){
+    if (!(settings$region_to_load %in% column_names)) {
       long_error_message <- c("The frequency data csv must contain a column for the region being loaded. ", 
                               "Either choose to load no frequency data or ensure it containts data for the ",
                               "selected region.")
@@ -103,7 +103,7 @@ validate_timeseries_data <- function(time_series_data, errors) {
   if (missing(errors)) {
     errors <- list(warnings=list(), errors=list())
   }
-  if (dim(time_series_data)[1] == 0){
+  if (dim(time_series_data)[1] == 0) {
     long_error_message <- c("The region and duration selected resulted in an empty dataset, please try another selection")
     long_error_message <- paste(long_error_message, collapse = '')
     errors$errors[[length(errors$errors) + 1]] <- list(title="Error loading timeseries data", body=long_error_message)
@@ -134,7 +134,7 @@ load_data <- function(data, settings) {
     site_details_raw <- process_raw_site_details(site_details_raw)
     data$site_details <- mutate(site_details_raw, clean = 'raw')
     
-    if (data$db$check_if_table_exists('site_details_cleaned')){
+    if (data$db$check_if_table_exists('site_details_cleaned')) {
       site_details_clean <- data$db$get_site_details_cleaned()
       site_details_clean <- process_raw_site_details(site_details_clean)
       site_details_clean <- mutate(site_details_clean, clean = 'clean')
@@ -148,7 +148,7 @@ load_data <- function(data, settings) {
     data$circuit_details <- mutate(circuit_details_raw, clean = 'raw')
     data$circuit_details_raw <- data$circuit_details
     
-    if (data$db$check_if_table_exists('circuit_details_cleaned')){
+    if (data$db$check_if_table_exists('circuit_details_cleaned')) {
       circuit_details_clean <- data$db$get_circuit_details_cleaned()
       circuit_details_clean <- mutate(circuit_details_clean, clean = 'clean')
       data$circuit_details <- bind_rows(data$circuit_details, circuit_details_clean)
@@ -174,7 +174,7 @@ load_data <- function(data, settings) {
     data$off_grid_postcodes <- read.csv(file=OFF_GRID_POSTCODES, header=TRUE, stringsAsFactors = FALSE)
     data$off_grid_postcodes <- data$off_grid_postcodes$postcodes
     
-    if(settings$frequency_data_file != ''){
+    if(settings$frequency_data_file != '') {
       data$frequency_data <- read.csv(file=settings$frequency_data_file, header=TRUE, stringsAsFactors = FALSE)
       data$frequency_data <- mutate(data$frequency_data, 
                                   ts=as.POSIXct(strptime(ts, "%Y-%m-%d %H:%M:%S", tz="Australia/Brisbane")))
