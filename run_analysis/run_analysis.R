@@ -212,7 +212,7 @@ check_grouping <- function(settings) {
 #' Run a complete analysis of the data, based onf the current toll settings
 #' data and settings should be provided as list of objects
 #' @return list of data with analysis performed, many fields are update or added.
-run_analysis <- function(data, settings) {
+run_analysis <-function(data, settings) {
   errors <- validate_pre_event_interval(
     settings$pre_event_interval,
     settings$load_start_time,
@@ -448,7 +448,8 @@ run_analysis <- function(data, settings) {
         data$zone_count <- vector_groupby_count_zones(combined_data_f, grouping_cols)
         data$distance_response <- vector_groupby_cumulative_distance(combined_data_f, grouping_cols)
         data$geo_data <- vector_groupby_system(combined_data_f, grouping_cols)
-        data$circuit_summary <- distinct(combined_data_f, c_id, clean, .keep_all = TRUE)
+       
+         data$circuit_summary <- distinct(combined_data_f, c_id, clean, .keep_all = TRUE)
         circ_sum_cols <- c("site_id", "c_id", "s_state", "s_postcode", "pv_installation_year_month",
                             "Standard_Version", "Grouping", "sum_ac", "clean", "manufacturer", "model",
                             "response_category", "zone", "distance", "lat", "lon", "con_type", "first_ac", "polarity",
@@ -467,7 +468,7 @@ run_analysis <- function(data, settings) {
         } else {
           data$circuit_summary$tool_hash <-git2r::revparse_single(revision="HEAD")$sha
         }
-
+        
         # Combine data sets that have the same grouping so they can be saved in a single file
         if (no_grouping){
           #et <- settings$pre_event_interval
@@ -508,6 +509,10 @@ run_analysis <- function(data, settings) {
                                         num_missing_from_input_db)
           errors$warnings[[length(errors$warnings) + 1]] <- list(title="Manufacturers missing from datasets", 
                                                                  body=long_error_message)
+          
+          # Adding disconnection percentage data to "data"
+          data$disconnection_percentage<-calc_percentage_disconnect_or_droptozero_DPVs(data$circuit_summary)
+
         }
       }
     }

@@ -1,8 +1,13 @@
 source("load_tool_environment.R")
 
-SETTINGS_FILE <- "validation/data/tesla/ref_meta_data.json"
-CIRCUIT_SUMMARY_OUTPUT <- "validation/data/tesla/test_circ_sum.csv"
-UNDERLYING_DATA_OUTPUT <- "validation/data/tesla/test_underlying.csv"
+
+ SETTINGS_FILE <- "D:/Project_MATCH/DER_disturbance_analysis/DER_disturbance_analysis/validation/data/Jan_2021/2021-01-24_5s_settings_file_v2.json"
+# SETTINGS_FILE <- "D:/Project_MATCH/DER_disturbance_analysis/DER_disturbance_analysis/validation/data/Mar_2021/2021-03-12_5s_settings_file.json"
+# SETTINGS_FILE <- "D:/Project_MATCH/DER_disturbance_analysis/DER_disturbance_analysis-master/DER_disturbance_analysis-master/validation/data/Jan_2021/2021-01-24_5s_settings_file_v2.json"
+
+CIRCUIT_SUMMARY_OUTPUT <- "D:/Project_MATCH/DER_disturbance_analysis/DER_disturbance_analysis/validation/data/Jan_2021/test_circ_sum.csv"
+UNDERLYING_DATA_OUTPUT <- "D:/Project_MATCH/DER_disturbance_analysis/DER_disturbance_analysis/validation/data/Jan_2021/test_underlying.csv"
+
 app_logger <- "example_logger"
 logging::addHandler(writeToFile, logger=app_logger, file="logging/headless_logs.log")
 
@@ -27,6 +32,7 @@ data <- list(
     postcode_data = data.frame(),
     response_count = data.frame(),
     zone_count = data.frame(),
+    disconnection_percentage=data.frame(),
     distance_response = data.frame(),
     frequency_data = data.frame(),
     unique_offsets = c(),

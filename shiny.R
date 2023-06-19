@@ -144,12 +144,13 @@ ui <- fluidPage(
           uiOutput(outputId="save_distance_response"),
           plotlyOutput(outputId="ZoneCount"),
           uiOutput("save_zone_count"),
+          plotlyOutput(outputId="DisconnectionPercentage"),
+          uiOutput("save_disconnection_percentage"),
           plotlyOutput(outputId="map"),
           HTML("<br><br>"),
           dataTableOutput("sample_count_table"),
           HTML("<br><br>"),
-          uiOutput("save_sample_count")
-
+          uiOutput("save_sample_count"),
         )
       )
     ),
@@ -315,6 +316,8 @@ reset_chart_area <- function(input, output, session, stringsAsFactors) {
   output$Voltage <- renderPlotly({})
   output$distance_response <- renderPlotly({})
   output$save_distance_response <- renderUI({})
+  output$DisconnectionPercentage <- renderPlotly({})
+  output$save_Disconnection_Percentage <- renderUI({})
   output$map <- renderPlotly({})
 
   }
@@ -492,6 +495,7 @@ server <- function(input,output,session){
                       postcode_data = data.frame(),
                       response_count = data.frame(),
                       zone_count = data.frame(),
+                      disconnection_percentage=data.frame(),
                       distance_response = data.frame(),
                       frequency_data = data.frame(),
                       unique_offsets = c(),
@@ -902,10 +906,36 @@ server <- function(input,output,session){
           plot_ly(v$zone_count, x=~series_x, y=~sample_count, color=~series_y, type="bar") %>%
             layout(yaxis = list(title = 'Fraction of zone circuits \n (denominator is count post filtering)'),
                     xaxis = list(title = 'Zone categories'), barmode = 'stack')
+  
           })
         output$save_zone_count <- renderUI({
           shinySaveButton("save_zone_count", "Save data", "Save file as ...", filetype=list(xlsx="csv"))
           })
+        
+        # adding a plot for disconnection percentages for each zone
+        ## add the standard plotly colors
+        my_colors<-c('#d62728','#2ca02c','#D1E5F0','#FFC0CB', '#90EE90', '#F89880', '#1f77b4','#ff7f0e') 
+        
+        output$DisconnectionPercentage <- renderPlotly({
+          plot_ly(v$disconnection_percentage, x=c("zone 1","zone 2","zone 3"), y=v$disconnection_percentage[,1],type="bar",name = 'Only Vmin<180V',marker = list(color = my_colors[1])) %>%
+            add_trace(y=~v$disconnection_percentage[,2],name = '180V<Vmin<200V',marker = list(color = my_colors[2])) %>%
+            add_trace(y=~v$disconnection_percentage[,3],name = '200V<Vmin<220V',marker = list(color = my_colors[3])) %>%
+            add_trace(y=~v$disconnection_percentage[,4],name = '220V<Vmin<240V',marker = list(color = my_colors[4])) %>%
+            add_trace(y=~v$disconnection_percentage[,5],name = '240V<Vmin<260V',marker = list(color = my_colors[5])) %>%
+            add_trace(y=~v$disconnection_percentage[,6],name = '260V<Vmin<265V',marker = list(color = my_colors[6])) %>%
+            add_trace(y=~v$disconnection_percentage[,7],name = 'Only Vmax>265V',marker = list(color = my_colors[7])) %>%
+            add_trace(y=~v$disconnection_percentage[,8],name = 'Both Vmin<180V & Vmax>265V',marker = list(color = my_colors[8])) %>%
+            layout(yaxis = list(title = ' Disconnection/Drop to Zero Percentage (%))'),
+                   xaxis = list(title = 'Zone categories'), barmode = 'stack')
+        })
+        output$save_disconnection_percentage <- renderUI({
+          shinySaveButton("save_disconnection_percentage", "Save data", "Save file as ...", filetype=list(xlsx="csv"))
+        })
+
+
+        ################################################################################
+        
+        
         if(dim(v$frequency_data)[1]>0){
           output$Frequency <- renderPlotly({
             plot_ly(v$agg_power, x=~Time, y=~Frequency, color=~series, type="scattergl")%>% 
@@ -934,22 +964,22 @@ server <- function(input,output,session){
         z2 <- data.frame(circle.polygon(event_longitude(), event_latitude(), zone_two_radius(), sides = 20, units='km', poly.type = "gc.earth"))
         z3 <- data.frame(circle.polygon(event_longitude(), event_latitude(), zone_three_radius(), sides = 20, units='km', poly.type = "gc.earth"))
         output$map <- renderPlotly({plot_geo(v$geo_data, lat=~lat, lon=~lon, color=~percentage_disconnect) %>%
-            add_polygons(x=~z1$lon, y=~z1$lat, inherit=FALSE, fillcolor='transparent', 
+            add_polygons(x=~z1$lon, y=~z1$lat, inherit=FALSE, fillcolor='transparent',
                           line=list(width=2,color="grey"), hoverinfo = "none", showlegend=FALSE) %>%
-            add_polygons(x=~z2$lon, y=~z2$lat, inherit=FALSE, fillcolor='transparent', 
+            add_polygons(x=~z2$lon, y=~z2$lat, inherit=FALSE, fillcolor='transparent',
                           line=list(width=2,color="grey"), hoverinfo = "none", showlegend=FALSE) %>%
-            add_polygons(x=~z3$lon, y=~z3$lat, inherit=FALSE, fillcolor='transparent', 
+            add_polygons(x=~z3$lon, y=~z3$lat, inherit=FALSE, fillcolor='transparent',
                           line=list(width=2,color="grey"), hoverinfo = "none", showlegend=FALSE) %>%
-            add_markers(x=~v$geo_data$lon, y=~v$geo_data$lat,  inherit=FALSE, 
+            add_markers(x=~v$geo_data$lon, y=~v$geo_data$lat,  inherit=FALSE,
                         hovertext=~v$geo_data$info, legendgroup = list(title = "Percentage Disconnects"),
-                        marker=list(color=~percentage_disconnect, colorbar=list(title='Percentage \n Disconnects'), 
+                        marker=list(color=~percentage_disconnect, colorbar=list(title='Percentage \n Disconnects'),
                                     colorscale='Bluered')) %>%
-            layout(annotations = 
-                      list(x = 1, y = -0.1, text = "Note: pecentage disconnects includes categories 3 and 4.", 
-                          showarrow = F, xref='paper', yref='paper', 
+            layout(annotations =
+                      list(x = 1, y = -0.1, text = "Note: pecentage disconnects includes categories 3 and 4.",
+                          showarrow = F, xref='paper', yref='paper',
                           xanchor='right', yanchor='auto', xshift=0, yshift=0))
           })
-        
+
         output$compliance_cleaned_or_raw <- 
           renderUI({radioButtons("compliance_cleaned_or_raw", 
                                   label=strong("Choose data set"), 
@@ -1203,6 +1233,14 @@ server <- function(input,output,session){
     shinyFileSave(input, "save_zone_count", roots=volumes, session=session)
     fileinfo <- parseSavePath(volumes, input$save_zone_count)
     if (nrow(fileinfo) > 0) {write.csv(v$zone_count, as.character(fileinfo$datapath), row.names=FALSE)}
+  })
+  
+  # Save data on disconnection percentage
+  observeEvent(input$save_disconnection_percentage, {
+    volumes <- c(home=getwd())
+    shinyFileSave(input, "save_disconnection_percentage", roots=volumes, session=session)
+    fileinfo <- parseSavePath(volumes, input$save_disconnection_percentage)
+    if (nrow(fileinfo) > 0) {write.csv(v$disconnection_percentage, as.character(fileinfo$datapath), row.names=FALSE)}
   })
   
   # Save data on response percentage by distance
