@@ -1,23 +1,81 @@
 source("load_tool_environment.R")
+source("upscale_disconnections/upscale_glm_test.R")
+source("upscale_disconnections/bootstrap_test.R")
 
 DisconnectionUpscaler <- R6Class("DisconnectionUpscaler",
   public = list(
     predictor_list = NULL,
-    circuit_summary = NULL,
+    circuits_data = NULL,
     circuits_to_summarise = NULL,
-    manufacturer_install_data = NULL,
-    manufacturer_capacities = NULL,
-    kw_loss_estimate = NULL,
-    initialize = function(circuit_summary = NA, manufacturer_install_data = NA) {
-      self$circuit_summary <- circuit_summary
-      self$manufacturer_install_data <- manufacturer_install_data
+    cer_install_data = NULL,
+    weighting_capacities = NULL,
+    zones_added = FALSE,
+    initialize = function(circuits_to_summarise = NA, cer_install_data = NA) {
+      self$circuits_to_summarise <- circuits_to_summarise
+      self$circuits_data <- self$get_circuit_data(circuits_to_summarise)
+      self$cer_install_data <- cer_install_data
     },
     set_predictors = function(predictor_list) {
       # validate inputs
+      # If cleaning functions have been run, will need be to re-run when predictors change
       self$predictor_list <- predictor_list
     },
     assess_predictors = function() {
       # Perform an assessment to determine which predictors to recommend
+    },
+    get_installed_capacity_by_grouping = function(event_date, region){
+      # Replaces "get_manufacturer_capacitys()"
+      #grouping_cols <- replace(self$predictor_list, self$predictor_list %in% c('zone', 'distance'), 's_postcode')
+      cer_install_data <- self$cer_install_data
+      cer_install_data <- filter(cer_install_data, s_state == region)
+      cer_install_data <- cer_install_data[order(cer_install_data$date), ]
+      cer_install_data <- filter(cer_install_data, date <= event_date)
+      cer_install_data <- group_by_at(cer_install_data, c('manufacturer', 'Standard_Version', 'Grouping', 's_postcode', 
+                                                          's_state'))
+      cer_install_data <- summarise(cer_install_data, capacity = last(standard_capacity))
+      #cer_install_data <- cer_install_data %>% group_by_at(append(grouping_cols, 's_state')) %>% 
+      #  summarise(capacity=sum(capacity))
+      cer_install_data <- as.data.frame(cer_install_data)
+      self$weighting_capacities <- cer_install_data
+    },
+    add_distance_zones = function(POSTCODE_DATA_FILE, event_lat, event_long, zone_radii) {
+      # Calculate the distance zones based on postcode data for both CER data and the circuit_summary
+      postcode_data <- read.csv(file=POSTCODE_DATA_FILE, header=TRUE, stringsAsFactors = FALSE)
+      postcode_data <- process_postcode_data(postcode_data)
+      weighting_capacities <- get_distance_from_event(upscaler$weighting_capacities, postcode_data, event_lat, event_long)
+      weighting_capacities <- get_zones(weighting_capacities, zone_radii[1], zone_radii[2], zone_radii[3])
+      weighting_capacities <- mutate(weighting_capacities,  zone=ifelse(zone %in% c(NA), "NA", zone))
+      self$weighting_capacities <- weighting_capacities
+      
+      circuit_summary <- self$circuits_to_summarise
+      circuit_summary <- subset(circuit_summary, select = -c(distance, lat, lon, zone))
+      circuit_summary <- get_distance_from_event(circuit_summary, postcode_data, event_lat, event_long)
+      circuit_summary <- get_zones(circuit_summary, zone_radii[1], zone_radii[2], zone_radii[3])
+      circuit_summary <- mutate(circuit_summary,  zone=ifelse(zone %in% c(NA), "NA", zone))
+      self$circuits_to_summarise <- circuit_summary
+      self$zones_added <- TRUE
+    },
+    combine_standards = function() {
+      # Group the transition standards in with the previous standard
+      self$circuits_data["Standard_Version"][self$circuits_data["Standard_Version"] == "Transition"] <-"AS4777.3:2005"
+      self$weighting_capacities["Standard_Version"][self$weighting_capacities["Standard_Version"] == "Transition"] <- "AS4777.3:2005"
+      self$circuits_data["Standard_Version"][self$circuits_data["Standard_Version"] == "Transition 2020-21"] <- "AS4777.2:2015"
+      self$weighting_capacities["Standard_Version"][self$weighting_capacities["Standard_Version"] == "Transition 2020-21"] <- "AS4777.2:2015"
+      self$circuits_data["Standard_Version"][self$circuits_data["Standard_Version"] == "AS4777.2:2015 VDRT"] <- "AS4777.2:2015"
+      self$weighting_capacities["Standard_Version"][self$weighting_capacities["Standard_Version"] == "AS4777.2:2015 VDRT"] <- "AS4777.2:2015"
+    },
+    get_circuit_data = function(circuits_to_summarise) {
+      # Could be private
+      circuits_data <- circuits_to_summarise %>% select(Standard_Version, Grouping, manufacturer, s_postcode, 
+                                                        response_category, distance, zone)
+      disconnection_categories <- c("3 Drop to Zero", "4 Disconnect")
+      # Don't count circuits without a well defined response type
+      # In future we may want the option to include UFLS Dropout
+      bad_categories <- c("6 Not enough data", "Undefined", "NA", "UFLS Dropout")
+      circuits_data <- filter(circuits_data, !(response_category %in% bad_categories | is.na(response_category)))
+      circuits_data <- circuits_data %>% 
+        mutate("disconnected" = ifelse(response_category %in% disconnection_categories, 1, 0))
+      return(circuits_data)
     },
     clean_data = function() {
       # Clean input data/ filter as required for upscaling
@@ -25,20 +83,110 @@ DisconnectionUpscaler <- R6Class("DisconnectionUpscaler",
       # Could be run at start of upscale_x_method()
       # Will need to consider time taken
     },
-    upscale_glm_method = function() {
+    upscale_glm_method = function(pre_event_CF, min_sample=30) {
       # Run upscaling method
       # Return kw loss etc
+      if (is.null(self$predictor_list)) {
+        stop("Predictors must be set before running this upscaling method")
+      }
+      weighting_capacities <- self$weighting_capacities %>% group_by_at(self$predictor_list) %>%
+        summarise(capacity=sum(capacity))
+      kw_loss_estimate <- get_glm_estimate(self$circuits_data, weighting_capacities, self$predictor_list,
+                                           min_samples, pre_event_CF, remove_others_from_model=FALSE,
+                                           group_others_before_modelling=TRUE, file_to_save=NULL)
+      return(kw_loss_estimate)
     },
-    upscale_tranche_method = function() {
+    upscale_tranche_method = function(min_sample, pre_event_CF) {
       # Run upscaling method
       # Return kw loss etc
+      weighting_capacities <- self$weighting_capacities %>% group_by_at(c('Standard_Version', 'manufacturer')) %>%
+        summarise(capacity=sum(capacity))
+      disconnection_summary <- group_disconnections_by_manufacturer(self$circuits_to_summarise)
+      disconnection_summary <- join_circuit_summary_and_cer_manufacturer_data(disconnection_summary,
+                                                                              weighting_capacities)
+      disconnection_summary <- impose_sample_size_threshold(disconnection_summary, sample_threshold = min_sample)
+      disconnection_summary <- calc_confidence_intervals_for_disconnections(disconnection_summary)
+      disconnection_summary <- calc_upscale_kw_loss(disconnection_summary)
+      upscaled_disconnections <- upscale_disconnections(disconnection_summary)
+      kw_loss_estimate <- sum(upscaled_disconnections$predicted_kw_loss, na.rm=TRUE)
+      return(kw_loss_estimate)
     },
-    run_bootstrap_CI = function(num_repetitions) {
+    run_bootstrap_CI = function(num_repetitions=5000) {
       # Run bootstrap method
       # Return confidence interval
+      weighting_capacities <- self$weighting_capacities %>% group_by_at(self$predictor_list) %>%
+        summarise(capacity=sum(capacity))
+      boot_ci_results <- get_bootstrap_confidence_interval(self$circuits_data, weighting_capacities,
+                                                           self$predictor_list, num_repetitions = num_repetitions)
+      return(boot_ci_results)
     },
     make_plots = function() {
-      # Create plots used to evaluatre the predictors
+      # Create plots used to evaluate the predictors
+      predictors_list <- c('manufacturer', 'Standard_Version', 'Grouping')
+      if (self$zones_added) {
+        predictors_list <- append(predictors_list, 'zone')
+      }
+      manufacturer_capacitys <- self$weighting_capacities
+      circuits_data <- self$circuits_data
+      for (predictor in predictors_list){
+        predictor_capacitys <- manufacturer_capacitys %>% group_by_at(predictor) %>% 
+          summarise(capacity=sum(capacity))
+        circuits_predictors_count <- circuits_data %>% group_by_at(predictor) %>% 
+          summarise(disconnections = sum(disconnected), sample_size = length(response_category))
+        circuits_data_counts <- merge(circuits_data, circuits_predictors_count, by=predictor, all = TRUE)
+        if (predictor == "manufacturer"){
+          circuits_data_counts <- mutate(circuits_data_counts, manufacturer = ifelse(manufacturer == "Unknown" |
+                                                                                       manufacturer == "Multiple" |
+                                                                                       manufacturer == "Mixed" |
+                                                                                       manufacturer == "" |
+                                                                                       is.na(manufacturer),
+                                                                                     "Other", manufacturer))
+        }
+        predictor_data <- group_by_at(circuits_data_counts, predictor)
+        predictor_data <- summarise(predictor_data, disconnections = first(disconnections, na.rm = TRUE),
+                                    sample_size = first(sample_size, na.rm = TRUE),
+                                    disc_rate = disconnections/sample_size)
+        
+        predictor_data <- merge(predictor_data, predictor_capacitys, by = predictor, all = TRUE)
+        if (predictor == "manufacturer"){
+          predictor_data <- mutate(predictor_data, manufacturer = ifelse(is.na(sample_size), 'Other', manufacturer))
+        }
+        predictor_data <- group_by_at(predictor_data, predictor)
+        predictor_data <- summarise(predictor_data, disconnections = sum(disconnections, na.rm = TRUE),
+                                    sample_size = sum(sample_size, na.rm = TRUE),
+                                    disc_rate = disconnections/sample_size,
+                                    capacity = sum(capacity, na.rm = TRUE))
+        predictor_data$sample_prop = predictor_data$sample_size / sum(predictor_data$sample_size, na.rm = TRUE)
+        predictor_data$capacity_prop = predictor_data$capacity / sum(predictor_data$capacity, na.rm = TRUE)
+        
+        # Create predictor evaluation plots
+        par(mar=c(12,4,4,2))
+        # 1. Disconnection rates between categories
+        counts <- select(predictor_data, disc_rate)
+        barp <- barplot(t(as.matrix(counts)), names=predictor_data[[predictor]],
+                        main="Proportion of each category observed to disconnect", col=rainbow(nrow(counts)),
+                        ylim=c(0,1), xlab="", ylab="Proportion of sites that disconnected", beside=TRUE, las=2)
+        text(barp, t(as.matrix(counts)) + 0.1, labels = round(t(as.matrix(counts)),digits=2))
+        grid(nx = NA, ny = NULL, lwd = 1, lty = 1, col = "gray")
+        # 2. Sample and CER proportions in each category
+        counts <- select(predictor_data, c(sample_prop, capacity_prop))
+        barp <- barplot(t(as.matrix(counts)), names=predictor_data[[predictor]], legend=c("Sample data", "CER data"),
+                        main="Proportion of each category within sample and CER", col=rainbow(2), ylim=c(0,1),
+                        xlab="", ylab="Proportion of sites", beside=TRUE, las=2)
+        text(barp, t(as.matrix(counts)) + 0.05, labels = round(t(as.matrix(counts)),digits=2))
+        grid(nx = NA, ny = NULL, lwd = 1, lty = 1, col = "gray")
+        # 3. Number of samples in each category
+        counts <- select(predictor_data, sample_size)
+        barp <- barplot(t(as.matrix(counts)), names=predictor_data[[predictor]],
+                        main="Number of samples in each category", col=rainbow(nrow(counts)),
+                        xlab="", ylab="Number of sites", beside=TRUE, las=2)
+        text(barp, t(as.matrix(counts)) + 10, labels = t(as.matrix(counts)))
+        lines(x=t(as.matrix(counts)), y=rep(30, nrow(counts)))
+        grid(nx = NA, ny = NULL, lwd = 1, lty = 1, col = "gray")
+        
+        #write.csv(predictor_data, sprintf('DERdat_results/PSSE_event_validation/20170303_SA_%s.csv', predictor),
+        #  row.names = FALSE)
+      }
     }
   )
 )
