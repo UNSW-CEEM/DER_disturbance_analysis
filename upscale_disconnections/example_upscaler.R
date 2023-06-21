@@ -18,8 +18,7 @@ manufacturer_install_data <- read.csv(file = "inbuilt_data/monthly_cer_cumulativ
 # Predictor options: 'manufacturer', 'Standard_Version', 'Grouping', one of: 's_postcode', 'zone', 'distance'.
 predictors_list <- c('manufacturer', 'Standard_Version')
 
-upscaler <- DisconnectionUpscaler$new(circuit_summary, manufacturer_install_data)
-upscaler$get_installed_capacity_by_grouping(event_date, region)
+upscaler <- DisconnectionUpscaler$new(circuit_summary, manufacturer_install_data, event_date, region)
 
 if ('zone' %in% predictors_list | 'distance' %in% predictors_list){
   upscaler$add_distance_zones(POSTCODE_DATA_FILE, event_lat, event_long, c(100, 200, 400))
@@ -32,7 +31,7 @@ if ('Standard_Version' %in% predictors_list){
 
 upscaler$make_plots()
 
-upscaler$set_predictors(predictors_list)
+upscaler$set_predictors(c('manufacturer'))
 upscaler$upscale_glm_method(30, 0.5)
 
 upscaler$upscale_tranche_method(30, 0.5)
