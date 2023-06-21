@@ -178,6 +178,28 @@ ui <- fluidPage(
          div(style="display:inline-block", uiOutput("get_next_c_id")))
      )
     ),
+    tabPanel("Upscaling", fluid=TRUE,
+             mainPanel(
+               radioButtons("predictor_to_visualise", label = strong("Predictor to visualise:"),
+                            choices = list("Manufacturer","Standard Version", "Size grouping", "Distance zone"),
+                            selected = "Manufacturer", inline = TRUE),
+               # TODO make plots
+               #plotlyOutput("predictor_disconnections"),
+               #plotlyOutput("predictor_proportions"),
+               #plotlyOutput("predictor_samples"),
+               h4("Select predictors for upscaling"),
+               checkboxGroupInput("predictor_list", "", choices = list("Manufacturer","Standard Version", "Size grouping", "Distance zone")),
+               textInput("pre_event_CF", "Pre-event capacity factor (%)"),
+               textOutput("dataset_CF"),
+               actionButton("upscale_disconnections", "Upscale"),
+               h4("Upscaled MW loss: "), # TODO Add calculated value
+               h4("Disconnection percentage: "), # TODO Add calculated value
+               actionButton("calc_boot_CI", "Calculate confidence interval"),
+               h4("Confidence bounds: "), # TODO Add calculated value
+               h4("Percentage bounds "), # TODO Add calculated value
+               actionButton("export_upscaled_results", "Export results to csv")
+             )
+    ),
     tabPanel("Settings", fluid=TRUE, 
              sidebarLayout(
                sidebarPanel(id="side_panel",
@@ -787,6 +809,9 @@ server <- function(input,output,session){
         logging::logerror(paste(error$title, error$body), logger=app_logger)
       }
     }
+    
+    output$dataset_CF <- renderText({paste("Dataset capacity factor (%): ", 
+                                           sprintf("%0.2f", v$pre_event_performance_factor*100))})
 
     no_grouping <- check_grouping(settings)
 

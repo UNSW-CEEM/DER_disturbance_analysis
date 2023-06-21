@@ -169,6 +169,15 @@ determine_performance_factors <- function(combined_data_f, pre_event_interval) {
   return(combined_data_f)
 }
 
+#' Calculate average pre-event performance factor
+#' Performance factor is calculated as power/ac_capacity at a site level
+#' @return The average pre-event performance factor across all circuits
+determine_pre_event_performance_factor <- function(combined_data_f, pre_event_interval) {
+  pre_event_performance_factor <- filter(combined_data_f, ts > pre_event_interval - d & ts <= pre_event_interval)
+  pre_event_performance_factor <- mean(pre_event_performance_factor$site_performance_factor, na.rm = TRUE)
+  return(pre_event_performance_factor)
+}
+
 #' Upscale disconnections
 #' @return A list of data objects summarising disconnections upscaled by manufacturer
 upscale_and_summarise_disconnections <- function(circuit_summary, manufacturer_install_data, load_date, region_to_load, exclude_solar_edge) {
@@ -315,6 +324,8 @@ run_analysis <- function(data, settings) {
     
     if(length(combined_data_f$ts) > 0){
       combined_data_f <- determine_performance_factors(combined_data_f, settings$pre_event_interval)
+      data$pre_event_performance_factor <- determine_pre_event_performance_factor(combined_data_f,
+                                                                                  settings$pre_event_interval)
 
       # -------- determine AS4777.2:2015 over-frequency f-W compliance --------
       if(dim(data$ideal_response_to_plot)[1]>0){
