@@ -77,6 +77,14 @@ required_packages <- c(
     # see https://r-spatial.org/r/2023/05/15/evolution4.html
     "geosphere",
 
+    # required for swfscMisc
+    # requires udunits to be installed
+    "units",
+
+    # required for swfscMisc
+    "sf",
+    "yaml",
+
     # for `circle.polygon` (+ potentially more)
     "swfscMisc",
 
@@ -100,6 +108,14 @@ required_packages <- c(
 
     # for logging information and errors
     "logging",
+
+    # TODO: can be removed
+    # required for stringr
+    # "stringi",
+
+    # TODO: can be removed
+    # for string manipulations
+    # "stringr",
 
     # for `test_that` and other testing functionality
     "testthat")
