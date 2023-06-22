@@ -1,31 +1,56 @@
-install.packages("versions")
-library("versions")
-install_type <- 'binary'
-install.versions(c('shiny'), c('1.4.0.2'), type=install_type)
-install.versions(c('shinyalert'), c('2.0.0'), type=install_type)
-install.versions(c('shinyTime'), c('1.0.1'), type=install_type)
-install.versions(c('shinyWidgets'), c('0.5.4'), type=install_type)
-install.versions(c('plotly'), c('4.9.2.1'), type=install_type)
-install.versions(c('lubridate'), c('1.7.8'), type=install_type)
-install.versions(c('dplyr'), c('0.8.5'), type=install_type)
-install.versions(c('tidyr'), c('1.0.2'), type=install_type)
-install.versions(c('data.table'), c('1.12.8'), type=install_type)
-install.versions(c('shinycssloaders'), c('1.0.0'), type=install_type)
-install.versions(c('shinyFiles'), c('0.8.0'), type=install_type)
-install.versions(c('shinyjs'), c('2.0.0'), type=install_type)
-install.versions(c('fasttime'), c('1.0-2'), type=install_type)
-install.versions(c('DT'), c('0.16'), type=install_type)
-install.versions(c('suncalc'), c('0.5.0'), type=install_type)
-install.versions(c('ggmap'), c('3.0.0'), type=install_type)
-install.versions(c('measurements'), c('1.4.0'), type=install_type)
-install.versions(c('assertthat'), c('0.2.1'), type=install_type)
-install.versions(c('geosphere'), c('1.5-10'), type=install_type)
-install.versions(c('swfscMisc'), c('1.3'), type=install_type)
-install.versions(c('padr'), c('0.5.1'), type=install_type)
-install.versions(c('sqldf'), c('0.4-11'), type=install_type)
-install.versions(c('gridExtra'), c('2.3'), type=install_type)
-install.versions(c('rjson'), c('0.2.20'), type=install_type)
-install.versions(c('R6'), c('2.5.0'), type=install_type)
-install.versions(c('git2r'), c('0.29.0'), type=install_type)
-install.versions(c('logging'), c('0.10-108'), type=install_type)
-install.versions(c('testthat'), c('2.3.2'), type=install_type)
+required_packages <- c(
+    "shiny", # for the dashboard
+    "shinyalert", # for `shinyalert`
+    "glue", # required for shinyTime
+    "vctrs", # required for shinyTime
+    "Rcpp", # required for shinyTime
+    "magrittr", # required for shinyTime
+    "fastmap", # required for shinyTime
+    "htmltools", # required for shinyTime
+    "later", # required for shinyTime
+    "promises", # required for shinyTime
+    "httpuv", # required for shinyTime
+    "mime", # required for shinyTime
+    "ellipsis", # required for shinyTime
+    "shinyTime", # for `timeInput`
+    "sass", # required for shinyWidgets
+    "lazyeval", # required for shinyWidgets
+    "jsonlite", # required for shinyWidgets
+    "cachem", # required for shinyWidgets
+    "shinyWidgets", # for `checkboxGroupButtons` (+ potentially more)
+    "plotly", # for `plotlyOutput`, `renderPlotly` and many more
+    "lubridate", # for dates
+    "dplyr", # for data manipulation
+    "tidyr", # for data manipulation
+    "data.table", # for data manipulation
+    ## "shinycssloaders", # TODO: can be removed
+    "fs", # required for shinyFiles
+    "shinyFiles", # for `shinyFilesButton`
+    "shinyjs", # for `shinyjs::hide` and `shinyjs::show`
+    "fasttime", # for `fastixPOSIXct`
+    "DT", # for `datatable`, `DT::coerceValue` (+ potentially more)
+    "suncalc", # for `suncalc::getSunlightTimes`
+    ## "ggmap", # TODO: can be removed
+    ## "measurements", # TODO: can be removed
+    "assertthat", # for `assert_that`
+    "geosphere", # for `distHaversine` # need to have gdal installed
+    "swfscMisc", # for `circle.polygon` (+ potentially more)
+    "padr", # for `thicken`
+    "sqldf", # for SQL queries
+    ## "gridExtra", # TODO: can be removed
+    "rjson", # for converting to and from JSON
+    "R6", # for `R6::R6Class`
+    "git2r", # for `git2r::discover_repository`
+    "logging", # for logging information and errors
+    "testthat") # for `test_that` and other testing functionality
+
+for (package in required_packages) {
+    if (!package %in% installed.packages()) {
+        if (!"rlang" %in% installed.packages()) {
+            install.packages("rlang")
+        }
+        print(paste0("Package ", package, " is not installed."))
+        install.packages(package, dependencies = TRUE)
+    }
+    require(package)
+}
