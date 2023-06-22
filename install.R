@@ -1,48 +1,108 @@
 required_packages <- c(
-    "shiny", # for the dashboard
-    "shinyalert", # for `shinyalert`
-    "glue", # required for shinyTime
-    "vctrs", # required for shinyTime
-    "Rcpp", # required for shinyTime
-    "magrittr", # required for shinyTime
-    "fastmap", # required for shinyTime
-    "htmltools", # required for shinyTime
-    "later", # required for shinyTime
-    "promises", # required for shinyTime
-    "httpuv", # required for shinyTime
-    "mime", # required for shinyTime
-    "ellipsis", # required for shinyTime
-    "shinyTime", # for `timeInput`
-    "sass", # required for shinyWidgets
-    "lazyeval", # required for shinyWidgets
-    "jsonlite", # required for shinyWidgets
-    "cachem", # required for shinyWidgets
-    "shinyWidgets", # for `checkboxGroupButtons` (+ potentially more)
-    "plotly", # for `plotlyOutput`, `renderPlotly` and many more
-    "lubridate", # for dates
-    "dplyr", # for data manipulation
-    "tidyr", # for data manipulation
-    "data.table", # for data manipulation
-    ## "shinycssloaders", # TODO: can be removed
-    "fs", # required for shinyFiles
-    "shinyFiles", # for `shinyFilesButton`
-    "shinyjs", # for `shinyjs::hide` and `shinyjs::show`
-    "fasttime", # for `fastixPOSIXct`
-    "DT", # for `datatable`, `DT::coerceValue` (+ potentially more)
-    "suncalc", # for `suncalc::getSunlightTimes`
-    ## "ggmap", # TODO: can be removed
-    ## "measurements", # TODO: can be removed
-    "assertthat", # for `assert_that`
-    "geosphere", # for `distHaversine` # need to have gdal installed
-    "swfscMisc", # for `circle.polygon` (+ potentially more)
-    "padr", # for `thicken`
-    "sqldf", # for SQL queries
-    ## "gridExtra", # TODO: can be removed
-    "rjson", # for converting to and from JSON
-    "R6", # for `R6::R6Class`
-    "git2r", # for `git2r::discover_repository`
-    "logging", # for logging information and errors
-    "testthat") # for `test_that` and other testing functionality
+    # for the dashboard
+    "shiny",
+
+    # for `shinyalert`
+    "shinyalert",
+
+    # required for shinyTime
+    "glue",
+    "vctrs",
+    "Rcpp",
+    "magrittr",
+    "fastmap",
+    "htmltools",
+    "later",
+    "promises",
+    "httpuv",
+    "mime",
+    "ellipsis",
+
+    # for `timeInput`
+    "shinyTime",
+
+    # required for shinyWidgets
+    "sass",
+    "lazyeval",
+    "jsonlite",
+    "cachem",
+
+    # for `checkboxGroupButtons` (+ potentially more)
+    "shinyWidgets",
+
+    # for `plotlyOutput`, `renderPlotly` and many more
+    "plotly",
+
+    # for dates
+    "lubridate",
+
+    # for data manipulation
+    "dplyr",
+    "tidyr",
+    "data.table",
+
+    # TODO: can be removed
+    # "shinycssloaders",
+
+    # required for shinyFiles
+    "fs",
+
+    # for `shinyFilesButton`
+    "shinyFiles",
+
+    # for `shinyjs::hide` and `shinyjs::show`
+    "shinyjs",
+
+    # for `fastixPOSIXct`
+    "fasttime",
+
+    # for `datatable`, `DT::coerceValue` (+ potentially more)
+    "DT",
+
+    # for `suncalc::getSunlightTimes`
+    "suncalc",
+
+    # TODO: can be removed
+    # "ggmap",
+
+    # TODO: can be removed
+    # "measurements",
+
+    # for `assert_that`
+    "assertthat",
+
+    # for `distHaversine`
+    # requires gdal to be installed
+    # legacy packages underpinning package will retire shortly
+    # see https://r-spatial.org/r/2023/05/15/evolution4.html
+    "geosphere",
+
+    # for `circle.polygon` (+ potentially more)
+    "swfscMisc",
+
+    # for `thicken`
+    "padr",
+
+    # for SQL queries
+    "sqldf",
+
+    # TODO: can be removed
+    # "gridExtra",
+
+    # for converting to and from JSON
+    "rjson",
+
+    # for `R6::R6Class`
+    "R6",
+
+    # for `git2r::discover_repository`
+    "git2r",
+
+    # for logging information and errors
+    "logging",
+
+    # for `test_that` and other testing functionality
+    "testthat")
 
 for (package in required_packages) {
     if (!package %in% installed.packages()) {
