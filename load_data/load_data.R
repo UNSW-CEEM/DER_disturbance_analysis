@@ -7,6 +7,7 @@ if (!exists("app_logger")) {
  
 INSTALL_DATA_FILE <- "inbuilt_data/cer_cumulative_capacity_and_number.csv"
 CER_MANUFACTURER_DATA <- "inbuilt_data/cer_cumulative_capacity_and_number_by_manufacturer.csv"
+CER_DATA_ALL_GROUPS <- "inbuilt_data/monthly_cer_cumulative_capacity_all_processed.csv"
 OFF_GRID_POSTCODES <- "inbuilt_data/off_grid_postcodes.csv"
 POSTCODE_DATA_FILE <- "inbuilt_data/PostcodesLatLongQGIS.csv"
 
@@ -167,6 +168,10 @@ load_data <- function(data, settings) {
     
     manufacturer_install_data <- read.csv(file = CER_MANUFACTURER_DATA, header = TRUE, stringsAsFactors = FALSE)
     data$manufacturer_install_data <- calc_installed_capacity_by_standard_and_manufacturer(manufacturer_install_data)
+    
+    if (file.exists(CER_DATA_ALL_GROUPS)){
+      data$grouped_install_data <- read.csv(file = CER_DATA_ALL_GROUPS, header = TRUE, stringsAsFactors = FALSE)
+    }
     
     postcode_data <- read.csv(file=POSTCODE_DATA_FILE, header=TRUE, stringsAsFactors = FALSE)
     data$postcode_data <- process_postcode_data(postcode_data)

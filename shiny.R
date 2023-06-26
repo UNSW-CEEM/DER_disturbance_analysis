@@ -20,13 +20,13 @@ ui <- fluidPage(
         sidebarPanel(id = "side_panel",
           h4("Settings input file selection"),
           textInput("settings_file", "Select JSON file for loading inputs (optional).",
-                    value = "C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/test.json"
+                    value = "validation/data/ufls/ref_meta_data.json"
           ),
           shinyFilesButton("load_settings", "Choose File", "Select settings file ...", multiple = FALSE),
           tags$hr(),
           h4("File selection"),
           textInput("database_name", "SQLite database file",
-                    value = "C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/data/20201203/20201203.db"
+                    value = "validation/data/ufls/ref.db"
           ),
           fluidRow(
             div(style="display:inline-block", shinyFilesButton("choose_database", "Choose File", 
@@ -180,22 +180,20 @@ ui <- fluidPage(
     ),
     tabPanel("Upscaling", fluid=TRUE,
              mainPanel(
-               radioButtons("predictor_to_visualise", label = strong("Predictor to visualise:"),
-                            choices = list("Manufacturer","Standard Version", "Size grouping", "Distance zone"),
-                            selected = "Manufacturer", inline = TRUE),
-               # TODO make plots
-               #plotlyOutput("predictor_disconnections"),
-               #plotlyOutput("predictor_proportions"),
-               #plotlyOutput("predictor_samples"),
+               uiOutput("predictor_to_visualise"),
+               plotOutput("predictor_disconnections"),
+               plotOutput("predictor_proportions"),
+               plotOutput("predictor_samples"),
                h4("Select predictors for upscaling"),
-               checkboxGroupInput("predictor_list", "", choices = list("Manufacturer","Standard Version", "Size grouping", "Distance zone")),
-               textInput("pre_event_CF", "Pre-event capacity factor (%)"),
+               uiOutput("predictor_list"),
+               numericInput("pre_event_CF", "Pre-event capacity factor (%)", value=0),
                textOutput("dataset_CF"),
                actionButton("upscale_disconnections", "Upscale"),
-               h4("Upscaled MW loss: "), # TODO Add calculated value
-               h4("Disconnection percentage: "), # TODO Add calculated value
+               textOutput("upsc_mwp_loss"),
+               textOutput("upsc_mw_loss"),
+               textOutput("upsc_perc_loss"),
                actionButton("calc_boot_CI", "Calculate confidence interval"),
-               h4("Confidence bounds: "), # TODO Add calculated value
+               textOutput("upsc_CI"),
                h4("Percentage bounds "), # TODO Add calculated value
                actionButton("export_upscaled_results", "Export results to csv")
              )
@@ -519,7 +517,8 @@ server <- function(input,output,session){
                       unique_offsets = c(),
                       circuit_summary = data.frame(),
                       region_frequency = data.frame(),
-                      trigger_update_manual_compliance_tab = FALSE
+                      trigger_update_manual_compliance_tab = FALSE,
+                      upscaler = NULL
                       )
   
   observeEvent(input$connect_to_database, {
@@ -812,6 +811,18 @@ server <- function(input,output,session){
     
     output$dataset_CF <- renderText({paste("Dataset capacity factor (%): ", 
                                            sprintf("%0.2f", v$pre_event_performance_factor*100))})
+    # Create buttons in Upscaling tab
+    if ("grouped_install_data" %in% names(v)) {
+      upscale_choices <- list("Manufacturer" = "manufacturer", "Standard Version" = "Standard_Version", 
+                              "Size grouping" = "Grouping", "Distance zone" = "zone")
+    } else {
+      upscale_choices <- list("Manufacturer" = "manufacturer", "Standard Version" = "Standard_Version")
+    }
+    output$predictor_to_visualise <- renderUI({radioButtons("predictor_to_visualise",
+                                                            label = strong("Predictor to visualise:"),
+                                                            choices = upscale_choices,
+                                                            selected = "manufacturer", inline = TRUE)})
+    output$predictor_list <- renderUI({checkboxGroupInput("predictor_list", "", choices = upscale_choices)})
 
     no_grouping <- check_grouping(settings)
 
@@ -989,7 +1000,7 @@ server <- function(input,output,session){
         # --------
       } else {
         # If there is no data left after filtering alert the user and create an empty plot.
-        shinyalert("Opps", "There is no data to plot")
+        shinyalert("Oops", "There is no data to plot")
         reset_chart_area(input, output, session)
         removeNotification(id)
       }
@@ -1437,7 +1448,7 @@ server <- function(input,output,session){
         settings <- fromJSON(file = settings_file())
       },
       error = function(cond){
-        shinyalert("Opps", "Something went wrong loading the settings, please see the console for more details.")
+        shinyalert("Oops", "Something went wrong loading the settings, please see the console for more details.")
       }
     )
     return(settings)
@@ -1655,6 +1666,43 @@ server <- function(input,output,session){
     replaceData(v$proxy_circuit_details_editor, v$circuit_details_for_editing, resetPaging=FALSE, rownames=FALSE) # important
     v$db$update_circuit_details_cleaned(v$circuit_details_for_editing)
   })
+  
+  # Run the disconnection upscaling
+  observeEvent(input$upscale_disconnections, {
+   # TODO
+    v$upscaler$set_predictors(input$predictor_list)
+    disc_rates <- v$upscaler$upscale_glm_method(input$pre_event_CF, min_sample=5)
+    output$upsc_mwp_loss <- renderText({paste("Upscaled MWp loss: ", sprintf("%0.0f", disc_rates$kwp_loss/1000))})
+    output$upsc_mw_loss <- renderText({paste("Upscaled MW loss: ", sprintf("%0.0f", disc_rates$kw_loss/1000))})
+    output$upsc_perc_loss <- renderText({paste("Disconnection percentage (%): ",
+                                               sprintf("%0.1f", disc_rates$perc_loss))})
+  })
+  
+  # Run the bootstrap confidence interval calculation
+  observeEvent(input$calc_boot_CI, {
+    # TODO
+    boot_CI <- v$upscaler$run_bootstrap_CI(5, 1000)
+    output$upsc_CI <- renderText({sprintf("Bounds for MWp loss: lb %0f, ub %0.0f", boot_CI$lower_bound_perc/1000, 
+                                          boot_CI$upper_bound_perc/1000)})
+  })
+  
+  # TODO - in progress
+  observeEvent(input$predictor_to_visualise, {
+    if ("grouped_install_data" %in% names(v)) {
+      v$upscaler <- DisconnectionUpscaler$new(v$circuit_summary, v$grouped_install_data, input$event_date,
+                                              input$region_to_load)
+      v$upscaler$add_distance_zones(POSTCODE_DATA_FILE, event_latitude(), event_longitude(),
+                                    c(zone_one_radius(), zone_two_radius(), zone_three_radius()))
+    } else {
+      v$upscaler <- DisconnectionUpscaler$new(v$circuit_summary, v$manufacturer_install_data, input$event_date,
+                                              input$region_to_load)
+    }
+    plots <- v$upscaler$make_plots(input$predictor_to_visualise)
+    output$predictor_disconnections <- renderPlot(plots$disc_plot)
+    output$predictor_proportions <- renderPlot(plots$bias_plot)
+    output$predictor_samples <- renderPlot(plots$sample_count_plot)
+  })
+  
 }
 
 shinyApp(ui = ui, server = server)

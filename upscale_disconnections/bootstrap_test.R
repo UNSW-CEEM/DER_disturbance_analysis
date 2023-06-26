@@ -1,5 +1,4 @@
-source("load_tool_environment.R")
-source("upscale_disconnections/upscale_glm_test.R")
+#source("upscale_disconnections/upscale_glm_test.R")
 #install.packages('boot',dep=TRUE)
 library(boot)
 
@@ -49,15 +48,16 @@ main <- function(){
   print(get_bootstrap_confidence_interval(circuits_data, manufacturer_capacitys, predictors_list, 2000))
 }
 
-get_bootstrap_confidence_interval <- function(circuits_data, manufacturer_capacitys, predictors_list, num_repetitions=5000){
+get_bootstrap_confidence_interval <- function(circuits_data, manufacturer_capacitys, predictors_list, min_samples=30,
+                                              num_repetitions=5000){
   glm_wrapper <- function(data, i){
     d2 <- data[i,]
-    get_glm_estimate(d2, manufacturer_capacitys, predictors_list, file_to_save=NULL)
+    get_glm_estimate(d2, manufacturer_capacitys, predictors_list, NULL, min_samples, file_to_save=NULL)
   }
   
   bucket_wrapper <- function(data, i){
     d2 <- data[i,]
-    upscale_existing_method(d2, manufacturer_capacitys, min_sample=30, save_csvs=FALSE)
+    upscale_existing_method(d2, manufacturer_capacitys, min_sample=min_samples, save_csvs=FALSE)
   }
   
   set.seed(1)
