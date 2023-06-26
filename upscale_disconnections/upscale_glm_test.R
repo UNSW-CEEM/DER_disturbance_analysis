@@ -1,5 +1,5 @@
-source("load_tool_environment.R")
-source('preprocess_cer_data/calc_installed_capacity_by_predictor_list.R')
+#source("load_tool_environment.R")
+#source('preprocess_cer_data/calc_installed_capacity_by_predictor_list.R')
 
 main <- function(){
   region <- 'QLD'
@@ -41,7 +41,7 @@ main <- function(){
   
   circuits_to_summarise <- circuit_summary
   #upscale_existing_method(circuits_to_summarise, manufacturer_capacitys, min_sample=30, save_csvs = TRUE)
-  upscale_glm_method(circuits_to_summarise, manufacturer_capacitys, predictors_list, min_sample=30, pre_event_CF,
+  upscale_new_glm_method(circuits_to_summarise, manufacturer_capacitys, predictors_list, min_sample=30, pre_event_CF,
                      file_to_save=sprintf('DERdat_results/20221014_event_analysis/20221014_SolAn_v2_model_m_st_z.csv', as.numeric(Sys.time())))
 }
 
@@ -65,8 +65,8 @@ upscale_existing_method <- function(circuits_to_summarise, manufacturer_capacity
 }
 
 # glm method
-upscale_glm_method <- function(circuits_to_summarise, manufacturer_capacitys, predictors_list, pre_event_CF, 
-                               min_samples, file_to_save=NULL){
+upscale_new_glm_method <- function(circuits_to_summarise, manufacturer_capacitys, predictors_list, pre_event_CF, 
+                                   min_samples, file_to_save=NULL){
   circuits_data <- circuits_to_summarise %>% select(Standard_Version, Grouping, manufacturer, s_postcode, 
                                                     response_category, distance, zone)
   disconnection_categories <- c("3 Drop to Zero", "4 Disconnect")
@@ -78,7 +78,7 @@ upscale_glm_method <- function(circuits_to_summarise, manufacturer_capacitys, pr
                    remove_others_from_model=FALSE, group_others_before_modelling=TRUE, file_to_save=file_to_save)
 }
 
-get_glm_estimate <- function(circuits_data, manufacturer_capacitys, predictors_list,pre_event_CF, min_samples=30,
+get_glm_estimate <- function(circuits_data, manufacturer_capacitys, predictors_list, pre_event_CF, min_samples=30,
                              remove_others_from_model=FALSE, group_others_before_modelling=TRUE, 
                              file_to_save=NULL){
   circuits_predictors_count <- circuits_data %>% group_by_at(predictors_list) %>% 
