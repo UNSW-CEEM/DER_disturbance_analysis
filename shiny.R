@@ -931,9 +931,6 @@ server <- function(input,output,session){
         output$save_disconnection_percentage <- renderUI({
           shinySaveButton("save_disconnection_percentage", "Save data", "Save file as ...", filetype=list(xlsx="csv"))
         })
-
-
-        ################################################################################
         
         
         if(dim(v$frequency_data)[1]>0){
