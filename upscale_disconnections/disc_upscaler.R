@@ -13,6 +13,7 @@ DisconnectionUpscaler <- R6Class("DisconnectionUpscaler",
     region = NULL,
     zones_added = FALSE,
     pred_in_cer_data = NULL,
+    glm_results = NULL,
     initialize = function(circuits_to_summarise = NA, cer_install_data = NA, event_date = NA, region = NA) {
       self$circuits_to_summarise <- circuits_to_summarise
       self$circuits_data <- self$get_circuit_data(circuits_to_summarise)
@@ -23,7 +24,7 @@ DisconnectionUpscaler <- R6Class("DisconnectionUpscaler",
       self$get_installed_capacity_by_grouping()
     },
     set_predictors = function(predictor_list) {
-      if ('zone' %in% predictor_list & !self$zones_added) {
+      if ('zone' %in% predictor_list && !self$zones_added) {
         stop("Distance zones must be added using 'upscaler$add_distance_zones' before predictor 'zone' can be used")
       }
       if (all(predictor_list %in% self$pred_in_cer_data)) {
@@ -106,12 +107,15 @@ DisconnectionUpscaler <- R6Class("DisconnectionUpscaler",
       weighting_capacities <- self$weighting_capacities %>% group_by_at(self$predictor_list) %>%
         summarise(capacity=sum(capacity))
       losses <- list()
-      losses$kwp_loss_estimate <- get_glm_estimate(self$circuits_data, weighting_capacities, self$predictor_list,
-                                                   pre_event_CF, min_sample, remove_others_from_model=FALSE,
-                                                   group_others_before_modelling=TRUE, file_to_save=NULL)
+      glm_results <- get_glm_estimate_table(self$circuits_data, weighting_capacities, self$predictor_list, min_sample,
+                                            remove_others_from_model = FALSE,
+                                            group_others_before_modelling = TRUE
+                                            )
+      glm_results$kwp_loss <- glm_results$capacity * glm_results$prediction
+      self$glm_results <- glm_results
+      losses$kwp_loss_estimate <- sum(glm_results$kwp_loss)
       losses$kw_loss_estimate <- losses$kwp_loss_estimate * pre_event_CF / 100
-      losses$perc_loss_estimate <- 0 # TODO: implement this
-      # TODO: decide on best return object
+      losses$perc_loss_estimate <- sum(glm_results$kwp_loss) / sum(glm_results$capacity)
       return(losses)
     },
     upscale_tranche_method = function(pre_event_CF, min_sample=30) {
@@ -151,13 +155,13 @@ DisconnectionUpscaler <- R6Class("DisconnectionUpscaler",
         summarise(capacity=sum(capacity))
       circuits_predictors_count <- circuits_data %>% group_by_at(predictor) %>% 
         summarise(disconnections = sum(disconnected), sample_size = length(response_category))
-      circuits_data_counts <- merge(circuits_data, circuits_predictors_count, by=predictor, all = TRUE)
+      circuits_data_counts <- merge(circuits_data, circuits_predictors_count, by = predictor, all = TRUE)
       if (predictor == "manufacturer"){
         circuits_data_counts <- mutate(circuits_data_counts, manufacturer = ifelse(manufacturer == "Unknown" |
-                                                                                     manufacturer == "Multiple" |
-                                                                                     manufacturer == "Mixed" |
-                                                                                     manufacturer == "" |
-                                                                                     is.na(manufacturer),
+                                                                                   manufacturer == "Multiple" |
+                                                                                   manufacturer == "Mixed" |
+                                                                                   manufacturer == "" |
+                                                                                   is.na(manufacturer),
                                                                                    "Other", manufacturer))
       }
       predictor_data <- group_by_at(circuits_data_counts, predictor)
@@ -178,47 +182,76 @@ DisconnectionUpscaler <- R6Class("DisconnectionUpscaler",
       predictor_data$capacity_prop = predictor_data$capacity / sum(predictor_data$capacity, na.rm = TRUE)
       return(predictor_data)
     },
-    make_plots = function(predictor) {
+    make_plots = function(predictor, type="graphics") {
       # Create plots used to evaluate the predictors
       # TODO - replace plots with interactive plotly charts?
       predictor_data <- self$get_predictor_summary(predictor)
       
       # Create predictor evaluation plots
       plots <- list()
-      par(mar=c(12,4,4,2))
-      # 1. Disconnection rates between categories
-      counts <- select(predictor_data, disc_rate)
-      barp <- barplot(t(as.matrix(counts)), names=predictor_data[[predictor]],
-                      main="Proportion of each category observed to disconnect", col=rainbow(nrow(counts)),
-                      ylim=c(0,1), xlab="", ylab="Proportion of sites that disconnected", beside=TRUE, las=2)
-      text(barp, t(as.matrix(counts)) + 0.1, labels = round(t(as.matrix(counts)),digits=2))
-      grid(nx = NA, ny = NULL, lwd = 1, lty = 1, col = "gray")
-      plots$disc_plot = recordPlot()
-      dev.off()
-      # 2. Sample and CER proportions in each category
-      counts <- select(predictor_data, c(sample_prop, capacity_prop))
-      barp <- barplot(t(as.matrix(counts)), names=predictor_data[[predictor]], legend=c("Sample data", "CER data"),
-                      main="Proportion of each category within sample and CER", col=rainbow(2), ylim=c(0,1),
-                      xlab="", ylab="Proportion of sites", beside=TRUE, las=2)
-      text(barp, t(as.matrix(counts)) + 0.05, labels = round(t(as.matrix(counts)),digits=2))
-      grid(nx = NA, ny = NULL, lwd = 1, lty = 1, col = "gray")
-      plots$bias_plot = recordPlot()
-      dev.off()
-      # 3. Number of samples in each category
-      counts <- select(predictor_data, sample_size)
-      barp <- barplot(t(as.matrix(counts)), names=predictor_data[[predictor]],
-                      main="Number of samples in each category", col=rainbow(nrow(counts)),
-                      xlab="", ylab="Number of sites", beside=TRUE, las=2)
-      text(barp, t(as.matrix(counts)) + 10, labels = t(as.matrix(counts)))
-      lines(x=t(as.matrix(counts)), y=rep(30, nrow(counts)))
-      grid(nx = NA, ny = NULL, lwd = 1, lty = 1, col = "gray")
-      plots$sample_count_plot = recordPlot()
-      dev.off()
-      
-      #write.csv(predictor_data, sprintf('DERdat_results/PSSE_event_validation/20170303_SA_%s.csv', predictor),
-      #  row.names = FALSE)
-      
-      return (plots)
+      if (type == "graphics") {
+        par(mar=c(12,4,4,2))
+        # 1. Disconnection rates between categories
+        counts <- select(predictor_data, disc_rate)
+        barp <- barplot(t(as.matrix(counts)), names=predictor_data[[predictor]],
+                        main="Proportion of each category observed to disconnect", col=rainbow(nrow(counts)),
+                        ylim=c(0,1), xlab="", ylab="Proportion of sites that disconnected", beside=TRUE, las=2)
+        text(barp, t(as.matrix(counts)) + 0.1, labels = round(t(as.matrix(counts)),digits=2))
+        grid(nx = NA, ny = NULL, lwd = 1, lty = 1, col = "gray")
+        plots$disc_plot = recordPlot()
+        dev.off()
+        # 2. Sample and CER proportions in each category
+        counts <- select(predictor_data, c(sample_prop, capacity_prop))
+        barp <- barplot(t(as.matrix(counts)), names=predictor_data[[predictor]], legend=c("Sample data", "CER data"),
+                        main="Proportion of each category within sample and CER", col=rainbow(2), ylim=c(0,1),
+                        xlab="", ylab="Proportion of sites", beside=TRUE, las=2)
+        text(barp, t(as.matrix(counts)) + 0.05, labels = round(t(as.matrix(counts)),digits=2))
+        grid(nx = NA, ny = NULL, lwd = 1, lty = 1, col = "gray")
+        plots$bias_plot = recordPlot()
+        dev.off()
+        # 3. Number of samples in each category
+        counts <- select(predictor_data, sample_size)
+        barp <- barplot(t(as.matrix(counts)), names = predictor_data[[predictor]],
+                        main = "Number of samples in each category", col = rainbow(nrow(counts)),
+                        xlab = "", ylab="Number of sites", beside = TRUE, las = 2)
+        text(barp, t(as.matrix(counts)) + 10, labels = t(as.matrix(counts)))
+        lines(x = t(as.matrix(counts)), y = rep(30, nrow(counts)))
+        grid(nx = NA, ny = NULL, lwd = 1, lty = 1, col = "gray")
+        plots$sample_count_plot = recordPlot()
+        dev.off()
+      } else if (type == "plotly") {
+        # 1. Disconnection rates between categories
+        plots$disc_plot <- plot_ly(predictor_data, x = predictor_data[[1]], y = ~disc_rate*100, type = "bar",
+                                   texttemplate = '%{y:1.1f}%', textposition='auto') %>%
+          layout(title = "Proportion of each category observed to disconnect",
+                 yaxis = list(title = 'Proportion of sites that disconnected', ticksuffix = "%"),
+                 xaxis = list(title = predictor)
+          )
+        # 2. Sample and CER proportions in each category
+        plots$bias_plot <- plot_ly(predictor_data, x = predictor_data[[1]], y = ~sample_prop*100, type = "bar",
+                                   texttemplate = '%{y:1.1f}%', textposition = 'auto', name = "Sample data") %>%
+          add_trace(x = predictor_data[[1]], y = ~capacity_prop*100, name = "CER data") %>%
+          layout(title = "Proportion of each category within sample and CER",
+                 yaxis = list(title = 'Proportion of sites', ticksuffix = "%"),
+                 xaxis = list(title = predictor)
+          )
+        # 3. Number of samples in each category
+        plots$sample_count_plot <- plot_ly(predictor_data, x = predictor_data[[1]], y = ~sample_size, type = "bar",
+                                           text = ~sample_size, textposition = 'auto') %>%
+          layout(shapes = list(hline(30, color = 'grey'))) %>%
+          layout(title = "Number of samples in each category",
+                 yaxis = list(title = 'Number of sites'),
+                 xaxis = list(title = predictor)
+          )
+      }
+      return(plots)
+    },
+    save_upscaling_summary = function(file_to_save){
+      if (!is.null(self$glm_results)) {
+        write.csv(self$glm_results, file_to_save, row.names = FALSE)
+      } else {
+        stop("Run the upscaling using upscaler$upscale_glm_method before saving output.")
+      }
     }
   )
 )

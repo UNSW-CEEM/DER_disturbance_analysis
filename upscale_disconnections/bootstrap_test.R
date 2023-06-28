@@ -52,7 +52,8 @@ get_bootstrap_confidence_interval <- function(circuits_data, manufacturer_capaci
                                               num_repetitions=5000){
   glm_wrapper <- function(data, i){
     d2 <- data[i,]
-    get_glm_estimate(d2, manufacturer_capacitys, predictors_list, NULL, min_samples, file_to_save=NULL)
+    model_data <- get_glm_estimate_table(d2, manufacturer_capacitys, predictors_list, min_samples)
+    sum(model_data$capacity * model_data$prediction)
   }
   
   bucket_wrapper <- function(data, i){
