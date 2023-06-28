@@ -179,23 +179,30 @@ ui <- fluidPage(
      )
     ),
     tabPanel("Upscaling", fluid=TRUE,
-             mainPanel(
-               uiOutput("predictor_to_visualise"),
-               plotOutput("predictor_disconnections"),
-               plotOutput("predictor_proportions"),
-               plotOutput("predictor_samples"),
-               h4("Select predictors for upscaling"),
-               uiOutput("predictor_list"),
-               numericInput("pre_event_CF", "Pre-event capacity factor (%)", value=0),
-               textOutput("dataset_CF"),
-               actionButton("upscale_disconnections", "Upscale"),
-               textOutput("upsc_mwp_loss"),
-               textOutput("upsc_mw_loss"),
-               textOutput("upsc_perc_loss"),
-               actionButton("calc_boot_CI", "Calculate confidence interval"),
-               textOutput("upsc_CI"),
-               h4("Percentage bounds "), # TODO Add calculated value
-               actionButton("export_upscaled_results", "Export results to csv")
+             sidebarLayout(
+               sidebarPanel(
+                 h4("Evaluate predictors"),
+                 uiOutput("predictor_to_visualise"),
+                 tags$hr(),
+                 h4("Set inputs for upscaling"),
+                 uiOutput("predictor_list"),
+                 numericInput("pre_event_CF", "Pre-event capacity factor (%)", value=0),
+                 textOutput("dataset_CF"),
+                 actionButton("upscale_disconnections", "Upscale"),
+                 textOutput("upsc_mwp_loss"),
+                 textOutput("upsc_mw_loss"),
+                 textOutput("upsc_perc_loss"),
+                 actionButton("calc_boot_CI", "Calculate confidence interval"),
+                 textOutput("upsc_CI"),
+                 h4("Percentage bounds "), # TODO Add calculated value
+                 uiOutput("save_glm_upscaled_results"),
+                 #actionButton("export_upscaled_results", "Export results to csv")
+               ),
+               mainPanel(
+                 plotlyOutput("predictor_disconnections"),
+                 plotlyOutput("predictor_proportions"),
+                 plotlyOutput("predictor_samples")
+                )
              )
     ),
     tabPanel("Settings", fluid=TRUE, 
@@ -809,8 +816,8 @@ server <- function(input,output,session){
       }
     }
     
-    output$dataset_CF <- renderText({paste("Dataset capacity factor (%): ", 
-                                           sprintf("%0.2f", v$pre_event_performance_factor*100))})
+    output$dataset_CF <- renderText({paste("Note: dataset capacity factor at pre-event interval is ", 
+                                           sprintf("%0.2f", v$pre_event_performance_factor*100),"%")})
     # Create buttons in Upscaling tab
     if ("grouped_install_data" %in% names(v)) {
       upscale_choices <- list("Manufacturer" = "manufacturer", "Standard Version" = "Standard_Version", 
@@ -822,7 +829,8 @@ server <- function(input,output,session){
                                                             label = strong("Predictor to visualise:"),
                                                             choices = upscale_choices,
                                                             selected = "manufacturer", inline = TRUE)})
-    output$predictor_list <- renderUI({checkboxGroupInput("predictor_list", "", choices = upscale_choices)})
+    output$predictor_list <- renderUI({checkboxGroupInput("predictor_list", "Select predictors for upscaling",
+                                                          choices = upscale_choices)})
 
     no_grouping <- check_grouping(settings)
 
@@ -1675,14 +1683,18 @@ server <- function(input,output,session){
     output$upsc_mwp_loss <- renderText({paste("Upscaled MWp loss: ", sprintf("%0.0f", disc_rates$kwp_loss/1000))})
     output$upsc_mw_loss <- renderText({paste("Upscaled MW loss: ", sprintf("%0.0f", disc_rates$kw_loss/1000))})
     output$upsc_perc_loss <- renderText({paste("Disconnection percentage (%): ",
-                                               sprintf("%0.1f", disc_rates$perc_loss))})
+                                               sprintf("%0.1f", disc_rates$perc_loss*100))})
+    output$save_glm_upscaled_results <- renderUI({
+      shinySaveButton("save_glm_upscaled_results", "Export results to csv", "Save file as ...",
+                      filetype=list(xlsx="csv"))
+    })
   })
   
   # Run the bootstrap confidence interval calculation
   observeEvent(input$calc_boot_CI, {
     # TODO
     boot_CI <- v$upscaler$run_bootstrap_CI(5, 1000)
-    output$upsc_CI <- renderText({sprintf("Bounds for MWp loss: lb %0f, ub %0.0f", boot_CI$lower_bound_perc/1000, 
+    output$upsc_CI <- renderText({sprintf("Bounds for MWp loss: lb %0.0f, ub %0.0f", boot_CI$lower_bound_perc/1000, 
                                           boot_CI$upper_bound_perc/1000)})
   })
   
@@ -1697,10 +1709,20 @@ server <- function(input,output,session){
       v$upscaler <- DisconnectionUpscaler$new(v$circuit_summary, v$manufacturer_install_data, input$event_date,
                                               input$region_to_load)
     }
-    plots <- v$upscaler$make_plots(input$predictor_to_visualise)
-    output$predictor_disconnections <- renderPlot(plots$disc_plot)
-    output$predictor_proportions <- renderPlot(plots$bias_plot)
-    output$predictor_samples <- renderPlot(plots$sample_count_plot)
+    plots <- v$upscaler$make_plots(input$predictor_to_visualise, type="plotly")
+    output$predictor_disconnections <- renderPlotly(plots$disc_plot)
+    output$predictor_proportions <- renderPlotly(plots$bias_plot)
+    output$predictor_samples <- renderPlotly(plots$sample_count_plot)
+  })
+  
+  # Save upscaled disconnections by unique predictor grouping
+  observeEvent(input$save_glm_upscaled_results,{
+    volumes <- c(home=getwd())
+    shinyFileSave(input, "save_glm_upscaled_results", roots=volumes, session=session)
+    fileinfo <- parseSavePath(volumes, input$save_glm_upscaled_results)
+    if (nrow(fileinfo) > 0) {
+      v$upscaler$save_upscaling_summary(as.character(fileinfo$datapath))
+    }
   })
   
 }

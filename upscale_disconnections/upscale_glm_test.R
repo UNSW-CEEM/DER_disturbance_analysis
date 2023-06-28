@@ -23,7 +23,7 @@ main <- function(){
   #manufacturer_capacitys <- get_manufacturer_capacitys(manufacturer_install_data, event_date, region)
   manufacturer_capacitys <- get_manufacturer_capacitys_variable(manufacturer_install_data, event_date, region, 
                                     replace(predictors_list, predictors_list %in% c('zone', 'distance'), 's_postcode'))
-  if ('zone' %in% predictors_list | 'distance' %in% predictors_list){
+  if ('zone' %in% predictors_list || 'distance' %in% predictors_list){
     postcode_data <- read.csv(file=POSTCODE_DATA_FILE, header=TRUE, stringsAsFactors = FALSE)
     postcode_data <- process_postcode_data(postcode_data)
     manufacturer_capacitys <- get_distance_from_event(manufacturer_capacitys, postcode_data, event_lat, event_long)
@@ -66,7 +66,7 @@ upscale_existing_method <- function(circuits_to_summarise, manufacturer_capacity
 
 # glm method
 upscale_new_glm_method <- function(circuits_to_summarise, manufacturer_capacitys, predictors_list, pre_event_CF, 
-                                   min_samples, file_to_save=NULL){
+                                   min_samples, file_to_save=NULL) {
   circuits_data <- circuits_to_summarise %>% select(Standard_Version, Grouping, manufacturer, s_postcode, 
                                                     response_category, distance, zone)
   disconnection_categories <- c("3 Drop to Zero", "4 Disconnect")
@@ -74,21 +74,35 @@ upscale_new_glm_method <- function(circuits_to_summarise, manufacturer_capacitys
   bad_categories <- c("6 Not enough data", "Undefined", "NA")
   circuits_data <- filter(circuits_data, !(response_category %in% bad_categories | is.na(response_category)))
   circuits_data <- circuits_data %>% mutate("disconnected" = ifelse(response_category %in% disconnection_categories,1,0))
-  get_glm_estimate(circuits_data, manufacturer_capacitys, predictors_list, min_samples, pre_event_CF,
-                   remove_others_from_model=FALSE, group_others_before_modelling=TRUE, file_to_save=file_to_save)
+  model_data <- get_glm_estimate_table(circuits_data, manufacturer_capacitys, predictors_list, min_samples,
+                                       remove_others_from_model=FALSE,
+                                       group_others_before_modelling=TRUE,
+                                       file_to_save=file_to_save
+                                       )
+  model_data$kwp_loss <- model_data$capacity * model_data$prediction
+  kwp_loss_estimate <- sum(model_data$kwp_loss)
+  perc_loss_estimate <- sum(model_data$kwp_loss) / sum(model_data$capacity)
+  if (!is.null(file_to_save)){
+    write.csv(model_data, file_to_save, row.names = FALSE)
+  }
+  results <- list(perc_loss=perc_loss_estimate, kwp_loss=kwp_loss_estimate)
+  
 }
 
-get_glm_estimate <- function(circuits_data, manufacturer_capacitys, predictors_list, pre_event_CF, min_samples=30,
-                             remove_others_from_model=FALSE, group_others_before_modelling=TRUE, 
-                             file_to_save=NULL){
+get_glm_estimate_table <- function(circuits_data, manufacturer_capacitys, predictors_list, min_samples = 30,
+                                   remove_others_from_model = FALSE, group_others_before_modelling = TRUE) {
   circuits_predictors_count <- circuits_data %>% group_by_at(predictors_list) %>% 
    summarise(disconnections = sum(disconnected), sample_size = length(response_category))
-  circuits_data <- merge(circuits_data, circuits_predictors_count, by=predictors_list, all = TRUE)
-  for (predictor in predictors_list){
+  circuits_data <- merge(circuits_data, circuits_predictors_count, by = predictors_list, all = TRUE)
+  for (predictor in predictors_list) {
     circuits_predictor_count <- circuits_data %>% group_by_at(predictor) %>% 
       summarise(disconnections = sum(disconnected),
                 sample_size = length(response_category))
-    circuits_data <- merge(circuits_data, circuits_predictor_count, by=predictor, suffixes=c("", paste("_",predictor,sep="")), all = TRUE)
+    circuits_data <- merge(circuits_data, circuits_predictor_count,
+                           by = predictor,
+                           suffixes = c("", paste("_", predictor, sep = "")),
+                           all = TRUE
+                           )
   }
 
   # TODO: want each category to have a min sample of 30 not each bucket -> currently just checks 'manufacturer'
@@ -109,17 +123,18 @@ get_glm_estimate <- function(circuits_data, manufacturer_capacitys, predictors_l
                                              is.na(manufacturer),
                                              "Other", manufacturer))
     
-    if('manufacturer' %in% predictors_list){
+    if('manufacturer' %in% predictors_list) {
       circuits_data <- mutate(circuits_data, manufacturer = ifelse(sample_size_manufacturer < min_samples, 
                                                                    "Other", manufacturer))
     }
   }
-  if('Standard_Version' %in% predictors_list){
-    if((sum(circuits_data$Standard_Version=="Transition") < min_samples) | (sum(circuits_data$Standard_Version=="AS4777.3:2005") < min_samples)){
+  if('Standard_Version' %in% predictors_list) {
+    if((sum(circuits_data$Standard_Version=="Transition") < min_samples) |
+       (sum(circuits_data$Standard_Version=="AS4777.3:2005") < min_samples)) {
       circuits_data["Standard_Version"][circuits_data["Standard_Version"] == "Transition"] <- "AS4777.3:2005"
       manufacturer_capacitys["Standard_Version"][manufacturer_capacitys["Standard_Version"] == "Transition"] <- "AS4777.3:2005"
     }
-    if(sum(circuits_data$Standard_Version=="AS4777.3:2005") < min_samples){
+    if(sum(circuits_data$Standard_Version=="AS4777.3:2005") < min_samples) {
       circuits_data["Standard_Version"][circuits_data["Standard_Version"] == "AS4777.3:2005"] <- "AS4777.2:2015"
       manufacturer_capacitys["Standard_Version"][manufacturer_capacitys["Standard_Version"] == "AS4777.3:2005"] <- "AS4777.2:2015"
     }
@@ -127,13 +142,14 @@ get_glm_estimate <- function(circuits_data, manufacturer_capacitys, predictors_l
       summarise(capacity=sum(capacity))
   }
   
-  model <- glm(reformulate(termlabels = predictors_list, response='disconnected'), circuits_data, 
-               family=binomial, na.action=na.exclude)
-  summary(model)
+  model <- glm(reformulate(termlabels = predictors_list, response = 'disconnected'), circuits_data, 
+    family = binomial,
+    na.action = na.exclude
+  )
   
   # Create a dataframe with all possible combinations of the selected predictors
   unique_factors_list <- list()
-  for(i in 1:length(predictors_list)) {
+  for (i in 1:length(predictors_list)) {
     unique_factors_list[[i]] <- unique(circuits_data[[predictors_list[i]]])
   }
   prediction_df <- expand.grid(unique_factors_list, stringsAsFactors = FALSE)
@@ -146,12 +162,12 @@ get_glm_estimate <- function(circuits_data, manufacturer_capacitys, predictors_l
   model_data <- merge(model_data, manufacturer_capacitys, by = predictors_list, all = TRUE)
   model_data <- merge(model_data, circuits_predictors_count, by = predictors_list, all = TRUE)
   
-  if('manufacturer' %in% predictors_list){
+  if ('manufacturer' %in% predictors_list) {
     model_data <- mutate(model_data, manufacturer = ifelse(is.na(capacity), 'Other', manufacturer))
     model_data <- mutate(model_data, manufacturer = ifelse(is.na(prediction), 'Other', manufacturer))
   }
   
-  if(!group_others_before_modelling){
+  if (!group_others_before_modelling) {
     model_data <- mutate(model_data, manufacturer = ifelse(is.na(sample_size) | sample_size < min_samples,
                                                            'Other', manufacturer))
   
@@ -176,13 +192,7 @@ get_glm_estimate <- function(circuits_data, manufacturer_capacitys, predictors_l
   # TODO: develop a better method for unseen categories than setting to 0 - is this ever reached?
   model_data <- mutate(model_data, prediction = ifelse(is.na(prediction), 0, prediction))
   
-  model_data$kwp_loss <- model_data$capacity * model_data$prediction
-  # kw_loss_estimate <- model_data$kwp_loss
-  kwp_loss_estimate <- sum(model_data$kwp_loss)
-  if (!is.null(file_to_save)){
-    write.csv(model_data, file_to_save, row.names = FALSE)
-  }
-  return(kwp_loss_estimate)
+  return(model_data)
 }
 
 if (!interactive()) {
