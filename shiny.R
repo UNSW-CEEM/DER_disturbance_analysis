@@ -914,17 +914,18 @@ server <- function(input,output,session){
         
         # adding a plot for disconnection percentages for each zone
         ## add the standard plotly colors
-        my_colors<-c('#d62728','#2ca02c','#D1E5F0','#FFC0CB', '#90EE90', '#F89880', '#1f77b4','#ff7f0e') 
+        my_colors<-c('#d62728','#2ca02c','#D1E500F0','#D1E5F0','#FFC0CB', '#90EE90', '#F89880', '#1f77b4','#ff7f0e') 
         
         output$DisconnectionPercentage <- renderPlotly({
-          plot_ly(v$disconnection_percentage, x=c("zone 1","zone 2","zone 3"), y=v$disconnection_percentage[,1],type="bar",name = 'Only Vmin<180V',marker = list(color = my_colors[1])) %>%
-            add_trace(y=~v$disconnection_percentage[,2],name = '180V<Vmin<200V',marker = list(color = my_colors[2])) %>%
-            add_trace(y=~v$disconnection_percentage[,3],name = '200V<Vmin<220V',marker = list(color = my_colors[3])) %>%
-            add_trace(y=~v$disconnection_percentage[,4],name = '220V<Vmin<240V',marker = list(color = my_colors[4])) %>%
-            add_trace(y=~v$disconnection_percentage[,5],name = '240V<Vmin<260V',marker = list(color = my_colors[5])) %>%
-            add_trace(y=~v$disconnection_percentage[,6],name = '260V<Vmin<265V',marker = list(color = my_colors[6])) %>%
-            add_trace(y=~v$disconnection_percentage[,7],name = 'Only Vmax>265V',marker = list(color = my_colors[7])) %>%
-            add_trace(y=~v$disconnection_percentage[,8],name = 'Both Vmin<180V & Vmax>265V',marker = list(color = my_colors[8])) %>%
+          plot_ly(v$disconnection_percentage, x=c("zone 1","zone 2","zone 3"), y=v$disconnection_percentage[,1],type="bar",name = 'Only Vmin<180V and not compliance with 2020 standards',marker = list(color = my_colors[1])) %>%
+            add_trace(y=~v$disconnection_percentage[,2],name = 'Only Vmin<180V and compliance with 2020 standards',marker = list(color = my_colors[2])) %>%
+            add_trace(y=~v$disconnection_percentage[,3],name = '180V<Vmin<200V',marker = list(color = my_colors[2])) %>%
+            add_trace(y=~v$disconnection_percentage[,4],name = '200V<Vmin<220V',marker = list(color = my_colors[3])) %>%
+            add_trace(y=~v$disconnection_percentage[,5],name = '220V<Vmin<240V',marker = list(color = my_colors[4])) %>%
+            add_trace(y=~v$disconnection_percentage[,6],name = '240V<Vmin<260V',marker = list(color = my_colors[5])) %>%
+            add_trace(y=~v$disconnection_percentage[,7],name = '260V<Vmin<265V',marker = list(color = my_colors[6])) %>%
+            add_trace(y=~v$disconnection_percentage[,8],name = 'Only Vmax>265V',marker = list(color = my_colors[7])) %>%
+            add_trace(y=~v$disconnection_percentage[,9],name = 'Both Vmin<180V & Vmax>265V',marker = list(color = my_colors[8])) %>%
             layout(yaxis = list(title = ' Disconnection/Drop to Zero Percentage (%))'),
                    xaxis = list(title = 'Zone categories'), barmode = 'stack')
         })
