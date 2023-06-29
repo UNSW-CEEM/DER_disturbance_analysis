@@ -30,16 +30,34 @@ required_packages <- c(
     # for `checkboxGroupButtons` (+ potentially more)
     "shinyWidgets",
 
-    # for `plotlyOutput`, `renderPlotly` and many more
-    "plotly",
+    # required for lubridate
+    "timechange",
 
     # for dates
     "lubridate",
+
+    # required for tidyr
+    "purrr",
 
     # for data manipulation
     "dplyr",
     "tidyr",
     "data.table",
+
+    # required for plotly
+    "colorspace",
+    "fansi",
+    "utf8",
+    "bit",
+    "bit64",
+    "processx",
+    "ps",
+    "tzdb",
+    "tibble",
+    "ggplot2",
+
+    # for `plotlyOutput`, `renderPlotly` and many more
+    "plotly",
 
     # TODO: can be removed
     # "shinycssloaders",
@@ -71,6 +89,22 @@ required_packages <- c(
     # for `assert_that`
     "assertthat",
 
+    # required for geosphere
+    # requires gdal to be installed
+    # requires netcdf to be installed
+    # requires mariadb to be installed
+    "e1071",
+    "classInt",
+    "png",
+    "ncdf4",
+    "terra",
+    "uuid",
+    "raster",
+    "spatstat.utils",
+    "sf",
+    "sp",
+    "proxy",
+
     # for `distHaversine`
     # requires gdal to be installed
     # legacy packages underpinning package will retire shortly
@@ -82,7 +116,6 @@ required_packages <- c(
     "units",
 
     # required for swfscMisc
-    "sf",
     "yaml",
 
     # for `circle.polygon` (+ potentially more)
@@ -120,13 +153,17 @@ required_packages <- c(
     # for `test_that` and other testing functionality
     "testthat")
 
+if (!"rlang" %in% installed.packages()) {
+    install.packages("rlang")
+}
 for (package in required_packages) {
-    if (!package %in% installed.packages()) {
-        if (!"rlang" %in% installed.packages()) {
-            install.packages("rlang")
-        }
-        print(paste0("Package ", package, " is not installed."))
-        install.packages(package, dependencies = TRUE)
+    if (!require(package, character.only = TRUE)) {
+        print(package)
+        ## install.packages(package, dependencies = TRUE)
     }
-    require(package)
+##     if (!require(package, character.only = TRUE)) {
+##         print(paste0("Package ", package, " is not installed."))
+##         install.packages(package, dependencies = TRUE)
+##     }
+##     require(sprintf("%s", package))
 }
