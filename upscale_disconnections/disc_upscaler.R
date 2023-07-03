@@ -38,17 +38,30 @@ DisconnectionUpscaler <- R6Class("DisconnectionUpscaler",
       }
       #TODO - also need to validate that predictors work with dataset e.g. enough samples
     },
-    assess_predictors = function(predictor) {
+    assess_predictors = function(predictor, min_sample = 30) {
       # Perform an assessment to determine which predictors to recommend
       predictor_data <- self$get_predictor_summary(predictor)
-      disc_diff <- max(predictor_data$disc_rate) - min(predictor_data$disc_rate)
+      disc_diff <- max(predictor_data$disc_rate, na.rm = TRUE) - min(predictor_data$disc_rate, na.rm = TRUE)
       max_prop_diff <- max(abs(predictor_data$sample_prop - predictor_data$capacity_prop))
-      predictor_data$samples_gt_30 <- predictor_data$sample_size > 30
+      predictor_data$samples_gt_30 <- predictor_data$sample_size > min_sample
       num_categories <- dim(predictor_data)[1]
       categories_with_30_samples <- sum(predictor_data$samples_gt_30)
-      #TODO: what to return? Set of numerical outputs, binaries or string summary
+      if (disc_diff > 0.05 &&
+          max_prop_diff > 0.05 &&
+          categories_with_30_samples/num_categories >= 0.4 &&
+          categories_with_30_samples > 1) {
+        outcome <- "good"
+      } else {
+        outcome <- "bad"
+      }
+      return(sprintf("For predictor %s, the biggest difference between disconnection rates was %0.0f%%.
+                     The largest difference between sample proportion and fleet proportion was %0.0f%%.
+                     %0.0f out of %0.0f categories had %s samples.\nBased on this assessment, this is a %s predictor
+                     to use for upscaling.", predictor, disc_diff * 100, max_prop_diff * 100,
+                     categories_with_30_samples, num_categories, min_sample, outcome)
+            )
     },
-    get_installed_capacity_by_grouping = function(){
+    get_installed_capacity_by_grouping = function() {
       # Replaces "get_manufacturer_capacitys()"
       cer_install_data <- self$cer_install_data
       cer_install_data <- filter(cer_install_data, s_state == self$region)
@@ -99,7 +112,7 @@ DisconnectionUpscaler <- R6Class("DisconnectionUpscaler",
         mutate("disconnected" = ifelse(response_category %in% disconnection_categories, 1, 0))
       return(circuits_data)
     },
-    upscale_glm_method = function(pre_event_CF, min_sample=30) {
+    upscale_glm_method = function(pre_event_CF, min_sample = 30) {
       # Run GLM upscaling method
       if (is.null(self$predictor_list)) {
         stop("Predictors must be set before running this upscaling method")
@@ -113,9 +126,14 @@ DisconnectionUpscaler <- R6Class("DisconnectionUpscaler",
                                             )
       glm_results$kwp_loss <- glm_results$capacity * glm_results$prediction
       self$glm_results <- glm_results
-      losses$kwp_loss_estimate <- sum(glm_results$kwp_loss)
+      if (is.na(sum(glm_results$prediction))) {
+        losses$msg <- sprintf("Not all categories were able to be predicted. %0.0f MWp was excluded from total. 
+        Export summary for details.", sum(glm_results$capacity * is.na(glm_results$kwp_loss))/1000)
+      }
+      losses$kwp_loss_estimate <- sum(glm_results$kwp_loss, na.rm = TRUE)
       losses$kw_loss_estimate <- losses$kwp_loss_estimate * pre_event_CF / 100
-      losses$perc_loss_estimate <- sum(glm_results$kwp_loss) / sum(glm_results$capacity)
+      losses$perc_loss_estimate <- sum(glm_results$kwp_loss, na.rm = TRUE) /
+        sum(glm_results$capacity * !is.na(glm_results$kwp_loss))
       return(losses)
     },
     upscale_tranche_method = function(pre_event_CF, min_sample=30) {
@@ -221,15 +239,15 @@ DisconnectionUpscaler <- R6Class("DisconnectionUpscaler",
         dev.off()
       } else if (type == "plotly") {
         # 1. Disconnection rates between categories
-        plots$disc_plot <- plot_ly(predictor_data, x = predictor_data[[1]], y = ~disc_rate*100, type = "bar",
-                                   texttemplate = '%{y:1.1f}%', textposition='auto') %>%
+        plots$disc_plot <- plot_ly(predictor_data, x = as.factor(predictor_data[[1]]), y = ~disc_rate*100, type = "bar",
+                                   texttemplate = '%{y:1.1f}%', textposition = 'outside') %>%
           layout(title = "Proportion of each category observed to disconnect",
                  yaxis = list(title = 'Proportion of sites that disconnected', ticksuffix = "%"),
-                 xaxis = list(title = predictor)
+                 xaxis = list(title = predictor, range = list(-0.5, length(predictor_data[[1]]) - 0.5))
           )
         # 2. Sample and CER proportions in each category
         plots$bias_plot <- plot_ly(predictor_data, x = predictor_data[[1]], y = ~sample_prop*100, type = "bar",
-                                   texttemplate = '%{y:1.1f}%', textposition = 'auto', name = "Sample data") %>%
+                                   texttemplate = '%{y:1.1f}%', textposition = 'outside', name = "Sample data") %>%
           add_trace(x = predictor_data[[1]], y = ~capacity_prop*100, name = "CER data") %>%
           layout(title = "Proportion of each category within sample and CER",
                  yaxis = list(title = 'Proportion of sites', ticksuffix = "%"),
@@ -237,7 +255,7 @@ DisconnectionUpscaler <- R6Class("DisconnectionUpscaler",
           )
         # 3. Number of samples in each category
         plots$sample_count_plot <- plot_ly(predictor_data, x = predictor_data[[1]], y = ~sample_size, type = "bar",
-                                           text = ~sample_size, textposition = 'auto') %>%
+                                           text = ~sample_size, textposition = 'outside') %>%
           layout(shapes = list(hline(30, color = 'grey'))) %>%
           layout(title = "Number of samples in each category",
                  yaxis = list(title = 'Number of sites'),

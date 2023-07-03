@@ -125,14 +125,6 @@ ui <- fluidPage(
           HTML("<br>"),
           uiOutput("save_ideal_response_downsampled_2020"),
           HTML("<br>"),
-          uiOutput("save_manufacturer_disconnection_summary"),
-          HTML("<br>"),
-          uiOutput("save_manufacturer_disconnection_summary_with_separate_ufls_counts"),
-          HTML("<br>"),
-          uiOutput("save_upscaled_disconnection_summary"),
-          HTML("<br>"),
-          uiOutput("save_upscaled_disconnection_summary_with_separate_ufls_counts"),
-          HTML("<br>"),
           uiOutput("save_voltage_excursion_summary"),
           HTML("<br><br>"),
           plotlyOutput(outputId="NormPower"),
@@ -183,20 +175,31 @@ ui <- fluidPage(
                sidebarPanel(
                  h4("Evaluate predictors"),
                  uiOutput("predictor_to_visualise"),
+                 textOutput("predictor_assessment"),
                  tags$hr(),
                  h4("Set inputs for upscaling"),
                  uiOutput("predictor_list"),
-                 numericInput("pre_event_CF", "Pre-event capacity factor (%)", value=0),
+                 uiOutput("pre_event_CF"),
                  textOutput("dataset_CF"),
-                 actionButton("upscale_disconnections", "Upscale"),
+                 uiOutput("upscale_disconnections"),
+                 uiOutput("calc_boot_CI"),
+                 tags$hr(),
+                 h3("Results"),
                  textOutput("upsc_mwp_loss"),
                  textOutput("upsc_mw_loss"),
                  textOutput("upsc_perc_loss"),
-                 actionButton("calc_boot_CI", "Calculate confidence interval"),
                  textOutput("upsc_CI"),
                  h4("Percentage bounds "), # TODO Add calculated value
                  uiOutput("save_glm_upscaled_results"),
-                 #actionButton("export_upscaled_results", "Export results to csv")
+                 tags$hr(style = "border-top: 3px double #000000;"),
+                 h4("Original 'tranche' upscaling"),
+                 uiOutput("save_manufacturer_disconnection_summary"),
+                 HTML("<br>"),
+                 uiOutput("save_manufacturer_disconnection_summary_with_separate_ufls_counts"),
+                 HTML("<br>"),
+                 uiOutput("save_upscaled_disconnection_summary"),
+                 HTML("<br>"),
+                 uiOutput("save_upscaled_disconnection_summary_with_separate_ufls_counts")
                ),
                mainPanel(
                  plotlyOutput("predictor_disconnections"),
@@ -831,6 +834,8 @@ server <- function(input,output,session){
                                                             selected = "manufacturer", inline = TRUE)})
     output$predictor_list <- renderUI({checkboxGroupInput("predictor_list", "Select predictors for upscaling",
                                                           choices = upscale_choices)})
+    output$pre_event_CF <- renderUI({numericInput("pre_event_CF", "Pre-event capacity factor (%)", value=0)})
+    output$upscale_disconnections <- renderUI({actionButton("upscale_disconnections", "Upscale")})
 
     no_grouping <- check_grouping(settings)
 
@@ -1678,16 +1683,21 @@ server <- function(input,output,session){
   # Run the disconnection upscaling
   observeEvent(input$upscale_disconnections, {
    # TODO
-    v$upscaler$set_predictors(input$predictor_list)
-    disc_rates <- v$upscaler$upscale_glm_method(input$pre_event_CF, min_sample=5)
-    output$upsc_mwp_loss <- renderText({paste("Upscaled MWp loss: ", sprintf("%0.0f", disc_rates$kwp_loss/1000))})
-    output$upsc_mw_loss <- renderText({paste("Upscaled MW loss: ", sprintf("%0.0f", disc_rates$kw_loss/1000))})
-    output$upsc_perc_loss <- renderText({paste("Disconnection percentage (%): ",
-                                               sprintf("%0.1f", disc_rates$perc_loss*100))})
-    output$save_glm_upscaled_results <- renderUI({
-      shinySaveButton("save_glm_upscaled_results", "Export results to csv", "Save file as ...",
-                      filetype=list(xlsx="csv"))
-    })
+    if (!is.null(input$predictor_list)) {
+      v$upscaler$set_predictors(input$predictor_list)
+      disc_rates <- v$upscaler$upscale_glm_method(input$pre_event_CF, min_sample=5)
+      output$upsc_mwp_loss <- renderText({paste("Upscaled MWp loss: ", sprintf("%0.0f", disc_rates$kwp_loss/1000))})
+      output$upsc_mw_loss <- renderText({paste("Upscaled MW loss: ", sprintf("%0.0f", disc_rates$kw_loss/1000))})
+      output$upsc_perc_loss <- renderText({paste("Disconnection percentage (%): ",
+                                                 sprintf("%0.1f", disc_rates$perc_loss*100))})
+      output$calc_boot_CI <- renderUI({actionButton("calc_boot_CI", "Calculate confidence interval")})
+      output$save_glm_upscaled_results <- renderUI({
+        shinySaveButton("save_glm_upscaled_results", "Export results to csv", "Save file as ...",
+                        filetype=list(xlsx="csv"))
+      })
+    } else {
+      shinyalert("Oops", "Select at least one predictor before upscaling.")
+    }
   })
   
   # Run the bootstrap confidence interval calculation
@@ -1713,6 +1723,7 @@ server <- function(input,output,session){
     output$predictor_disconnections <- renderPlotly(plots$disc_plot)
     output$predictor_proportions <- renderPlotly(plots$bias_plot)
     output$predictor_samples <- renderPlotly(plots$sample_count_plot)
+    output$predictor_assessment <- renderText(v$upscaler$assess_predictors(input$predictor_to_visualise))
   })
   
   # Save upscaled disconnections by unique predictor grouping
