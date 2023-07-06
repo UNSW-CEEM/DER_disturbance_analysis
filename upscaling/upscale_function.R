@@ -21,7 +21,7 @@ calc_site_performance_factors <- function(performance_data) {
   performace_data_p <- group_by(performance_data, ts, site_id, clean)
   performace_data_p <- summarise(performace_data_p , site_performance_factor=sum(power_kW))
   performace_data_p <- as.data.frame(performace_data_p)
-  performance_data <- left_join(performance_data, performace_data_p, on=c('site_id', 'ts', 'clean'))
+  performance_data <- left_join(performance_data, performace_data_p, by=c('site_id', 'ts', 'clean'))
   performance_data <- mutate(performance_data, site_performance_factor=(site_performance_factor/sum_ac))
   return(performance_data)
 }
