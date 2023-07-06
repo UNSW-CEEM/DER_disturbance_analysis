@@ -106,4 +106,3 @@ testthat::test_that("Test get_max_circuit_powers complex case",{
                                  stringsAsFactors = FALSE)
   testthat::expect_equal(max_powers, expected_results)
 })
-
