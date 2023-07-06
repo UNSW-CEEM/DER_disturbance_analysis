@@ -27,13 +27,13 @@ DBInterface <- R6::R6Class("DBInterface",
       }
       con <- RSQLite::dbConnect(RSQLite::SQLite(), db_path_name)
       RSQLite::dbDisconnect(con)
-      self$db_path_name = db_path_name
+      self$db_path_name <- db_path_name
     },
     connect_to_existing_database = function(db_path_name, check_tables_have_expected_columns=TRUE) {
       if (!file.exists(db_path_name)) {
         stop("Specified database file not found. Please check the filepath provided.")
       }
-      self$db_path_name = db_path_name
+      self$db_path_name <- db_path_name
       if (check_tables_have_expected_columns) {
         self$check_tables_have_expected_columns()
       }
@@ -469,8 +469,9 @@ DBInterface <- R6::R6Class("DBInterface",
         end_chunk_index <- self$calc_end_chunk_index(length_ids, max_chunk_size, start_chunk_index)
         sites_in_chunk <- self$fiter_dataframe_by_start_and_end_index(site_details, start_chunk_index, end_chunk_index)
         circuits <- filter(circuit_details, site_id %in% sites_in_chunk$site_id)
-        if (start_chunk_index > length_ids) {circuits <- ids[0:0,,drop=FALSE]}
-
+        if (start_chunk_index > length_ids) {
+            circuits <- ids[0:0, , drop=FALSE]
+        }
       }
 
       self$create_site_details_cleaned_table()
@@ -587,10 +588,10 @@ DBInterface <- R6::R6Class("DBInterface",
       return(time_series)
     },
     get_filtered_time_series_data = function(state, duration, start_time, end_time) {
-      circuit_details = self$get_circuit_details_raw()
-      site_details = self$get_site_details_raw()
-      site_in_state = filter(site_details, s_state==state)
-      circuit_in_state = filter(circuit_details, site_id %in% site_in_state$site_id)
+      circuit_details <- self$get_circuit_details_raw()
+      site_details <- self$get_site_details_raw()
+      site_in_state <- filter(site_details, s_state==state)
+      circuit_in_state <- filter(circuit_details, site_id %in% site_in_state$site_id)
       # TODO: check validity of e != ''
       query <- "select ts, c_id, d, e, v, vmin, vmax, vmean, f, fmin, fmax from timeseries
                         where c_id in (select c_id from circuit_in_state)
@@ -605,10 +606,10 @@ DBInterface <- R6::R6Class("DBInterface",
       return(time_series)
     },
     get_filtered_time_series_data_all_durations = function(state, start_time, end_time) {
-      circuit_details = self$get_circuit_details_raw()
-      site_details = self$get_site_details_raw()
-      site_in_state = filter(site_details, s_state==state)
-      circuit_in_state = filter(circuit_details, site_id %in% site_in_state$site_id)
+      circuit_details <- self$get_circuit_details_raw()
+      site_details <- self$get_site_details_raw()
+      site_in_state <- filter(site_details, s_state==state)
+      circuit_in_state <- filter(circuit_details, site_id %in% site_in_state$site_id)
       query <- "select ts, c_id, d, e, v, f from timeseries
                         where c_id in (select c_id from circuit_in_state)
                         and e != ''
@@ -620,10 +621,10 @@ DBInterface <- R6::R6Class("DBInterface",
       return(time_series)
     },
     get_max_circuit_powers = function(state) {
-      circuit_details = self$get_circuit_details_raw()
-      site_details = self$get_site_details_raw()
-      site_in_state = filter(site_details, s_state==state)
-      circuit_in_state = filter(circuit_details, site_id %in% site_in_state$site_id)
+      circuit_details <- self$get_circuit_details_raw()
+      site_details <- self$get_site_details_raw()
+      site_in_state <- filter(site_details, s_state==state)
+      circuit_in_state <- filter(circuit_details, site_id %in% site_in_state$site_id)
       query <- "select c.c_id as c_id, max(c.e * c.polarity / (c.d * 1000)) as max_power from
                     ((select c_id, d, e from timeseries
                             where c_id in (select c_id from circuit_in_state)) a
@@ -663,11 +664,13 @@ DBInterface <- R6::R6Class("DBInterface",
     },
     calc_end_chunk_index = function(number_of_ids, max_chunk_size, start_chunk_index) {
       end_chunk_index <- start_chunk_index + max_chunk_size - 1
-      if (end_chunk_index > number_of_ids) {end_chunk_index <- number_of_ids}
+      if (end_chunk_index > number_of_ids) {
+          end_chunk_index <- number_of_ids
+      }
       return(end_chunk_index)
     },
     fiter_dataframe_by_start_and_end_index = function(df, start_index, end_index) {
-      df <- df[start_index:end_index,,drop=F]
+      df <- df[start_index:end_index, , drop=FALSE]
       return(df)
     },
     clean_duration_values = function(time_series) {
