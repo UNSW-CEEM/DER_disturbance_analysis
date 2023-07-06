@@ -1,10 +1,17 @@
 app_logger <- "shinyapp"
 source("load_tool_environment.R")
+unloadNamespace("shinyFiles")
+unloadNamespace("shinyTime")
+unloadNamespace("shinyWidgets")
+unloadNamespace("shiny")
+require("shiny")
+require("shinyFiles")
+require("shinyTime")
+require("shinyWidgets")
 
 # set up logging at info level
 basicConfig(level = 20)
 addHandler(writeToFile, logger=app_logger, file="logging/applogs.log")
-
 
 ui <- fluidPage(
   tags$head(
@@ -29,7 +36,7 @@ ui <- fluidPage(
                     value = "C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/data/20201203/20201203.db"
           ),
           fluidRow(
-            div(style="display:inline-block", shinyFilesButton("choose_database", "Choose File", 
+            div(style="display:inline-block", shinyFilesButton("choose_database", "Choose File",
                                                                "Select database file ...", multiple = FALSE)),
             div(style="display:inline-block", actionButton("load_file_from_settings", "Load from settings file")),
             div(style="display:inline-block", actionButton("connect_to_database", "Connect"))),
@@ -37,11 +44,11 @@ ui <- fluidPage(
           uiOutput("load_date"),
           uiOutput("load_time_start"),
           uiOutput("load_time_end"),
-          radioButtons("region_to_load", label = strong("Regions"), 
+          radioButtons("region_to_load", label = strong("Regions"),
                        choices = list("QLD","NSW", "VIC", "SA", "TAS", "WA"), selected = "TAS", inline = TRUE),
           uiOutput("duration"),
           HTML("<br><br>"),
-          textInput("frequency_data", "Frequency data file", 
+          textInput("frequency_data", "Frequency data file",
                     value = ""
           ),
           shinyFilesButton("choose_frequency_data", "Choose File", "Select fequency data file ...", multiple = FALSE),
@@ -66,8 +73,8 @@ ui <- fluidPage(
           uiOutput("offsets"),
           tags$hr(),
           h4("Chart specific filters"),
-          materialSwitch("norm_power_filter_off_at_t0", 
-                         label = strong("Normalised power chart: filter out off at t0 circuits:"), 
+          materialSwitch("norm_power_filter_off_at_t0",
+                         label = strong("Normalised power chart: filter out off at t0 circuits:"),
                          status = "primary", value = TRUE),
           tags$hr(),
           h4("Grouping Categories"),
@@ -85,9 +92,9 @@ ui <- fluidPage(
           materialSwitch("v_excursion_agg", label=strong("Voltage excursion:"), status="primary", value=FALSE),
           tags$hr(),
           h4("Additional Processing"),
-          radioButtons("confidence_category", label = strong("Grouping category to calculate confidence interval for, 
-                                                              must be a Grouping Category"), 
-                       choices = list("none", "response_category", "compliance_status", "compliance_status_2020", 
+          radioButtons("confidence_category", label = strong("Grouping category to calculate confidence interval for,
+                                                              must be a Grouping Category"),
+                       choices = list("none", "response_category", "compliance_status", "compliance_status_2020",
                                       "reconnection_compliance_status"), selected = "none", inline = TRUE),
           materialSwitch(inputId="raw_upscale", label=strong("Upscaled Data"), status="primary", right=FALSE),
           tags$hr(),
@@ -153,7 +160,7 @@ ui <- fluidPage(
         )
       )
     ),
-    tabPanel("Data Cleaning", fluid=TRUE, 
+    tabPanel("Data Cleaning", fluid=TRUE,
       mainPanel(
         plotlyOutput("site_plot"),
         h4("Editing the tables below changes the connected database, to use these changes in the analysis data must
@@ -164,7 +171,7 @@ ui <- fluidPage(
         DTOutput('circuit_details_editor')
       )
     ),
-    tabPanel("Manual compliance", fluid=TRUE, 
+    tabPanel("Manual compliance", fluid=TRUE,
      mainPanel(
        plotlyOutput("compliance_plot"),
        h4("Editing the compliance value changes the connected database, to use these changes in the analysis data must
@@ -178,70 +185,70 @@ ui <- fluidPage(
          div(style="display:inline-block", uiOutput("get_next_c_id")))
      )
     ),
-    tabPanel("Settings", fluid=TRUE, 
+    tabPanel("Settings", fluid=TRUE,
              sidebarLayout(
                sidebarPanel(id="side_panel",
                             h3("Droop response compliance settings"),
-                            numericInput("compliance_threshold", 
-                                         label = strong('Compliance threshold'), 
+                            numericInput("compliance_threshold",
+                                         label = strong('Compliance threshold'),
                                          value = 0.5, max=1, min=0),
-                            numericInput("start_buffer", 
-                                         label = strong('Start buffer, allowed time to reach compliance threshold, in seconds.'), 
+                            numericInput("start_buffer",
+                                         label = strong('Start buffer, allowed time to reach compliance threshold, in seconds.'),
                                          value = 60),
-                            numericInput("end_buffer", 
-                                         label = strong('End buffer, allowed time for system ending response early, in seconds.'), 
+                            numericInput("end_buffer",
+                                         label = strong('End buffer, allowed time for system ending response early, in seconds.'),
                                          value = 60),
-                            numericInput("end_buffer_responding", 
-                                         label = strong('Response time, window length for systems to be considered Non Compliant Responding, in seconds.'), 
+                            numericInput("end_buffer_responding",
+                                         label = strong('Response time, window length for systems to be considered Non Compliant Responding, in seconds.'),
                                          value = 120),
                             h3("Over-frequency droop response compliance settings AS4777.2:2020"),
-                            numericInput("compliance_threshold_2020", 
-                                         label = strong('Compliance threshold'), 
+                            numericInput("compliance_threshold_2020",
+                                         label = strong('Compliance threshold'),
                                          value = 0.5, max=1, min=0),
-                            numericInput("start_buffer_2020", 
-                                         label = strong('Start buffer, allowed time to reach compliance threshold, in seconds.'), 
+                            numericInput("start_buffer_2020",
+                                         label = strong('Start buffer, allowed time to reach compliance threshold, in seconds.'),
                                          value = 10),
-                            numericInput("end_buffer_2020", 
-                                         label = strong('End buffer, allowed time for system ending response early, in seconds. 
-                                                        Note, AS4777.2:2020 ideal response profile is calculated separately to the 2015 response profile.'), 
+                            numericInput("end_buffer_2020",
+                                         label = strong('End buffer, allowed time for system ending response early, in seconds.
+                                                        Note, AS4777.2:2020 ideal response profile is calculated separately to the 2015 response profile.'),
                                          value = 0),
-                            numericInput("end_buffer_responding_2020", 
-                                         label = strong('Response time, window length for systems to be considered Non Compliant Responding, in seconds.'), 
+                            numericInput("end_buffer_responding_2020",
+                                         label = strong('Response time, window length for systems to be considered Non Compliant Responding, in seconds.'),
                                          value = 120),
                             h3("Reconnection compliance settings"),
-                            numericInput("reconnection_threshold", 
-                                         label = strong('The level at which a circuit is considered to have reconnected.'), 
+                            numericInput("reconnection_threshold",
+                                         label = strong('The level at which a circuit is considered to have reconnected.'),
                                          value = 0.95, max = 1, min = 0),
-                            numericInput("ramp_rate_threshold", 
+                            numericInput("ramp_rate_threshold",
                                          label = strong('Reconnection ramp rate threshold for assessing compliance, in pct/min.'), value = 0.333),
-                            numericInput("total_ramp_threshold_for_compliance", 
+                            numericInput("total_ramp_threshold_for_compliance",
                                          label = strong('Total ramp threshold for compliance, in pct'), value = 0.125),
-                            numericInput("total_ramp_threshold_for_non_compliance", 
+                            numericInput("total_ramp_threshold_for_non_compliance",
                                          label = strong('Toatl ramp threshold for non compliance, in pct'), value = 0.25),
-                            numericInput("ramp_rate_change_resource_limit_threshold", 
+                            numericInput("ramp_rate_change_resource_limit_threshold",
                                          label = strong('Ramp rate change threshold for detecting resource limitation, in pct/min'), value = -0.1),
                             h3("UFLS settings"),
-                            numericInput("pre_event_ufls_window_length", 
-                                         label = strong('Pre-event UFLS Window: The time window before the 
-                                                         event used to determine if the connection with a 
-                                                         device is stable enough to determine its UFLS status, 
-                                                         in minutes.'), 
+                            numericInput("pre_event_ufls_window_length",
+                                         label = strong('Pre-event UFLS Window: The time window before the
+                                                         event used to determine if the connection with a
+                                                         device is stable enough to determine its UFLS status,
+                                                         in minutes.'),
                                          value = 5),
-                            numericInput("pre_event_ufls_stability_threshold", 
-                                         label = strong('The fraction of the Pre-event UFLS Window that needs to be 
+                            numericInput("pre_event_ufls_stability_threshold",
+                                         label = strong('The fraction of the Pre-event UFLS Window that needs to be
                                                          sampled for the connection with a device to be considered
-                                                         stable enough to determine its UFLS status.'), 
+                                                         stable enough to determine its UFLS status.'),
                                          value = 0.6, max = 1, min = 0),
                             h3("Misc settings"),
-                            numericInput("disconnecting_threshold", 
+                            numericInput("disconnecting_threshold",
                                          label = strong('Disconnecting threshold, level below which circuit is considered to
                                                       have disconnected. Note that this value is used in the compliance
                                                         calculations but NOT the response categorisation.'),
                                          value = 0.05, max = 1, min = 0),
-                            numericInput("NED_threshold", 
-                                         label = strong('Minimum proportion of sampled seconds allowed within post event interval to not have a 6 Not enough data response'), 
+                            numericInput("NED_threshold",
+                                         label = strong('Minimum proportion of sampled seconds allowed within post event interval to not have a 6 Not enough data response'),
                                          value = 0.8, max = 1, min = 0),
-                            materialSwitch("exclude_solar_edge", label = strong("Exclude solar edge from reconnection summary."), 
+                            materialSwitch("exclude_solar_edge", label = strong("Exclude solar edge from reconnection summary."),
                                            status = "primary", value = FALSE),
                             materialSwitch("exclude_islanded_circuits", label = strong("Exclude islanded circuits from figures and results"),
                                            status = "primary", value = TRUE),
@@ -266,9 +273,9 @@ reset_sidebar <- function(input, output, session, stringsAsFactors) {
   output$StdVersion <- renderUI({})
   output$responses <- renderUI({})
   output$zones <- renderUI({})
-  output$compliance <- renderUI({}) 
+  output$compliance <- renderUI({})
   output$compliance_2020 <- renderUI({})
-  output$reconnection_compliance <- renderUI({}) 
+  output$reconnection_compliance <- renderUI({})
   output$offsets <- renderUI({})
   shinyjs::hide("norm_power_filter_off_at_t0")
   shinyjs::hide("standard_agg")
@@ -328,8 +335,8 @@ reset_data_cleaning_tab <- function(input, output, session, stringsAsFactors) {
 
 server <- function(input,output,session) {
   # Create radio button dyamically so label can be updated
-  output$duration <- renderUI({radioButtons("duration", label=strong("Sampled duration (seconds), select one."), 
-                                            choices = list("5","30","60"), 
+  output$duration <- renderUI({radioButtons("duration", label=strong("Sampled duration (seconds), select one."),
+                                            choices = list("5","30","60"),
                                             selected = "60", inline = TRUE)})
   # Hide these inputs by default, they are shown once data is loaded.
   hide("frequency_data")
@@ -446,7 +453,7 @@ server <- function(input,output,session) {
   zone_three_radius <- reactive({input$zone_three_radius})
   norm_power_filter_off_at_t0 <- reactive({input$norm_power_filter_off_at_t0})
   confidence_category <- reactive({input$confidence_category})
-  
+
   # Values from settings tab
   compliance_threshold <- reactive({input$compliance_threshold})
   start_buffer <- reactive({input$start_buffer})
@@ -468,9 +475,9 @@ server <- function(input,output,session) {
   disconnecting_threshold <- reactive({input$disconnecting_threshold})
   exclude_solar_edge <- reactive({input$exclude_solar_edge})
   exclude_islanded_circuits <- reactive({input$exclude_islanded_circuits})
-  
-  
-  # Store the main data table in a reactive value so it is accessable outside 
+
+
+  # Store the main data table in a reactive value so it is accessable outside
   # the observe event that creates it.
   v <- reactiveValues(combined_data = data.frame(),
                       combined_data_no_ac_filter = data.frame(),
@@ -499,10 +506,10 @@ server <- function(input,output,session) {
                       region_frequency = data.frame(),
                       trigger_update_manual_compliance_tab = FALSE
                       )
-  
+
   observeEvent(input$connect_to_database, {
     v$db <- DBInterface$new()
-    
+
     good_connection = FALSE
     tryCatch({
       v$db$connect_to_existing_database(database_name())
@@ -511,20 +518,20 @@ server <- function(input,output,session) {
       error =  function(cond) {
         shinyalert("An error occured while connecting to the database.", cond$message)
     })
-    
+
     if (good_connection) {
       min_timestamp <- v$db$get_min_timestamp()
       max_timestamp <- v$db$get_max_timestamp()
-      
+
       output$load_time_start <- renderUI({
-        timeInput("load_time_start", label = strong('Enter start time'), 
+        timeInput("load_time_start", label = strong('Enter start time'),
                   value = min_timestamp)
       })
       output$load_time_end <- renderUI({
-        timeInput("load_time_end", label = strong('Enter end time'), 
+        timeInput("load_time_end", label = strong('Enter end time'),
                   value = max_timestamp)
       })
-      
+
       output$load_date <- renderUI({
         dateRangeInput("load_date", label = strong('Date range (yyyy-mm-dd):'),
                        start = strftime(min_timestamp, format = "%Y-%m-%d"),
@@ -533,7 +540,7 @@ server <- function(input,output,session) {
                        max = strftime(max_timestamp, format = "%Y-%m-%d"),
                        startview = "year")
       })
-      
+
       shinyjs::show("frequency_data")
       shinyjs::show("choose_frequency_data")
       shinyjs::show("region_to_load")
@@ -542,12 +549,12 @@ server <- function(input,output,session) {
       shinyjs::show("load_first_filter_settings")
     }
   })
-  
+
   # This is the event that runs when the "Load data" button on the GUI is
-  # Clicked. 
+  # Clicked.
   observeEvent(input$load_data, {
     id <- showNotification("Loading data", duration = 1000)
-  
+
     # setup loading inputs
     data <- reactiveValuesToList(v)
     settings <- get_current_settings()
@@ -559,7 +566,7 @@ server <- function(input,output,session) {
     rm(loaded)
     for (d_name in names(data)) {
       v[[d_name]] <- data[[d_name]]
-    }    
+    }
     removeNotification(id)
 
 # -------- UI Code --------
@@ -580,7 +587,7 @@ server <- function(input,output,session) {
       if (v$db$check_if_table_exists('site_details_cleaned')) {
         v$site_details_for_editing <- v$db$get_site_details_cleaning_report()
         v$site_details_for_editing <- filter(v$site_details_for_editing, s_state == settings$region_to_load)
-        output$site_details_editor <- renderDT(isolate(v$site_details_for_editing), selection='single', rownames=FALSE, 
+        output$site_details_editor <- renderDT(isolate(v$site_details_for_editing), selection='single', rownames=FALSE,
                                                 editable=TRUE)
         v$proxy_site_details_editor <- dataTableProxy('site_details_editor')
       }
@@ -588,32 +595,32 @@ server <- function(input,output,session) {
       if (v$db$check_if_table_exists('circuit_details_cleaned')) {
         v$circuit_details_for_editing <- v$db$get_circuit_details_cleaning_report()
         v$circuit_details_for_editing <- filter(v$circuit_details_for_editing, site_id %in% v$site_details_for_editing$site_id)
-        output$circuit_details_editor <- renderDT(isolate(v$circuit_details_for_editing), selection='single', 
+        output$circuit_details_editor <- renderDT(isolate(v$circuit_details_for_editing), selection='single',
                                                   rownames=FALSE, editable=TRUE)
         v$proxy_circuit_details_editor <- dataTableProxy('circuit_details_editor')
       }
 
-      # Filtering option widgets are rendered after the data is loaded, this is 
+      # Filtering option widgets are rendered after the data is loaded, this is
       # because they are only usable once there is data to filter. Additionally
-      # The data loaded can then be used to create the appropraite options for 
+      # The data loaded can then be used to create the appropraite options for
       # filtering.
       output$postcodes <- renderUI({
-        selectizeInput("postcodes", label=strong("Select postcodes"), choices = sort(unique(v$site_details$s_postcode)), 
-                      multiple=TRUE)  
+        selectizeInput("postcodes", label=strong("Select postcodes"), choices = sort(unique(v$site_details$s_postcode)),
+                      multiple=TRUE)
         })
       output$manufacturers <- renderUI({
-        selectizeInput("manufacturers", label=strong("Select manufacturers"), 
-                        choices = sort(unique(v$site_details$manufacturer)), multiple=TRUE)  
+        selectizeInput("manufacturers", label=strong("Select manufacturers"),
+                        choices = sort(unique(v$site_details$manufacturer)), multiple=TRUE)
       })
       output$models <- renderUI({
-        selectizeInput("models", label=strong("Select models"), choices = sort(unique(v$site_details$model)), multiple=TRUE)  
+        selectizeInput("models", label=strong("Select models"), choices = sort(unique(v$site_details$model)), multiple=TRUE)
       })
       output$sites <- renderUI({
-        selectizeInput("sites", label=strong("Select Sites"), choices = sort(unique(v$site_details$site_id)), multiple=TRUE)  
+        selectizeInput("sites", label=strong("Select Sites"), choices = sort(unique(v$site_details$site_id)), multiple=TRUE)
       })
       output$circuits <- renderUI({
-        selectizeInput("circuits", label=strong("Select Circuits"), choices = sort(unique(v$circuit_details$c_id)), 
-                        multiple=TRUE)  
+        selectizeInput("circuits", label=strong("Select Circuits"), choices = sort(unique(v$circuit_details$c_id)),
+                        multiple=TRUE)
       })
       shinyjs::show("standard_agg")
       output$size_groupings <- renderUI({
@@ -624,7 +631,7 @@ server <- function(input,output,session) {
                               direction = "vertical")
       })
       output$cleaned <- renderUI({
-        checkboxGroupButtons(inputId="cleaned", 
+        checkboxGroupButtons(inputId="cleaned",
                               label=strong("Data sets"), choices=list("clean", "raw"),
                               selected=list("clean"),
                               justified=TRUE, status="primary", individual=TRUE,
@@ -632,20 +639,20 @@ server <- function(input,output,session) {
                               direction = "vertical")
       })
       output$StdVersion <- renderUI({
-        checkboxGroupButtons(inputId="StdVersion", 
-                              label=strong("AS47777 Version:"), choices=list("AS4777.3:2005", "Transition", 
-                                                                            "AS4777.2:2015", "AS4777.2:2015 VDRT", 
+        checkboxGroupButtons(inputId="StdVersion",
+                              label=strong("AS47777 Version:"), choices=list("AS4777.3:2005", "Transition",
+                                                                            "AS4777.2:2015", "AS4777.2:2015 VDRT",
                                                                             "Transition 2020-21", "AS4777.2:2020"),
-                              selected=list("AS4777.3:2005", "Transition", "AS4777.2:2015", "AS4777.2:2015 VDRT", 
+                              selected=list("AS4777.3:2005", "Transition", "AS4777.2:2015", "AS4777.2:2015 VDRT",
                                             "Transition 2020-21", "AS4777.2:2020"),
                               justified=TRUE, status="primary", individual=TRUE,
                               checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")),
                               direction = "vertical")
         })
       output$responses <- renderUI({
-        checkboxGroupButtons(inputId="responses", 
+        checkboxGroupButtons(inputId="responses",
                               label=strong("Select Responses:"),
-                              choices=list("1 Ride Through", "2 Curtail", "3 Drop to Zero", "4 Disconnect","5 Off at t0", 
+                              choices=list("1 Ride Through", "2 Curtail", "3 Drop to Zero", "4 Disconnect","5 Off at t0",
                                           "6 Not enough data", "7 UFLS Dropout", "Undefined", NA),
                               selected=list("1 Ride Through", "2 Curtail", "3 Drop to Zero", "4 Disconnect",
                                             "5 Off at t0", "6 Not enough data", "7 UFLS Dropout", "Undefined", NA),
@@ -654,42 +661,42 @@ server <- function(input,output,session) {
                               direction = "vertical")
       })
       output$zones <- renderUI({
-        checkboxGroupButtons(inputId="zones", label=strong("Zones"), 
+        checkboxGroupButtons(inputId="zones", label=strong("Zones"),
                               choices=list("1 Zone", "2 Zone", "3 Zone", "Undefined", NA),
-                              selected=list("1 Zone", "2 Zone", "3 Zone", "Undefined", NA), 
+                              selected=list("1 Zone", "2 Zone", "3 Zone", "Undefined", NA),
                               justified=TRUE, status="primary", individual=TRUE,
                               checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")),
                               direction = "vertical")
       })
       output$compliance <- renderUI({
-        checkboxGroupButtons(inputId="compliance", label=strong("Compliance"), 
-                              choices=list("Compliant", "Non-compliant Responding", 
+        checkboxGroupButtons(inputId="compliance", label=strong("Compliance"),
+                              choices=list("Compliant", "Non-compliant Responding",
                                           "Non-compliant", "UFLS Dropout", "Disconnect/Drop to Zero",
                                           "Off at t0", "Not enough data", "Undefined", NA),
-                              selected=list("Compliant", "Non-compliant Responding", 
+                              selected=list("Compliant", "Non-compliant Responding",
                                             "Non-compliant", "UFLS Dropout", "Disconnect/Drop to Zero",
-                                            "Off at t0", "Not enough data", "Undefined", NA), 
+                                            "Off at t0", "Not enough data", "Undefined", NA),
                               justified=TRUE, status="primary", individual=TRUE,
                               checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")),
                               direction = "vertical")
       })
       output$compliance_2020 <- renderUI({
-        checkboxGroupButtons(inputId="compliance_2020", label=strong("Compliance 2020"), 
-                             choices=list("Compliant", "Non-compliant Responding", 
+        checkboxGroupButtons(inputId="compliance_2020", label=strong("Compliance 2020"),
+                             choices=list("Compliant", "Non-compliant Responding",
                                           "Non-compliant", "UFLS Dropout", "Disconnect/Drop to Zero",
                                           "Off at t0", "Not enough data", "Undefined", NA),
-                             selected=list("Compliant", "Non-compliant Responding", 
+                             selected=list("Compliant", "Non-compliant Responding",
                                            "Non-compliant", "UFLS Dropout", "Disconnect/Drop to Zero",
-                                           "Off at t0", "Not enough data", "Undefined", NA), 
+                                           "Off at t0", "Not enough data", "Undefined", NA),
                              justified=TRUE, status="primary", individual=TRUE,
                              checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")),
                              direction = "vertical")
       })
       output$reconnection_compliance <- renderUI({
-        checkboxGroupButtons(inputId="reconnection_compliance", label=strong("Reconnection Compliance"), 
-                              choices=list("Compliant", "Non Compliant", 
+        checkboxGroupButtons(inputId="reconnection_compliance", label=strong("Reconnection Compliance"),
+                              choices=list("Compliant", "Non Compliant",
                                           "Unsure", "Cannot be set", NA),
-                              selected=list("Compliant", "Non Compliant", 
+                              selected=list("Compliant", "Non Compliant",
                                             "Unsure", "Cannot be set", NA),
                               justified=TRUE, status="primary", individual=TRUE,
                               checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")),
@@ -698,7 +705,7 @@ server <- function(input,output,session) {
       sample_counts <- get_offset_sample_counts(v$combined_data, v$unique_offsets)
       unique_offsets_filter_label <- make_offset_filter_label(sample_counts, v$unique_offsets)
       output$offsets <- renderUI({
-        checkboxGroupButtons(inputId="offsets", label=unique_offsets_filter_label, 
+        checkboxGroupButtons(inputId="offsets", label=unique_offsets_filter_label,
                               choices=v$unique_offsets, selected=c(v$unique_offsets[which.max(sample_counts)]) ,
                               justified=TRUE, status="primary", individual=TRUE,
                               checkIcon=list(yes=icon("ok", lib="glyphicon"), no=icon("remove", lib="glyphicon")),
@@ -721,20 +728,20 @@ server <- function(input,output,session) {
       shinyjs::show("norm_power_filter_off_at_t0")
       shinyjs::show("confidence_category")
       output$event_date <- renderUI({
-        dateInput("event_date", label=strong('Event date (yyyy-mm-dd):'), 
+        dateInput("event_date", label=strong('Event date (yyyy-mm-dd):'),
                   value=strftime(floor_date(get_mode(v$combined_data$ts), "day"), format="%Y-%m-%d"), startview="year")
       })
       output$pre_event_interval <- renderUI({
-        timeInput("pre_event_interval", label=strong('Pre-event time interval'), 
+        timeInput("pre_event_interval", label=strong('Pre-event time interval'),
                   value = as.POSIXct("12:13:55",format="%H:%M:%S"))
       })
       output$window_length <- renderUI({
         numericInput("window_length", label=strong('Set window length (min),
-                                                    Only data in this window is used for response analysis.'), 
+                                                    Only data in this window is used for response analysis.'),
                       value=5, min = 1, max = 100, step = 1)
       })
       output$post_event_ufls_window_length <- renderUI({
-        numericInput("post_event_ufls_window_length", label=strong('Set post event UFLS window length (min)'), 
+        numericInput("post_event_ufls_window_length", label=strong('Set post event UFLS window length (min)'),
                       value=5, min = 1, max = 100, step = 1)
       })
       output$event_latitude <- renderUI({
@@ -790,18 +797,18 @@ server <- function(input,output,session) {
 
     no_grouping <- check_grouping(settings)
 
-    if ((sum(v$sample_count_table$sample_count)<1000 & no_grouping) | 
+    if ((sum(v$sample_count_table$sample_count)<1000 & no_grouping) |
       (length(v$sample_count_table$sample_count)<1000 & !no_grouping)) {
       if(length(v$combined_data_f$ts) > 0) {
         # Create plots on main tab
         logdebug('create plots', logger=app_logger)
-        
+
         # -------- Render plots and save buttons --------
         # inputs:v$agg_power,  v$sample_count_table, ideal_response_to_plot, agg_norm_power, v$response_count, v$zone_count, v$agg_power, v$distance_response, geo_data, v$combined_data_f
         # outputs: output$...
         # dependencies: event_longitude(), event_latitude(), zone_one_radius(), pre_event_interval(), duration()
         output$PlotlyTest <- renderPlotly({
-          plot_ly(v$agg_power, x=~Time, y=~Power_kW, color=~series, type="scattergl")  %>% 
+          plot_ly(v$agg_power, x=~Time, y=~Power_kW, color=~series, type="scattergl")  %>%
             layout(yaxis = list(title = "Aggregate Power (kW)"))})
         output$save_agg_power <- renderUI({
           shinySaveButton("save_agg_power", "Save Aggregated Results", "Save file as ...", filetype=list(xlsx="csv"))
@@ -817,46 +824,46 @@ server <- function(input,output,session) {
           shinySaveButton("batch_save", "Batch save", "Save file as ...", filetype=list(xlsx="csv"))
         })
         output$save_ideal_response <- renderUI({
-          shinySaveButton("save_ideal_response", "Save response", "Choose directory for report files ...", 
+          shinySaveButton("save_ideal_response", "Save response", "Choose directory for report files ...",
                           filetype=list(xlsx="csv"))
         })
         output$save_ideal_response_downsampled <- renderUI({
-          shinySaveButton("save_ideal_response_downsampled", "Save downsampled response", 
+          shinySaveButton("save_ideal_response_downsampled", "Save downsampled response",
                           "Choose directory for report files ...", filetype=list(xlsx="csv"))
         })
         output$save_ideal_response_2020 <- renderUI({
-          shinySaveButton("save_ideal_response_2020", "Save response 2020", "Choose directory for report files ...", 
+          shinySaveButton("save_ideal_response_2020", "Save response 2020", "Choose directory for report files ...",
                           filetype=list(xlsx="csv"))
         })
         output$save_ideal_response_downsampled_2020 <- renderUI({
-          shinySaveButton("save_ideal_response_downsampled_2020", "Save downsampled response 2020", 
+          shinySaveButton("save_ideal_response_downsampled_2020", "Save downsampled response 2020",
                           "Choose directory for report files ...", filetype=list(xlsx="csv"))
         })
         output$save_manufacturer_disconnection_summary <- renderUI({
-          shinySaveButton("save_manufacturer_disconnection_summary", "Save manufacturer disconnection summary", 
+          shinySaveButton("save_manufacturer_disconnection_summary", "Save manufacturer disconnection summary",
                           "Choose directory for report files ...", filetype=list(xlsx="csv"))
         })
         output$save_manufacturer_disconnection_summary_with_separate_ufls_counts <- renderUI({
-          shinySaveButton("save_manufacturer_disconnection_summary_with_separate_ufls_counts", 
-                          "Save manufacturer disconnection summary with separate ufls counts", 
+          shinySaveButton("save_manufacturer_disconnection_summary_with_separate_ufls_counts",
+                          "Save manufacturer disconnection summary with separate ufls counts",
                           "Choose directory for report files ...", filetype=list(xlsx="csv"))
         })
         output$save_upscaled_disconnection_summary <- renderUI({
-          shinySaveButton("save_upscaled_disconnection_summary", "Save upscaled disconnection summary", 
+          shinySaveButton("save_upscaled_disconnection_summary", "Save upscaled disconnection summary",
                           "Choose directory for report files ...", filetype=list(xlsx="csv"))
         })
         output$save_upscaled_disconnection_summary_with_separate_ufls_counts <- renderUI({
-          shinySaveButton("save_upscaled_disconnection_summary_with_separate_ufls_counts", 
-                          "Save upscaled disconnection summary with separate ufls counts", 
+          shinySaveButton("save_upscaled_disconnection_summary_with_separate_ufls_counts",
+                          "Save upscaled disconnection summary with separate ufls counts",
                           "Choose directory for report files ...", filetype=list(xlsx="csv"))
         })
         output$save_voltage_excursion_summary <- renderUI({
-          shinySaveButton("save_voltage_excursion_summary", 
-                          "Save voltage excursion summary", 
+          shinySaveButton("save_voltage_excursion_summary",
+                          "Save voltage excursion summary",
                           "Choose directory for report files ...", filetype=list(xlsx="csv"))
         })
-      
-    
+
+
         if ("width" %in% names(v$sample_count_table)) {
           sample_count_table <- datatable(v$sample_count_table) %>% formatStyle(
             "width",  background = styleColorBar(c(0, 1), 'red'))
@@ -865,31 +872,31 @@ server <- function(input,output,session) {
         }
 
         output$sample_count_table <- renderDataTable({sample_count_table})
-        output$save_sample_count <- renderUI({shinySaveButton("save_sample_count", "Save data", "Save file as ...", 
+        output$save_sample_count <- renderUI({shinySaveButton("save_sample_count", "Save data", "Save file as ...",
                                                               filetype=list(xlsx="csv"))
         })
         if(dim(v$ideal_response_to_plot)[1]>0) {
           output$NormPower <- renderPlotly({
-            plot_ly(v$agg_norm_power, x=~Time, y=~c_id_norm_power, color=~series, type="scattergl") %>% 
-              add_trace(x=~v$ideal_response_to_plot$ts, y=~v$ideal_response_to_plot$norm_power, name='Ideal Response', 
+            plot_ly(v$agg_norm_power, x=~Time, y=~c_id_norm_power, color=~series, type="scattergl") %>%
+              add_trace(x=~v$ideal_response_to_plot$ts, y=~v$ideal_response_to_plot$norm_power, name='Ideal Response',
                         mode='markers', inherit=FALSE) %>%
-              add_trace(x=~v$ideal_response_downsampled$time_group, y=~v$ideal_response_downsampled$norm_power, 
+              add_trace(x=~v$ideal_response_downsampled$time_group, y=~v$ideal_response_downsampled$norm_power,
                         name='Ideal Response Downsampled', mode='markers', inherit=FALSE) %>%
-              add_trace(x=~v$ideal_response_to_plot_2020$ts, y=~v$ideal_response_to_plot_2020$norm_power, name='Ideal Response 2020', 
+              add_trace(x=~v$ideal_response_to_plot_2020$ts, y=~v$ideal_response_to_plot_2020$norm_power, name='Ideal Response 2020',
                         mode='markers', inherit=FALSE) %>%
-              add_trace(x=~v$ideal_response_downsampled_2020$time_group, y=~v$ideal_response_downsampled_2020$norm_power, 
+              add_trace(x=~v$ideal_response_downsampled_2020$time_group, y=~v$ideal_response_downsampled_2020$norm_power,
                         name='Ideal Response Downsampled 2020', mode='markers', inherit=FALSE) %>%
               layout(yaxis=list(title="Circuit power normalised to value of pre-event interval, \n aggregated by averaging"))
           })
         } else {
           output$NormPower <- renderPlotly({
-            plot_ly(v$agg_norm_power, x=~Time, y=~c_id_norm_power, color=~series, type="scattergl", 
-                    mode = 'lines+markers') %>% 
+            plot_ly(v$agg_norm_power, x=~Time, y=~c_id_norm_power, color=~series, type="scattergl",
+                    mode = 'lines+markers') %>%
               layout(yaxis=list(title="Circuit power normalised to value of pre-event interval, \n aggregated by averaging"))
-          }) 
+          })
         }
         output$ResponseCount <- renderPlotly({
-          plot_ly(v$response_count, x=~series_x, y=~sample_count, color=~series_y, type="bar") %>% 
+          plot_ly(v$response_count, x=~series_x, y=~sample_count, color=~series_y, type="bar") %>%
             layout(yaxis = list(title = 'Fraction of circuits \n (denominator is count post filtering)'),
                     xaxis = list(title = 'Response categories'),
                     barmode = 'stack')
@@ -897,7 +904,7 @@ server <- function(input,output,session) {
         output$save_response_count <- renderUI({
           shinySaveButton("save_response_count", "Save data", "Save file as ...", filetype=list(xlsx="csv"))
           })
-        
+
         output$ZoneCount <- renderPlotly({
           plot_ly(v$zone_count, x=~series_x, y=~sample_count, color=~series_y, type="bar") %>%
             layout(yaxis = list(title = 'Fraction of zone circuits \n (denominator is count post filtering)'),
@@ -908,22 +915,22 @@ server <- function(input,output,session) {
           })
         if(dim(v$frequency_data)[1]>0) {
           output$Frequency <- renderPlotly({
-            plot_ly(v$agg_power, x=~Time, y=~Frequency, color=~series, type="scattergl")%>% 
-              add_trace(x=~v$region_frequency$ts, y=~v$region_frequency$f, name='High Speed Data', 
-                        mode='markers', inherit=FALSE) %>% 
+            plot_ly(v$agg_power, x=~Time, y=~Frequency, color=~series, type="scattergl")%>%
+              add_trace(x=~v$region_frequency$ts, y=~v$region_frequency$f, name='High Speed Data',
+                        mode='markers', inherit=FALSE) %>%
               layout(yaxis=list(title="Average frequency (Hz)"))
             })
         } else {
           output$Frequency <- renderPlotly({
-            plot_ly(v$agg_power, x=~Time, y=~Frequency, color=~series, type="scattergl")%>% 
+            plot_ly(v$agg_power, x=~Time, y=~Frequency, color=~series, type="scattergl")%>%
               layout(yaxis=list(title="Average frequency (Hz)"))
           })
         }
-        output$Voltage <- renderPlotly({plot_ly(v$agg_power, x=~Time, y=~Voltage, color=~series, type="scattergl") %>% 
+        output$Voltage <- renderPlotly({plot_ly(v$agg_power, x=~Time, y=~Voltage, color=~series, type="scattergl") %>%
             layout(yaxis=list(title="Average volatge (V)"))
           })
         output$distance_response <- renderPlotly({
-          plot_ly(v$distance_response, x=~distance, y=~percentage, color=~series, type="scattergl") %>% 
+          plot_ly(v$distance_response, x=~distance, y=~percentage, color=~series, type="scattergl") %>%
             layout(yaxis=list(title="Cumlative  disconnects / Cumulative circuits \n (Includes response categories 3 and 4)"),
                     xaxis=list(title="Distance from event (km)"))
           })
@@ -934,32 +941,32 @@ server <- function(input,output,session) {
         z2 <- data.frame(circle.polygon(event_longitude(), event_latitude(), zone_two_radius(), sides = 20, units='km', poly.type = "gc.earth"))
         z3 <- data.frame(circle.polygon(event_longitude(), event_latitude(), zone_three_radius(), sides = 20, units='km', poly.type = "gc.earth"))
         output$map <- renderPlotly({plot_geo(v$geo_data, lat=~lat, lon=~lon, color=~percentage_disconnect) %>%
-            add_polygons(x=~z1$lon, y=~z1$lat, inherit=FALSE, fillcolor='transparent', 
+            add_polygons(x=~z1$lon, y=~z1$lat, inherit=FALSE, fillcolor='transparent',
                           line=list(width=2,color="grey"), hoverinfo = "none", showlegend=FALSE) %>%
-            add_polygons(x=~z2$lon, y=~z2$lat, inherit=FALSE, fillcolor='transparent', 
+            add_polygons(x=~z2$lon, y=~z2$lat, inherit=FALSE, fillcolor='transparent',
                           line=list(width=2,color="grey"), hoverinfo = "none", showlegend=FALSE) %>%
-            add_polygons(x=~z3$lon, y=~z3$lat, inherit=FALSE, fillcolor='transparent', 
+            add_polygons(x=~z3$lon, y=~z3$lat, inherit=FALSE, fillcolor='transparent',
                           line=list(width=2,color="grey"), hoverinfo = "none", showlegend=FALSE) %>%
-            add_markers(x=~v$geo_data$lon, y=~v$geo_data$lat,  inherit=FALSE, 
+            add_markers(x=~v$geo_data$lon, y=~v$geo_data$lat,  inherit=FALSE,
                         hovertext=~v$geo_data$info, legendgroup = list(title = "Percentage Disconnects"),
-                        marker=list(color=~percentage_disconnect, colorbar=list(title='Percentage \n Disconnects'), 
+                        marker=list(color=~percentage_disconnect, colorbar=list(title='Percentage \n Disconnects'),
                                     colorscale='Bluered')) %>%
-            layout(annotations = 
-                      list(x = 1, y = -0.1, text = "Note: pecentage disconnects includes categories 3 and 4.", 
-                          showarrow = F, xref='paper', yref='paper', 
+            layout(annotations =
+                      list(x = 1, y = -0.1, text = "Note: pecentage disconnects includes categories 3 and 4.",
+                          showarrow = F, xref='paper', yref='paper',
                           xanchor='right', yanchor='auto', xshift=0, yshift=0))
           })
-        
-        output$compliance_cleaned_or_raw <- 
-          renderUI({radioButtons("compliance_cleaned_or_raw", 
-                                  label=strong("Choose data set"), 
-                                  choices = list("clean","raw"), 
-                                  selected = v$combined_data_f$clean[1], 
+
+        output$compliance_cleaned_or_raw <-
+          renderUI({radioButtons("compliance_cleaned_or_raw",
+                                  label=strong("Choose data set"),
+                                  choices = list("clean","raw"),
+                                  selected = v$combined_data_f$clean[1],
                                   inline = TRUE)})
-        
+
         v$reconnection_profile <- create_reconnection_profile(pre_event_interval(), ramp_length_minutes = 6,
                                                               time_step_seconds = as.numeric(duration()))
-        
+
         removeNotification(id)
         # --------
       } else {
@@ -976,9 +983,9 @@ server <- function(input,output,session) {
     }
     logdebug('Update plots completed', logger=app_logger)
   })
-  
+
   observeEvent(input$compliance_cleaned_or_raw, {
-                 
+
     if(compliance_cleaned_or_raw() %in% v$combined_data_f$clean) {
       # Setting up manual compliance tab.
       circuit_options <- filter(v$combined_data_f, clean == compliance_cleaned_or_raw())
@@ -988,23 +995,23 @@ server <- function(input,output,session) {
       v$compliance_counter <- 1
       message <- paste0("Select circuit (now viewing circuit ", v$compliance_counter, ' of ', length(v$c_id_vector) ,")")
       circuit_to_view <- v$c_id_vector[[v$compliance_counter]]
-      output$compliance_circuits <- renderUI({selectizeInput("compliance_circuits", label=strong(message), choices=as.list(v$c_id_vector), 
+      output$compliance_circuits <- renderUI({selectizeInput("compliance_circuits", label=strong(message), choices=as.list(v$c_id_vector),
                                                           multiple=FALSE, selected=circuit_to_view)})
       output$get_next_c_id <- renderUI({actionButton("get_next_c_id", "Next")})
       output$get_previous_c_id <- renderUI({actionButton("get_previous_c_id", "Previous")})
     } else {
-      output$compliance_cleaned_or_raw <- renderUI({radioButtons("compliance_cleaned_or_raw", 
-                                                                 label=strong("Choose data set"), 
-                                                                 choices = list("clean","raw"), 
-                                                                 selected = v$combined_data_f$clean[1], 
+      output$compliance_cleaned_or_raw <- renderUI({radioButtons("compliance_cleaned_or_raw",
+                                                                 label=strong("Choose data set"),
+                                                                 choices = list("clean","raw"),
+                                                                 selected = v$combined_data_f$clean[1],
                                                                  inline = TRUE)})
     }
-    
-    output$manual_compliance_type <- renderUI({radioButtons("manual_compliance_type", 
-                                                            label = strong("Compliance types"), 
-                                                            choices = list("Over frequency","Reconnection"), 
+
+    output$manual_compliance_type <- renderUI({radioButtons("manual_compliance_type",
+                                                            label = strong("Compliance types"),
+                                                            choices = list("Over frequency","Reconnection"),
                                                             selected = "Over frequency", inline = TRUE)})
-    
+
   })
 
   observeEvent(c(input$compliance_circuits, input$manual_compliance_type), {
@@ -1012,112 +1019,112 @@ server <- function(input,output,session) {
       v$compliance_counter <- match(c(compliance_circuits()), v$c_id_vector)
       message <- paste0("Select circuit (now viewing circuit ", v$compliance_counter, ' of ', length(v$c_id_vector) ,")")
       circuit_to_view <- v$c_id_vector[[v$compliance_counter]]
-      output$compliance_circuits <- isolate(renderUI({selectizeInput("compliance_circuits", label=strong(message), 
-                                                                     choices=as.list(v$c_id_vector), 
+      output$compliance_circuits <- isolate(renderUI({selectizeInput("compliance_circuits", label=strong(message),
+                                                                     choices=as.list(v$c_id_vector),
                                                                      multiple=FALSE, selected=circuit_to_view)}))
       data_to_view <- filter(filter(v$combined_data_f, clean==compliance_cleaned_or_raw()), c_id==compliance_circuits())
-      
+
       if (manual_compliance_type() == "Over frequency") {
-        
-        output$set_c_id_compliance <- renderUI({radioButtons("set_c_id_compliance", label = strong("Compliance"), 
-                                                              choices = list("Not set","Compliant","Non-compliant", 
-                                                                             "Non-compliant Responding", "Disconnect", 
-                                                                             "Unsure"), 
+
+        output$set_c_id_compliance <- renderUI({radioButtons("set_c_id_compliance", label = strong("Compliance"),
+                                                              choices = list("Not set","Compliant","Non-compliant",
+                                                                             "Non-compliant Responding", "Disconnect",
+                                                                             "Unsure"),
                                                              selected = data_to_view$manual_droop_compliance[1], inline = TRUE)})
         if (compliance_cleaned_or_raw() == 'clean') {
           circuit_data <- filter(v$circuit_details_for_editing, c_id == compliance_circuits())
-          updateRadioButtons(session, "set_c_id_compliance", 
+          updateRadioButtons(session, "set_c_id_compliance",
                              selected = circuit_data$manual_droop_compliance[1])
         } else {
           circuit_data <- filter(v$circuit_details_raw, c_id == compliance_circuits())
-          updateRadioButtons(session, "set_c_id_compliance", 
+          updateRadioButtons(session, "set_c_id_compliance",
                              selected = circuit_data$manual_droop_compliance[1])
-          
+
         }
-        
+
       } else {
-        
-        output$set_c_id_compliance <- renderUI({radioButtons("set_c_id_compliance", label = strong("Compliance"), 
-                                                             choices = list("Not set","Compliant","Too Fast", 
-                                                                            "Too Slow", "Unsure"), 
+
+        output$set_c_id_compliance <- renderUI({radioButtons("set_c_id_compliance", label = strong("Compliance"),
+                                                             choices = list("Not set","Compliant","Too Fast",
+                                                                            "Too Slow", "Unsure"),
                                                              selected = data_to_view$manual_reconnect_compliance[1], inline = TRUE)})
-        
+
         if (compliance_cleaned_or_raw() == 'clean') {
           circuit_data <- filter(v$circuit_details_for_editing, c_id == compliance_circuits())
-          updateRadioButtons(session, "set_c_id_compliance", 
+          updateRadioButtons(session, "set_c_id_compliance",
                              selected = circuit_data$manual_reconnect_compliance[1])
         } else {
           circuit_data <- filter(v$circuit_details_raw, c_id == compliance_circuits())
-          updateRadioButtons(session, "set_c_id_compliance", 
+          updateRadioButtons(session, "set_c_id_compliance",
                              selected = circuit_data$manual_reconnect_compliance[1])
-          
+
         }
-        
+
       }
-      
+
 
       data_to_view <- mutate(data_to_view, Time=ts)
       if (manual_compliance_type() == "Over frequency") {
-        
+
         if(dim(v$ideal_response_to_plot)[1]>0) {
           output$compliance_plot <- renderPlotly({
-            plot_ly(data_to_view, x=~Time, y=~c_id_norm_power, type="scatter") %>% 
-              add_trace(x=v$ideal_response_to_plot$ts, y=v$ideal_response_to_plot$norm_power, name='Ideal Response', 
+            plot_ly(data_to_view, x=~Time, y=~c_id_norm_power, type="scatter") %>%
+              add_trace(x=v$ideal_response_to_plot$ts, y=v$ideal_response_to_plot$norm_power, name='Ideal Response',
                         mode='markers', inherit=FALSE) %>%
-              add_trace(x=v$ideal_response_downsampled$time_group, y=v$ideal_response_downsampled$norm_power, 
+              add_trace(x=v$ideal_response_downsampled$time_group, y=v$ideal_response_downsampled$norm_power,
                         name='Ideal Response Downsampled', mode='markers', inherit=FALSE) %>%
               layout(yaxis=list(title="Circuit power \n normalised to value of pre-event interval"))
           })
         } else {
           output$compliance_plot <- renderPlotly({
-            plot_ly(data_to_view, x=~Time, y=~c_id_norm_power, type="scatter") %>% 
+            plot_ly(data_to_view, x=~Time, y=~c_id_norm_power, type="scatter") %>%
               layout(yaxis=list(title="Circuit power \n normalised to value of pre-event interval"))
           })
         }
-        
+
       } else {
-        
+
         output$compliance_plot <- renderPlotly({
-          plot_ly(data_to_view, x=~Time, y=~c_id_daily_norm_power, type="scatter") %>% 
-            add_trace(x=v$reconnection_profile$ts, y=v$reconnection_profile$norm_power, name='Ideal Response', 
+          plot_ly(data_to_view, x=~Time, y=~c_id_daily_norm_power, type="scatter") %>%
+            add_trace(x=v$reconnection_profile$ts, y=v$reconnection_profile$norm_power, name='Ideal Response',
                       mode='markers', inherit=FALSE) %>%
             layout(yaxis=list(title="Circuit power \n normalised to max circuit power"))
         })
-        
+
       }
 
     } else {
       shinyalert("Wow", "That circuit id does not exist.")
     }
   })
-  
+
   observeEvent(input$set_c_id_compliance, {
     current_c_id <- v$c_id_vector[[v$compliance_counter]]
     if (compliance_cleaned_or_raw() == "clean") {
       if (manual_compliance_type() == "Over frequency") {
-        v$circuit_details_for_editing <- mutate(v$circuit_details_for_editing, 
+        v$circuit_details_for_editing <- mutate(v$circuit_details_for_editing,
                                   manual_droop_compliance=
                                     ifelse((c_id==current_c_id),
                                            set_c_id_compliance(),
                                            manual_droop_compliance))
       } else {
-        v$circuit_details_for_editing <- mutate(v$circuit_details_for_editing, 
+        v$circuit_details_for_editing <- mutate(v$circuit_details_for_editing,
                                                 manual_reconnect_compliance=
                                                   ifelse((c_id==current_c_id),
                                                          set_c_id_compliance(),
                                                          manual_reconnect_compliance))
-        
+
       }
       v$db$update_circuit_details_cleaned(v$circuit_details_for_editing)
     } else {
       if (manual_compliance_type() == "Over frequency") {
-        v$circuit_details_raw <- mutate(v$circuit_details_raw, 
+        v$circuit_details_raw <- mutate(v$circuit_details_raw,
                                     manual_droop_compliance=
                                       ifelse((c_id==current_c_id),
                                              set_c_id_compliance(),
                                              manual_droop_compliance))
       } else {
-        v$circuit_details_raw <- mutate(v$circuit_details_raw, 
+        v$circuit_details_raw <- mutate(v$circuit_details_raw,
                                         manual_reconnect_compliance=
                                           ifelse((c_id==current_c_id),
                                                  set_c_id_compliance(),
@@ -1126,27 +1133,27 @@ server <- function(input,output,session) {
       v$db$update_circuit_details_raw(v$circuit_details_raw)
     }
   })
-  
+
   observeEvent(input$get_next_c_id,{
     if (v$compliance_counter < length(v$c_id_vector)) {
       v$compliance_counter <- v$compliance_counter + 1
       circuit_to_view <- v$c_id_vector[[v$compliance_counter]]
       message <- paste0("Select circuit (now viewing circuit ", v$compliance_counter, ' of ', length(v$c_id_vector) ,")")
-      output$compliance_circuits <- renderUI({selectizeInput("compliance_circuits", label=strong(message), choices=as.list(v$c_id_vector), 
-                                                          multiple=FALSE, selected=circuit_to_view)})      
+      output$compliance_circuits <- renderUI({selectizeInput("compliance_circuits", label=strong(message), choices=as.list(v$c_id_vector),
+                                                          multiple=FALSE, selected=circuit_to_view)})
     }
   })
-  
+
   observeEvent(input$get_previous_c_id,{
     if (v$compliance_counter > 1) {
       v$compliance_counter <- v$compliance_counter - 1
       circuit_to_view <- v$c_id_vector[[v$compliance_counter]]
       message <- paste0("Select circuit (now viewing circuit ", v$compliance_counter, ' of ', length(v$c_id_vector) ,")")
-      output$compliance_circuits <- renderUI({selectizeInput("compliance_circuits", label=strong(message), choices=as.list(v$c_id_vector), 
-                                                          multiple=FALSE, selected=circuit_to_view)})      
+      output$compliance_circuits <- renderUI({selectizeInput("compliance_circuits", label=strong(message), choices=as.list(v$c_id_vector),
+                                                          multiple=FALSE, selected=circuit_to_view)})
     }
   })
-  
+
   # Save data from aggregate pv power plot
   observeEvent(input$save_agg_power,{
     volumes <- c(home=getwd())
@@ -1156,7 +1163,7 @@ server <- function(input,output,session) {
       write.csv(v$agg_power, as.character(fileinfo$datapath), row.names=FALSE)
     }
   })
-  
+
   # Save underlying data by circuit id and time stamp
   observeEvent(input$save_underlying,{
     volumes <- c(home=getwd())
@@ -1168,7 +1175,7 @@ server <- function(input,output,session) {
       removeNotification(id)
     }
   })
-  
+
   # Save circuit summary
   observeEvent(input$save_circuit_summary,{
     volumes <- c(home=getwd())
@@ -1180,7 +1187,7 @@ server <- function(input,output,session) {
       removeNotification(id)
     }
   })
-  
+
   # Save data from sample count table
   observeEvent(input$save_sample_count,{
     volumes <- c(home=getwd())
@@ -1188,7 +1195,7 @@ server <- function(input,output,session) {
     fileinfo <- parseSavePath(volumes, input$save_sample_count)
     if (nrow(fileinfo) > 0) {write.csv(v$sample_count_table, as.character(fileinfo$datapath), row.names=FALSE)}
   })
-  
+
   # Save data on aggregated response categories
   observeEvent(input$save_response_count,{
     volumes <- c(home=getwd())
@@ -1196,7 +1203,7 @@ server <- function(input,output,session) {
     fileinfo <- parseSavePath(volumes, input$save_response_count)
     if (nrow(fileinfo) > 0) {write.csv(v$response_count, as.character(fileinfo$datapath), row.names=FALSE)}
   })
-  
+
   # Save data on zones
   observeEvent(input$save_zone_count, {
     volumes <- c(home=getwd())
@@ -1204,7 +1211,7 @@ server <- function(input,output,session) {
     fileinfo <- parseSavePath(volumes, input$save_zone_count)
     if (nrow(fileinfo) > 0) {write.csv(v$zone_count, as.character(fileinfo$datapath), row.names=FALSE)}
   })
-  
+
   # Save data on response percentage by distance
   observeEvent(input$save_distance_response, {
     volumes <- c(home=getwd())
@@ -1212,7 +1219,7 @@ server <- function(input,output,session) {
     fileinfo <- parseSavePath(volumes, input$save_distance_response)
     if (nrow(fileinfo) > 0) {write.csv(v$distance_response, as.character(fileinfo$datapath), row.names=FALSE)}
   })
-  
+
   # Save ideal response curve
   observeEvent(input$save_ideal_response,{
     volumes <- c(home=getwd())
@@ -1222,8 +1229,8 @@ server <- function(input,output,session) {
       write.csv(v$ideal_response_to_plot, as.character(fileinfo$datapath), row.names=FALSE)
     }
   })
-  
-  
+
+
   # Save downsampled ideal response curve
   observeEvent(input$save_ideal_response_downsampled,{
     volumes <- c(home=getwd())
@@ -1233,8 +1240,8 @@ server <- function(input,output,session) {
       write.csv(v$ideal_response_downsampled, as.character(fileinfo$datapath), row.names=FALSE)
     }
   })
-  
-  
+
+
   # Save ideal response curve 2020
   observeEvent(input$save_ideal_response_2020,{
     volumes <- c(home=getwd())
@@ -1244,8 +1251,8 @@ server <- function(input,output,session) {
       write.csv(v$ideal_response_to_plot_2020, as.character(fileinfo$datapath), row.names=FALSE)
     }
   })
-  
-  
+
+
   # Save downsampled ideal response curve 2020
   observeEvent(input$save_ideal_response_downsampled_2020,{
     volumes <- c(home=getwd())
@@ -1255,8 +1262,8 @@ server <- function(input,output,session) {
       write.csv(v$ideal_response_downsampled_2020, as.character(fileinfo$datapath), row.names=FALSE)
     }
   })
-  
-  
+
+
   observeEvent(input$save_manufacturer_disconnection_summary,{
     volumes <- c(home=getwd())
     shinyFileSave(input, "save_manufacturer_disconnection_summary", roots=volumes, session=session)
@@ -1265,19 +1272,19 @@ server <- function(input,output,session) {
       write.csv(v$disconnection_summary, as.character(fileinfo$datapath), row.names=FALSE)
     }
   })
-  
-  
+
+
   observeEvent(input$save_manufacturer_disconnection_summary_with_separate_ufls_counts,{
     volumes <- c(home=getwd())
-    shinyFileSave(input, "save_manufacturer_disconnection_summary_with_separate_ufls_counts", roots=volumes, 
+    shinyFileSave(input, "save_manufacturer_disconnection_summary_with_separate_ufls_counts", roots=volumes,
                   session=session)
     fileinfo <- parseSavePath(volumes, input$save_manufacturer_disconnection_summary_with_separate_ufls_counts)
     if (nrow(fileinfo) > 0) {
       write.csv(v$disconnection_summary_with_separate_ufls_counts, as.character(fileinfo$datapath), row.names=FALSE)
     }
   })
-  
-  
+
+
   observeEvent(input$save_upscaled_disconnection_summary,{
     volumes <- c(home=getwd())
     shinyFileSave(input, "save_upscaled_disconnection_summary", roots=volumes, session=session)
@@ -1286,39 +1293,39 @@ server <- function(input,output,session) {
       write.csv(v$upscaled_disconnections, as.character(fileinfo$datapath), row.names=FALSE)
     }
   })
-  
-  
+
+
   observeEvent(input$save_upscaled_disconnection_summary_with_separate_ufls_counts,{
     volumes <- c(home=getwd())
-    shinyFileSave(input, "save_upscaled_disconnection_summary_with_separate_ufls_counts", roots=volumes, 
+    shinyFileSave(input, "save_upscaled_disconnection_summary_with_separate_ufls_counts", roots=volumes,
                   session=session)
     fileinfo <- parseSavePath(volumes, input$save_upscaled_disconnection_summary_with_separate_ufls_counts)
     if (nrow(fileinfo) > 0) {
       write.csv(v$upscaled_disconnections_with_separate_ufls_counts, as.character(fileinfo$datapath), row.names=FALSE)
     }
   })
-  
+
   observeEvent(input$save_voltage_excursion_summary,{
     volumes <- c(home=getwd())
-    shinyFileSave(input, "save_voltage_excursion_summary", roots=volumes, 
+    shinyFileSave(input, "save_voltage_excursion_summary", roots=volumes,
                   session=session)
     fileinfo <- parseSavePath(volumes, input$save_voltage_excursion_summary)
     if (nrow(fileinfo) > 0) {
       write.csv(v$antiislanding_summary, as.character(fileinfo$datapath), row.names=FALSE)
     }
   })
-  
+
   get_current_settings <- function() {
     settings <- vector(mode='list')
-    
+
     settings$database_name <- database_name()
-    
+
     settings$region_to_load <- region_to_load()
     settings$duration <- duration()
     settings$load_start_time <- load_start_time()
     settings$load_end_time <- load_end_time()
     settings$frequency_data_file <- frequency_data_file()
-    
+
     settings$cleaned <- clean()
     settings$standards <- standards()
     settings$responses <- responses()
@@ -1333,7 +1340,7 @@ server <- function(input,output,session) {
     settings$reconnection_compliance <- reconnection_compliance()
     settings$offsets <- offsets()
     settings$size_groupings <- size_groupings()
-    
+
     settings$standard_agg <- agg_on_standard()
     settings$pst_agg <- pst_agg()
     settings$grouping_agg <- grouping_agg()
@@ -1346,13 +1353,13 @@ server <- function(input,output,session) {
     settings$v_excursion_agg <- v_excursion_agg()
     settings$compliance_agg <- compliance_agg()
     settings$compliance_2020_agg <- compliance_2020_agg()
-    
+
     settings$confidence_category <- confidence_category()
     settings$raw_upscale <- raw_upscale()
     settings$load_date <- load_date()
     settings$load_start_date <- load_start_date()
     settings$load_end_date <- load_end_date()
-    
+
     settings$pre_event_interval <- pre_event_interval()
     settings$window_length <- window_length()
     settings$post_event_ufls_window_length <- post_event_ufls_window_length()
@@ -1363,7 +1370,7 @@ server <- function(input,output,session) {
     settings$zone_three_radius <- zone_three_radius()
     settings$zone_three_radius <- zone_three_radius()
     settings$norm_power_filter_off_at_t0 <- norm_power_filter_off_at_t0()
-  
+
     settings$compliance_threshold <- compliance_threshold()
     settings$start_buffer <- start_buffer()
     settings$end_buffer <- end_buffer()
@@ -1384,7 +1391,7 @@ server <- function(input,output,session) {
     settings$disconnecting_threshold <- disconnecting_threshold()
     settings$exclude_solar_edge <- exclude_solar_edge()
     settings$exclude_islanded_circuits <- exclude_islanded_circuits()
-    
+
     return(settings)
   }
 
@@ -1394,7 +1401,7 @@ server <- function(input,output,session) {
     settings_as_json <- toJSON(settings, indent = 1)
     return(settings_as_json)
   }
-  
+
   observeEvent(input$save_settings, {
     settings_as_json <- get_settings_as_json()
     volumes <- c(home=getwd())
@@ -1404,7 +1411,7 @@ server <- function(input,output,session) {
       write(settings_as_json, as.character(fileinfo$datapath))
     }
   })
-  
+
   load_settings <- function() {
     settings <- c()
     tryCatch(
@@ -1417,12 +1424,12 @@ server <- function(input,output,session) {
     )
     return(settings)
   }
-  
+
   observeEvent(input$load_file_from_settings, {
     settings <- load_settings()
     if (length(settings) > 0) {updateTextInput(session, "database_name", value = settings$database_name)}
   })
-  
+
   observeEvent(input$load_first_filter_settings, {
     settings <- load_settings()
     if (length(settings) > 0) {
@@ -1435,7 +1442,7 @@ server <- function(input,output,session) {
       updateTextInput(session, "frequency_data", value = settings$frequency_data_file)
     }
   })
-  
+
   observeEvent(input$load_second_filter_settings, {
     settings <- load_settings()
     if (length(settings) > 0) {
@@ -1455,7 +1462,7 @@ server <- function(input,output,session) {
       updateSelectizeInput(session, "models", selected = settings$models)
       updateSelectizeInput(session, "sites", selected = settings$sites)
       updateSelectizeInput(session, "circuits", selected = settings$circuits)
-      
+
       updateMaterialSwitch(session, "standard_agg", value = settings$standard_agg)
       updateMaterialSwitch(session, "pst_agg", value = settings$pst_agg)
       updateMaterialSwitch(session, "grouping_agg", value = settings$grouping_agg)
@@ -1475,11 +1482,11 @@ server <- function(input,output,session) {
 
       updateRadioButtons(session, "confidence_category", selected = settings$confidence_category)
       updateMaterialSwitch(session, "raw_upscale", value = settings$raw_upscale)
-      
+
       updateDateInput(session, "event_date", value = strftime(settings$pre_event_interval, format = "%Y-%m-%d"))
       updateTimeInput(session, "pre_event_interval", value = settings$pre_event_interval)
       updateNumericInput(session, "window_length", value = settings$window_length)
-      updateNumericInput(session, "post_event_ufls_window_length", 
+      updateNumericInput(session, "post_event_ufls_window_length",
                          value = settings$post_event_ufls_window_length)
       updateNumericInput(session, "event_latitude", value = settings$event_latitude)
       updateNumericInput(session, "event_longitude", value = settings$event_longitude)
@@ -1487,9 +1494,9 @@ server <- function(input,output,session) {
       updateNumericInput(session, "zone_two_radius", value = settings$zone_two_radius)
       updateNumericInput(session, "zone_three_radius", value = settings$zone_three_radius)
     }
-  
+
   })
-  
+
   observeEvent(input$load_backend_settings, {
     settings <- load_settings()
     if (length(settings) > 0) {
@@ -1508,7 +1515,7 @@ server <- function(input,output,session) {
       updateNumericInput(session, "total_ramp_threshold_for_non_compliance", value = settings$total_ramp_threshold_for_non_compliance)
       updateNumericInput(session, "ramp_rate_change_resource_limit_threshold", value = settings$ramp_rate_change_resource_limit_threshold)
       updateNumericInput(session, "pre_event_ufls_window_length", value = settings$pre_event_ufls_window_length)
-      updateNumericInput(session, "pre_event_ufls_stability_threshold", 
+      updateNumericInput(session, "pre_event_ufls_stability_threshold",
                          value = settings$pre_event_ufls_stability_threshold)
       updateNumericInput(session,"NED_threshold", value = settings$NED_threshold)
       updateNumericInput(session, "disconnecting_threshold", value = settings$disconnecting_threshold)
@@ -1516,7 +1523,7 @@ server <- function(input,output,session) {
       updateMaterialSwitch(session, "exclude_islanded_circuits", value = settings$exclude_islanded_circuits)
     }
   })
-  
+
   observe({
     volumes <- c(home=getwd())
     shinyFileChoose(input, "load_settings", roots=volumes, session=session)
@@ -1539,8 +1546,8 @@ server <- function(input,output,session) {
       removeNotification(id)
     }
   })
-  
-  
+
+
   # Time series file selection pop up.
   observe({
     volumes <- c(home=getwd())
@@ -1548,7 +1555,7 @@ server <- function(input,output,session) {
     fileinfo <- parseFilePaths(volumes, input$choose_database)
     if (nrow(fileinfo) > 0) {updateTextInput(session, "database_name", value=as.character(fileinfo$datapath))}
   })
-  
+
   # frequency file selection pop up.
   observe({
     volumes <- c(home=getwd())
@@ -1556,7 +1563,7 @@ server <- function(input,output,session) {
     fileinfo <- parseFilePaths(volumes, input$choose_frequency_data)
     if (nrow(fileinfo) > 0) {updateTextInput(session, "frequency_data", value=as.character(fileinfo$datapath))}
   })
-  
+
   # Inforce mutual exclusivity of Aggregation settings
   observe({
     if(manufacturer_agg() | model_agg() | pst_agg() | circuit_agg() | circuit_agg() | response_agg() | zone_agg()
@@ -1564,7 +1571,7 @@ server <- function(input,output,session) {
       updateMaterialSwitch(session=session, "raw_upscale", value = FALSE)
     }
   })
-  
+
   # Inforce mutual exclusivity of Aggregation settings
   observe({
     if(raw_upscale()) {
@@ -1581,7 +1588,7 @@ server <- function(input,output,session) {
       updateMaterialSwitch(session=session, "grouping_agg", value = FALSE)
     }
   })
-  
+
   # Plot the data for the circuit selected in the table
   observeEvent(input$circuit_details_editor_rows_selected, {
     v$proxy_site_details_editor %>% selectRows(NULL)
@@ -1590,9 +1597,9 @@ server <- function(input,output,session) {
       data_to_view <- filter(v$combined_data, c_id==c_id_to_plot)
       output$site_plot <- renderPlotly({plot_ly(data_to_view, x=~ts, y=~power_kW, type="scattergl")})
     }
-    
+
   })
-  
+
   # Plot the data for the site selected in the table
   observeEvent(input$site_details_editor_rows_selected, {
     v$proxy_circuit_details_editor %>% selectRows(NULL)
@@ -1605,8 +1612,8 @@ server <- function(input,output,session) {
       output$site_plot <- renderPlotly({plot_ly(data_to_view, x=~ts, y=~power_kW, color=~c_id, type="scattergl")})
     }
   })
-  
-  
+
+
   # Allow user to edit site details in data cleaning tab
   observeEvent(input$site_details_editor_cell_edit, {
     info = input$site_details_editor_cell_edit
@@ -1618,7 +1625,7 @@ server <- function(input,output,session) {
     replaceData(v$proxy_site_details_editor, v$site_details_for_editing, resetPaging=FALSE, rownames=FALSE)  # important
     v$db$update_site_details_cleaned(v$site_details_for_editing)
   })
-  
+
   # Allow user to edit circuit details in data cleaning tab
   observeEvent(input$circuit_details_editor_cell_edit, {
     info = input$circuit_details_editor_cell_edit
