@@ -124,6 +124,12 @@ required_packages <- c(
     # for `thicken`
     "padr",
 
+    # required for SQL
+    "rappdirs",
+    "xfun",
+    "RSQLite",
+    "chron",
+    
     # for SQL queries
     "sqldf",
 
@@ -149,6 +155,9 @@ required_packages <- c(
     # TODO: can be removed
     # for string manipulations
     # "stringr",
+    
+    # required for testthat
+    "brio",
 
     # for `test_that` and other testing functionality
     "testthat")
@@ -158,12 +167,7 @@ if (!"rlang" %in% installed.packages()) {
 }
 for (package in required_packages) {
     if (!require(package, character.only = TRUE)) {
-        print(package)
-        ## install.packages(package, dependencies = TRUE)
+        install.packages(package, dependencies = TRUE)
     }
-##     if (!require(package, character.only = TRUE)) {
-##         print(paste0("Package ", package, " is not installed."))
-##         install.packages(package, dependencies = TRUE)
-##     }
-##     require(sprintf("%s", package))
+    require(sprintf("%s", package))
 }
