@@ -1,4 +1,13 @@
-required_packages <- c(
+using <- function(...) {
+    libs <- unlist(list(...))
+    req <- unlist(lapply(libs, require, character.only = TRUE))
+    need <- libs[req == FALSE]
+    if (length(need) > 0) {
+        install.packages(need)
+        lapply(need, require, character.only = TRUE)
+    }
+}
+using(
     # for the dashboard
     "shiny",
 
@@ -129,7 +138,7 @@ required_packages <- c(
     "xfun",
     "RSQLite",
     "chron",
-    
+
     # for SQL queries
     "sqldf",
 
@@ -155,19 +164,9 @@ required_packages <- c(
     # TODO: can be removed
     # for string manipulations
     # "stringr",
-    
+
     # required for testthat
     "brio",
 
     # for `test_that` and other testing functionality
     "testthat")
-
-if (!"rlang" %in% installed.packages()) {
-    install.packages("rlang")
-}
-for (package in required_packages) {
-    if (!require(package, character.only = TRUE)) {
-        install.packages(package, dependencies = TRUE)
-    }
-    require(sprintf("%s", package))
-}
