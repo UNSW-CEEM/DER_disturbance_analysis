@@ -1,3 +1,10 @@
+#' Load libraries
+#'
+#' For dependencies, to use them we have to either call require() or library().
+#' This doesn't install the dependency if it's required though. using fixes
+#' that issue. It tries to load all packages passed to it, and if a package is
+#' not found, it will install it and then load it.
+#' @param ... The libraries /dependencies / packages to load.
 using <- function(...) {
     libs <- unlist(list(...))
     req <- unlist(lapply(libs, require, character.only = TRUE))
@@ -7,6 +14,7 @@ using <- function(...) {
         lapply(need, require, character.only = TRUE)
     }
 }
+
 using(
     # for the dashboard
     "shiny",
