@@ -131,7 +131,7 @@ test_that("Test the preprocessing of the site_details data",{
                                 sum_ac, first_ac, s_postcode, manufacturer,
                                 model, stringsAsFactors = FALSE)
   # Call processing function
-  processed_site_details = process_raw_site_details(test_site_details)
+  processed_site_details <- process_raw_site_details(test_site_details)
   # Test the answer matches the expected answer
   expect_identical(processed_site_details, expected_answer)
 })
@@ -152,7 +152,7 @@ test_that("Test the power calculations",{
   expected_answer <- data.frame(e, polarity, d, e_polarity, power_kW,
                                 stringsAsFactors = FALSE)
   # Call processing function
-  test_combined_data = perform_power_calculations(test_combined_data)
+  test_combined_data <- perform_power_calculations(test_combined_data)
   # Test the answer matches the expected answer
   expect_equal(test_combined_data, expected_answer, tolerance=0.0001)
 })
@@ -182,7 +182,7 @@ test_that("Test the standard categorisation function",{
   expected_answer <- data.frame(site_id, s_state, sum_dc, first_ac, pv_installation_year_month, Standard_Version,
                                 stringsAsFactors = FALSE)
   # Call processing function
-  processed_site_details = site_categorisation(test_site_details)
+  processed_site_details <- site_categorisation(test_site_details)
   # Test the answer matches the expected answer
   expect_identical(processed_site_details, expected_answer)
 })
