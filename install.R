@@ -34,6 +34,8 @@ using(
     "padr",
     "sqldf",
     "rjson",
+    "R6",
+    "git2r",
     "logging",
     "testthat"
 )
