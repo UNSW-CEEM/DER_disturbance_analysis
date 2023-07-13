@@ -34,5 +34,6 @@ using(
     "padr",
     "sqldf",
     "rjson",
-    "logging"
+    "logging",
+    "testthat"
 )
