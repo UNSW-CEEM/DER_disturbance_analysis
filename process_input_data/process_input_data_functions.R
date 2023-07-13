@@ -39,12 +39,12 @@ get_offset_sample_counts <- function(time_series_data, unique_offsets) {
 process_raw_site_details <- function(site_details) {
     site_details <- filter(site_details, !is.na(ac) & ac != "")
     assert_raw_site_details_assumptions(site_details)
-    # The data can contain duplicate site ids, these need to be summarised so there
-    # is one row per site id. AC power is summed so sites with more than 100kW
-    # can be filtered out of the data set. The first ac value is taken as a sample
-    # of the site, it is not summed, as latter when the data is joined to the
-    # circuit data (which may have multiple rows be site_id) this would create
-    # apparent additional ac capacity.
+    # The data can contain duplicate site ids, but these need to be reframed
+    # so there is one row per site id. AC power is summed so sites with more
+    # than 100kW can be filtered out of the data set. The first AC value is
+    # taken as a sample of the site, it is not summed, as later when the data
+    # is joined to the circuit data (which may have multiple rows be site_id)
+    # this would create apparent additional AC capacity.
     site_details <- group_by(site_details, site_id)
     processed_site_details <- reframe(
         site_details,
