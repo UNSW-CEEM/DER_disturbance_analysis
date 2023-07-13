@@ -61,13 +61,13 @@ process_raw_site_details <- function(site_details) {
 }
 
 sum_manufacturers <- function(manufacturers) {
-  unique_manufactuerers <- unique(manufacturers)
-  if (anyNA(unique_manufactuerers)) {
+  unique_manufacturers <- unique(manufacturers)
+  if (anyNA(unique_manufacturers)) {
     manufacturer <- 'NA'
-  } else if (length(unique_manufactuerers) > 1) {
+  } else if (length(unique_manufacturers) > 1) {
     manufacturer <- 'Multiple'
   } else {
-    manufacturer <- unique_manufactuerers[1]
+    manufacturer <- unique_manufacturers[1]
   }
   return(manufacturer)
 }
