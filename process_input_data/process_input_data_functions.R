@@ -37,22 +37,27 @@ get_offset_sample_counts <- function(time_series_data, unique_offsets) {
 
 
 process_raw_site_details <- function(site_details) {
-  site_details <- filter(site_details, !is.na(ac) & ac != "")
-  assert_raw_site_details_assumptions(site_details)
-  # The data can contain duplicate site ids, these need to be sumarised so there
-  # is one row per site id. AC power is summed so sites with more than 100kW
-  # can be filtered out of the data set. The first ac value is taken as a sample
-  # of the site, it is not summed, as latter when the data is joined to the
-  # circuit data (which may have mutiple rows be site_id) this would create
-  # apparent additional ac capacity.
-  site_details <- group_by(site_details, site_id)
-  processed_site_details <- summarise(site_details, s_state=first(s_state),
-                                      pv_installation_year_month=first(pv_installation_year_month),
-                                      sum_ac=sum(ac), first_ac=first(ac), s_postcode=first(s_postcode),
-                                      manufacturer=paste(manufacturer, collapse=' '),
-                                      model=paste(model, collapse=' '))
-  processed_site_details <- as.data.frame(processed_site_details)
-  return(processed_site_details)
+    site_details <- filter(site_details, !is.na(ac) & ac != "")
+    assert_raw_site_details_assumptions(site_details)
+    # The data can contain duplicate site ids, these need to be summarised so there
+    # is one row per site id. AC power is summed so sites with more than 100kW
+    # can be filtered out of the data set. The first ac value is taken as a sample
+    # of the site, it is not summed, as latter when the data is joined to the
+    # circuit data (which may have multiple rows be site_id) this would create
+    # apparent additional ac capacity.
+    site_details <- group_by(site_details, site_id)
+    processed_site_details <- reframe(
+        site_details,
+        s_state = first(s_state),
+        pv_installation_year_month = first(pv_installation_year_month),
+        sum_ac = sum(ac),
+        first_ac = first(ac),
+        s_postcode = first(s_postcode),
+        manufacturer = paste(manufacturer, collapse = ' '),
+        model = paste(model, collapse = ' ')
+    )
+    processed_site_details <- as.data.frame(processed_site_details)
+    return(processed_site_details)
 }
 
 sum_manufacturers <- function(manufacturers) {
@@ -67,24 +72,27 @@ sum_manufacturers <- function(manufacturers) {
   return(manufacturer)
 }
 
+#' Check incoming site data for conformance to data processing assumptions.
 assert_raw_site_details_assumptions <- function(site_details) {
-  # Check in coming site data for conformance to data processing assumptions
-  # We assume that only possible s_state values are NSW, QLD, VIC, TAS, SA, WA, NT, ACT
-  s_state <- site_details$s_state
-  assert_that(all(s_state == "NSW" | s_state == "QLD" | s_state == "VIC" | s_state == "TAS" | s_state == "SA" |
-                    s_state == "WA" | s_state == "ACT"), msg="State values outside expected set NSW, ACT, SA etc")
-  # We assume that for each site id there is only one distinct s_state value  and s_postcode value
-  site_details_grouped <- group_by(site_details, site_id)
-  site_details_grouped <- summarise(site_details_grouped, s_state=unique(s_state), s_postcode=unique(s_postcode))
-  site_details_grouped <- as.data.frame(site_details_grouped)
-  assert_that(all(lapply(site_details_grouped$s_state, length)==1),
-              msg="Some sites have mutiple distinct s_state values")
-  assert_that(all(lapply(site_details_grouped$s_postcode, length)==1),
-              msg="Some sites have mutiple distinct s_postcode values")
-  # We assume ac and dc values can be converted to numeric without be turned
-  # into NAs
-  assert_that(all(!is.na(as.numeric(site_details$ac))))
-  #assert_that(all(!is.na(as.numeric(site_details$dc))))
+    # Only possible s_state values are NSW, QLD, VIC, TAS, SA, WA, NT, ACT.
+    s_state <- site_details$s_state
+    assert_that(
+        all(s_state %in% c("NSW", "QLD", "VIC", "TAS", "SA" , "WA", "ACT")),
+        msg = "State values outside expected set NSW, ACT, SA etc."
+    )
+    # Only one distinct s_state and s_postcode value for each site_id.
+    site_details_grouped <- group_by(site_details, site_id) %>%
+        reframe(s_state = unique(s_state), s_postcode = unique(s_postcode))
+    assert_that(
+        all(count(site_details_grouped, site_id, s_state)$n == 1),
+        msg = "Some sites have mutiple distinct s_state values."
+    )
+    assert_that(
+        all(count(site_details_grouped, site_id, s_postcode)$n == 1),
+        msg = "Some sites have mutiple distinct s_postcode values."
+    )
+    # Assume AC values can be converted to numeric without be turned into NAs.
+    assert_that(all(!is.na(as.numeric(site_details$ac))))
 }
 
 perform_power_calculations <- function(master_data_table) {
