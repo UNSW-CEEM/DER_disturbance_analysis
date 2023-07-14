@@ -26,20 +26,38 @@ ui <- fluidPage(
       sidebarLayout(
         sidebarPanel(id = "side_panel",
           h4("Settings input file selection"),
-          textInput("settings_file", "Select JSON file for loading inputs (optional).",
-                    value = "C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/test.json"
+          textInput(
+            "settings_file",
+            "Select JSON file for loading inputs (optional).",
+            value = ""
           ),
           shinyFilesButton("load_settings", "Choose File", "Select settings file ...", multiple = FALSE),
           tags$hr(),
           h4("File selection"),
-          textInput("database_name", "SQLite database file",
-                    value = "C:/Users/NGorman/Documents/GitHub/DER_disturbance_analysis/data/20201203/20201203.db"
+          textInput(
+            "database_name",
+            "SQLite database file",
+            value = ""
           ),
           fluidRow(
-            div(style="display:inline-block", shinyFilesButton("choose_database", "Choose File",
-                                                               "Select database file ...", multiple = FALSE)),
-            div(style="display:inline-block", actionButton("load_file_from_settings", "Load from settings file")),
-            div(style="display:inline-block", actionButton("connect_to_database", "Connect"))),
+            div(
+              style="display:inline-block",
+              shinyFilesButton(
+                "choose_database",
+                "Choose File",
+                "Select database file ...",
+                multiple = FALSE
+              )
+            ),
+            div(
+              style="display:inline-block",
+              actionButton("load_file_from_settings", "Load from settings file")
+            ),
+            div(
+              style="display:inline-block",
+              actionButton("connect_to_database", "Connect")
+            )
+          ),
           tags$hr(),
           uiOutput("load_date"),
           uiOutput("load_time_start"),
@@ -73,9 +91,12 @@ ui <- fluidPage(
           uiOutput("offsets"),
           tags$hr(),
           h4("Chart specific filters"),
-          materialSwitch("norm_power_filter_off_at_t0",
-                         label = strong("Normalised power chart: filter out off at t0 circuits:"),
-                         status = "primary", value = TRUE),
+          materialSwitch(
+            "norm_power_filter_off_at_t0",
+            label = strong("Normalised power chart: filter out off at t0 circuits:"),
+            status = "primary",
+            value = TRUE
+          ),
           tags$hr(),
           h4("Grouping Categories"),
           materialSwitch("standard_agg", label=strong("AS4777:"), status="primary", value=TRUE),
@@ -482,57 +503,69 @@ server <- function(input,output,session) {
 
   # Store the main data table in a reactive value so it is accessable outside
   # the observe event that creates it.
-  v <- reactiveValues(combined_data = data.frame(),
-                      combined_data_no_ac_filter = data.frame(),
-                      agg_power = data.frame(),
-                      agg_norm_power = data.frame(),
-                      install_data = data.frame(),
-                      site_details = data.frame(),
-                      circuit_details = data.frame(),
-                      circuit_details_for_editing = data.frame(),
-                      site_details_raw = data.frame(),
-                      site_details_for_editing = data.frame(),
-                      proxy_site_details_editor = 1,
-                      proxy_circuit_details_editor = 1,
-                      combined_data_after_clean = data.frame(),
-                      time_series_data = data.frame(),
-                      sample_count_table = data.frame(),
-                      combined_data_f = data.frame(),
-                      performance_factors = data.frame(),
-                      postcode_data = data.frame(),
-                      response_count = data.frame(),
-                      zone_count = data.frame(),
-                      distance_response = data.frame(),
-                      frequency_data = data.frame(),
-                      unique_offsets = c(),
-                      circuit_summary = data.frame(),
-                      region_frequency = data.frame(),
-                      trigger_update_manual_compliance_tab = FALSE
-                      )
+  v <- reactiveValues(
+    combined_data = data.frame(),
+    combined_data_no_ac_filter = data.frame(),
+    agg_power = data.frame(),
+    agg_norm_power = data.frame(),
+    install_data = data.frame(),
+    site_details = data.frame(),
+    circuit_details = data.frame(),
+    circuit_details_for_editing = data.frame(),
+    site_details_raw = data.frame(),
+    site_details_for_editing = data.frame(),
+    proxy_site_details_editor = 1,
+    proxy_circuit_details_editor = 1,
+    combined_data_after_clean = data.frame(),
+    time_series_data = data.frame(),
+    sample_count_table = data.frame(),
+    combined_data_f = data.frame(),
+    performance_factors = data.frame(),
+    postcode_data = data.frame(),
+    response_count = data.frame(),
+    zone_count = data.frame(),
+    distance_response = data.frame(),
+    frequency_data = data.frame(),
+    unique_offsets = c(),
+    circuit_summary = data.frame(),
+    region_frequency = data.frame(),
+    trigger_update_manual_compliance_tab = FALSE
+  )
 
   observeEvent(input$connect_to_database, {
     v$db <- DBInterface$new()
 
     good_connection <- FALSE
-    tryCatch({
-      v$db$connect_to_existing_database(database_name())
-      good_connection <- TRUE
+    tryCatch(
+      {
+        v$db$connect_to_existing_database(database_name())
+        good_connection <- TRUE
       },
-      error =  function(cond) {
-        shinyalert("An error occured while connecting to the database.", cond$message)
-    })
+      error = function(cond) {
+        shinyalert(
+          "An error occured while connecting to the database.",
+          cond$message
+        )
+      }
+    )
 
     if (good_connection) {
       min_timestamp <- v$db$get_min_timestamp()
       max_timestamp <- v$db$get_max_timestamp()
 
       output$load_time_start <- renderUI({
-        timeInput("load_time_start", label = strong('Enter start time'),
-                  value = min_timestamp)
+        timeInput(
+          "load_time_start",
+          label = strong('Enter start time'),
+          value = min_timestamp
+        )
       })
       output$load_time_end <- renderUI({
-        timeInput("load_time_end", label = strong('Enter end time'),
-                  value = max_timestamp)
+        timeInput(
+          "load_time_end",
+          label = strong('Enter end time'),
+          value = max_timestamp
+        )
       })
 
       output$load_date <- renderUI({
@@ -589,7 +622,10 @@ server <- function(input,output,session) {
     } else {
       if (v$db$check_if_table_exists('site_details_cleaned')) {
         v$site_details_for_editing <- v$db$get_site_details_cleaning_report()
-        v$site_details_for_editing <- filter(v$site_details_for_editing, s_state == settings$region_to_load)
+        v$site_details_for_editing <- filter(
+          v$site_details_for_editing,
+          s_state == settings$region_to_load
+        )
         output$site_details_editor <- renderDT(
           isolate(v$site_details_for_editing),
           selection='single',
@@ -601,7 +637,10 @@ server <- function(input,output,session) {
 
       if (v$db$check_if_table_exists('circuit_details_cleaned')) {
         v$circuit_details_for_editing <- v$db$get_circuit_details_cleaning_report()
-        v$circuit_details_for_editing <- filter(v$circuit_details_for_editing, site_id %in% v$site_details_for_editing$site_id)
+        v$circuit_details_for_editing <- filter(
+          v$circuit_details_for_editing,
+          site_id %in% v$site_details_for_editing$site_id
+        )
         output$circuit_details_editor <- renderDT(
           isolate(v$circuit_details_for_editing),
           selection='single',
@@ -616,15 +655,28 @@ server <- function(input,output,session) {
       # The data loaded can then be used to create the appropraite options for
       # filtering.
       output$postcodes <- renderUI({
-        selectizeInput("postcodes", label=strong("Select postcodes"), choices = sort(unique(v$site_details$s_postcode)),
-                      multiple=TRUE)
-        })
+        selectizeInput(
+          "postcodes",
+          label=strong("Select postcodes"),
+          choices=sort(unique(v$site_details$s_postcode)),
+          multiple=TRUE
+        )
+      })
       output$manufacturers <- renderUI({
-        selectizeInput("manufacturers", label=strong("Select manufacturers"),
-                        choices = sort(unique(v$site_details$manufacturer)), multiple=TRUE)
+        selectizeInput(
+          "manufacturers",
+          label=strong("Select manufacturers"),
+          choices = sort(unique(v$site_details$manufacturer)),
+          multiple=TRUE
+        )
       })
       output$models <- renderUI({
-        selectizeInput("models", label=strong("Select models"), choices = sort(unique(v$site_details$model)), multiple=TRUE)
+        selectizeInput(
+          "models",
+          label=strong("Select models"),
+          choices = sort(unique(v$site_details$model)),
+          multiple=TRUE
+        )
       })
       output$sites <- renderUI({
         selectizeInput("sites", label=strong("Select Sites"), choices = sort(unique(v$site_details$site_id)), multiple=TRUE)
@@ -1665,7 +1717,9 @@ server <- function(input,output,session) {
       circuits <- unique(circuits$c_id)
       data_to_view <- filter(v$combined_data, c_id %in% circuits)
       data_to_view <- mutate(data_to_view, c_id=as.character(c_id))
-      output$site_plot <- renderPlotly({plot_ly(data_to_view, x=~ts, y=~power_kW, color=~c_id, type="scattergl")})
+      output$site_plot <- renderPlotly({
+        plot_ly(data_to_view, x=~ts, y=~power_kW, color=~c_id, type="scattergl")
+      })
     }
   })
 
