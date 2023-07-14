@@ -602,8 +602,12 @@ server <- function(input,output,session) {
       if (v$db$check_if_table_exists('circuit_details_cleaned')) {
         v$circuit_details_for_editing <- v$db$get_circuit_details_cleaning_report()
         v$circuit_details_for_editing <- filter(v$circuit_details_for_editing, site_id %in% v$site_details_for_editing$site_id)
-        output$circuit_details_editor <- renderDT(isolate(v$circuit_details_for_editing), selection='single',
-                                                  rownames=FALSE, editable=TRUE)
+        output$circuit_details_editor <- renderDT(
+          isolate(v$circuit_details_for_editing),
+          selection='single',
+          rownames=FALSE,
+          editable=TRUE
+        )
         v$proxy_circuit_details_editor <- dataTableProxy('circuit_details_editor')
       }
 
