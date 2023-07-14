@@ -590,8 +590,12 @@ server <- function(input,output,session) {
       if (v$db$check_if_table_exists('site_details_cleaned')) {
         v$site_details_for_editing <- v$db$get_site_details_cleaning_report()
         v$site_details_for_editing <- filter(v$site_details_for_editing, s_state == settings$region_to_load)
-        output$site_details_editor <- renderDT(isolate(v$site_details_for_editing), selection='single', rownames=FALSE,
-                                                editable=TRUE)
+        output$site_details_editor <- renderDT(
+          isolate(v$site_details_for_editing),
+          selection='single',
+          rownames=FALSE,
+          editable=TRUE
+        )
         v$proxy_site_details_editor <- dataTableProxy('site_details_editor')
       }
 
