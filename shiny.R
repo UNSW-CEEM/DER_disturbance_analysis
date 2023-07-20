@@ -1,13 +1,5 @@
 app_logger <- "shinyapp"
 source("load_tool_environment.R")
-unloadNamespace("shinyFiles")
-unloadNamespace("shinyTime")
-unloadNamespace("shinyWidgets")
-unloadNamespace("shiny")
-require("shiny")
-require("shinyFiles")
-require("shinyTime")
-require("shinyWidgets")
 
 # set up logging at info level
 basicConfig(level = 20)
