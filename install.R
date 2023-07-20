@@ -14,10 +14,6 @@ using <- function(...) {
 }
 
 using(
-    "shiny",
-    "shinyTime",
-    "shinyWidgets",
-    "shinyalert",
     "plotly",
     "lubridate",
     "dplyr",
@@ -37,5 +33,9 @@ using(
     "R6",
     "git2r",
     "logging",
-    "testthat"
+    "testthat",
+    "shiny",
+    "shinyTime",
+    "shinyWidgets",
+    "shinyalert"
 )
