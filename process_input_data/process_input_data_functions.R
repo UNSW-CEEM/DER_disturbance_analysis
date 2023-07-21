@@ -46,7 +46,7 @@ process_raw_site_details <- function(site_details) {
     # is joined to the circuit data (which may have multiple rows be site_id)
     # this would create apparent additional AC capacity.
     site_details <- group_by(site_details, site_id)
-    processed_site_details <- reframe(
+    processed_site_details <- summarise(
         site_details,
         s_state = first(s_state),
         pv_installation_year_month = first(pv_installation_year_month),
@@ -82,7 +82,7 @@ assert_raw_site_details_assumptions <- function(site_details) {
     )
     # Only one distinct s_state and s_postcode value for each site_id.
     site_details_grouped <- group_by(site_details, site_id) %>%
-        reframe(s_state = unique(s_state), s_postcode = unique(s_postcode))
+        summarise(s_state = unique(s_state), s_postcode = unique(s_postcode))
     assert_that(
         all(count(site_details_grouped, site_id, s_state)$n == 1),
         msg = "Some sites have mutiple distinct s_state values."
