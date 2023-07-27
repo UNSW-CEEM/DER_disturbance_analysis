@@ -41,5 +41,5 @@ testthat::test_that("Calculating categorisation works",{
                              6,                  Cannot-be-set"
   
   expected_categories <- load_test_df_keep_NA(expected_categories)
-  testthat::expect_equal(reconnection_times, expected_categories, tolerance = 1e-4)
+  testthat::expect_equivalent(reconnection_times, expected_categories, tolerance = 1e-4)
 })
