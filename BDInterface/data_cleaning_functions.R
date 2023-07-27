@@ -49,7 +49,7 @@ site_details_data_cleaning_one <- function(site_details){
 
 site_details_data_cleaning_two <- function(time_series, site_details){
   max_site_power <- calc_max_kw_per_site(time_series)
-  site_details <- left_join(site_details, max_site_power, on=c("site_id"))
+  site_details <- left_join(site_details, max_site_power, by=c("site_id"))
   site_details <- check_for_peak_power_greater_than_dc_capacity(site_details)
   # Record if dc value was scaled or not.
   site_details <- mutate(site_details, change_dc=ifelse(sum_dc!=sum_dc_old,1,0))
@@ -113,7 +113,7 @@ clean_connection_types <- function(combined_data, circuit_details, postcode_data
   # Select the values from the orginal circuit details that would not be changed 
   # by cleaning, then merge back in with details updated or created by cleaning
   circuit_details <- select(circuit_details, site_id, c_id, manual_droop_compliance, manual_reconnect_compliance)
-  combined_data <- left_join(combined_data, circuit_details, on="c_id")
+  combined_data <- left_join(combined_data, circuit_details, by="c_id")
   return(combined_data)
 }
 
