@@ -106,7 +106,7 @@ test_that("Test assess_islands with response_category = 'NED' and v, f are norma
   v <- c(240)
   combined_data <- data.frame(c_id, ts, clean, Islanded, response_category, f, v, stringsAsFactors = FALSE)
   
-  out <- assess_islands(combined_data)
+  out <- as.data.frame(assess_islands(combined_data))
   island_assessment <- c("Otherwise normal")
   expected_output <- data.frame(c_id, clean, island_assessment, stringsAsFactors = FALSE)
   expect_equal(out, expected_output, tolerance=0.001)
@@ -123,7 +123,7 @@ test_that("Test assess_islands with max_freq = 55Hz" ,{
   v <- c(240)
   combined_data <- data.frame(c_id, ts, clean, Islanded, response_category, f, v, stringsAsFactors = FALSE)
 
-  out <- assess_islands(combined_data)
+  out <- as.data.frame(assess_islands(combined_data))
   island_assessment <- c('Gateway curtailed')
   expected_output <- data.frame(c_id, clean, island_assessment, stringsAsFactors = FALSE)
   expect_equal(out, expected_output, tolerance=0.001)
@@ -140,7 +140,7 @@ test_that("Test assess_islands with min_freq = 49Hz" ,{
   v <- c(240)
   combined_data <- data.frame(c_id, ts, clean, Islanded, response_category, f, v, stringsAsFactors = FALSE)
   
-  out <- assess_islands(combined_data)
+  out <- as.data.frame(assess_islands(combined_data))
   island_assessment <- c('Frequency disruption')
   expected_output <- data.frame(c_id, clean, island_assessment, stringsAsFactors = FALSE)
   expect_equal(out, expected_output, tolerance=0.001)
@@ -158,7 +158,7 @@ test_that("Test assess_islands with fmin = 48Hz but minimum f = 50 Hz" ,{
   v <- c(240)
   combined_data <- data.frame(c_id, ts, clean, Islanded, response_category, f, fmin, v, stringsAsFactors = FALSE)
   
-  out <- assess_islands(combined_data)
+  out <- as.data.frame(assess_islands(combined_data))
   island_assessment <- c('Frequency disruption')
   expected_output <- data.frame(c_id, clean, island_assessment, stringsAsFactors = FALSE)
   expect_equal(out, expected_output, tolerance=0.001)
@@ -175,7 +175,7 @@ test_that("Test assess_islands with max_voltage = 270Hz" ,{
   v <- c(270)
   combined_data <- data.frame(c_id, ts, clean, Islanded, response_category, f, v, stringsAsFactors = FALSE)
   
-  out <- assess_islands(combined_data)
+  out <- as.data.frame(assess_islands(combined_data))
   island_assessment <- c('Voltage disruption')
   expected_output <- data.frame(c_id, clean, island_assessment, stringsAsFactors = FALSE)
   expect_equal(out, expected_output, tolerance=0.001)
@@ -192,7 +192,7 @@ test_that("Test assess_islands for site with no other disruptions" ,{
   v <- c(241)
   combined_data <- data.frame(c_id, ts, clean, Islanded, response_category, f, v, stringsAsFactors = FALSE)
   
-  out <- assess_islands(combined_data)
+  out <- as.data.frame(assess_islands(combined_data))
   island_assessment <- c('PV disconnect')
   expected_output <- data.frame(c_id, clean, island_assessment, stringsAsFactors = FALSE)
   expect_equal(out, expected_output, tolerance=0.001)
