@@ -83,7 +83,7 @@ vector_groupby_count_zones <- function(data, grouping_cols){
   if (!"zone" %in% grouping_cols) {grouping_cols <- c(grouping_cols, "zone")}
   grouping_cols <- grouping_cols[grouping_cols != "c_id"]
   add_cols <- grouping_cols[!grouping_cols %in% c("clean", "zone")]
-  grouping_cols <- c(grouping_cols, add_cols)
+  grouping_cols <- unique(c(grouping_cols, add_cols))
   data <- group_by(data, .dots=grouping_cols)
   data <- summarise(data , sample_count=length(unique(c_id)))
   data$series_x <- do.call(paste, c(data[c("clean", "zone")], sep = "-" ))
