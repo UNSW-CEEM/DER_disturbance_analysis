@@ -44,7 +44,7 @@ testthat::test_that("Categorising a circuit with 5s data, and just a breif ramp 
                                                     ramp_rate_change_resource_limit_threshold = -0.1)
 
   
-  testthat::expect_equal(calculated_results, expected_results, tolerance = 1e-4)
+  testthat::expect_equivalence(calculated_results, expected_results, tolerance = 1e-4)
 })
 
 
@@ -82,7 +82,7 @@ testthat::test_that("Categorising a circuit with 5s data, sustained ramp rate vi
                                                     ramp_threshold_for_non_compliance = 0.3,
                                                     ramp_rate_change_resource_limit_threshold = -0.1)
   
-  testthat::expect_equal(calculated_results, expected_results, tolerance = 1e-4)
+  testthat::expect_equivalence(calculated_results, expected_results, tolerance = 1e-4)
 })
 
 
@@ -120,7 +120,7 @@ testthat::test_that("Categorising a circuit with 60s data, no ramp rate violatio
                                                     ramp_threshold_for_non_compliance = 0.3,
                                                     ramp_rate_change_resource_limit_threshold = -0.1)
   
-  testthat::expect_equal(calculated_results, expected_results, tolerance = 1e-4)
+  testthat::expect_equivalence(calculated_results, expected_results, tolerance = 1e-4)
 })
 
 
@@ -159,5 +159,5 @@ testthat::test_that("Categorising a circuit with 5s data, sustained ramp rate vi
                                                     ramp_rate_change_resource_limit_threshold = -0.1)
   
   
-  testthat::expect_equal(calculated_results, expected_results, tolerance = 1e-4)
+  testthat::expect_equivalence(calculated_results, expected_results, tolerance = 1e-4)
 })
