@@ -26,7 +26,7 @@ jobs:
     strategy:
       matrix:
         os: ['macos-latest', 'windows-latest']
-        r-version: ['3.5.2', '4.2.2', 'latest']
+        r-version: ['4.2.2', 'latest']
 
     steps:
       - uses: actions/checkout@v3
