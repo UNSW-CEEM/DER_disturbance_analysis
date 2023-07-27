@@ -30,7 +30,7 @@ test_that("Test 2015 undervoltage detected", {
   expected_result['antiislanding_v_excursion_2020'] <- 'undervoltage_1'
 
   result <- detect_voltage_threshold_excursions(combined_data, PRE_EVENT_INTERVAL, WINDOW_LENGTH)
-  testthat::expect_equivalent(result, expected_result)
+  testthat::expect_equal(result, expected_result, ignore_attr = TRUE)
 })
 test_that("Test 2015 overvoltage 1 detected", {
   combined_data <- COMBINED_DATA_TEMPLATE
@@ -39,7 +39,7 @@ test_that("Test 2015 overvoltage 1 detected", {
   expected_result['antiislanding_v_excursion_2015'] <- 'overvoltage_1'
 
   result <- detect_voltage_threshold_excursions(combined_data, PRE_EVENT_INTERVAL, WINDOW_LENGTH)
-  testthat::expect_equivalent(result, expected_result)
+  testthat::expect_equal(result, expected_result, ignore_attr = TRUE)
 })
 test_that("Test 2015 overvoltage 2 detected", {
   combined_data <- COMBINED_DATA_TEMPLATE
@@ -49,7 +49,7 @@ test_that("Test 2015 overvoltage 2 detected", {
   expected_result['antiislanding_v_excursion_2020'] <- 'overvoltage_1'
 
   result <- detect_voltage_threshold_excursions(combined_data, PRE_EVENT_INTERVAL, WINDOW_LENGTH)
-  testthat::expect_equivalent(result, expected_result)
+  testthat::expect_equal(result, expected_result, ignore_attr = TRUE)
 })
 
 test_that("Test 2020 undervoltage 2 detected", {
@@ -60,7 +60,7 @@ test_that("Test 2020 undervoltage 2 detected", {
   expected_result['antiislanding_v_excursion_2020'] <- 'undervoltage_2'
 
   result <- detect_voltage_threshold_excursions(combined_data, PRE_EVENT_INTERVAL, WINDOW_LENGTH)
-  testthat::expect_equivalent(result, expected_result)
+  testthat::expect_equal(result, expected_result, ignore_attr = TRUE)
 })
 test_that("Test 2020 undervoltage 1 detected", {
   combined_data <- COMBINED_DATA_TEMPLATE
@@ -70,7 +70,7 @@ test_that("Test 2020 undervoltage 1 detected", {
   expected_result['antiislanding_v_excursion_2020'] <- 'undervoltage_1'
 
   result <- detect_voltage_threshold_excursions(combined_data, PRE_EVENT_INTERVAL, WINDOW_LENGTH)
-  testthat::expect_equivalent(result, expected_result)
+  testthat::expect_equal(result, expected_result, ignore_attr = TRUE)
 })
 test_that("Test 2020 overvoltage 1 detected", {
   combined_data <- COMBINED_DATA_TEMPLATE
@@ -80,7 +80,7 @@ test_that("Test 2020 overvoltage 1 detected", {
   expected_result['antiislanding_v_excursion_2020'] <- 'overvoltage_1'
 
   result <- detect_voltage_threshold_excursions(combined_data, PRE_EVENT_INTERVAL, WINDOW_LENGTH)
-  testthat::expect_equivalent(result, expected_result)
+  testthat::expect_equal(result, expected_result, ignore_attr = TRUE)
 })
 test_that("Test 2020 overvoltage 2 detected", {
   combined_data <- COMBINED_DATA_TEMPLATE
@@ -90,5 +90,5 @@ test_that("Test 2020 overvoltage 2 detected", {
   expected_result['antiislanding_v_excursion_2020'] <- 'overvoltage_2'
 
   result <- detect_voltage_threshold_excursions(combined_data, PRE_EVENT_INTERVAL, WINDOW_LENGTH)
-  testthat::expect_equivalent(result, expected_result)
+  testthat::expect_equal(result, expected_result, ignore_attr = TRUE)
 })
