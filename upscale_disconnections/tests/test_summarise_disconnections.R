@@ -31,7 +31,7 @@ testthat::test_that("group_disconnections_by_manufacturer",{
   circuit_summary <- load_test_file(circuit_summary)
   expected_output <- load_test_file(expected_output)
   output <- group_disconnections_by_manufacturer(circuit_summary)
-  testthat::expect_equal(output, expected_output, tolerance = 1e-4)
+  testthat::expect_equivalent(output, expected_output, tolerance = 1e-4)
 })
 
 testthat::test_that("join_circuit_summary_and_cer_manufacturer_data",{

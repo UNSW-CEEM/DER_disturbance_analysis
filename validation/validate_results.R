@@ -142,6 +142,9 @@ compare_dfs <- function(reference, test, event_name=NA){
     # 1. check for new columns
     ref_columns <- names(reference)
     test_columns <- names(test)
+    # ignore tool_hash, since it will always be different
+    ref_columns <- ref_columns[!ref_columns %in% c("tool_hash")]
+    test_columns <- test_columns[!test_columns %in% c("tool_hash")]
     column_diff <- difference_between_lists(ref_columns, test_columns)
 
     if (length(column_diff$reference_only) > 0) {

@@ -1,31 +1,41 @@
-install.packages("versions")
-library("versions")
-install_type <- 'binary'
-install.versions(c('shiny'), c('1.4.0.2'), type=install_type)
-install.versions(c('shinyalert'), c('2.0.0'), type=install_type)
-install.versions(c('shinyTime'), c('1.0.1'), type=install_type)
-install.versions(c('shinyWidgets'), c('0.5.4'), type=install_type)
-install.versions(c('plotly'), c('4.9.2.1'), type=install_type)
-install.versions(c('lubridate'), c('1.7.8'), type=install_type)
-install.versions(c('dplyr'), c('0.8.5'), type=install_type)
-install.versions(c('tidyr'), c('1.0.2'), type=install_type)
-install.versions(c('data.table'), c('1.12.8'), type=install_type)
-install.versions(c('shinycssloaders'), c('1.0.0'), type=install_type)
-install.versions(c('shinyFiles'), c('0.8.0'), type=install_type)
-install.versions(c('shinyjs'), c('2.0.0'), type=install_type)
-install.versions(c('fasttime'), c('1.0-2'), type=install_type)
-install.versions(c('DT'), c('0.16'), type=install_type)
-install.versions(c('suncalc'), c('0.5.0'), type=install_type)
-install.versions(c('ggmap'), c('3.0.0'), type=install_type)
-install.versions(c('measurements'), c('1.4.0'), type=install_type)
-install.versions(c('assertthat'), c('0.2.1'), type=install_type)
-install.versions(c('geosphere'), c('1.5-10'), type=install_type)
-install.versions(c('swfscMisc'), c('1.3'), type=install_type)
-install.versions(c('padr'), c('0.5.1'), type=install_type)
-install.versions(c('sqldf'), c('0.4-11'), type=install_type)
-install.versions(c('gridExtra'), c('2.3'), type=install_type)
-install.versions(c('rjson'), c('0.2.20'), type=install_type)
-install.versions(c('R6'), c('2.5.0'), type=install_type)
-install.versions(c('git2r'), c('0.29.0'), type=install_type)
-install.versions(c('logging'), c('0.10-108'), type=install_type)
-install.versions(c('testthat'), c('2.3.2'), type=install_type)
+#' Load libraries
+#'
+#' using tries to load all libraries passed to it, and if a library is not
+#' found, using will install it and then load it.
+#' @param ... The libraries / dependencies / packages to load.
+using <- function(...) {
+    libs <- unlist(list(...))
+    req <- unlist(lapply(libs, require, character.only = TRUE))
+    need <- libs[req == FALSE]
+    if (length(need) > 0) {
+        install.packages(need)
+        lapply(need, require, character.only = TRUE)
+    }
+}
+
+using(
+    "plotly",
+    "lubridate",
+    "dplyr",
+    "tidyr",
+    "data.table",
+    "shinyFiles",
+    "shinyjs",
+    "fasttime",
+    "DT",
+    "suncalc",
+    "assertthat",
+    "geosphere",
+    "swfscMisc",
+    "padr",
+    "sqldf",
+    "rjson",
+    "R6",
+    "git2r",
+    "logging",
+    "testthat",
+    "shiny",
+    "shinyTime",
+    "shinyWidgets",
+    "shinyalert"
+)

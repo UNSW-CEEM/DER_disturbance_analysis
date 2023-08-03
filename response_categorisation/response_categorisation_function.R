@@ -12,7 +12,7 @@ categorise_response <- function(combined_data, event_time, window_length, NED_th
                                                    "sampled", "not sampled"))
   event_window_data <- categorise_by_response(event_window_data, window_length, NED_threshold_pct)
   event_window_data <- select(event_window_data, "c_id", "clean", "response_category")
-  combined_data <- left_join(combined_data, event_window_data, on=c("c_id", "clean"))
+  combined_data <- left_join(combined_data, event_window_data, by=c("c_id", "clean"))
   return(combined_data)
 }
 

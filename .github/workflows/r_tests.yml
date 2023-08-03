@@ -21,12 +21,12 @@ permissions:
 
 jobs:
   test:
-    name: Run tests on ${{ matrix.os }}
+    name: Run tests on ${{ matrix.os }} for R version ${{ matrix.r-version }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: ['macos-latest', 'windows-latest']
-        r-version: ['3.6.3']
+        r-version: ['4.2.2', 'latest']
 
     steps:
       - uses: actions/checkout@v3

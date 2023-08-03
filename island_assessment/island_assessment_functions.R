@@ -4,7 +4,7 @@ classify_islands <- function(combined_data, alert_data, event_time, window_lengt
   # determine which islanded sites can be classified as disconnect
   event_window_data <- filter(combined_data, ts > event_time - d & ts <= event_time + 60 * window_length)
   event_window_data <- assess_islands(event_window_data)
-  combined_data <- left_join(combined_data, event_window_data, on=c("c_id", "clean"))
+  combined_data <- left_join(combined_data, event_window_data, by=c("c_id", "clean"))
   # replace response_category with island_assessment response
   combined_data <- replace_response_with_alert(combined_data)
   return(combined_data)

@@ -66,24 +66,27 @@ sum_manufacturers <- function(manufacturers){
   return(manufacturer)
 }
 
-assert_raw_site_details_assumptions <- function(site_details){
-  # Check in coming site data for conformance to data processing assumptions
-  # We assume that only possible s_state values are NSW, QLD, VIC, TAS, SA, WA, NT, ACT
-  s_state <- site_details$s_state
-  assert_that(all(s_state == "NSW" | s_state == "QLD" | s_state == "VIC" | s_state == "TAS" | s_state == "SA" |
-                    s_state == "WA" | s_state == "ACT"), msg="State values outside expected set NSW, ACT, SA etc")
-  # We assume that for each site id there is only one distinct s_state value  and s_postcode value
-  site_details_grouped <- group_by(site_details, site_id)
-  site_details_grouped <- summarise(site_details_grouped, s_state=unique(s_state), s_postcode=unique(s_postcode))
-  site_details_grouped <- as.data.frame(site_details_grouped)
-  assert_that(all(lapply(site_details_grouped$s_state, length)==1), 
-              msg="Some sites have mutiple distinct s_state values")
-  assert_that(all(lapply(site_details_grouped$s_postcode, length)==1),
-              msg="Some sites have mutiple distinct s_postcode values")
-  # We assume ac and dc values can be converted to numeric without be turned
-  # into NAs
-  assert_that(all(!is.na(as.numeric(site_details$ac))))
-  #assert_that(all(!is.na(as.numeric(site_details$dc))))
+#' Check incoming site data for conformance to data processing assumptions.
+assert_raw_site_details_assumptions <- function(site_details) {
+    # Only possible s_state values are NSW, QLD, VIC, TAS, SA, WA, NT, ACT.
+    s_state <- site_details$s_state
+    assert_that(
+        all(s_state %in% c("NSW", "QLD", "VIC", "TAS", "SA" , "WA", "ACT")),
+        msg = "State values outside expected set NSW, ACT, SA etc."
+    )
+    # Only one distinct s_state and s_postcode value for each site_id.
+    site_details_grouped <- group_by(site_details, site_id) %>%
+        summarise(s_state = unique(s_state), s_postcode = unique(s_postcode))
+    assert_that(
+        all(count(site_details_grouped, site_id, s_state)$n == 1),
+        msg = "Some sites have mutiple distinct s_state values."
+    )
+    assert_that(
+        all(count(site_details_grouped, site_id, s_postcode)$n == 1),
+        msg = "Some sites have mutiple distinct s_postcode values."
+    )
+    # Assume AC values can be converted to numeric without be turned into NAs.
+    assert_that(all(!is.na(as.numeric(site_details$ac))))
 }
 
 perform_power_calculations <- function(master_data_table){
