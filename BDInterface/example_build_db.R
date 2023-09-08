@@ -7,15 +7,24 @@ db <- DBInterface$new()
 
 db$connect_to_new_database("data/2021-01-24/20210124_v2.db")
 
-db$default_timeseries_column_aliases <- list(utc_tstamp='_ts', c_id='_c_id', 
-                                             voltage='_voltage', frequency='_frequency', 
-                                             energy='_e', duration='_d', 
-                                             power='_p', vmin='_vmin', 
-                                             vmax='_vmax', vmean='_vmean')
+db$default_timeseries_column_aliases <- list(
+    utc_tstamp='_ts',
+    c_id='_c_id',
+    voltage='_voltage',
+    frequency='_frequency',
+    energy='_e',
+    duration='_d',
+    power='_p',
+    vmin='_vmin',
+    vmax='_vmax',
+    vmean='_vmean'
+)
 
-db$build_database(timeseries = timeseries_path_name,
-                  circuit_details = circuit_details_path_name,
-                  site_details = site_details_path_name)
+db$build_database(
+    timeseries = timeseries_path_name,
+    circuit_details = circuit_details_path_name,
+    site_details = site_details_path_name
+)
 
 db$add_postcode_lon_lat_to_database("inbuilt_data/postcode_lon_lat.csv")
 
