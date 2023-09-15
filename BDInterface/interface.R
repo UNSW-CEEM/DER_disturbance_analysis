@@ -12,33 +12,30 @@ source("data_cleaning_functions.R")
 source("get_free_disk_space.R")
 setwd(wd)
 
-
-DBInterface <- R6::R6Class("DBInterface",
+DBInterface <- R6::R6Class(
+  "DBInterface",
   public = list(
-    db_path_name=NULL,
-    default_timeseries_column_aliases=list(
-        ts='_ts',
-        time_stamp='_ts',
-        c_id='_c_id',
-        v='_voltage',
-        vmin='_vmin',
-        vmax='_vmax',
-        vmean='_vmean',
-        f='_frequency',
-        fmin='_fmin',
-        fmax='_fmax',
-        e='_e',
-        d='_d',
-        p='_p'
+    db_path_name = NULL,
+    default_timeseries_column_aliases = list(
+      ts = '_ts',
+      time_stamp = '_ts',
+      c_id = '_c_id',
+      v = '_voltage',
+      vmin = '_vmin',
+      vmax = '_vmax',
+      vmean = '_vmean',
+      f = '_frequency',
+      fmin = '_fmin',
+      fmax = '_fmax',
+      e = '_e',
+      d = '_d',
+      p = '_p'
     ),
-    connect_to_new_database=function(db_path_name) {
+    connect_to_new_database = function(db_path_name) {
       if (file.exists(db_path_name)) {
         stop(
-            paste0(
-                "That database file already exits. If you want to create a new DB with this name please delete the "
-                "existing DB. If you want to connect to an existing DB please use the "
-                "connect_to_existing_database method."
-            )
+          "That database file already exits. If you want to create a new DB with this name please delete the
+          existing DB. If you want to connect to an existing DB please use the connect_to_existing_database method."
         )
       }
       con <- RSQLite::dbConnect(RSQLite::SQLite(), db_path_name)
@@ -56,35 +53,65 @@ DBInterface <- R6::R6Class("DBInterface",
     },
     check_tables_have_expected_columns = function() {
       self$check_table_has_expected_columns(
-          'timeseries',
-          c("ts", "c_id", "d", "d_key", "e", "f", "fmin", "fmax", "v",
-                                                            "vmin", "vmax", "vmean"))
-      self$check_table_has_expected_columns('circuit_details_raw', c("c_id", "site_id", "con_type", "polarity",
-                                                                     "manual_droop_compliance",
-                                                                     "manual_reconnect_compliance"))
+        'timeseries',
+        c("ts", "c_id", "d", "d_key", "e", "f", "fmin", "fmax", "v", "vmin", "vmax", "vmean")
+      )
+      self$check_table_has_expected_columns(
+        'circuit_details_raw',
+        c("c_id", "site_id", "con_type", "polarity", "manual_droop_compliance", "manual_reconnect_compliance")
+      )
       if (self$check_if_table_exists('circuit_details_cleaned')) {
-        self$check_table_has_expected_columns('circuit_details_cleaned', c("c_id", "site_id", "con_type", "polarity",
-                                                                           "sunrise", "sunset", "min_power", "max_power",
-                                                                           "frac_day", "old_con_type", "con_type_changed",
-                                                                           "polarity_changed", "manual_droop_compliance",
-                                                                           "manual_reconnect_compliance"))
+        self$check_table_has_expected_columns(
+          'circuit_details_cleaned',
+          c(
+            "c_id",
+            "site_id",
+            "con_type",
+            "polarity",
+            "sunrise",
+            "sunset",
+            "min_power",
+            "max_power",
+            "frac_day",
+            "old_con_type",
+            "con_type_changed",
+            "polarity_changed",
+            "manual_droop_compliance",
+            "manual_reconnect_compliance"
+          )
+        )
       }
-      self$check_table_has_expected_columns('site_details_raw', c("site_id", "s_postcode", "s_state", "ac", "dc",
-                                                                  "manufacturer", "model",
-                                                                  "pv_installation_year_month"))
+      self$check_table_has_expected_columns(
+        'site_details_raw',
+        c("site_id", "s_postcode", "s_state", "ac", "dc", "manufacturer", "model", "pv_installation_year_month")
+      )
 
       if (self$check_if_table_exists('site_details_cleaned')) {
-        self$check_table_has_expected_columns('site_details_cleaned', c("site_id", "s_postcode", "s_state",
-                                                                        "pv_installation_year_month", "ac", "dc",
-                                                                        "ac_old", "dc_old", "ac_dc_ratio", "manufacturer",
-                                                                        "model", "rows_grouped", "max_power_kW",
-                                                                        "change_ac", "change_dc"))
+        self$check_table_has_expected_columns(
+          'site_details_cleaned',
+          c(
+            "site_id",
+            "s_postcode",
+            "s_state",
+            "pv_installation_year_month",
+            "ac",
+            "dc",
+            "ac_old",
+            "dc_old",
+            "ac_dc_ratio",
+            "manufacturer",
+            "model",
+            "rows_grouped",
+            "max_power_kW",
+            "change_ac",
+            "change_dc"
+          )
+        )
       }
 
       if (self$check_if_table_exists('postcode_lon_lat')) {
         self$check_table_has_expected_columns('postcode_lon_lat', c("postcode", "lon", "lat"))
       }
-
     },
     check_table_has_expected_columns = function(table, expected_columns) {
       con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)
@@ -94,16 +121,21 @@ DBInterface <- R6::R6Class("DBInterface",
         expected_columns <- sort(expected_columns)
         if (!identical(table_column_names, expected_columns)) {
           RSQLite::dbDisconnect(con)
-          stop(paste0("Connection to database aborted, the tables in specified database did not have the expected columns. ",
-                "This is probably becuase the database was created with a different (probably older) version of the ",
-                "database interface tool. Try re-creating the database with the current version to resolve this issue."))
+          stop(
+            "Connection to database aborted, the tables in specified database did not have the expected columns.
+            This is probably becuase the database was created with a different (probably older) version of the
+            database interface tool. Try re-creating the database with the current version to resolve this issue."
+          )
         }
         RSQLite::dbDisconnect(con)
       }
     },
-    build_database = function(timeseries, circuit_details, site_details, alerts_file = NULL, check_disk_space = TRUE,
+    build_database = function(timeseries,
+                              circuit_details,
+                              site_details,
+                              alerts_file = NULL,
+                              check_disk_space = TRUE,
                               check_dataset_ids_match = TRUE) {
-
       if (!file.exists(timeseries)) {
         stop("Specified timeseries file not found. Please check the filepath provided.")
       }
@@ -116,7 +148,7 @@ DBInterface <- R6::R6Class("DBInterface",
       if (!is.null(alerts_file)) {
         if (!file.exists(alerts_file)) {
           stop("Specified alerts file not found. Please check the filepath provided.")
-          }
+        }
       }
 
       time_series_build_query <- self$get_time_series_build_query(timeseries)
@@ -134,37 +166,45 @@ DBInterface <- R6::R6Class("DBInterface",
       event <- "built"
       created_at <- lubridate::now("UTC")
       tool_git_hash <- git2r::revparse_single(revision = "HEAD")$sha
-      RSQLite::dbExecute(con, "INSERT INTO db_history VALUES (:event, :timestamp, :hash)",
-                         params = list(event = event, timestamp = created_at, hash = tool_git_hash))
+      RSQLite::dbExecute(
+        con,
+        "INSERT INTO db_history VALUES (:event, :timestamp, :hash)",
+        params = list(event = event, timestamp = created_at, hash = tool_git_hash)
+      )
 
       # insert timeseries data
       RSQLite::dbExecute(con, "DROP TABLE IF EXISTS timeseries")
 
-      RSQLite::dbExecute(con, "CREATE TABLE timeseries(
-                         ts TEXT,
-                         c_id INT,
-                         d_key INT,
-                         e REAL,
-                         v REAL,
-                         vmin REAL DEFAULT NULL,
-                         vmax REAL DEFAULT NULL,
-                         vmean REAL DEFAULT NULL,
-                         f REAL,
-                         fmin REAL DEFAULT NULL,
-                         fmax REAL DEFAULT NULL,
-                         PRIMARY KEY (ts, c_id, d_key))")
+      RSQLite::dbExecute(
+        con,
+        "CREATE TABLE timeseries(
+                             ts TEXT,
+                             c_id INT,
+                             d_key INT,
+                             e REAL,
+                             v REAL,
+                             vmin REAL DEFAULT NULL,
+                             vmax REAL DEFAULT NULL,
+                             vmean REAL DEFAULT NULL,
+                             f REAL,
+                             fmin REAL DEFAULT NULL,
+                             fmax REAL DEFAULT NULL,
+                             PRIMARY KEY (ts, c_id, d_key))"
+      )
 
       # Suppress warning
       withCallingHandlers({
         file_con <- base::file(timeseries)
-        sqldf::read.csv.sql(sql = time_series_build_query, eol = '\n',
+        sqldf::read.csv.sql(sql = time_series_build_query,
+                            eol = '\n',
                             dbname = self$db_path_name)
         base::close(file_con)
       }, warning = function(w) {
         if (startsWith(conditionMessage(w), "Don't need to call dbFetch()"))
           invokeRestart("muffleWarning")
       })
-      null_replace_columns <- c("e", "v", "vmin", "vmax", "vmean", "f", "fmin", "fmax")
+      null_replace_columns <-
+        c("e", "v", "vmin", "vmax", "vmean", "f", "fmin", "fmax")
       for (col in null_replace_columns) {
         RSQLite::dbExecute(con, sprintf("UPDATE timeseries SET %s = NULL WHERE %s = ''", col, col))
       }
@@ -176,39 +216,45 @@ DBInterface <- R6::R6Class("DBInterface",
 
       RSQLite::dbExecute(con, "DROP TABLE IF EXISTS circuit_details_raw")
 
-      RSQLite::dbExecute(con, "CREATE TABLE circuit_details_raw(
-                         c_id INT PRIMARY KEY,
-                         site_id INT,
-                         con_type TEXT,
-                         polarity REAL)")
+      RSQLite::dbExecute(
+        con,
+        "CREATE TABLE circuit_details_raw(c_id INT PRIMARY KEY, site_id INT, con_type TEXT, polarity REAL)"
+      )
 
       # Suppress warning
       withCallingHandlers({
         file_con <- base::file(circuit_details)
-        sqldf::read.csv.sql(sql = circuit_details_build_query, eol = '\n',
-                            dbname = self$db_path_name)
+        sqldf::read.csv.sql(sql = circuit_details_build_query, eol = '\n', dbname = self$db_path_name)
         base::close(file_con)
       }, warning = function(w) {
         if (startsWith(conditionMessage(w), "Don't need to call dbFetch()"))
           invokeRestart("muffleWarning")
       })
 
-      RSQLite::dbExecute(con, "ALTER TABLE circuit_details_raw ADD manual_droop_compliance TEXT DEFAULT 'Not set'")
+      RSQLite::dbExecute(
+        con,
+        "ALTER TABLE circuit_details_raw ADD manual_droop_compliance TEXT DEFAULT 'Not set'"
+      )
 
-      RSQLite::dbExecute(con, "ALTER TABLE circuit_details_raw ADD manual_reconnect_compliance TEXT DEFAULT 'Not set'")
+      RSQLite::dbExecute(
+        con,
+        "ALTER TABLE circuit_details_raw ADD manual_reconnect_compliance TEXT DEFAULT 'Not set'"
+      )
 
       RSQLite::dbExecute(con, "DROP TABLE IF EXISTS site_details_raw")
 
-      RSQLite::dbExecute(con, "CREATE TABLE site_details_raw(
-                         site_id INT, s_postcode INT, s_state TEXT, ac REAL, dc REAL, manufacturer TEXT, model TEXT,
-                         pv_installation_year_month TEXT)")
+      RSQLite::dbExecute(
+        con,
+        "CREATE TABLE site_details_raw(
+                             site_id INT, s_postcode INT, s_state TEXT, ac REAL, dc REAL, manufacturer TEXT, model TEXT,
+                             pv_installation_year_month TEXT)"
+      )
 
       site_details <- read.csv(file = site_details, header = TRUE, stringsAsFactors = FALSE)
 
       # Suppress warning
       withCallingHandlers({
-        sqldf::sqldf(site_details_build_query,
-                     dbname = self$db_path_name)
+        sqldf::sqldf(site_details_build_query, dbname = self$db_path_name)
       }, warning = function(w) {
         if (startsWith(conditionMessage(w), "Don't need to call dbFetch()"))
           invokeRestart("muffleWarning")
@@ -217,16 +263,18 @@ DBInterface <- R6::R6Class("DBInterface",
 
       RSQLite::dbExecute(con, "DROP TABLE IF EXISTS alerts")
 
-      RSQLite::dbExecute(con, "CREATE TABLE alerts(
-                         c_id INT, GridFaultContactorTrip INT, SYNC_a038_DoOpenArguments INT, count_times_open INT,
-                         first_timestamp INT, SYNC_a010_vfCheckFreqWobble INT, SYNC_a005_vfCheckUnderVoltage INT)")
+      RSQLite::dbExecute(
+        con,
+        "CREATE TABLE alerts(
+                             c_id INT, GridFaultContactorTrip INT, SYNC_a038_DoOpenArguments INT, count_times_open INT,
+                             first_timestamp INT, SYNC_a010_vfCheckFreqWobble INT, SYNC_a005_vfCheckUnderVoltage INT)"
+      )
 
       if (!is.null(alerts_file)) {
         # Suppress warning
         withCallingHandlers({
           file_con <- base::file(alerts_file)
-          sqldf::read.csv.sql(sql = alerts_build_query, eol = '\n',
-                              dbname = self$db_path_name)
+          sqldf::read.csv.sql(sql = alerts_build_query, eol = '\n', dbname = self$db_path_name)
           base::close(file_con)
         }, warning = function(w) {
           if (startsWith(conditionMessage(w), "Don't need to call dbFetch()"))
@@ -234,15 +282,27 @@ DBInterface <- R6::R6Class("DBInterface",
         })
       }
 
-      RSQLite::dbExecute(con, "UPDATE alerts SET GridFaultContactorTrip = NULL WHERE GridFaultContactorTrip = ''")
-      RSQLite::dbExecute(con, "UPDATE alerts SET SYNC_a038_DoOpenArguments = NULL
-                         WHERE SYNC_a038_DoOpenArguments = ''")
+      RSQLite::dbExecute(
+        con,
+        "UPDATE alerts SET GridFaultContactorTrip = NULL WHERE GridFaultContactorTrip = ''"
+      )
+      RSQLite::dbExecute(
+        con,
+        "UPDATE alerts SET SYNC_a038_DoOpenArguments = NULL
+                             WHERE SYNC_a038_DoOpenArguments = ''"
+      )
       RSQLite::dbExecute(con, "UPDATE alerts SET count_times_open = NULL WHERE count_times_open = ''")
       RSQLite::dbExecute(con, "UPDATE alerts SET first_timestamp = NULL WHERE first_timestamp = ''")
-      RSQLite::dbExecute(con, "UPDATE alerts SET SYNC_a010_vfCheckFreqWobble = NULL
-                         WHERE SYNC_a010_vfCheckFreqWobble = ''")
-      RSQLite::dbExecute(con, "UPDATE alerts SET SYNC_a005_vfCheckUnderVoltage = NULL
-                         WHERE SYNC_a005_vfCheckUnderVoltage = ''")
+      RSQLite::dbExecute(
+        con,
+        "UPDATE alerts SET SYNC_a010_vfCheckFreqWobble = NULL
+                             WHERE SYNC_a010_vfCheckFreqWobble = ''"
+      )
+      RSQLite::dbExecute(
+        con,
+        "UPDATE alerts SET SYNC_a005_vfCheckUnderVoltage = NULL
+                             WHERE SYNC_a005_vfCheckUnderVoltage = ''"
+      )
 
       if (check_dataset_ids_match) {
         self$check_ids_match_between_datasets()
@@ -255,7 +315,8 @@ DBInterface <- R6::R6Class("DBInterface",
       optional_columns <- c("vmin", "vmax", "vmean", "fmin", "fmax")
 
       if (any(optional_columns %in% column_names)) {
-        replace_columns <- paste(optional_columns[optional_columns %in% column_names], collapse = ", ")
+        replace_columns <-
+          paste(optional_columns[optional_columns %in% column_names], collapse = ", ")
         select_columns <- c()
         for (col in optional_columns[optional_columns %in% column_names]) {
           select_columns <- c(select_columns, sprintf("_%s as %s", col, col))
@@ -268,27 +329,31 @@ DBInterface <- R6::R6Class("DBInterface",
         select_columns <- ''
       }
 
-      query <- sprintf("
-        REPLACE INTO timeseries(ts, c_id, d_key, e, v, f %s)
-        SELECT _ts as ts,
-              cast(_c_id as integer) as c_id,
-              cast(IFNULL(_d, 0) as integer) as d_key,
-              _e as e,
-              _voltage as v,
-              _frequency as f
-              %s
-        from file_con", replace_columns, select_columns)
+      query <- sprintf(
+        "REPLACE INTO timeseries(ts, c_id, d_key, e, v, f %s)
+            SELECT _ts as ts,
+                  cast(_c_id as integer) as c_id,
+                  cast(IFNULL(_d, 0) as integer) as d_key,
+                  _e as e,
+                  _voltage as v,
+                  _frequency as f
+                  %s
+            from file_con",
+        replace_columns,
+        select_columns
+      )
 
       for (name in column_names) {
         if (name %in% names(self$default_timeseries_column_aliases)) {
-          query <- gsub(self$default_timeseries_column_aliases[[name]], name, query)
+          query <-
+            gsub(self$default_timeseries_column_aliases[[name]], name, query)
         } else {
           error_message <- "The provided time series file should have the columns ts, c_id, d e, v and f,
-          or known aliases of these columns.
+              or known aliases of these columns.
 
-          The columns _cols_ where found instead.
+              The columns _cols_ where found instead.
 
-          Please overide the column alaises in the database interface and try again."
+              Please overide the column alaises in the database interface and try again."
 
           error_message <- gsub('_cols_', paste(column_names, collapse = ', '), error_message)
 
@@ -298,21 +363,28 @@ DBInterface <- R6::R6Class("DBInterface",
       return(query)
     },
     get_circuit_details_build_query = function(circuit_details) {
-      column_names <- names(read.csv(circuit_details, nrows = 3, header = TRUE))
+      column_names <-
+        names(read.csv(circuit_details, nrows = 3, header = TRUE))
 
-      column_aliases <- list(c_id = '_c_id', site_id = '_site_id',
-                             con_type = '_con_type', polarity = '_polarity')
+      column_aliases <- list(
+        c_id = '_c_id',
+        site_id = '_site_id',
+        con_type = '_con_type',
+        polarity = '_polarity'
+      )
 
       query <- "REPLACE INTO circuit_details_raw
-      SELECT cast(_c_id as integer) as c_id, cast(_site_id as integer) as site_id, _con_type as con_type,
-      _polarity as polarity from file_con"
+          SELECT cast(_c_id as integer) as c_id, cast(_site_id as integer) as site_id, _con_type as con_type,
+          _polarity as polarity from file_con"
 
       for (name in column_names) {
         if (name %in% names(column_aliases)) {
           query <- gsub(column_aliases[[name]], name, query)
         } else {
-          stop("The provided circuit details file should have the columns c_id, site_id, con_type
-               and polarity. Please check this file and try again.")
+          stop(
+            "The provided circuit details file should have the columns c_id, site_id, con_type
+                   and polarity. Please check this file and try again."
+          )
         }
       }
       return(query)
@@ -320,24 +392,32 @@ DBInterface <- R6::R6Class("DBInterface",
     get_site_details_build_query = function(site_details) {
       column_names <- names(read.csv(site_details, nrows = 3, header = TRUE))
 
-      column_aliases <- list(site_id = '_site_id', s_state = '_s_state', ac = '_ac',
-                             dc = '_dc', manufacturer = '_manufacturer',
-                             model = '_model', s_postcode = '_s_postcode',
-                             pv_installation_year_month = '_pv_installation_year_month')
+      column_aliases <- list(
+        site_id = '_site_id',
+        s_state = '_s_state',
+        ac = '_ac',
+        dc = '_dc',
+        manufacturer = '_manufacturer',
+        model = '_model',
+        s_postcode = '_s_postcode',
+        pv_installation_year_month = '_pv_installation_year_month'
+      )
 
       query <- "REPLACE INTO site_details_raw
-      SELECT cast(_site_id as integer) as site_id, cast(_s_postcode as integer) as s_postcode, _s_state as s_state,
-      _ac as ac, _dc as dc, _manufacturer as manufacturer,
-      _model as model, _pv_installation_year_month as
-      pv_installation_year_month from site_details"
+          SELECT cast(_site_id as integer) as site_id, cast(_s_postcode as integer) as s_postcode, _s_state as s_state,
+          _ac as ac, _dc as dc, _manufacturer as manufacturer,
+          _model as model, _pv_installation_year_month as
+          pv_installation_year_month from site_details"
 
       for (name in column_names) {
         if (name %in% names(column_aliases)) {
           query <- gsub(column_aliases[[name]], name, query)
         } else {
-          stop("The provided site details file should have the columns site_id, s_postcode, s_state,
-               ac, dc, manufacturer, model and pv_installation_year_month. The ac column should be in
-               kW and the the dc in W. Please check this file and try again.")
+          stop(
+            "The provided site details file should have the columns site_id, s_postcode, s_state,
+                   ac, dc, manufacturer, model and pv_installation_year_month. The ac column should be in
+                   kW and the the dc in W. Please check this file and try again."
+          )
         }
       }
       return(query)
@@ -345,28 +425,33 @@ DBInterface <- R6::R6Class("DBInterface",
     get_alerts_build_query = function(alerts_file) {
       column_names <- names(read.csv(alerts_file, nrows = 3, header = TRUE))
 
-      column_aliases <- list(c_id = '_c_id', GridFaultContactorTrip = '_GridFaultContactorTrip',
-                             SYNC_a038_DoOpenArguments = '_SYNC_a038_DoOpenArguments',
-                             count_times_open = '_count_times_open',
-                             first_timestamp = '_first_timestamp',
-                             SYNC_a010_vfCheckFreqWobble = '_SYNC_a010_vfCheckFreqWobble',
-                             SYNC_a005_vfCheckUnderVoltage = '_SYNC_a005_vfCheckUnderVoltage')
+      column_aliases <- list(
+        c_id = '_c_id',
+        GridFaultContactorTrip = '_GridFaultContactorTrip',
+        SYNC_a038_DoOpenArguments = '_SYNC_a038_DoOpenArguments',
+        count_times_open = '_count_times_open',
+        first_timestamp = '_first_timestamp',
+        SYNC_a010_vfCheckFreqWobble = '_SYNC_a010_vfCheckFreqWobble',
+        SYNC_a005_vfCheckUnderVoltage = '_SYNC_a005_vfCheckUnderVoltage'
+      )
 
       query <- "REPLACE INTO alerts
-      SELECT cast(_c_id as integer) as c_id, _GridFaultContactorTrip as GridFaultContactorTrip,
-      _SYNC_a038_DoOpenArguments as SYNC_a038_DoOpenArguments,
-      _count_times_open as count_times_open, _first_timestamp as first_timestamp,
-      _SYNC_a010_vfCheckFreqWobble as SYNC_a010_vfCheckFreqWobble,
-      _SYNC_a005_vfCheckUnderVoltage as SYNC_a005_vfCheckUnderVoltage
-      from file_con"
+          SELECT cast(_c_id as integer) as c_id, _GridFaultContactorTrip as GridFaultContactorTrip,
+          _SYNC_a038_DoOpenArguments as SYNC_a038_DoOpenArguments,
+          _count_times_open as count_times_open, _first_timestamp as first_timestamp,
+          _SYNC_a010_vfCheckFreqWobble as SYNC_a010_vfCheckFreqWobble,
+          _SYNC_a005_vfCheckUnderVoltage as SYNC_a005_vfCheckUnderVoltage
+          from file_con"
 
       for (name in column_names) {
         if (name %in% names(column_aliases)) {
           query <- gsub(column_aliases[[name]], name, query)
         } else {
-          stop("The provided alerts file should have the columns c_id, GridFaultContactorTrip,
-          SYNC_a038_DoOpenArguments, count_times_open, first_timestamp, SYNC_a010_vfCheckFreqWobble and
-          SYNC_a005_vfCheckUnderVoltage. Please check this file and try again.")
+          stop(
+            "The provided alerts file should have the columns c_id, GridFaultContactorTrip,
+              SYNC_a038_DoOpenArguments, count_times_open, first_timestamp, SYNC_a010_vfCheckFreqWobble and
+              SYNC_a005_vfCheckUnderVoltage. Please check this file and try again."
+          )
         }
       }
       return(query)
@@ -393,18 +478,22 @@ DBInterface <- R6::R6Class("DBInterface",
         RSQLite::dbExecute(con, "DROP TABLE IF EXISTS circuit_details_raw")
         RSQLite::dbExecute(con, "DROP TABLE IF EXISTS site_details_raw")
         RSQLite::dbDisconnect(con)
-        stop("Database build aborted because fewer than 10 ids match between the timeseries and circuit details files.
-              Please check files from matching event data sets are being used. To disable this check, use
-              check_dataset_ids_match = FALSE.")
+        stop(
+          "Database build aborted because fewer than 10 ids match between the timeseries and circuit details files.
+           Please check files from matching event data sets are being used. To disable this check, use
+           check_dataset_ids_match = FALSE."
+        )
       }
       if (length(site_ids_intersection) < 10) {
         RSQLite::dbExecute(con, "DROP TABLE IF EXISTS timeseries")
         RSQLite::dbExecute(con, "DROP TABLE IF EXISTS circuit_details_raw")
         RSQLite::dbExecute(con, "DROP TABLE IF EXISTS site_details_raw")
         RSQLite::dbDisconnect(con)
-        stop("Database build aborted because fewer than 10 ids match between the site details and circuit details files.
-              Please check files from matching event data sets are being used. To disable this check, use
-              check_dataset_ids_match = FALSE.")
+        stop(
+          "Database build aborted because fewer than 10 ids match between the site details and circuit details files.
+                  Please check files from matching event data sets are being used. To disable this check, use
+                  check_dataset_ids_match = FALSE."
+        )
       }
       RSQLite::dbDisconnect(con)
     },
@@ -419,7 +508,7 @@ DBInterface <- R6::R6Class("DBInterface",
 
       site_details <- left_join(site_details, manufacturer_mapping, by = c('manufacturer' = 'sa'))
       site_details <- mutate(site_details, manufacturer = aemo)
-      site_details <- site_details[, !(colnames(site_details) %in% c("sa","aemo"))]
+      site_details <- site_details[, !(colnames(site_details) %in% c("sa", "aemo"))]
 
       site_details <- site_details_data_cleaning_one(site_details)
 
@@ -455,8 +544,16 @@ DBInterface <- R6::R6Class("DBInterface",
         time_series <- self$perform_power_calculations(time_series)
 
         time_series <- filter(time_series, is.finite(power_kW))
-        pv_time_series <- filter(time_series, con_type %in% c("pv_site_net", "pv_site", "pv_inverter_net", "pv_inverter"))
-        pv_time_series <- pv_time_series[order(pv_time_series$d),]
+        pv_time_series <- filter(
+          time_series,
+          con_type %in% c(
+            "pv_site_net",
+            "pv_site",
+            "pv_inverter_net",
+            "pv_inverter"
+          )
+        )
+        pv_time_series <- pv_time_series[order(pv_time_series$d), ]
         pv_time_series <- distinct(pv_time_series, ts, c_id, .keep_all = TRUE)
 
         site_details_cleaned_chunk <- site_details_data_cleaning_two(pv_time_series, sites_in_chunk)
@@ -468,7 +565,6 @@ DBInterface <- R6::R6Class("DBInterface",
         circuit_details_cleaned_chunk <- clean_connection_types(time_series, circuits, postcode_data)
         circuit_details_cleaned <- bind_rows(circuit_details_cleaned, circuit_details_cleaned_chunk)
 
-
         print(paste0("Done cleaning batch ", iteration_number))
 
         # Setup for next iteration.
@@ -477,13 +573,14 @@ DBInterface <- R6::R6Class("DBInterface",
         end_chunk_index <- self$calc_end_chunk_index(length_ids, max_chunk_size, start_chunk_index)
         sites_in_chunk <- self$fiter_dataframe_by_start_and_end_index(site_details, start_chunk_index, end_chunk_index)
         circuits <- filter(circuit_details, site_id %in% sites_in_chunk$site_id)
-        if (start_chunk_index > length_ids) {circuits <- ids[0:0, , drop = FALSE]}
+        if (start_chunk_index > length_ids) {
+          circuits <- ids[0:0, , drop = FALSE]
+        }
 
       }
 
       self$create_site_details_cleaned_table()
       self$insert_site_details_cleaned(site_details_cleaned)
-
 
       self$create_circuit_details_cleaned_table()
       self$insert_circuit_details_cleaned(circuit_details_cleaned)
@@ -499,99 +596,104 @@ DBInterface <- R6::R6Class("DBInterface",
       return(site_details_raw)
     },
     get_site_details_cleaned = function() {
-      site_details_cleaned <- sqldf::sqldf("select site_id, s_state, s_postcode, ac,
-                                                   manufacturer, model, pv_installation_year_month
-                                              from site_details_cleaned",
-                                           dbname = self$db_path_name)
+      site_details_cleaned <- sqldf::sqldf(
+        "select site_id, s_state, s_postcode, ac, manufacturer, model, pv_installation_year_month
+         from site_details_cleaned",
+        dbname = self$db_path_name
+      )
       return(site_details_cleaned)
     },
     get_circuit_details_cleaned = function() {
-      circuit_details_cleaned <- sqldf::sqldf("select c_id, site_id, con_type, polarity,
-                                                      manual_droop_compliance,
-                                                      manual_reconnect_compliance
-                                                 from circuit_details_cleaned",
-                                              dbname = self$db_path_name)
+      circuit_details_cleaned <- sqldf::sqldf(
+        "select c_id, site_id, con_type, polarity, manual_droop_compliance, manual_reconnect_compliance
+        from circuit_details_cleaned",
+        dbname = self$db_path_name
+      )
       return(circuit_details_cleaned)
     },
     get_alerts_data = function() {
-      alerts_data <- sqldf::sqldf("select * from alerts",
-                                           dbname = self$db_path_name)
+      alerts_data <- sqldf::sqldf("select * from alerts", dbname = self$db_path_name)
       return(alerts_data)
     },
     get_site_details_cleaning_report = function() {
-      site_details_cleaned <- sqldf::sqldf("select * from site_details_cleaned",
-                                           dbname = self$db_path_name)
+      site_details_cleaned <- sqldf::sqldf("select * from site_details_cleaned", dbname = self$db_path_name)
       return(site_details_cleaned)
     },
     get_circuit_details_cleaning_report = function() {
-      circuit_details_cleaned <- sqldf::sqldf("select * from circuit_details_cleaned",
-                                              dbname = self$db_path_name)
+      circuit_details_cleaned <- sqldf::sqldf("select * from circuit_details_cleaned", dbname = self$db_path_name)
       return(circuit_details_cleaned)
     },
     get_site_details_processed = function() {
-      site_details_processed <- sqldf::sqldf("select * from site_details_processed",
-                                             dbname = self$db_path_name)
+      site_details_processed <- sqldf::sqldf("select * from site_details_processed", dbname = self$db_path_name)
       return(site_details_processed)
     },
     get_time_series_data_by_c_id = function(c_ids) {
       time_series <- sqldf::sqldf(
         "SELECT ts, c_id, d, e,
-        v AS v__numeric,
-        vmin AS vmin__numeric,
-        vmax AS vmax__numeric,
-        vmean AS vmean__numeric,
-        f AS f__numeric,
-        fmin AS fmin__numeric,
-        fmax AS fmax__numeric
-        FROM timeseries
-        WHERE c_id IN (SELECT c_id FROM c_ids)",
-        dbname = self$db_path_name, method="name__class")
+            v AS v__numeric,
+            vmin AS vmin__numeric,
+            vmax AS vmax__numeric,
+            vmean AS vmean__numeric,
+            f AS f__numeric,
+            fmin AS fmin__numeric,
+            fmax AS fmax__numeric
+            FROM timeseries
+            WHERE c_id IN (SELECT c_id FROM c_ids)",
+        dbname = self$db_path_name,
+        method = "name__class"
+      )
       return(time_series)
     },
     get_time_series_data_by_c_id_full_row = function(c_ids) {
       time_series <- sqldf::sqldf(
         "SELECT ts, c_id, d_key, d, e,
-        v AS v__numeric,
-        vmin AS vmin__numeric,
-        vmax AS vmax__numeric,
-        vmean AS vmean__numeric,
-        f AS f__numeric,
-        fmin AS fmin__numeric,
-        fmax AS fmax__numeric
-        FROM timeseries
-        where c_id in
-        (select c_id from c_ids)",
-        dbname = self$db_path_name, method="name__class")
+            v AS v__numeric,
+            vmin AS vmin__numeric,
+            vmax AS vmax__numeric,
+            vmean AS vmean__numeric,
+            f AS f__numeric,
+            fmin AS fmin__numeric,
+            fmax AS fmax__numeric
+            FROM timeseries
+            where c_id in
+            (select c_id from c_ids)",
+        dbname = self$db_path_name,
+        method = "name__class"
+      )
       return(time_series)
     },
     get_time_series_data = function() {
       time_series <- sqldf::sqldf(
         "SELECT ts, c_id, d, e,
-        v AS v__numeric,
-        vmin AS vmin__numeric,
-        vmax AS vmax__numeric,
-        vmean AS vmean__numeric,
-        f AS f__numeric,
-        fmin AS fmin__numeric,
-        fmax AS fmax__numeric
-        FROM timeseries",
-        dbname = self$db_path_name, method="name__class")
-      time_series <- time_series[with(time_series, order(c_id, ts)), ]
+            v AS v__numeric,
+            vmin AS vmin__numeric,
+            vmax AS vmax__numeric,
+            vmean AS vmean__numeric,
+            f AS f__numeric,
+            fmin AS fmin__numeric,
+            fmax AS fmax__numeric
+            FROM timeseries",
+        dbname = self$db_path_name,
+        method = "name__class"
+      )
+      time_series <- time_series[with(time_series, order(c_id, ts)),]
       rownames(time_series) <- NULL
       return(time_series)
     },
     get_time_series_data_all = function() {
       time_series <- sqldf::sqldf(
         "SELECT ts, c_id, d_key, d, e,
-        v AS v__numeric,
-        vmin AS vmin__numeric,
-        vmax AS vmax__numeric,
-        vmean AS vmean__numeric,
-        f AS f__numeric,
-        fmin AS fmin__numeric,
-        fmax AS fmax__numeric
-        FROM timeseries",
-        dbname = self$db_path_nam, method = "name__class")
+            v AS v__numeric,
+            vmin AS vmin__numeric,
+            vmax AS vmax__numeric,
+            vmean AS vmean__numeric,
+            f AS f__numeric,
+            fmin AS fmin__numeric,
+            fmax AS fmax__numeric
+            FROM timeseries",
+        dbname = self$db_path_nam,
+        method = "name__class"
+      )
       return(time_series)
     },
     get_filtered_time_series_data = function(state, duration, start_time, end_time) {
@@ -601,11 +703,11 @@ DBInterface <- R6::R6Class("DBInterface",
       circuit_in_state = filter(circuit_details, site_id %in% site_in_state$site_id)
       # TODO: check validity of e != ''
       query <- "select ts, c_id, d, e, v, vmin, vmax, vmean, f, fmin, fmax from timeseries
-                        where c_id in (select c_id from circuit_in_state)
-                        and d = duration
-                        and e != ''
-                        and datetime(ts) >= datetime('start_time')
-                        and datetime(ts) <= datetime('end_time')"
+                            where c_id in (select c_id from circuit_in_state)
+                            and d = duration
+                            and e != ''
+                            and datetime(ts) >= datetime('start_time')
+                            and datetime(ts) <= datetime('end_time')"
       query <- gsub('duration', duration, query)
       query <- gsub('start_time', start_time, query)
       query <- gsub('end_time', end_time, query)
@@ -618,10 +720,10 @@ DBInterface <- R6::R6Class("DBInterface",
       site_in_state = filter(site_details, s_state == state)
       circuit_in_state = filter(circuit_details, site_id %in% site_in_state$site_id)
       query <- "select ts, c_id, d, e, v, f from timeseries
-                        where c_id in (select c_id from circuit_in_state)
-                        and e != ''
-                        and datetime(ts) >= datetime('start_time')
-                        and datetime(ts) <= datetime('end_time')"
+                            where c_id in (select c_id from circuit_in_state)
+                            and e != ''
+                            and datetime(ts) >= datetime('start_time')
+                            and datetime(ts) <= datetime('end_time')"
       query <- gsub('start_time', start_time, query)
       query <- gsub('end_time', end_time, query)
       time_series <- sqldf::sqldf(query , dbname = self$db_path_name)
@@ -632,25 +734,26 @@ DBInterface <- R6::R6Class("DBInterface",
       site_details = self$get_site_details_raw()
       site_in_state = filter(site_details, s_state == state)
       circuit_in_state = filter(circuit_details, site_id %in% site_in_state$site_id)
-      query <- "select c.c_id as c_id, max(c.e * c.polarity / (c.d * 1000)) as max_power from
-                    ((select c_id, d, e from timeseries
-                            where c_id in (select c_id from circuit_in_state)) a
-                        inner join
-                     (select c_id, polarity from circuit_details_raw) b
-                    on a.c_id == b.c_id) c
-                group by c.c_id;
-               "
+      query <-
+        "select c.c_id as c_id, max(c.e * c.polarity / (c.d * 1000)) as max_power from
+                        ((select c_id, d, e from timeseries
+                                where c_id in (select c_id from circuit_in_state)) a
+                            inner join
+                         (select c_id, polarity from circuit_details_raw) b
+                        on a.c_id == b.c_id) c
+                    group by c.c_id;
+                   "
       max_power <- sqldf::sqldf(query , dbname = self$db_path_name)
       max_power <- mutate(max_power, clean = 'raw')
       if (self$check_if_table_exists('circuit_details_cleaned')) {
         query <- "select c.c_id as c_id, max(c.e * c.polarity / (c.d * 1000)) as max_power from
-                    ((select c_id, d, e from timeseries
-                            where c_id in (select c_id from circuit_in_state)) a
-                        inner join
-                     (select c_id, polarity from circuit_details_cleaned) b
-                    on a.c_id == b.c_id) c
-                group by c.c_id;
-               "
+                        ((select c_id, d, e from timeseries
+                                where c_id in (select c_id from circuit_in_state)) a
+                            inner join
+                         (select c_id, polarity from circuit_details_cleaned) b
+                        on a.c_id == b.c_id) c
+                    group by c.c_id;
+                   "
         max_power_clean <- sqldf::sqldf(query , dbname = self$db_path_name)
         max_power_clean <- mutate(max_power_clean, clean = 'clean')
         max_power <- bind_rows(max_power, max_power_clean)
@@ -669,13 +772,17 @@ DBInterface <- R6::R6Class("DBInterface",
       start_chunk_index <- (iteration_number - 1) * max_chunk_size + 1
       return(start_chunk_index)
     },
-    calc_end_chunk_index = function(number_of_ids, max_chunk_size, start_chunk_index) {
+    calc_end_chunk_index = function(number_of_ids,
+                                    max_chunk_size,
+                                    start_chunk_index) {
       end_chunk_index <- start_chunk_index + max_chunk_size - 1
-      if (end_chunk_index > number_of_ids) {end_chunk_index <- number_of_ids}
+      if (end_chunk_index > number_of_ids) {
+        end_chunk_index <- number_of_ids
+      }
       return(end_chunk_index)
     },
     fiter_dataframe_by_start_and_end_index = function(df, start_index, end_index) {
-      df <- df[start_index:end_index,,drop=F]
+      df <- df[start_index:end_index, , drop = F]
       return(df)
     },
     clean_duration_values = function(time_series) {
@@ -685,7 +792,8 @@ DBInterface <- R6::R6Class("DBInterface",
       return(time_series)
     },
     calc_interval_between_measurements = function(time_series) {
-      time_series <- time_series %>% dplyr::group_by(c_id) %>%
+      time_series <- time_series %>%
+        dplyr::group_by(c_id) %>%
         dplyr::mutate(interval = time - lag(time, order_by = time))
       return(time_series)
     },
@@ -695,11 +803,15 @@ DBInterface <- R6::R6Class("DBInterface",
       return(time_series)
     },
     replace_duration_value_with_calced_interval = function(time_series) {
-      time_series <- dplyr::mutate(time_series, d = ifelse(d_change, interval, d))
+      time_series <-
+        dplyr::mutate(time_series, d = ifelse(d_change, interval, d))
       return(time_series)
     },
     flag_duration_for_updating_if_value_non_standard_and_calced_interval_is_5s = function(time_series) {
-      time_series <- dplyr::mutate(time_series, d_change = ifelse((!d %in% c(5, 30, 60) & (interval == 5)), TRUE, FALSE))
+      time_series <- dplyr::mutate(
+        time_series,
+        d_change = ifelse((!d %in% c(5, 30, 60) & (interval == 5)), TRUE, FALSE)
+      )
       return(time_series)
     },
     update_timeseries_table_in_database = function(time_series) {
@@ -707,8 +819,9 @@ DBInterface <- R6::R6Class("DBInterface",
       withCallingHandlers({
         sqldf::sqldf(
           "REPLACE INTO timeseries SELECT ts, c_id, d_key, e, v, vmin, vmax, vmean, f, fmin, fmax, d FROM time_series",
-          dbname = self$db_path_name)
-      }, warning=function(w) {
+          dbname = self$db_path_name
+        )
+      }, warning = function(w) {
         if (startsWith(conditionMessage(w), "Don't need to call dbFetch()"))
           invokeRestart("muffleWarning")
       })
@@ -716,45 +829,49 @@ DBInterface <- R6::R6Class("DBInterface",
     perform_power_calculations = function(time_series) {
       time_series <- mutate(time_series, d = as.numeric(d))
       time_series <- mutate(time_series, e = as.numeric(e))
-      time_series <- mutate(time_series, e_polarity=e*polarity)
-      time_series <- mutate(time_series, power_kW = e_polarity/(d * 1000))
+      time_series <- mutate(time_series, e_polarity = e * polarity)
+      time_series <-
+        mutate(time_series, power_kW = e_polarity / (d * 1000))
       return(time_series)
     },
     add_meta_data_to_time_series = function(time_series, circuit_details) {
       details_to_add <- select(circuit_details, c_id, site_id, polarity, con_type)
-      time_series <- inner_join(time_series, details_to_add, by='c_id')
+      time_series <- inner_join(time_series, details_to_add, by = 'c_id')
       return(time_series)
     },
     create_site_details_cleaned_table = function() {
       con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)
       RSQLite::dbExecute(con, "DROP TABLE IF EXISTS site_details_cleaned")
-      RSQLite::dbExecute(con, "CREATE TABLE site_details_cleaned(
-                                 site_id INT PRIMARY KEY, s_postcode INT, s_state TEXT, pv_installation_year_month TEXT,
-                                 ac REAL, dc REAL, ac_old REAL, dc_old REAL, ac_dc_ratio REAL, manufacturer TEXT,
-                                 model TEXT, rows_grouped REAL, max_power_kW REAL, change_ac INT, change_dc INT)")
+      RSQLite::dbExecute(
+        con,
+        "CREATE TABLE site_details_cleaned(
+                site_id INT PRIMARY KEY, s_postcode INT, s_state TEXT, pv_installation_year_month TEXT,
+                ac REAL, dc REAL, ac_old REAL, dc_old REAL, ac_dc_ratio REAL, manufacturer TEXT,
+                model TEXT, rows_grouped REAL, max_power_kW REAL, change_ac INT, change_dc INT)"
+      )
       RSQLite::dbDisconnect(con)
     },
     insert_site_details_cleaned = function(site_details) {
       query <- "INSERT INTO site_details_cleaned
-                            SELECT site_id, s_postcode, s_state, pv_installation_year_month, ac, dc, ac_old, dc_old,
-                                   ac_dc_ratio, manufacturer, model, rows_grouped, max_power_kW, change_ac, change_dc
-                              FROM site_details"
+                SELECT site_id, s_postcode, s_state, pv_installation_year_month, ac, dc, ac_old, dc_old,
+                       ac_dc_ratio, manufacturer, model, rows_grouped, max_power_kW, change_ac, change_dc
+                FROM site_details"
       # Suppress warning
       withCallingHandlers({
         sqldf::sqldf(query, dbname = self$db_path_name)
-      }, warning=function(w) {
+      }, warning = function(w) {
         if (startsWith(conditionMessage(w), "Don't need to call dbFetch()"))
           invokeRestart("muffleWarning")
       })
     },
     update_site_details_cleaned = function(site_details) {
       query <- "REPLACE INTO site_details_cleaned
-                            SELECT site_id, s_postcode, s_state, pv_installation_year_month, ac, dc, ac_old, dc_old,
-                                   ac_dc_ratio, manufacturer, model, rows_grouped, max_power_kW, change_ac, change_dc
-                              FROM site_details"
+                SELECT site_id, s_postcode, s_state, pv_installation_year_month, ac, dc, ac_old, dc_old,
+                       ac_dc_ratio, manufacturer, model, rows_grouped, max_power_kW, change_ac, change_dc
+                FROM site_details"
       withCallingHandlers({
         sqldf::sqldf(query, dbname = self$db_path_name)
-      }, warning=function(w) {
+      }, warning = function(w) {
         if (startsWith(conditionMessage(w), "Don't need to call dbFetch()"))
           invokeRestart("muffleWarning")
       })
@@ -762,50 +879,53 @@ DBInterface <- R6::R6Class("DBInterface",
     create_circuit_details_cleaned_table = function() {
       con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)
       RSQLite::dbExecute(con, "DROP TABLE IF EXISTS circuit_details_cleaned")
-      RSQLite::dbExecute(con, "CREATE TABLE circuit_details_cleaned(
-                         c_id INT PRIMARY KEY, site_id INT, con_type TEXT, polarity INT, sunrise TEXT, sunset TEXT,
-                         min_power REAL, max_power REAL, frac_day REAL, old_con_type TEXT,
-                         con_type_changed INT, polarity_changed INT, manual_droop_compliance TEXT,
-                         manual_reconnect_compliance TEXT)")
+      RSQLite::dbExecute(
+        con,
+        "CREATE TABLE circuit_details_cleaned(
+                             c_id INT PRIMARY KEY, site_id INT, con_type TEXT, polarity INT, sunrise TEXT, sunset TEXT,
+                             min_power REAL, max_power REAL, frac_day REAL, old_con_type TEXT,
+                             con_type_changed INT, polarity_changed INT, manual_droop_compliance TEXT,
+                             manual_reconnect_compliance TEXT)"
+      )
       RSQLite::dbDisconnect(con)
     },
     insert_circuit_details_cleaned = function(circuit_details) {
       query <- "INSERT INTO circuit_details_cleaned
-                            SELECT c_id, site_id, con_type, polarity, sunrise, sunset, min_power, max_power, frac_day,
-                                   old_con_type, con_type_changed, polarity_changed, manual_droop_compliance,
-                                   manual_reconnect_compliance
-                              FROM circuit_details"
+                SELECT c_id, site_id, con_type, polarity, sunrise, sunset, min_power, max_power, frac_day,
+                       old_con_type, con_type_changed, polarity_changed, manual_droop_compliance,
+                       manual_reconnect_compliance
+                FROM circuit_details"
       # Suppress warning
       withCallingHandlers({
         sqldf::sqldf(query, dbname = self$db_path_name)
-      }, warning=function(w) {
+      }, warning = function(w) {
         if (startsWith(conditionMessage(w), "Don't need to call dbFetch()"))
           invokeRestart("muffleWarning")
       })
     },
     update_circuit_details_cleaned = function(circuit_details) {
       query <- "REPLACE INTO circuit_details_cleaned
-                            SELECT c_id, site_id, con_type, polarity, sunrise, sunset, min_power, max_power, frac_day,
-                                   old_con_type, con_type_changed, polarity_changed, manual_droop_compliance,
-                                   manual_reconnect_compliance
-                              FROM circuit_details"
+                SELECT c_id, site_id, con_type, polarity, sunrise, sunset, min_power, max_power, frac_day,
+                       old_con_type, con_type_changed, polarity_changed, manual_droop_compliance,
+                       manual_reconnect_compliance
+                FROM circuit_details"
       # Suppress warning
       withCallingHandlers({
         sqldf::sqldf(query, dbname = self$db_path_name)
-      }, warning=function(w) {
+      }, warning = function(w) {
         if (startsWith(conditionMessage(w), "Don't need to call dbFetch()"))
           invokeRestart("muffleWarning")
       })
     },
     update_circuit_details_raw = function(circuit_details) {
       query <- "REPLACE INTO circuit_details_raw
-                            SELECT c_id, site_id,  con_type, polarity, manual_droop_compliance,
-                                   manual_reconnect_compliance
-                              FROM circuit_details"
+                                SELECT c_id, site_id,  con_type, polarity, manual_droop_compliance,
+                                       manual_reconnect_compliance
+                                  FROM circuit_details"
       # Suppress warning
       withCallingHandlers({
         sqldf::sqldf(query, dbname = self$db_path_name)
-      }, warning=function(w) {
+      }, warning = function(w) {
         if (startsWith(conditionMessage(w), "Don't need to call dbFetch()"))
           invokeRestart("muffleWarning")
       })
@@ -829,7 +949,7 @@ DBInterface <- R6::R6Class("DBInterface",
       # Suppress warning
       withCallingHandlers({
         invisible(sqldf::sqldf(query, dbname = self$db_path_name)) # stops an empty df being prinited.
-      }, warning=function(w) {
+      }, warning = function(w) {
         if (startsWith(conditionMessage(w), "Don't need to call dbFetch()"))
           invokeRestart("muffleWarning")
       })
@@ -853,7 +973,7 @@ DBInterface <- R6::R6Class("DBInterface",
       # Suppress warning
       withCallingHandlers({
         invisible(sqldf::sqldf(query, dbname = self$db_path_name)) # stops an empty df being prinited.
-      }, warning=function(w) {
+      }, warning = function(w) {
         if (startsWith(conditionMessage(w), "Don't need to call dbFetch()"))
           invokeRestart("muffleWarning")
       })
@@ -862,13 +982,13 @@ DBInterface <- R6::R6Class("DBInterface",
       con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)
       min_timestamp <- RSQLite::dbGetQuery(con, "SELECT MIN(ts) as ts FROM timeseries")
       RSQLite::dbDisconnect(con)
-      return(fastPOSIXct(min_timestamp$ts[1], tz="Australia/Brisbane"))
+      return(fastPOSIXct(min_timestamp$ts[1], tz = "Australia/Brisbane"))
     },
     get_max_timestamp = function() {
       con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)
       max_timestamp <- RSQLite::dbGetQuery(con, "SELECT MAX(ts) as ts FROM timeseries")
       RSQLite::dbDisconnect(con)
-      return(fastPOSIXct(max_timestamp$ts[1], tz="Australia/Brisbane"))
+      return(fastPOSIXct(max_timestamp$ts[1], tz = "Australia/Brisbane"))
     },
     check_if_table_exists = function(table_name) {
       query <- "SELECT count(*) as flag FROM sqlite_master WHERE type='table' AND name='table_name'"

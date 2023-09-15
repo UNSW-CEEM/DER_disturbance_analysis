@@ -68,13 +68,7 @@ test_that("Test checking of day vs night energy", {
 test_that("Test checking of reversed ploarity", {
   # Test input data
   c_id <- c("800", "4064", "6019", "6018", "1000")
-  con_type <- c(
-      "pv_site",
-      "pv_site_net",
-      "pv_inverter_net",
-      "load",
-      "pv_inverter_net"
-  )
+  con_type <- c("pv_site", "pv_site_net", "pv_inverter_net", "load", "pv_inverter_net")
   energy_day <- c(0.13, 0.12, 0.13, 0.13, 0.13)
   energy_night <- c(0.12, 0.12, 0.12, 0.12, 0.12)
   min_power <- c(-6, -6, 6, -6, -6)
@@ -82,25 +76,19 @@ test_that("Test checking of reversed ploarity", {
   first_ac <- c(1, 1, 1, 1, 1)
   polarity <- c(1, 1, 1, 1, -1)
   energy_data <- data.frame(
-      c_id,
-      con_type,
-      energy_day,
-      energy_night,
-      first_ac,
-      min_power,
-      max_power,
-      polarity,
-      stringsAsFactors = FALSE
+    c_id,
+    con_type,
+    energy_day,
+    energy_night,
+    first_ac,
+    min_power,
+    max_power,
+    polarity,
+    stringsAsFactors = FALSE
   )
   # Test output data
   c_id <- c("800", "4064", "6019", "6018", "1000")
-  con_type <- c(
-      "pv_site",
-      "pv_site_net",
-      "pv_inverter_net",
-      "load",
-      "pv_inverter_net"
-  )
+  con_type <- c("pv_site", "pv_site_net", "pv_inverter_net", "load", "pv_inverter_net")
   energy_day <- c(0.13, 0.12, 0.13, 0.13, 0.13)
   energy_night <- c(0.12, 0.12, 0.12, 0.12, 0.12)
   min_power <- c(-6, -6, 6, -6, -6)
@@ -108,15 +96,15 @@ test_that("Test checking of reversed ploarity", {
   first_ac <- c(1, 1, 1, 1, 1)
   polarity <- c(-1, 1, 1, 1, 1)
   expected_out <- data.frame(
-      c_id,
-      con_type,
-      energy_day,
-      energy_night,
-      first_ac,
-      min_power,
-      max_power,
-      polarity,
-      stringsAsFactors = FALSE
+    c_id,
+    con_type,
+    energy_day,
+    energy_night,
+    first_ac,
+    min_power,
+    max_power,
+    polarity,
+    stringsAsFactors = FALSE
   )
   # Call processing function
   out <- check_for_reversed_polarity(energy_data)
@@ -176,18 +164,18 @@ test_that("Test grouping of site data",{
   manufacturer <- c("SMA", "SMA", "ABB")
   model <- c("1", "2", "3")
   test_site_details <- data.frame(
-      site_id,
-      s_state,
-      pv_installation_year_month,
-      ac,
-      dc,
-      ac_old,
-      dc_old,
-      ac_dc_ratio,
-      manufacturer,
-      model,
-      s_postcode,
-      stringsAsFactors = FALSE
+    site_id,
+    s_state,
+    pv_installation_year_month,
+    ac,
+    dc,
+    ac_old,
+    dc_old,
+    ac_dc_ratio,
+    manufacturer,
+    model,
+    s_postcode,
+    stringsAsFactors = FALSE
   )
   # Test output data
   site_id <- c(101, 300)
@@ -203,19 +191,19 @@ test_that("Test grouping of site data",{
   model <- c("1 2", "3")
   rows_grouped <- c(2, 1)
   expected_answer <- data.frame(
-      site_id,
-      s_state,
-      pv_installation_year_month,
-      sum_ac,
-      sum_dc,
-      sum_ac_old,
-      sum_dc_old,
-      ac_dc_ratio,
-      manufacturer,
-      model,
-      s_postcode,
-      rows_grouped,
-      stringsAsFactors = FALSE
+    site_id,
+    s_state,
+    pv_installation_year_month,
+    sum_ac,
+    sum_dc,
+    sum_ac_old,
+    sum_dc_old,
+    ac_dc_ratio,
+    manufacturer,
+    model,
+    s_postcode,
+    rows_grouped,
+    stringsAsFactors = FALSE
   )
   # Call processing function
   processed_site_details <- group_site_details_to_one_row_per_site(test_site_details)

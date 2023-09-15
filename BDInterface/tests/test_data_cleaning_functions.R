@@ -62,7 +62,7 @@ test_that("Test remove_outlying_voltages voltage mixed", {
   expect_equal(output_timeseries, expected_timeseries)
 })
 
-test_that("Test remove_outlying_voltages including nans", {
+test_that("Test remove_outlying_voltages including NaNs", {
   # Setup inputs
   c_id <- c(1, 1, 1)
   ts <- c("2018-01-02 05:56:20", "2018-01-02 03:58:04", "2018-01-02 06:16:17")
