@@ -53,7 +53,7 @@ test_that("Test remove_outlying_voltages voltage mixed", {
   vmean <- v
   v_changed <- c(FALSE, FALSE, FALSE)
 
-  test_timeseries <- data.frame(c_id, ts, v, v min, v max, v mean, stringsAsFactors = FALSE)
+  test_timeseries <- data.frame(c_id, ts, v, vmin, vmax, vmean, stringsAsFactors = FALSE)
   expected_timeseries <- test_timeseries
   expected_timeseries["v_changed"] <- v_changed
 

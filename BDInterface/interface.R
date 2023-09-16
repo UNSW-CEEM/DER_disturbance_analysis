@@ -734,8 +734,7 @@ DBInterface <- R6::R6Class(
       site_details = self$get_site_details_raw()
       site_in_state = filter(site_details, s_state == state)
       circuit_in_state = filter(circuit_details, site_id %in% site_in_state$site_id)
-      query <-
-        "select c.c_id as c_id, max(c.e * c.polarity / (c.d * 1000)) as max_power from
+      query <- "select c.c_id as c_id, max(c.e * c.polarity / (c.d * 1000)) as max_power from
                         ((select c_id, d, e from timeseries
                                 where c_id in (select c_id from circuit_in_state)) a
                             inner join
@@ -803,8 +802,7 @@ DBInterface <- R6::R6Class(
       return(time_series)
     },
     replace_duration_value_with_calced_interval = function(time_series) {
-      time_series <-
-        dplyr::mutate(time_series, d = ifelse(d_change, interval, d))
+      time_series <- dplyr::mutate(time_series, d = ifelse(d_change, interval, d))
       return(time_series)
     },
     flag_duration_for_updating_if_value_non_standard_and_calced_interval_is_5s = function(time_series) {
@@ -830,8 +828,7 @@ DBInterface <- R6::R6Class(
       time_series <- mutate(time_series, d = as.numeric(d))
       time_series <- mutate(time_series, e = as.numeric(e))
       time_series <- mutate(time_series, e_polarity = e * polarity)
-      time_series <-
-        mutate(time_series, power_kW = e_polarity / (d * 1000))
+      time_series <- mutate(time_series, power_kW = e_polarity / (d * 1000))
       return(time_series)
     },
     add_meta_data_to_time_series = function(time_series, circuit_details) {
