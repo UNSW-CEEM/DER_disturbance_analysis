@@ -1,6 +1,5 @@
 # Automatically run all tests
-# Stop on failure is set to TRUE by default. For local runs this can be set to
-# FALSE to show full set of results.
+# Stop on failure is set to TRUE by default. For local runs this can be set to FALSE to show full set of results.
 STOP_ON_FAILURE <- TRUE
 
 library(testthat)
