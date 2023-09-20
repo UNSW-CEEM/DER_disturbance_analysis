@@ -1,4 +1,4 @@
-context("Testing the data cleaning functions functions")
+context("Testing the data cleaning functions")
 
 
 test_that("Test remove_outlying_voltages voltage too low", {
