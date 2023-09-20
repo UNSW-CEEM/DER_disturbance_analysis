@@ -267,7 +267,7 @@ remove_outlying_voltages <- function(time_series) {
   old_time_series <- time_series
 
   voltage_extremes <- time_series %>%
-    select(c("c_id"), voltage_cols) %>%
+    select(c("c_id"), all_of(voltage_cols)) %>%
     group_by(c_id) %>%
     summarise_all(voltages_in_bounds)
 
