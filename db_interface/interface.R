@@ -406,17 +406,16 @@ DBInterface <- R6::R6Class(
       query <- "REPLACE INTO site_details_raw
           SELECT cast(_site_id AS integer) AS site_id, cast(_s_postcode AS integer) AS s_postcode, _s_state AS s_state,
           _ac AS ac, _dc AS dc, _manufacturer AS manufacturer,
-          _model AS model, _pv_installation_year_month as
-          pv_installation_year_month from site_details"
+          _model AS model, _pv_installation_year_month AS pv_installation_year_month FROM site_details"
 
       for (name in column_names) {
         if (name %in% names(column_aliases)) {
           query <- gsub(column_aliases[[name]], name, query)
         } else {
           stop(
-            "The provided site details file should have the columns site_id, s_postcode, s_state,
-                   ac, dc, manufacturer, model and pv_installation_year_month. The ac column should be in
-                   kW and the the dc in W. Please check this file and try again."
+            "The provided site details file should have the columns site_id, s_postcode, s_state, ac, dc, manufacturer,
+             model and pv_installation_year_month. The ac column should be in kW and the the dc in W. Please check this
+             file and try again."
           )
         }
       }
