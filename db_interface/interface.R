@@ -319,7 +319,7 @@ DBInterface <- R6::R6Class(
           paste(optional_columns[optional_columns %in% column_names], collapse = ", ")
         select_columns <- c()
         for (col in optional_columns[optional_columns %in% column_names]) {
-          select_columns <- c(select_columns, sprintf("_%s as %s", col, col))
+          select_columns <- c(select_columns, sprintf("_%s AS %s", col, col))
         }
         select_columns <- paste(select_columns, collapse = ",\n")
         replace_columns <- paste(", ", replace_columns)
@@ -331,12 +331,12 @@ DBInterface <- R6::R6Class(
 
       query <- sprintf(
         "REPLACE INTO timeseries(ts, c_id, d_key, e, v, f %s)
-            SELECT _ts as ts,
-                  cast(_c_id as integer) as c_id,
-                  cast(IFNULL(_d, 0) as integer) as d_key,
-                  _e as e,
-                  _voltage as v,
-                  _frequency as f
+            SELECT _ts AS ts,
+                  cast(_c_id AS integer) AS c_id,
+                  cast(IFNULL(_d, 0) AS integer) AS d_key,
+                  _e AS e,
+                  _voltage AS v,
+                  _frequency AS f
                   %s
             from file_con",
         replace_columns,
@@ -374,8 +374,8 @@ DBInterface <- R6::R6Class(
       )
 
       query <- "REPLACE INTO circuit_details_raw
-          SELECT cast(_c_id as integer) as c_id, cast(_site_id as integer) as site_id, _con_type as con_type,
-          _polarity as polarity from file_con"
+          SELECT cast(_c_id AS integer) AS c_id, cast(_site_id AS integer) AS site_id, _con_type AS con_type,
+          _polarity AS polarity from file_con"
 
       for (name in column_names) {
         if (name %in% names(column_aliases)) {
@@ -404,9 +404,9 @@ DBInterface <- R6::R6Class(
       )
 
       query <- "REPLACE INTO site_details_raw
-          SELECT cast(_site_id as integer) as site_id, cast(_s_postcode as integer) as s_postcode, _s_state as s_state,
-          _ac as ac, _dc as dc, _manufacturer as manufacturer,
-          _model as model, _pv_installation_year_month as
+          SELECT cast(_site_id AS integer) AS site_id, cast(_s_postcode AS integer) AS s_postcode, _s_state AS s_state,
+          _ac AS ac, _dc AS dc, _manufacturer AS manufacturer,
+          _model AS model, _pv_installation_year_month as
           pv_installation_year_month from site_details"
 
       for (name in column_names) {
@@ -436,11 +436,11 @@ DBInterface <- R6::R6Class(
       )
 
       query <- "REPLACE INTO alerts
-          SELECT cast(_c_id as integer) as c_id, _GridFaultContactorTrip as GridFaultContactorTrip,
-          _SYNC_a038_DoOpenArguments as SYNC_a038_DoOpenArguments,
-          _count_times_open as count_times_open, _first_timestamp as first_timestamp,
-          _SYNC_a010_vfCheckFreqWobble as SYNC_a010_vfCheckFreqWobble,
-          _SYNC_a005_vfCheckUnderVoltage as SYNC_a005_vfCheckUnderVoltage
+          SELECT cast(_c_id AS integer) AS c_id, _GridFaultContactorTrip AS GridFaultContactorTrip,
+          _SYNC_a038_DoOpenArguments AS SYNC_a038_DoOpenArguments,
+          _count_times_open AS count_times_open, _first_timestamp AS first_timestamp,
+          _SYNC_a010_vfCheckFreqWobble AS SYNC_a010_vfCheckFreqWobble,
+          _SYNC_a005_vfCheckUnderVoltage AS SYNC_a005_vfCheckUnderVoltage
           from file_con"
 
       for (name in column_names) {
@@ -977,18 +977,18 @@ DBInterface <- R6::R6Class(
     },
     get_min_timestamp = function() {
       con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)
-      min_timestamp <- RSQLite::dbGetQuery(con, "SELECT MIN(ts) as ts FROM timeseries")
+      min_timestamp <- RSQLite::dbGetQuery(con, "SELECT MIN(ts) AS ts FROM timeseries")
       RSQLite::dbDisconnect(con)
       return(fastPOSIXct(min_timestamp$ts[1], tz = "Australia/Brisbane"))
     },
     get_max_timestamp = function() {
       con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)
-      max_timestamp <- RSQLite::dbGetQuery(con, "SELECT MAX(ts) as ts FROM timeseries")
+      max_timestamp <- RSQLite::dbGetQuery(con, "SELECT MAX(ts) AS ts FROM timeseries")
       RSQLite::dbDisconnect(con)
       return(fastPOSIXct(max_timestamp$ts[1], tz = "Australia/Brisbane"))
     },
     check_if_table_exists = function(table_name) {
-      query <- "SELECT count(*) as flag FROM sqlite_master WHERE type='table' AND name='table_name'"
+      query <- "SELECT count(*) AS flag FROM sqlite_master WHERE type='table' AND name='table_name'"
       query <- gsub('table_name', table_name, query)
       con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)
       exists_flag <- RSQLite::dbGetQuery(con, query)
