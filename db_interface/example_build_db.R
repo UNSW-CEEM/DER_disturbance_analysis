@@ -2,7 +2,7 @@ timeseries_path_name <- "data/2021-01-24/20210124_aemo.csv"
 site_details_path_name <- "data/2021-01-24/20210124_site_details.csv"
 circuit_details_path_name <- "data/2021-01-24/20210124_circuit_details.csv"
 
-source("BDInterface/interface.R")
+source("db_interface/interface.R")
 db <- DBInterface$new()
 
 db$connect_to_new_database("data/2021-01-24/20210124_v2.db")

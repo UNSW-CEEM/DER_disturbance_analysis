@@ -187,13 +187,13 @@ summary {
 <div id="using-the-database-interface" class="section level2">
 <h2>Using the database interface</h2>
 <p>To use the database interface we need to source the file containing it.</p>
-<pre class="r"><code>source(&quot;BDInterface/R/interface.R&quot;)</code></pre>
+<pre class="r"><code>source(&quot;db_interface/R/interface.R&quot;)</code></pre>
 <div id="creating-a-sqlite-database-from-solar-analytics-data" class="section level3">
 <h3>Creating a sqlite database from solar analytics data</h3>
 <p>Define the paths of the solar analytics files to use in the database.</p>
-<pre class="r"><code>timeseries_path_name &lt;- &quot;BDInterface/tests/testthat/data/simple_timeseries.csv&quot;
-site_details_path_name &lt;- &quot;BDInterface/tests/testthat/data/simple_site_details.csv&quot;
-circuit_details_path_name &lt;- &quot;BDInterface/tests/testthat/data/simple_circuit_details.csv&quot;</code></pre>
+<pre class="r"><code>timeseries_path_name &lt;- &quot;db_interface/tests/testthat/data/simple_timeseries.csv&quot;
+site_details_path_name &lt;- &quot;db_interface/tests/testthat/data/simple_site_details.csv&quot;
+circuit_details_path_name &lt;- &quot;db_interface/tests/testthat/data/simple_circuit_details.csv&quot;</code></pre>
 <p>Create an instance of the database interface and use it to create a new database.</p>
 <pre class="r"><code>db &lt;- DBInterface$new()
 
@@ -209,23 +209,23 @@ db$connect_to_new_database(&quot;example_database.db&quot;)</code></pre>
 <p>You may receive three possible errors at this stage.</p>
 <div id="if-the-timeseries-csv-from-solar-analytics-does-not-contain-the-expected-header." class="section level5">
 <h5>3. If the timeseries csv from solar analytics does not contain the expected header.</h5>
-<pre class="r"><code>timeseries_path_name &lt;- &quot;BDInterface/tests/testthat/data/simple_timeseries_unknown_header.csv&quot;
-site_details_path_name &lt;- &quot;BDInterface/tests/testthat/data/simple_site_details.csv&quot;
-circuit_details_path_name &lt;- &quot;BDInterface/tests/testthat/data/simple_circuit_details.csv&quot;
+<pre class="r"><code>timeseries_path_name &lt;- &quot;db_interface/tests/testthat/data/simple_timeseries_unknown_header.csv&quot;
+site_details_path_name &lt;- &quot;db_interface/tests/testthat/data/simple_site_details.csv&quot;
+circuit_details_path_name &lt;- &quot;db_interface/tests/testthat/data/simple_circuit_details.csv&quot;
 db_two &lt;- DBInterface$new()
 db_two$connect_to_new_database(&quot;example_database_two.db&quot;)
 db_two$build_database(timeseries = timeseries_path_name,
                   circuit_details = circuit_details_path_name,
-                  site_details = site_details_path_name, 
+                  site_details = site_details_path_name,
                   check_dataset_ids_match = FALSE)</code></pre>
-<pre><code>## Error in self$get_time_series_build_query(timeseries): The provided time series file should have the columns ts, c_id, d e, v and f, 
-##           or known aliases of these columns. 
-##           
+<pre><code>## Error in self$get_time_series_build_query(timeseries): The provided time series file should have the columns ts, c_id, d e, v and f,
+##           or known aliases of these columns.
+##
 ##           The columns ts, c_id, d, e, voltage, f where found instead.
-##           
+##
 ##           Please overide the column alaises in the database interface and try again.</code></pre>
 <p>This is fixed by overiding the default timeseries columns, in this case the 'v' column is given the alias 'voltage'.</p>
-<pre class="r"><code>db_two$default_timeseries_column_aliases &lt;- list(ts='_ts', time_stamp='_ts', c_id='_c_id', voltage='_v', 
+<pre class="r"><code>db_two$default_timeseries_column_aliases &lt;- list(ts='_ts', time_stamp='_ts', c_id='_c_id', voltage='_v',
                                                  f='_f', e='_e', d='_d')</code></pre>
 <p>Then the build procedure needs to be rerun.</p>
 <pre class="r"><code>db_two$build_database(timeseries = timeseries_path_name,
@@ -235,9 +235,9 @@ db_two$build_database(timeseries = timeseries_path_name,
 </div>
 <div id="if-the-circuit-details-csv-from-solar-analytics-does-not-contain-the-expected-header." class="section level5">
 <h5>2. If the circuit details csv from solar analytics does not contain the expected header.</h5>
-<pre class="r"><code>timeseries_path_name &lt;- &quot;BDInterface/tests/testthat/data/simple_timeseries.csv&quot;
-site_details_path_name &lt;- &quot;BDInterface/tests/testthat/data/simple_site_details.csv&quot;
-circuit_details_path_name &lt;- &quot;BDInterface/tests/testthat/data/simple_circuit_details_unknown_header.csv&quot;
+<pre class="r"><code>timeseries_path_name &lt;- &quot;db_interface/tests/testthat/data/simple_timeseries.csv&quot;
+site_details_path_name &lt;- &quot;db_interface/tests/testthat/data/simple_site_details.csv&quot;
+circuit_details_path_name &lt;- &quot;db_interface/tests/testthat/data/simple_circuit_details_unknown_header.csv&quot;
 db_two &lt;- DBInterface$new()
 db_two$connect_to_new_database(&quot;example_database_two.db&quot;)
 db_two$build_database(timeseries = timeseries_path_name,
@@ -250,9 +250,9 @@ db_two$build_database(timeseries = timeseries_path_name,
 </div>
 <div id="if-the-site-details-csv-from-solar-analytics-does-not-contain-the-expected-header." class="section level5">
 <h5>3. If the site details csv from solar analytics does not contain the expected header.</h5>
-<pre class="r"><code>timeseries_path_name &lt;- &quot;BDInterface/tests/testthat/data/simple_timeseries.csv&quot;
-site_details_path_name &lt;- &quot;BDInterface/tests/testthat/data/simple_site_details_unknown_header.csv&quot;
-circuit_details_path_name &lt;- &quot;BDInterface/tests/testthat/data/simple_circuit_details.csv&quot;
+<pre class="r"><code>timeseries_path_name &lt;- &quot;db_interface/tests/testthat/data/simple_timeseries.csv&quot;
+site_details_path_name &lt;- &quot;db_interface/tests/testthat/data/simple_site_details_unknown_header.csv&quot;
+circuit_details_path_name &lt;- &quot;db_interface/tests/testthat/data/simple_circuit_details.csv&quot;
 db_two &lt;- DBInterface$new()
 db_two$connect_to_new_database(&quot;example_database_two.db&quot;)
 db_two$build_database(timeseries = timeseries_path_name,
@@ -270,7 +270,7 @@ db_two$build_database(timeseries = timeseries_path_name,
 <h3>Cleaning the database</h3>
 <p>This step attempts to fill in missing sample duration values and correct errors in the ciruit and site details data.</p>
 <p>Before running data cleaning the postcode lattiude and longditude data needs to be added to the database, this is for calculating sunrise and sunset times that are used for validating if a pofile is from a PV system. Data mapping the manufacturer names provided by solar analytic to a consistent set of unique manufacture names also needs to be provided.</p>
-<pre class="r"><code>db$add_postcode_lon_lat_to_database(&quot;BDInterface/tests/testthat/data/postcode_lon_lat.csv&quot;)
+<pre class="r"><code>db$add_postcode_lon_lat_to_database(&quot;db_interface/tests/testthat/data/postcode_lon_lat.csv&quot;)
 db$add_manufacturer_mapping_table(&quot;manufacturer_mapping.csv&quot;)</code></pre>
 <p>Then the data cleaning loop can be run.</p>
 <pre class="r"><code>db$run_data_cleaning_loop()</code></pre>
@@ -280,16 +280,16 @@ db$add_manufacturer_mapping_table(&quot;manufacturer_mapping.csv&quot;)</code></
 <div id="setting-up-a-database-for-use-with-the-disturbance-analysis-tool" class="section level3">
 <h3>Setting up a database for use with the disturbance analysis tool</h3>
 <p>The disturbance analysis tool currently requires data cleaning to be performed. An example script for building the database ready for use by the tool is as follows. On data sets of 6 GB from solar analytics this takes aproximately 1 hr to clean. min to run.</p>
-<pre class="r"><code>timeseries_path_name &lt;- &quot;BDInterface/tests/testthat/data/simple_timeseries.csv&quot;
-site_details_path_name &lt;- &quot;BDInterface/tests/testthat/data/simple_site_details.csv&quot;
-circuit_details_path_name &lt;- &quot;BDInterface/tests/testthat/data/simple_circuit_details.csv&quot;
+<pre class="r"><code>timeseries_path_name &lt;- &quot;db_interface/tests/testthat/data/simple_timeseries.csv&quot;
+site_details_path_name &lt;- &quot;db_interface/tests/testthat/data/simple_site_details.csv&quot;
+circuit_details_path_name &lt;- &quot;db_interface/tests/testthat/data/simple_circuit_details.csv&quot;
 db &lt;- DBInterface$new()
 db$connect_to_new_database(&quot;example_database.db&quot;)
 db$build_database(timeseries = timeseries_path_name,
                   circuit_details = circuit_details_path_name,
                   site_details = site_details_path_name,
                   check_dataset_ids_match = FALSE)
-db$add_postcode_lon_lat_to_database(&quot;BDInterface/tests/testthat/data/postcode_lon_lat.csv&quot;)
+db$add_postcode_lon_lat_to_database(&quot;db_interface/tests/testthat/data/postcode_lon_lat.csv&quot;)
 db$add_manufacturer_mapping_table(&quot;manufacturer_mapping.csv&quot;)
 db$run_data_cleaning_loop()</code></pre>
 <pre><code>## [1] &quot;Done cleaning batch 1&quot;</code></pre>
@@ -337,7 +337,7 @@ db$get_time_series_data_by_c_id(c_ids = circuits_to_load)</code></pre>
 <ul>
 <li>Get <strong>time series data by state, duration and time</strong>, this is preferable to loading all time series data and then filter because selection is done before loading the data into memory.</li>
 </ul>
-<pre class="r"><code>db$get_filtered_time_series_data(state = 'NSW', duration = 5, start_time = '2018-01-01 00:00:20', 
+<pre class="r"><code>db$get_filtered_time_series_data(state = 'NSW', duration = 5, start_time = '2018-01-01 00:00:20',
                                  end_time = '2018-01-01 00:00:30')</code></pre>
 <pre><code>##                    ts c_id d   e   v  f
 ## 1 2018-01-01 00:00:20    1 5 100 200 50
