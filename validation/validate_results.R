@@ -38,7 +38,7 @@ if (base_directory_name == "DER_disturbance_analysis") {
     print("Script is not being run in DER_disturbance_analysis folder, make sure that tool directory has been set")
     tool_directory <- "~/UNSW/MATCH/DER_disturbance_analysis"
 }
-source(sprintf("%s/BDInterface/interface.R", tool_directory))
+source(sprintf("%s/db_interface/interface.R", tool_directory))
 
 data_dirs <- list.dirs('validation/data', recursive=FALSE)
 
@@ -115,7 +115,7 @@ compare_dbs <- function(ref_db_con, test_db_con, compare_values=FALSE, event_nam
                 ))
             diff_found <- TRUE
         }
- 
+
         # compare values in table
         if (compare_values) {
             ref_data <- RSQLite::dbGetQuery(ref_db_con, sprintf(table_all_data_query, table))
@@ -191,13 +191,13 @@ if (length(data_dirs) > 0) {
                 ref_db_con <- RSQLite::dbConnect(RSQLite::SQLite(), sprintf("%s/%s", dir, ref_db_name))
                 test_db_con <- RSQLite::dbConnect(RSQLite::SQLite(), sprintf("%s/%s", dir, test_db_name))
                 compare_dbs(ref_db_con, test_db_con, TRUE, dir)
-                
+
                 # check csvs
                 ref_circuit_summary <- read.csv(sprintf("%s/%s", dir, ref_circuit_summary_fname))
                 ref_underlying_data <- read.csv(sprintf("%s/%s", dir, ref_underlying_data_fname))
                 test_circuit_summary <- read.csv(sprintf("%s/%s", dir, test_circuit_summary_fname))
                 test_underlying_data <- read.csv(sprintf("%s/%s", dir, test_underlying_data_fname))
-                
+
                 # check circuit summary
                 logging::loginfo(sprintf("%s - Comparing circuit summaries...", dir))
                 compare_dfs(ref_circuit_summary, test_circuit_summary, event_name=dir)
@@ -216,7 +216,7 @@ if (length(data_dirs) > 0) {
                 }
             }
         } else {
-            logging::logerror("Required files not found in directory. Check that the analysis has been run and saved 
+            logging::logerror("Required files not found in directory. Check that the analysis has been run and saved
                               with the input prefixes")
         }
     }

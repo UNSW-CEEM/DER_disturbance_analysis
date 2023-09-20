@@ -30,7 +30,7 @@ if (base_directory_name == "DER_disturbance_analysis") {
     print("Script is not being run in DER_disturbance_analysis folder, make sure that tool directory has been set")
     tool_directory <- "~/UNSW/MATCH/DER_disturbance_analysis"
 }
-source(sprintf("%s/BDInterface/interface.R", tool_directory))
+source(sprintf("%s/db_interface/interface.R", tool_directory))
 
 data_dirs <- list.dirs('validation/data', recursive=FALSE)
 required_file_names <- c("ref_circuit_details.csv", "ref_meta_data.json", "ref_raw_data.csv", "ref_site_details.csv")
@@ -57,9 +57,9 @@ if (length(data_dirs) > 0){
                 db$connect_to_new_database(db_path_name)
             }
 
-            db$default_timeseries_column_aliases <- list(utc_tstamp='_ts', c_id='_c_id', voltage='_voltage', 
+            db$default_timeseries_column_aliases <- list(utc_tstamp='_ts', c_id='_c_id', voltage='_voltage',
                                                          frequency='_frequency', energy='_e', duration='_d', power='_p',
-                                                         batt_power='_bp', site_power='_sp', vmin='_vmin', vmax='_vmax', 
+                                                         batt_power='_bp', site_power='_sp', vmin='_vmin', vmax='_vmax',
                                                          vmean='_vmean', fmin='_fmin', fmax='_fmax')
             db$build_database(timeseries = timeseries_path_name,
                               circuit_details = circuit_details_path_name,
@@ -86,7 +86,7 @@ if (length(data_dirs) > 0){
                 close(metadata_conn)
             }
         } else {
-            logging::logerror(sprintf("Required files missing from directory: %s/%s", dir, 
+            logging::logerror(sprintf("Required files missing from directory: %s/%s", dir,
                                       required_file_names[!required_files_in_dir]))
         }
     }
