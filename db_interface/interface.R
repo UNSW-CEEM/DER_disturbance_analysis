@@ -116,7 +116,7 @@ DBInterface <- R6::R6Class(
     check_table_has_expected_columns = function(table, expected_columns) {
       con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)
       if (RSQLite::dbExistsTable(con, table)) {
-        table <- sqldf::sqldf(paste0("select * from ", table,  " limit 1"), dbname = self$db_path_name)
+        table <- sqldf::sqldf(paste0("SELECT * FROM ", table,  " LIMIT 1"), dbname = self$db_path_name)
         table_column_names <- sort(names(table))
         expected_columns <- sort(expected_columns)
         if (!identical(table_column_names, expected_columns)) {
