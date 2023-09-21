@@ -116,7 +116,7 @@ DBInterface <- R6::R6Class(
     check_table_has_expected_columns = function(table, expected_columns) {
       con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)
       if (RSQLite::dbExistsTable(con, table)) {
-        table <- sqldf::sqldf(paste0("SELECT * FROM ", table,  " LIMIT 1"), dbname = self$db_path_name)
+        table <- RSQLite::dbGetQuery(con, paste0("SELECT * FROM ", table,  " LIMIT 1"))
         table_column_names <- sort(names(table))
         expected_columns <- sort(expected_columns)
         if (!identical(table_column_names, expected_columns)) {
@@ -576,43 +576,59 @@ DBInterface <- R6::R6Class(
       RSQLite::dbDisconnect(con)
     },
     get_circuit_details_raw = function() {
-      circuit_details_raw <- sqldf::sqldf("SELECT * FROM circuit_details_raw", dbname = self$db_path_name)
+      con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)
+      circuit_details_raw <- RSQLite::dbGetQuery(con, "SELECT * FROM circuit_details_raw")
+      RSQLite::dbDisconnect(con)
       return(circuit_details_raw)
     },
     get_site_details_raw = function() {
-      site_details_raw <- sqldf::sqldf("SELECT * FROM site_details_raw", dbname = self$db_path_name)
+      con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)
+      site_details_raw <- RSQLite::dbGetQuery(con, "SELECT * FROM site_details_raw")
+      RSQLite::dbDisconnect(con)
       return(site_details_raw)
     },
     get_site_details_cleaned = function() {
-      site_details_cleaned <- sqldf::sqldf(
+      con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)
+      site_details_cleaned <- RSQLite::dbGetQuery(
+        con,
         "SELECT site_id, s_state, s_postcode, ac, manufacturer, model, pv_installation_year_month
-         FROM site_details_cleaned",
-        dbname = self$db_path_name
+         FROM site_details_cleaned"
       )
+      RSQLite::dbDisconnect(con)
       return(site_details_cleaned)
     },
     get_circuit_details_cleaned = function() {
-      circuit_details_cleaned <- sqldf::sqldf(
+      con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)
+      circuit_details_cleaned <- RSQLite::dbGetQuery(
+        con,
         "SELECT c_id, site_id, con_type, polarity, manual_droop_compliance, manual_reconnect_compliance
-        FROM circuit_details_cleaned",
-        dbname = self$db_path_name
+        FROM circuit_details_cleaned"
       )
+      RSQLite::dbDisconnect(con)
       return(circuit_details_cleaned)
     },
     get_alerts_data = function() {
-      alerts_data <- sqldf::sqldf("SELECT * FROM alerts", dbname = self$db_path_name)
+      con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)
+      alerts_data <- RSQLite::dbGetQuery(con, "SELECT * FROM alerts")
+      RSQLite::dbDisconnect(con)
       return(alerts_data)
     },
     get_site_details_cleaning_report = function() {
-      site_details_cleaned <- sqldf::sqldf("SELECT * FROM site_details_cleaned", dbname = self$db_path_name)
+      con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)
+      site_details_cleaned <- RSQLite::dbGetQuery(con, "SELECT * FROM site_details_cleaned")
+      RSQLite::dbDisconnect(con)
       return(site_details_cleaned)
     },
     get_circuit_details_cleaning_report = function() {
-      circuit_details_cleaned <- sqldf::sqldf("SELECT * FROM circuit_details_cleaned", dbname = self$db_path_name)
+      con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)
+      circuit_details_cleaned <- RSQLite::dbGetQuery(con, "SELECT * FROM circuit_details_cleaned")
+      RSQLite::dbDisconnect(con)
       return(circuit_details_cleaned)
     },
     get_site_details_processed = function() {
-      site_details_processed <- sqldf::sqldf("SELECT * FROM site_details_processed", dbname = self$db_path_name)
+      con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)
+      site_details_processed <- RSQLite::dbGetQuery(con, "SELECT * FROM site_details_processed")
+      RSQLite::dbDisconnect(con)
       return(site_details_processed)
     },
     get_time_series_data_by_c_id = function(c_ids) {
@@ -699,7 +715,9 @@ DBInterface <- R6::R6Class(
       query <- gsub('duration', duration, query)
       query <- gsub('start_time', start_time, query)
       query <- gsub('end_time', end_time, query)
-      time_series <- sqldf::sqldf(query , dbname = self$db_path_name)
+      con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)
+      time_series <- RSQLite::dbGetQuery(con, query)
+      RSQLite::dbDisconnect(con)
       return(time_series)
     },
     get_filtered_time_series_data_all_durations = function(state, start_time, end_time) {
@@ -714,7 +732,9 @@ DBInterface <- R6::R6Class(
         AND datetime(ts) <= datetime('end_time')"
       query <- gsub('start_time', start_time, query)
       query <- gsub('end_time', end_time, query)
-      time_series <- sqldf::sqldf(query , dbname = self$db_path_name)
+      con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)
+      time_series <- RSQLite::dbGetQuery(con, query)
+      RSQLite::dbDisconnect(con)
       return(time_series)
     },
     get_max_circuit_powers = function(state) {
@@ -730,29 +750,33 @@ DBInterface <- R6::R6Class(
                         ON a.c_id == b.c_id) c
                     GROUP BY c.c_id;
                    "
-      max_power <- sqldf::sqldf(query , dbname = self$db_path_name)
+      max_power <- sqldf::sqldf(query, dbname = self$db_path_name)
       max_power <- mutate(max_power, clean = 'raw')
       if (self$check_if_table_exists('circuit_details_cleaned')) {
-        query <- "select c.c_id AS c_id, max(c.e * c.polarity / (c.d * 1000)) AS max_power FROM
-                        ((select c_id, d, e FROM timeseries
-                                WHERE c_id in (select c_id FROM circuit_in_state)) a
+        query <- "SELECT c.c_id AS c_id, max(c.e * c.polarity / (c.d * 1000)) AS max_power FROM
+                        ((SELECT c_id, d, e FROM timeseries
+                                WHERE c_id in (SELECT c_id FROM circuit_in_state)) a
                             INNER JOIN
                          (SELECT c_id, polarity FROM circuit_details_cleaned) b
                         ON a.c_id == b.c_id) c
                     GROUP BY c.c_id;
                    "
-        max_power_clean <- sqldf::sqldf(query , dbname = self$db_path_name)
+        max_power_clean <- sqldf::sqldf(query, dbname = self$db_path_name)
         max_power_clean <- mutate(max_power_clean, clean = 'clean')
         max_power <- bind_rows(max_power, max_power_clean)
       }
       return(max_power)
     },
     get_postcode_lon_lat = function() {
-      postcodes <- sqldf::sqldf("SELECT * FROM postcode_lon_lat", dbname = self$db_path_name)
+      con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)
+      postcodes <- RSQLite::dbGetQuery(con, "SELECT * FROM postcode_lon_lat")
+      RSQLite::dbDisconnect(con)
       return(postcodes)
     },
     get_manufacturer_mapping = function() {
-      postcodes <- sqldf::sqldf("SELECT * FROM manufacturer_mapping", dbname = self$db_path_name)
+      con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)
+      postcodes <- RSQLite::dbGetQuery(con, "SELECT * FROM manufacturer_mapping")
+      RSQLite::dbDisconnect(con)
       return(postcodes)
     },
     calc_start_chunk_index = function(iteration_number, max_chunk_size) {
