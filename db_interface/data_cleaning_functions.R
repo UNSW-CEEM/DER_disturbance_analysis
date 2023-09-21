@@ -42,7 +42,7 @@ group_site_details_to_one_row_per_site <- function(site_details) {
 }
 
 site_details_data_cleaning_one <- function(site_details) {
-  # Record old ac and dc values.
+  # Record old AC and DC values.
   site_details <- mutate(site_details, ac_old = ac)
   site_details <- mutate(site_details, dc_old = dc)
   site_details <- check_for_ac_value_in_watts(site_details)
@@ -70,15 +70,14 @@ site_details_data_cleaning_two <- function(time_series, site_details) {
 }
 
 check_for_peak_power_greater_than_dc_capacity <- function(site_details) {
-  # If DC capacity value doesn't make sense given peak power value then scale
-  # DC capacity up, based on nearest interger scaling value that makes DC
-  # capacity higher than peak power.
+  # If DC capacity value doesn't make sense given peak power value then scale DC capacity up, based on nearest
+  # integer scaling value that makes DC capacity higher than peak power.
   site_details <- mutate(
     site_details,
     sum_dc = ifelse(
-    (sum_dc / 1000) / abs(max_power_kW) < 0.9,
-    ceiling(max_power_kW / (sum_dc / 1000)) * sum_dc,
-    sum_dc
+      (sum_dc / 1000) / abs(max_power_kW) < 0.9,
+      ceiling(max_power_kW / (sum_dc / 1000)) * sum_dc,
+      sum_dc
     )
   )
   return(site_details)
@@ -93,9 +92,8 @@ check_for_ac_value_in_watts <- function(site_details) {
 }
 
 check_ac_capacity_less_than_peak_power <- function(site_details) {
-  # If AC value needs scaling to based on ratio to peak power and DC has not
-  # been scaled, then scale to meet DC capacity. if DC was also scaled then
-  # scale to meet peak power value.
+  # If AC value needs scaling to based on ratio to peak power and DC has not been scaled, then scale to meet DC
+  # capacity. if DC was also scaled then scale to meet peak power value.
   site_details <- mutate(
     site_details,
     sum_ac = ifelse(
@@ -132,9 +130,8 @@ clean_connection_types <- function(combined_data, circuit_details, postcode_data
   combined_data <- mutate(combined_data, polarity_changed = ifelse(polarity != old_polarity, 1, 0))
   # Remove first_ac column
   combined_data <- combined_data[, -which(names(combined_data) %in% c("ac"))]
-  # Select the values from the orginal circuit details that would not be
-  # changed by cleaning, then merge back in with details updated or created
-  # by cleaning.
+  # Select the values from the orginal circuit details that would not be changed by cleaning, then merge back in with
+  # details updated or created by cleaning.
   circuit_details <- select(circuit_details, site_id, c_id, manual_droop_compliance, manual_reconnect_compliance)
   combined_data <- left_join(combined_data, circuit_details, by = "c_id")
   return(combined_data)
@@ -160,12 +157,11 @@ calc_sunrise_sunset_bounds <- function(postcode_data, event_date) {
       keep = c('sunset')
     )$sunset
   )
-  # Create 1 hour buffer either side of sunrise and sunset to allow for large
-  # postcodes, as lat and lon is the postcode centre.
+  # Create 1 hour buffer either side of sunrise and sunset to allow for large postcodes, as lat and lon is the
+  # postcode centre.
   postcode_data <- mutate(postcode_data, sunrise = sunrise-60*60)
   postcode_data <- mutate(postcode_data, sunset = sunset+60*60)
-  # Format sunrise and sunset as character so it is displayed in Brisbane
-  # time in GUI.
+  # Format sunrise and sunset as character so it is displayed in Brisbane time in GUI.
   postcode_data <- mutate(
     postcode_data,
     dis_sunrise = strftime(sunrise, tz = "Australia/Brisbane", format = "%H:%M:%S")
@@ -203,9 +199,8 @@ clac_output_summary_values <- function(combined_data) {
 }
 
 check_day_vs_night_energy <- function(combined_data) {
-  # Check for pv connection type, if the type is pv but more than 25% of the
-  # gen/load was outside daylight hours then change to type 'load'. Only
-  # change if system has operated at above an avergae of 1% capacity.
+  # Check for pv connection type, if the type is pv but more than 25% of the gen/load was outside daylight hours then
+  # change to type 'load'. Only change if system has operated at above an average of 1% capacity.
   combined_data <- mutate(
     combined_data,
     con_type = ifelse(
@@ -222,9 +217,8 @@ check_day_vs_night_energy <- function(combined_data) {
 }
 
 check_for_reversed_polarity <- function(combined_data) {
-  # Check for peak power occuring as a negative value i.e. reversed polarity,
-  # if this occurs for pv systems that have operated at above an avergae of
-  # 1% capacity then swap polarity.
+  # Check for peak power occuring as a negative value i.e. reversed polarity, if this occurs for pv systems that have
+  # operated at above an average of 1% capacity then swap polarity.
   combined_data <- mutate(
     combined_data,
     polarity = ifelse(
@@ -242,9 +236,8 @@ check_for_reversed_polarity <- function(combined_data) {
 }
 
 check_for_mixed_polarity <- function(combined_data) {
-  # Check for power flowing in both negative and positive direction, if this
-  # occurs with values large than 10 % of the inverter capacity then change
-  # connection type to 'mixed'
+  # Check for power flowing in both negative and positive direction, if this occurs with values large than 10 % of the
+  # inverter capacity then change # connection type to 'mixed'
   combined_data <- mutate(
     combined_data,
     con_type = ifelse(max_power > ac * .1 & min_power * -1 > ac * 0.1, "mixed", con_type)
@@ -260,8 +253,8 @@ voltages_in_bounds <- function(v) {
 }
 
 remove_outlying_voltages <- function(time_series) {
-  # Replace outlier voltages with NA to avoid corrupting results.
-  # Only replaces voltages where all recorded voltages are outside bounds.
+  # Replace outlier voltages with NA to avoid corrupting results. Only replaces voltages where all recorded voltages are
+  # outside bounds.
   voltage_cols <- c("v", "vmin", "vmax", "vmean")
   time_series[, voltage_cols] <- sapply(time_series[, voltage_cols], as.numeric)
   old_time_series <- time_series
