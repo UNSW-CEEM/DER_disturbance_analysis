@@ -19,8 +19,7 @@ timeseries_path_name <- "data/simple_timeseries.csv"
 site_details_path_name <- "data/simple_site_details.csv"
 circuit_details_path_name <- "data/simple_circuit_details.csv"
 
-# We expect the output of loading via the database to be the same as if we
-# just read straight from csv.
+# We expect the output of loading via the database to be the same as if we just read straight from CSV.
 expected_timeseries <- load_test_file(timeseries_path_name)
 expected_site_details <- load_test_file(site_details_path_name)
 expected_circuit_details <- load_test_file(circuit_details_path_name)
@@ -78,8 +77,7 @@ timeseries_path_name <- "data/timeseries_max_power_testing.csv"
 site_details_path_name <- "data/site_details_max_power_testing.csv"
 circuit_details_path_name <- "data/circuit_details_max_power_testing.csv"
 
-# We expect the output of loading via the database to be the same as if we
-# just read straight from csv.
+# We expect the output of loading via the database to be the same as if we just read straight from CSV.
 expected_timeseries <- load_test_file(timeseries_path_name)
 expected_site_details <- load_test_file(site_details_path_name)
 expected_circuit_details <- load_test_file(circuit_details_path_name)
