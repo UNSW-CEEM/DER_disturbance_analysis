@@ -19,17 +19,23 @@ DBInterface <- R6::R6Class(
     default_timeseries_column_aliases = list(
       ts = '_ts',
       time_stamp = '_ts',
+      utc_tstamp = '_ts',
       c_id = '_c_id',
       v = '_voltage',
+      voltage = '_voltage',
       vmin = '_vmin',
       vmax = '_vmax',
       vmean = '_vmean',
       f = '_frequency',
+      frequency = '_frequency',
       fmin = '_fmin',
       fmax = '_fmax',
       e = '_e',
+      energy = '_e',
       d = '_d',
-      p = '_p'
+      duration = '_d',
+      p = '_p',
+      power = '_p'
     ),
     connect_to_new_database = function(db_path_name) {
       if (file.exists(db_path_name)) {
@@ -345,12 +351,12 @@ DBInterface <- R6::R6Class(
           query <-
             gsub(self$default_timeseries_column_aliases[[name]], name, query)
         } else {
-          error_message <- "The provided time series file should have the columns ts, c_id, d e, v and f,
-            or known aliases of these columns.
-
-            The columns _cols_ where found instead.
-
-            Please overide the column alaises in the database interface and try again."
+          error_message <- paste0(
+            "The provided time series file should have the columns ts, c_id, d, e, v and f, ",
+            "or known aliases of these columns.\n",
+            "The columns _cols_ were found instead.\n\n",
+            "Please override the column alaises in the database interface and try again."
+          )
           error_message <- gsub('_cols_', paste(column_names, collapse = ', '), error_message)
           stop(error_message)
         }
@@ -376,8 +382,12 @@ DBInterface <- R6::R6Class(
           query <- gsub(column_aliases[[name]], name, query)
         } else {
           stop(
-            "The provided circuit details file should have the columns c_id, site_id, con_type and polarity. Please
-             check this file and try again."
+            paste0(
+              "The provided circuit details file should have the columns c_id, site_id, con_type and polarity. ",
+              "Column: ",
+              name,
+              " is not recognised. Please check this file and try again."
+            )
           )
         }
       }
