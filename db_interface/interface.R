@@ -41,7 +41,7 @@ DBInterface <- R6::R6Class(
       if (file.exists(db_path_name)) {
         stop(
           paste0(
-            "That database file already exits. If you want to create a new DB with this name please delete the "
+            "That database file already exits. If you want to create a new DB with this name please delete the ",
             "existing DB. If you want to connect to an existing DB please use the connect_to_existing_database method."
           )
         )
@@ -131,9 +131,10 @@ DBInterface <- R6::R6Class(
           RSQLite::dbDisconnect(con)
           stop(
             paste0(
-              "Connection to database aborted. The tables in the specified database did not have the expected columns. "
-              "This is probably because the database was created with a different (probably older) version of the "
-              "database interface tool. Try re-creating the database with the current version to resolve this issue."
+              "Connection to database aborted. The tables in the specified database did not have the expected ",
+              "columns. This is probably because the database was created with a different (probably older) version ",
+              "of the database interface tool. Try re-creating the database with the current version to resolve this ",
+              "issue."
             )
           )
         }
