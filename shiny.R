@@ -260,8 +260,7 @@ ui <- fluidPage(
                )
              ),
     tabPanel("Assumptions and Methodology", fluid=TRUE, documentation_panel())
-  ),
-  useShinyalert()
+  )
 )
 
 reset_sidebar <- function(input, output, session, stringsAsFactors) {
