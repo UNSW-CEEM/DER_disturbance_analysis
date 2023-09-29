@@ -40,8 +40,10 @@ DBInterface <- R6::R6Class(
     connect_to_new_database = function(db_path_name) {
       if (file.exists(db_path_name)) {
         stop(
-          "That database file already exits. If you want to create a new DB with this name please delete the
-          existing DB. If you want to connect to an existing DB please use the connect_to_existing_database method."
+          paste0(
+            "That database file already exits. If you want to create a new DB with this name please delete the "
+            "existing DB. If you want to connect to an existing DB please use the connect_to_existing_database method."
+          )
         )
       }
       con <- RSQLite::dbConnect(RSQLite::SQLite(), db_path_name)
@@ -128,9 +130,11 @@ DBInterface <- R6::R6Class(
         if (!identical(table_column_names, expected_columns)) {
           RSQLite::dbDisconnect(con)
           stop(
-            "Connection to database aborted, the tables in specified database did not have the expected columns.
-            This is probably becuase the database was created with a different (probably older) version of the
-            database interface tool. Try re-creating the database with the current version to resolve this issue."
+            paste0(
+              "Connection to database aborted. The tables in the specified database did not have the expected columns. "
+              "This is probably because the database was created with a different (probably older) version of the "
+              "database interface tool. Try re-creating the database with the current version to resolve this issue."
+            )
           )
         }
         RSQLite::dbDisconnect(con)
@@ -725,9 +729,7 @@ DBInterface <- R6::R6Class(
       query <- gsub('duration', duration, query)
       query <- gsub('start_time', start_time, query)
       query <- gsub('end_time', end_time, query)
-      con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)
-      time_series <- RSQLite::dbGetQuery(con, query)
-      RSQLite::dbDisconnect(con)
+      time_series <- sqldf::sqldf(query, dbname = self$db_path_name)
       return(time_series)
     },
     get_filtered_time_series_data_all_durations = function(state, start_time, end_time) {
@@ -742,9 +744,7 @@ DBInterface <- R6::R6Class(
         AND datetime(ts) <= datetime('end_time')"
       query <- gsub('start_time', start_time, query)
       query <- gsub('end_time', end_time, query)
-      con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)
-      time_series <- RSQLite::dbGetQuery(con, query)
-      RSQLite::dbDisconnect(con)
+      time_series <- sqldf::sqldf(query, dbname = self$db_path_name)
       return(time_series)
     },
     get_max_circuit_powers = function(state) {
