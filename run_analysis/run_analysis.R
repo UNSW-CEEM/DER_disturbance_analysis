@@ -45,7 +45,7 @@ validate_pre_event_interval <- function(pre_event_interval, load_start_time, loa
 #' @return Ideal response time series dataframe
 ideal_response_from_frequency <- function(frequency_data, region_to_load, f_ulco, f_hyst, t_hyst, f_upper) {
   if (dim(frequency_data)[1] > 0) {
-    temp_f_data <- select(frequency_data, ts, region_to_load) 
+    temp_f_data <- select(frequency_data, ts, region_to_load)
     temp_f_data <- setnames(temp_f_data, c(region_to_load), c("f"))
     temp_f_data <- mutate(temp_f_data, f = as.numeric(f))
     ideal_response_to_plot <- ideal_response(temp_f_data, f_ulco, f_hyst, t_hyst, f_upper)
@@ -91,13 +91,13 @@ ufls_detection <- function(
   post_event_ufls_window_length, pre_event_ufls_stability_threshold, post_event_delay
 ) {
   logdebug("run ufls detection", logger=logger)
-  ufls_statuses_ts <- ufls_detection_tstamp(db = db_interface, region = region_to_load, 
-                                  pre_event_interval = pre_event_interval, 
+  ufls_statuses_ts <- ufls_detection_tstamp(db = db_interface, region = region_to_load,
+                                  pre_event_interval = pre_event_interval,
                                   pre_event_window_length = pre_event_ufls_window_length,
-                                  post_event_window_length = post_event_ufls_window_length, 
+                                  post_event_window_length = post_event_ufls_window_length,
                                   pre_pct_sample_seconds_threshold = pre_event_ufls_stability_threshold,
                                   post_event_delay = post_event_delay)
-  
+
   ufls_statuses_v <- ufls_detection_voltage(combined_data_f, pre_event_interval, window_length, fill_nans = FALSE)
   combined_data_f <- left_join(combined_data_f, ufls_statuses_ts, by = c("c_id"))
   combined_data_f <- left_join(combined_data_f, ufls_statuses_v, by = c("c_id"))
@@ -161,7 +161,7 @@ determine_performance_factors <- function(combined_data_f, pre_event_interval) {
   logdebug('Calc site peformance factors', logger=logger)
   combined_data_f <- calc_site_performance_factors(combined_data_f)
   combined_data_f <- setnames(combined_data_f, c("ts"), c("Time"))
-  
+
   combined_data_f <- event_normalised_power(combined_data_f, pre_event_interval, keep_site_id=TRUE)
   combined_data_f <- setnames(
     combined_data_f, c("Event_Normalised_Power_kW"), c("Site_Event_Normalised_Power_kW"))
@@ -174,22 +174,22 @@ determine_performance_factors <- function(combined_data_f, pre_event_interval) {
 upscale_and_summarise_disconnections <- function(circuit_summary, manufacturer_install_data, load_date, region_to_load, exclude_solar_edge) {
   logdebug('Summarise and upscale disconnections on a manufacturer basis.', logger=logger)
   if (exclude_solar_edge){
-    circuits_to_summarise <- filter(circuit_summary, manufacturer != "SolarEdge" | 
+    circuits_to_summarise <- filter(circuit_summary, manufacturer != "SolarEdge" |
                                     is.na(manufacturer))
-    manufacturer_install_data <- filter(manufacturer_install_data, manufacturer != "SolarEdge" | 
+    manufacturer_install_data <- filter(manufacturer_install_data, manufacturer != "SolarEdge" |
                                           is.na(manufacturer))
   } else {
     circuits_to_summarise <- circuit_summary
     manufacturer_install_data <- manufacturer_install_data
   }
-  upscaling_results <- get_upscaling_results(circuits_to_summarise, manufacturer_install_data, load_date, 
+  upscaling_results <- get_upscaling_results(circuits_to_summarise, manufacturer_install_data, load_date,
                                               region_to_load, sample_threshold = 30)
   upscaling_results$with_separate_ufls_counts <- get_upscaling_results_excluding_ufls_affected_circuits(
     circuits_to_summarise, manufacturer_install_data, load_date, region_to_load, sample_threshold = 30)
 
-  write.csv(upscaling_results$manufacturers_missing_from_cer, 
+  write.csv(upscaling_results$manufacturers_missing_from_cer,
             "logging/manufacturers_missing_from_cer.csv", row.names=FALSE)
-  write.csv(upscaling_results$manufacturers_missing_from_input_db, 
+  write.csv(upscaling_results$manufacturers_missing_from_input_db,
             "logging/manufacturers_missing_from_input_db.csv", row.names=FALSE)
 
   return(upscaling_results)
@@ -223,14 +223,14 @@ run_analysis <- function(data, settings) {
 
   if (length(errors$errors) == 0) {
     logging::logdebug("error checks passed", logger=logger)
-    
+
     # First get ideal response profile for 2015 standard, AS4777.2:2015.
     response_data <- ideal_response_from_frequency(
       data$frequency_data, settings$region_to_load, f_ulco=50.25, f_hyst=0.1, t_hyst=60, f_upper=52.00
     )
     data$ideal_response_to_plot <- response_data$ideal_response_to_plot
     data$region_frequency <- response_data$region_frequency
-    
+
     # Next, get ideal response profile for 2020 standard, AS4777.2:2020 (uses different settings based on region).
     # Currently, WA (Western Power) uses "Australia B", TAS uses "Australia C", all other NEM regions use "Australia A".
     if(settings$region_to_load == "WA"){
@@ -254,7 +254,7 @@ run_analysis <- function(data, settings) {
     )
     data$ideal_response_to_plot_2020 <- response_data_2020$ideal_response_to_plot
     data$region_frequency_2020 <- response_data_2020$region_frequency
-    
+
     # -------- filter combined data by user filters --------
     combined_data_f <- filter_combined_data(
       data$combined_data, data$off_grid_postcodes, settings$cleaned, settings$size_groupings, settings$standards,
@@ -272,7 +272,7 @@ run_analysis <- function(data, settings) {
       # -------- categorise response --------
       combined_data_f <- categorise_response(
         combined_data_f, settings$pre_event_interval, settings$window_length, settings$NED_threshold)
-      combined_data_f <- mutate(combined_data_f,  
+      combined_data_f <- mutate(combined_data_f,
                                 response_category = ifelse(response_category %in% c(NA), "NA", response_category))
       combined_data_f <- filter(combined_data_f, response_category %in% settings$responses)
 
@@ -307,12 +307,12 @@ run_analysis <- function(data, settings) {
 
     # -------- filter by time window --------
     logdebug('filter by time window', logger=logger)
-    if (length(settings$offsets) < length(data$unique_offsets)) { 
+    if (length(settings$offsets) < length(data$unique_offsets)) {
       combined_data_f <- filter(combined_data_f, time_offset %in% settings$offsets)
     }
-    
+
     combined_data_f <- normalise_c_id_power_by_pre_event(combined_data_f, settings$pre_event_interval)
-    
+
     if(length(combined_data_f$ts) > 0){
       combined_data_f <- determine_performance_factors(combined_data_f, settings$pre_event_interval)
 
@@ -321,8 +321,8 @@ run_analysis <- function(data, settings) {
         ideal_response_downsampled <- down_sample_1s(
           data$ideal_response_to_plot, settings$duration, min(combined_data_f$ts))
         data$ideal_response_downsampled <- ideal_response_downsampled
-        combined_data_f <- 
-          calc_error_metric_and_compliance_2(combined_data_f, 
+        combined_data_f <-
+          calc_error_metric_and_compliance_2(combined_data_f,
                                               ideal_response_downsampled,
                                               data$ideal_response_to_plot,
                                               settings$compliance_threshold,
@@ -333,7 +333,7 @@ run_analysis <- function(data, settings) {
         combined_data_f <- mutate(
           combined_data_f,  compliance_status=ifelse(compliance_status %in% c(NA), "NA", compliance_status))
       } else {
-        combined_data_f <- mutate(combined_data_f, compliance_status="Undefined")  
+        combined_data_f <- mutate(combined_data_f, compliance_status="Undefined")
       }
       if (length(settings$compliance) < 8) {
         combined_data_f <- filter(combined_data_f, compliance_status %in% settings$compliance)
@@ -344,8 +344,8 @@ run_analysis <- function(data, settings) {
         ideal_response_downsampled_2020 <- down_sample_1s(
           data$ideal_response_to_plot_2020, settings$duration, min(combined_data_f$ts))
         data$ideal_response_downsampled_2020 <- ideal_response_downsampled_2020
-        combined_data_f <- 
-          calc_error_metric_and_compliance_2(combined_data_f, 
+        combined_data_f <-
+          calc_error_metric_and_compliance_2(combined_data_f,
                                              ideal_response_downsampled_2020,
                                              data$ideal_response_to_plot_2020,
                                              settings$compliance_threshold_2020,
@@ -356,12 +356,12 @@ run_analysis <- function(data, settings) {
         combined_data_f <- mutate(
           combined_data_f,  compliance_status_2020=ifelse(compliance_status_2020 %in% c(NA), "NA", compliance_status_2020))
       } else {
-        combined_data_f <- mutate(combined_data_f, compliance_status_2020="Undefined")  
+        combined_data_f <- mutate(combined_data_f, compliance_status_2020="Undefined")
       }
       if (length(settings$compliance_2020) < 8) {
         combined_data_f <- filter(combined_data_f, compliance_status_2020 %in% settings$compliance_2020)
       }
-            
+
       # -------- determine reconnection compliace --------
       logdebug('Set reconnection compliance values', logger=logger)
       max_power <- data$db$get_max_circuit_powers(settings$region_to_load)
@@ -373,18 +373,18 @@ run_analysis <- function(data, settings) {
                                                               settings$disconnecting_threshold,
                                                               reconnect_threshold = settings$reconnection_threshold,
                                                               ramp_rate_threshold = settings$ramp_rate_threshold,
-                                                              ramp_threshold_for_compliance = 
+                                                              ramp_threshold_for_compliance =
                                                                 settings$total_ramp_threshold_for_compliance,
-                                                              ramp_threshold_for_non_compliance = 
+                                                              ramp_threshold_for_non_compliance =
                                                                 settings$total_ramp_threshold_for_non_compliance,
-                                                              ramp_rate_change_resource_limit_threshold = 
+                                                              ramp_rate_change_resource_limit_threshold =
                                                                 settings$ramp_rate_change_resource_limit_threshold)
       combined_data_f <- left_join(combined_data_f, reconnection_categories, by = 'c_id')
-      
+
       # -------- calculate summary stats --------
       logdebug('Count samples in each data series to be displayed', logger=logger)
       grouping_cols <- find_grouping_cols(settings)
-      
+
       data$sample_count_table <- vector_groupby_count(combined_data_f, grouping_cols)
       if (settings$confidence_category %in% grouping_cols) {
         population_groups <- grouping_cols[settings$confidence_category != grouping_cols]
@@ -393,7 +393,7 @@ run_analysis <- function(data, settings) {
         data$sample_count_table <- left_join(population_count_table, data$sample_count_table, by=population_groups)
         data$sample_count_table$percentage_of_sub_pop <- data$sample_count_table$sample_count / data$sample_count_table$sub_population_size
         data$sample_count_table$percentage_of_sub_pop <- round(data$sample_count_table$percentage_of_sub_pop, digits = 4)
-        result <- mapply(confidence_interval, data$sample_count_table$sample_count, 
+        result <- mapply(confidence_interval, data$sample_count_table$sample_count,
                           data$sample_count_table$sub_population_size, 0.95)
         data$sample_count_table$lower_95_CI <- round(result[1,], digits = 4)
         data$sample_count_table$upper_95_CI <- round(result[2,], digits = 4)
@@ -406,7 +406,7 @@ run_analysis <- function(data, settings) {
     # Procced to  aggregation and plotting only if there is less than 1000 data series to plot, else stop and notify the
     # user.
     logdebug('Proceed to aggregation and plotting', logger=logger)
-    if ((sum(data$sample_count_table$sample_count)<1000 & no_grouping) | 
+    if ((sum(data$sample_count_table$sample_count)<1000 & no_grouping) |
         (length(data$sample_count_table$sample_count)<1000 & !no_grouping)){
       if(length(combined_data_f$ts) > 0){
         # Copy data for saving
@@ -434,7 +434,7 @@ run_analysis <- function(data, settings) {
       # Check that the filter does not result in an empty dataframe.
       logdebug('Check that the filter does not result in an empty dataframe.', logger=logger)
       if(length(combined_data_f$ts) > 0){
-        
+
         # -------- Initialise aggregate dataframes  --------
         if (settings$norm_power_filter_off_at_t0){
           combined_data_for_norm_power <- filter(combined_data_f,  response_category != "5 Off at t0")
@@ -472,15 +472,15 @@ run_analysis <- function(data, settings) {
         if (no_grouping){
           #et <- settings$pre_event_interval
           # agg_norm_power <- event_normalised_power(agg_norm_power, et, keep_site_id=TRUE)
-          data$agg_power <- left_join(data$agg_power, data$agg_norm_power[, c("c_id_norm_power", "c_id", "Time")], 
+          data$agg_power <- left_join(data$agg_power, data$agg_norm_power[, c("c_id_norm_power", "c_id", "Time")],
                                     by=c("Time", "c_id"))
         } else {
           #et <- settings$pre_event_interval
           # agg_norm_power <- event_normalised_power(agg_norm_power, et,  keep_site_id=FALSE)
-          data$agg_power <- left_join(data$agg_power, data$agg_norm_power[, c("c_id_norm_power", "series", "Time")], 
+          data$agg_power <- left_join(data$agg_power, data$agg_norm_power[, c("c_id_norm_power", "series", "Time")],
                                     by=c("Time", "series"))
         }
-        data$agg_power <- left_join(data$agg_power, agg_f_and_v[, c("Time", "series", "Voltage", "Frequency")], 
+        data$agg_power <- left_join(data$agg_power, agg_f_and_v[, c("Time", "series", "Voltage", "Frequency")],
                                   by=c("Time", "series"))
 
         # Summarise and upscale disconnections on a manufacturer basis.
@@ -489,24 +489,24 @@ run_analysis <- function(data, settings) {
         )
         data$disconnection_summary <- upscaling_results$disconnection_summary
         data$upscaled_disconnections <- upscaling_results$upscaled_disconnections
-        data$disconnection_summary_with_separate_ufls_counts <- 
+        data$disconnection_summary_with_separate_ufls_counts <-
           upscaling_results$with_separate_ufls_counts$disconnection_summary
-        data$upscaled_disconnections_with_separate_ufls_counts <- 
+        data$upscaled_disconnections_with_separate_ufls_counts <-
           upscaling_results$with_separate_ufls_counts$upscaled_disconnections
 
-        if(length(upscaling_results$manufacturers_missing_from_cer$manufacturer) > 0 | 
+        if(length(upscaling_results$manufacturers_missing_from_cer$manufacturer) > 0 |
            length(upscaling_results$manufacturers_missing_from_input_db$manufacturer) > 0) {
           num_missing_from_cer <- length(upscaling_results$manufacturers_missing_from_cer$manufacturer)
           num_missing_from_input_db <- length(upscaling_results$manufacturers_missing_from_input_db$manufacturer)
           long_error_message <- c("%s manufacturers present in the input data could not be ",
                                   "matched to the CER data set. \n%s manufacturers present in the CER data could not be ",
                                   "matched to the input data set. \nLists of each of these have been saved in the ",
-                                  "files logging/manufacturers_missing_from_[dataset].csv. You may want to review the ", 
+                                  "files logging/manufacturers_missing_from_[dataset].csv. You may want to review the ",
                                   "mapping used in processing the input data and check the number and names of ",
                                   "missing manufacturers.")
-          long_error_message <- sprintf(paste(long_error_message, collapse = ''), num_missing_from_cer, 
+          long_error_message <- sprintf(paste(long_error_message, collapse = ''), num_missing_from_cer,
                                         num_missing_from_input_db)
-          errors$warnings[[length(errors$warnings) + 1]] <- list(title="Manufacturers missing from datasets", 
+          errors$warnings[[length(errors$warnings) + 1]] <- list(title="Manufacturers missing from datasets",
                                                                  body=long_error_message)
         }
       }
