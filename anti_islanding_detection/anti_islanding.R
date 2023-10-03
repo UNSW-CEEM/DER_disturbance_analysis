@@ -9,7 +9,7 @@ UNDERVOLTAGE_2015 <- 180
 OVERVOLTAGE_1_2015 <- 260
 OVERVOLTAGE_2_2015 <- 265
 
-# - AS4777.2 2020 table 4.1 
+# - AS4777.2 2020 table 4.1
 UNDERVOLTAGE_2_2020 <- 70
 UNDERVOLTAGE_1_2020 <- 180
 OVERVOLTAGE_1_2020 <- 265
@@ -37,7 +37,7 @@ detect_voltage_threshold_excursions <- function(combined_data, pre_event_interva
         (vmax > OVERVOLTAGE_1_2015) & in_event_window, "overvoltage_1", antiislanding_v_excursion_2015))
     combined_data <- mutate(combined_data, antiislanding_v_excursion_2015=ifelse(
         (vmax > OVERVOLTAGE_2_2015) & in_event_window, "overvoltage_2", antiislanding_v_excursion_2015))
-    
+
     combined_data <- mutate(combined_data, antiislanding_v_excursion_2020=ifelse(
         (vmin < UNDERVOLTAGE_1_2020) & in_event_window, "undervoltage_1", NA))
     combined_data <- mutate(combined_data, antiislanding_v_excursion_2020=ifelse(
