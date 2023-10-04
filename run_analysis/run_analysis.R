@@ -12,7 +12,7 @@ if (!exists("app_logger")) {
 #' @param window_length The input window length
 #' @param data The dataframe containing the loaded data
 validate_pre_event_interval <- function(pre_event_interval, load_start_time, load_end_time, window_length, data) {
-  logdebug("Validating pre_event_interval", logger=logger)
+  logdebug("Validating pre_event_interval", logger = logger)
   # check pre-event interval is on the selected time offset
   errors <- list(errors=list(), warnings=list())
   start_time <- as.POSIXct(load_start_time, tz = "Australia/Brisbane")
@@ -78,13 +78,13 @@ filter_combined_data <- function(
   sites,
   circuits
 ) {
-  logdebug("Apply user filters to combined data", logger=logger)
+  logdebug("Apply user filters to combined data", logger = logger)
   combined_data_f <- combined_data
   site_types <- c("pv_site_net", "pv_site", "pv_inverter_net", "pv_inverter")
   if (length(cleaned) > 0) {
     combined_data_f <- filter(combined_data_f, clean %in% cleaned)
   }
-  combined_data_f <- filter(combined_data_f, sum_ac<=100)
+  combined_data_f <- filter(combined_data_f, sum_ac <= 100)
   if (length(site_types) > 0 ) {
     combined_data_f <- filter(combined_data_f, con_type %in% site_types)
   }
@@ -132,7 +132,7 @@ ufls_detection <- function(
   pre_event_ufls_stability_threshold,
   post_event_delay
 ) {
-  logdebug("run ufls detection", logger=logger)
+  logdebug("run ufls detection", logger = logger)
   ufls_statuses_ts <- ufls_detection_tstamp(
     db = db_interface,
     region = region_to_load,
@@ -174,12 +174,12 @@ determine_distance_zones <- function(
   if (length(combined_data_f$ts) > 0) {
     combined_data_f <- get_distance_from_event(combined_data_f, postcode_data, event_latitude, event_longitude)
     combined_data_f <- get_zones(combined_data_f, zone_one_radius, zone_two_radius, zone_three_radius)
-    combined_data_f <- mutate(combined_data_f,  zone=ifelse(zone %in% c(NA), "NA", zone))
+    combined_data_f <- mutate(combined_data_f,  zone = ifelse(zone %in% c(NA), "NA", zone))
     if (length(zones) < 3) {
       combined_data_f <- filter(combined_data_f, zone %in% zones)
     }
   } else {
-    logwarn("no timestamp data found for distance zones", logger=logger)
+    logwarn("no timestamp data found for distance zones", logger = logger)
   }
   return(combined_data_f)
 }
@@ -187,7 +187,7 @@ determine_distance_zones <- function(
 #' Normalise power by c_id, based on pre-event interval power
 #' @return An updated dataframe with the column c_id_norm_power added
 normalise_c_id_power_by_pre_event <- function(combined_data_f, pre_event_interval) {
-  logdebug('Calc event normalised power', logger=logger)
+  logdebug('Calc event normalised power', logger = logger)
   event_powers <- filter(combined_data_f, ts > pre_event_interval - d & ts <= pre_event_interval)
   event_powers <- mutate(event_powers, event_power=power_kW)
   event_powers <- select(event_powers, c_id, clean, event_power)
@@ -200,7 +200,7 @@ normalise_c_id_power_by_pre_event <- function(combined_data_f, pre_event_interva
 #' Optionally adds pre event normalised power as a new column when pre_event_interval is provided
 #' @return An updated dataframe with the column c_id_daily_norm_power added
 normalise_c_id_power_by_daily_max <- function(combined_data, max_power, pre_event_interval) {
-  logdebug('Calc daily normalised power', logger=logger)
+  logdebug('Calc daily normalised power', logger = logger)
   combined_data_f <- left_join(combined_data, max_power, by=c("c_id", "clean"))
   combined_data_f <- mutate(combined_data_f, c_id_daily_norm_power=power_kW/max_power)
   if (!missing(pre_event_interval)) {
@@ -216,7 +216,7 @@ normalise_c_id_power_by_daily_max <- function(combined_data, max_power, pre_even
 #' Performance factor is calculated as power/ac_capacity at a site level
 #' @return An updated dataframe with site_performance_factor and event_normalised_performance_factor
 determine_performance_factors <- function(combined_data_f, pre_event_interval) {
-  logdebug('Calc site peformance factors', logger=logger)
+  logdebug('Calc site peformance factors', logger = logger)
   combined_data_f <- calc_site_performance_factors(combined_data_f)
   combined_data_f <- setnames(combined_data_f, c("ts"), c("Time"))
   combined_data_f <- event_normalised_power(combined_data_f, pre_event_interval, keep_site_id=TRUE)
@@ -232,7 +232,7 @@ determine_performance_factors <- function(combined_data_f, pre_event_interval) {
 #' Upscale disconnections
 #' @return A list of data objects summarising disconnections upscaled by manufacturer
 upscale_and_summarise_disconnections <- function(circuit_summary, manufacturer_install_data, load_date, region_to_load, exclude_solar_edge) {
-  logdebug('Summarise and upscale disconnections on a manufacturer basis.', logger=logger)
+  logdebug('Summarise and upscale disconnections on a manufacturer basis.', logger = logger)
   if (exclude_solar_edge) {
     circuits_to_summarise <- filter(circuit_summary, manufacturer != "SolarEdge" | is.na(manufacturer))
     manufacturer_install_data <- filter(manufacturer_install_data, manufacturer != "SolarEdge" | is.na(manufacturer))
@@ -304,11 +304,16 @@ run_analysis <- function(data, settings) {
   )
 
   if (length(errors$errors) == 0) {
-    logging::logdebug("error checks passed", logger=logger)
+    logging::logdebug("error checks passed", logger = logger)
 
     # First get ideal response profile for 2015 standard, AS4777.2:2015.
     response_data <- ideal_response_from_frequency(
-      data$frequency_data, settings$region_to_load, f_ulco=50.25, f_hyst=0.1, t_hyst=60, f_upper=52.00
+      data$frequency_data,
+      settings$region_to_load,
+      f_ulco = 50.25,
+      f_hyst = 0.1,
+      t_hyst = 60,
+      f_upper = 52.00
     )
     data$ideal_response_to_plot <- response_data$ideal_response_to_plot
     data$region_frequency <- response_data$region_frequency
@@ -370,14 +375,21 @@ run_analysis <- function(data, settings) {
       # -------- categorise response --------
       combined_data_f <- categorise_response(
         combined_data_f, settings$pre_event_interval, settings$window_length, settings$NED_threshold)
-      combined_data_f <- mutate(combined_data_f,
-                                response_category = ifelse(response_category %in% c(NA), "NA", response_category))
+      combined_data_f <- mutate(
+        combined_data_f,
+        response_category = ifelse(response_category %in% c(NA), "NA", response_category)
+      )
       combined_data_f <- filter(combined_data_f, response_category %in% settings$responses)
-
       combined_data_f <- ufls_detection(
-        data$db, combined_data_f, settings$region_to_load, settings$pre_event_interval, settings$window_length,
-        settings$pre_event_ufls_window_length, settings$post_event_ufls_window_length,
-        settings$pre_event_ufls_stability_threshold, as.numeric(settings$duration)
+        data$db,
+        combined_data_f,
+        settings$region_to_load,
+        settings$pre_event_interval,
+        settings$window_length,
+        settings$pre_event_ufls_window_length,
+        settings$post_event_ufls_window_length,
+        settings$pre_event_ufls_stability_threshold,
+        as.numeric(settings$duration)
       )
 
       # process alerts where they exist
@@ -398,17 +410,29 @@ run_analysis <- function(data, settings) {
       combined_data_f <- subset(combined_data_f, select = -c(Islanded, island_assessment, islanding_alert))
       data$antiislanding_summary <- antiislanding_summary(combined_data_f)
     } else if ("Islanded" %in% names(combined_data_f)) {
-      combined_data_f <- mutate(combined_data_f, response_category=ifelse(island_assessment %in%
-              c("Frequency disruption", "Voltage disruption", "Gateway curtailed"), "Undefined", response_category))
+      combined_data_f <- mutate(
+        combined_data_f,
+        response_category = ifelse(
+          island_assessment %in% c("Frequency disruption", "Voltage disruption", "Gateway curtailed"),
+          "Undefined",
+          response_category
+        )
+      )
     }
 
     combined_data_f <- determine_distance_zones(
-      combined_data_f, data$postcode_data, settings$event_latitude, settings$event_longitude, settings$zone_one_radius,
-      settings$zone_two_radius, settings$zone_three_radius, settings$zones
+      combined_data_f,
+      data$postcode_data,
+      settings$event_latitude,
+      settings$event_longitude,
+      settings$zone_one_radius,
+      settings$zone_two_radius,
+      settings$zone_three_radius,
+      settings$zones
     )
 
     # -------- filter by time window --------
-    logdebug('filter by time window', logger=logger)
+    logdebug('filter by time window', logger = logger)
     if (length(settings$offsets) < length(data$unique_offsets)) {
       combined_data_f <- filter(combined_data_f, time_offset %in% settings$offsets)
     }
@@ -419,7 +443,7 @@ run_analysis <- function(data, settings) {
       combined_data_f <- determine_performance_factors(combined_data_f, settings$pre_event_interval)
 
       # -------- determine AS4777.2:2015 over-frequency f-W compliance --------
-      if (dim(data$ideal_response_to_plot)[1]>0) {
+      if (dim(data$ideal_response_to_plot)[1] > 0) {
         ideal_response_downsampled <- down_sample_1s(
           data$ideal_response_to_plot, settings$duration, min(combined_data_f$ts))
         data$ideal_response_downsampled <- ideal_response_downsampled
@@ -434,7 +458,9 @@ run_analysis <- function(data, settings) {
           settings$disconnecting_threshold
         )
         combined_data_f <- mutate(
-          combined_data_f,  compliance_status=ifelse(compliance_status %in% c(NA), "NA", compliance_status))
+          combined_data_f,
+          compliance_status = ifelse(compliance_status %in% c(NA), "NA", compliance_status)
+        )
       } else {
         combined_data_f <- mutate(combined_data_f, compliance_status="Undefined")
       }
@@ -443,7 +469,7 @@ run_analysis <- function(data, settings) {
       }
 
       # -------- determine AS4777.2:2020 over-frequency f-W compliance --------
-      if (dim(data$ideal_response_to_plot_2020)[1]>0) {
+      if (dim(data$ideal_response_to_plot_2020)[1] > 0) {
         ideal_response_downsampled_2020 <- down_sample_1s(
           data$ideal_response_to_plot_2020,
           settings$duration,
@@ -472,7 +498,7 @@ run_analysis <- function(data, settings) {
       }
 
       # -------- determine reconnection compliace --------
-      logdebug('Set reconnection compliance values', logger=logger)
+      logdebug('Set reconnection compliance values', logger = logger)
       max_power <- data$db$get_max_circuit_powers(settings$region_to_load)
       combined_data_f <- normalise_c_id_power_by_daily_max(
         combined_data_f,
@@ -493,7 +519,7 @@ run_analysis <- function(data, settings) {
       combined_data_f <- left_join(combined_data_f, reconnection_categories, by = 'c_id')
 
       # -------- calculate summary stats --------
-      logdebug('Count samples in each data series to be displayed', logger=logger)
+      logdebug('Count samples in each data series to be displayed', logger = logger)
       grouping_cols <- find_grouping_cols(settings)
 
       data$sample_count_table <- vector_groupby_count(combined_data_f, grouping_cols)
@@ -525,12 +551,12 @@ run_analysis <- function(data, settings) {
 
     # Proceed to aggregation and plotting only if there is less than 1000 data series to plot, else stop and notify the
     # user.
-    logdebug('Proceed to aggregation and plotting', logger=logger)
+    logdebug('Proceed to aggregation and plotting', logger = logger)
     if ((sum(data$sample_count_table$sample_count)<1000 & no_grouping) |
         (length(data$sample_count_table$sample_count)<1000 & !no_grouping)) {
       if (length(combined_data_f$ts) > 0) {
         # Copy data for saving
-        logdebug('Copy data for saving', logger=logger)
+        logdebug('Copy data for saving', logger = logger)
         combined_data_cols <- c(
           "ts",
           "site_id",
@@ -595,7 +621,7 @@ run_analysis <- function(data, settings) {
       }
 
       # Check that the filter does not result in an empty dataframe.
-      logdebug('Check that the filter does not result in an empty dataframe.', logger=logger)
+      logdebug('Check that the filter does not result in an empty dataframe.', logger = logger)
       if (length(combined_data_f$ts) > 0) {
 
         # -------- Initialise aggregate dataframes  --------
