@@ -20,21 +20,27 @@ validate_pre_event_interval <- function(pre_event_interval, load_start_time, loa
   pre_event_interval <- as.POSIXct(pre_event_interval, tz = "Australia/Brisbane")
   data_at_set_pre_event_interval = filter(data, ts > pre_event_interval - d & ts <= pre_event_interval)
   if (dim(data_at_set_pre_event_interval)[1] == 0) {
-    long_error_message <- c("The pre-event time interval does not match any time step in the time series data.")
-    long_error_message <- paste(long_error_message, collapse = '')
-    errors$errors[[length(errors$errors) + 1]] <- list(title="Error in pre-event time interval", body=long_error_message)
+    long_error_message <- "The pre-event time interval does not match any time step in the time series data."
+    errors$errors[[length(errors$errors) + 1]] <- list(
+      title="Error in pre-event time interval",
+      body=long_error_message
+    )
   }
   # check pre-event interval is inside the time window loaded
   if ((pre_event_interval < start_time) | (pre_event_interval > end_time)) {
-    long_error_message <- c("The pre-event interval must be within the time window of loaded data.")
-    long_error_message <- paste(long_error_message, collapse = '')
-    errors$errors[[length(errors$errors) + 1]] <- list(title="Error in pre-event time interval", body=long_error_message)
+    long_error_message <- "The pre-event interval must be within the time window of loaded data."
+    errors$errors[[length(errors$errors) + 1]] <- list(
+      title="Error in pre-event time interval",
+      body=long_error_message
+    )
   }
   # check window length does not extend outside time window loaded.
   if ((pre_event_interval + window_length * 60) > end_time) {
-    long_error_message <- c("The event window length must be within the time window of loaded data.")
-    long_error_message <- paste(long_error_message, collapse = '')
-    errors$errors[[length(errors$errors) + 1]] <- list(title="Error in pre-event time interval", body=long_error_message)
+    long_error_message <- "The event window length must be within the time window of loaded data."
+    errors$errors[[length(errors$errors) + 1]] <- list(
+      title="Error in pre-event time interval",
+      body=long_error_message
+    )
   }
   return(errors)
 }
@@ -60,23 +66,52 @@ ideal_response_from_frequency <- function(frequency_data, region_to_load, f_ulco
 }
 
 #' Apply user filters to combined data
-filter_combined_data <- function(combined_data, off_grid_postcodes, cleaned, size_groupings, standards, postcodes,
-                                manufacturers, models, sites, circuits) {
+filter_combined_data <- function(
+  combined_data,
+  off_grid_postcodes,
+  cleaned,
+  size_groupings,
+  standards,
+  postcodes,
+  manufacturers,
+  models,
+  sites,
+  circuits
+) {
   logdebug("Apply user filters to combined data", logger=logger)
   combined_data_f <- combined_data
   site_types <- c("pv_site_net", "pv_site", "pv_inverter_net", "pv_inverter")
-  if (length(cleaned) > 0) {combined_data_f <- filter(combined_data_f, clean %in% cleaned)}
+  if (length(cleaned) > 0) {
+    combined_data_f <- filter(combined_data_f, clean %in% cleaned)
+  }
   combined_data_f <- filter(combined_data_f, sum_ac<=100)
-  if (length(site_types) > 0 ) {combined_data_f <- filter(combined_data_f, con_type %in% site_types)}
+  if (length(site_types) > 0 ) {
+    combined_data_f <- filter(combined_data_f, con_type %in% site_types)
+  }
   if (length(off_grid_postcodes) > 0 ) {
-    combined_data_f <- filter(combined_data_f, !(s_postcode %in% off_grid_postcodes))}
-  if (length(size_groupings) > 0 ) {combined_data_f <- filter(combined_data_f, Grouping %in% size_groupings)}
-  if (length(standards) > 0 ) {combined_data_f <- filter(combined_data_f, Standard_Version %in% standards)}
-  if (length(postcodes) > 0) {combined_data_f <- filter(combined_data_f, s_postcode %in% postcodes)}
-  if (length(manufacturers) > 0) {combined_data_f <- filter(combined_data_f, manufacturer %in% manufacturers)}
-  if (length(models) > 0) {combined_data_f <- filter(combined_data_f, model %in% models)}
-  if (length(sites) > 0) {combined_data_f <- filter(combined_data_f, site_id %in% sites)}
-  if (length(circuits) > 0) {combined_data_f <- filter(combined_data_f, c_id %in% circuits)}
+    combined_data_f <- filter(combined_data_f, !(s_postcode %in% off_grid_postcodes))
+  }
+  if (length(size_groupings) > 0 ) {
+    combined_data_f <- filter(combined_data_f, Grouping %in% size_groupings)
+  }
+  if (length(standards) > 0 ) {
+    combined_data_f <- filter(combined_data_f, Standard_Version %in% standards)
+  }
+  if (length(postcodes) > 0) {
+    combined_data_f <- filter(combined_data_f, s_postcode %in% postcodes)
+  }
+  if (length(manufacturers) > 0) {
+    combined_data_f <- filter(combined_data_f, manufacturer %in% manufacturers)
+  }
+  if (length(models) > 0) {
+    combined_data_f <- filter(combined_data_f, model %in% models)
+  }
+  if (length(sites) > 0) {
+    combined_data_f <- filter(combined_data_f, site_id %in% sites)
+  }
+  if (length(circuits) > 0) {
+    combined_data_f <- filter(combined_data_f, c_id %in% circuits)
+  }
   return(combined_data_f)
 }
 
@@ -87,24 +122,39 @@ filter_combined_data <- function(combined_data, off_grid_postcodes, cleaned, siz
 #' * [ufls_detection_voltage()] for detail of voltage based UFLS detection
 #' @return An updated dataframe with columns for UFLS check results
 ufls_detection <- function(
-  db_interface, combined_data_f, region_to_load, pre_event_interval, window_length, pre_event_ufls_window_length,
-  post_event_ufls_window_length, pre_event_ufls_stability_threshold, post_event_delay
+  db_interface,
+  combined_data_f,
+  region_to_load,
+  pre_event_interval,
+  window_length,
+  pre_event_ufls_window_length,
+  post_event_ufls_window_length,
+  pre_event_ufls_stability_threshold,
+  post_event_delay
 ) {
   logdebug("run ufls detection", logger=logger)
-  ufls_statuses_ts <- ufls_detection_tstamp(db = db_interface, region = region_to_load,
-                                  pre_event_interval = pre_event_interval,
-                                  pre_event_window_length = pre_event_ufls_window_length,
-                                  post_event_window_length = post_event_ufls_window_length,
-                                  pre_pct_sample_seconds_threshold = pre_event_ufls_stability_threshold,
-                                  post_event_delay = post_event_delay)
+  ufls_statuses_ts <- ufls_detection_tstamp(
+    db = db_interface,
+    region = region_to_load,
+    pre_event_interval = pre_event_interval,
+    pre_event_window_length = pre_event_ufls_window_length,
+    post_event_window_length = post_event_ufls_window_length,
+    pre_pct_sample_seconds_threshold = pre_event_ufls_stability_threshold,
+    post_event_delay = post_event_delay
+  )
 
   ufls_statuses_v <- ufls_detection_voltage(combined_data_f, pre_event_interval, window_length, fill_nans = FALSE)
   combined_data_f <- left_join(combined_data_f, ufls_statuses_ts, by = c("c_id"))
   combined_data_f <- left_join(combined_data_f, ufls_statuses_v, by = c("c_id"))
-  combined_data_f <- mutate(combined_data_f, response_category =
-                            if_else((ufls_status == "UFLS Dropout") |
-                                      (ufls_status_v == "UFLS Dropout"),
-                                    "UFLS Dropout", response_category, missing=response_category))
+  combined_data_f <- mutate(
+    combined_data_f,
+    response_category = if_else(
+      (ufls_status == "UFLS Dropout") | (ufls_status_v == "UFLS Dropout"),
+      "UFLS Dropout",
+      response_category,
+      missing=response_category
+    )
+  )
   return(combined_data_f)
 }
 
@@ -169,10 +219,12 @@ determine_performance_factors <- function(combined_data_f, pre_event_interval) {
   logdebug('Calc site peformance factors', logger=logger)
   combined_data_f <- calc_site_performance_factors(combined_data_f)
   combined_data_f <- setnames(combined_data_f, c("ts"), c("Time"))
-
   combined_data_f <- event_normalised_power(combined_data_f, pre_event_interval, keep_site_id=TRUE)
   combined_data_f <- setnames(
-    combined_data_f, c("Event_Normalised_Power_kW"), c("Site_Event_Normalised_Power_kW"))
+    combined_data_f,
+    c("Event_Normalised_Power_kW"),
+    c("Site_Event_Normalised_Power_kW")
+  )
   combined_data_f <- setnames(combined_data_f, c("Time"), c("ts"))
   return(combined_data_f)
 }
@@ -196,23 +248,42 @@ upscale_and_summarise_disconnections <- function(circuit_summary, manufacturer_i
     sample_threshold = 30
   )
   upscaling_results$with_separate_ufls_counts <- get_upscaling_results_excluding_ufls_affected_circuits(
-    circuits_to_summarise, manufacturer_install_data, load_date, region_to_load, sample_threshold = 30)
+    circuits_to_summarise,
+    manufacturer_install_data,
+    load_date,
+    region_to_load,
+    sample_threshold = 30
+  )
 
-  write.csv(upscaling_results$manufacturers_missing_from_cer,
-            "logging/manufacturers_missing_from_cer.csv", row.names=FALSE)
-  write.csv(upscaling_results$manufacturers_missing_from_input_db,
-            "logging/manufacturers_missing_from_input_db.csv", row.names=FALSE)
-
+  write.csv(
+    upscaling_results$manufacturers_missing_from_cer,
+    "logging/manufacturers_missing_from_cer.csv",
+    row.names=FALSE
+  )
+  write.csv(
+    upscaling_results$manufacturers_missing_from_input_db,
+    "logging/manufacturers_missing_from_input_db.csv",
+    row.names=FALSE
+  )
   return(upscaling_results)
 }
 
 #' Check if grouping is occuring
 #' @return boolean no_grouping, TRUE when no grouping is occuring
 check_grouping <- function(settings) {
-  if (settings$standard_agg==FALSE & settings$pst_agg==FALSE & settings$grouping_agg==FALSE &
-      settings$manufacturer_agg==FALSE & settings$model_agg==FALSE & settings$zone_agg==FALSE &
-      settings$circuit_agg==TRUE & settings$compliance_agg==TRUE & settings$compliance_2020_agg==TRUE
-      & settings$reconnection_compliance_agg & settings$v_excursion_agg==FALSE) {
+  if (
+    settings$standard_agg==FALSE &
+    settings$pst_agg==FALSE &
+    settings$grouping_agg==FALSE &
+    settings$manufacturer_agg==FALSE &
+    settings$model_agg==FALSE &
+    settings$zone_agg==FALSE &
+    settings$circuit_agg==TRUE &
+    settings$compliance_agg==TRUE &
+    settings$compliance_2020_agg==TRUE &
+    settings$reconnection_compliance_agg &
+    settings$v_excursion_agg==FALSE
+  ) {
     no_grouping=TRUE
   } else {
     no_grouping=FALSE
@@ -244,17 +315,17 @@ run_analysis <- function(data, settings) {
 
     # Next, get ideal response profile for 2020 standard, AS4777.2:2020 (uses different settings based on region).
     # Currently, WA (Western Power) uses "Australia B", TAS uses "Australia C", all other NEM regions use "Australia A".
-    if(settings$region_to_load == "WA") {
+    if (settings$region_to_load == "WA") {
       f_ulco <- 50.15
       f_hyst <- 0.1
       t_hyst <- 20
       f_upper <- 52.00
-    } else if(settings$region_to_load == "TAS") {
+    } else if (settings$region_to_load == "TAS") {
       f_ulco <- 50.5
       f_hyst <- 0.05
       t_hyst <- 20
       f_upper <- 55.00
-    } else{
+    } else {
       f_ulco <- 50.25
       f_hyst <- 0.1
       t_hyst <- 20
@@ -352,15 +423,16 @@ run_analysis <- function(data, settings) {
         ideal_response_downsampled <- down_sample_1s(
           data$ideal_response_to_plot, settings$duration, min(combined_data_f$ts))
         data$ideal_response_downsampled <- ideal_response_downsampled
-        combined_data_f <-
-          calc_error_metric_and_compliance_2(combined_data_f,
-                                              ideal_response_downsampled,
-                                              data$ideal_response_to_plot,
-                                              settings$compliance_threshold,
-                                              settings$start_buffer,
-                                              settings$end_buffer,
-                                              settings$end_buffer_responding,
-                                              settings$disconnecting_threshold)
+        combined_data_f <- calc_error_metric_and_compliance_2(
+          combined_data_f,
+          ideal_response_downsampled,
+          data$ideal_response_to_plot,
+          settings$compliance_threshold,
+          settings$start_buffer,
+          settings$end_buffer,
+          settings$end_buffer_responding,
+          settings$disconnecting_threshold
+        )
         combined_data_f <- mutate(
           combined_data_f,  compliance_status=ifelse(compliance_status %in% c(NA), "NA", compliance_status))
       } else {
@@ -373,19 +445,25 @@ run_analysis <- function(data, settings) {
       # -------- determine AS4777.2:2020 over-frequency f-W compliance --------
       if (dim(data$ideal_response_to_plot_2020)[1]>0) {
         ideal_response_downsampled_2020 <- down_sample_1s(
-          data$ideal_response_to_plot_2020, settings$duration, min(combined_data_f$ts))
+          data$ideal_response_to_plot_2020,
+          settings$duration,
+          min(combined_data_f$ts)
+        )
         data$ideal_response_downsampled_2020 <- ideal_response_downsampled_2020
-        combined_data_f <-
-          calc_error_metric_and_compliance_2(combined_data_f,
-                                             ideal_response_downsampled_2020,
-                                             data$ideal_response_to_plot_2020,
-                                             settings$compliance_threshold_2020,
-                                             settings$start_buffer_2020,
-                                             settings$end_buffer_2020,
-                                             settings$end_buffer_responding_2020,
-                                             settings$disconnecting_threshold)
+        combined_data_f <- calc_error_metric_and_compliance_2(
+          combined_data_f,
+          ideal_response_downsampled_2020,
+          data$ideal_response_to_plot_2020,
+          settings$compliance_threshold_2020,
+          settings$start_buffer_2020,
+          settings$end_buffer_2020,
+          settings$end_buffer_responding_2020,
+          settings$disconnecting_threshold
+        )
         combined_data_f <- mutate(
-          combined_data_f,  compliance_status_2020=ifelse(compliance_status_2020 %in% c(NA), "NA", compliance_status_2020))
+          combined_data_f,
+          compliance_status_2020 = ifelse(compliance_status_2020 %in% c(NA), "NA", compliance_status_2020)
+        )
       } else {
         combined_data_f <- mutate(combined_data_f, compliance_status_2020="Undefined")
       }
@@ -397,19 +475,21 @@ run_analysis <- function(data, settings) {
       logdebug('Set reconnection compliance values', logger=logger)
       max_power <- data$db$get_max_circuit_powers(settings$region_to_load)
       combined_data_f <- normalise_c_id_power_by_daily_max(
-        combined_data_f, max_power, settings$pre_event_interval
+        combined_data_f,
+        max_power,
+        settings$pre_event_interval
       )
       event_window_data <- filter(combined_data_f, ts > settings$pre_event_interval - d)
-      reconnection_categories <- create_reconnection_summary(event_window_data, settings$pre_event_interval,
-                                                              settings$disconnecting_threshold,
-                                                              reconnect_threshold = settings$reconnection_threshold,
-                                                              ramp_rate_threshold = settings$ramp_rate_threshold,
-                                                              ramp_threshold_for_compliance =
-                                                                settings$total_ramp_threshold_for_compliance,
-                                                              ramp_threshold_for_non_compliance =
-                                                                settings$total_ramp_threshold_for_non_compliance,
-                                                              ramp_rate_change_resource_limit_threshold =
-                                                                settings$ramp_rate_change_resource_limit_threshold)
+      reconnection_categories <- create_reconnection_summary(
+        event_window_data,
+        settings$pre_event_interval,
+        settings$disconnecting_threshold,
+        reconnect_threshold = settings$reconnection_threshold,
+        ramp_rate_threshold = settings$ramp_rate_threshold,
+        ramp_threshold_for_compliance = settings$total_ramp_threshold_for_compliance,
+        ramp_threshold_for_non_compliance = settings$total_ramp_threshold_for_non_compliance,
+        ramp_rate_change_resource_limit_threshold = settings$ramp_rate_change_resource_limit_threshold
+      )
       combined_data_f <- left_join(combined_data_f, reconnection_categories, by = 'c_id')
 
       # -------- calculate summary stats --------
@@ -422,10 +502,19 @@ run_analysis <- function(data, settings) {
         population_count_table <- vector_groupby_count(combined_data_f, population_groups)
         population_count_table <- dplyr::rename(population_count_table, sub_population_size=sample_count)
         data$sample_count_table <- left_join(population_count_table, data$sample_count_table, by=population_groups)
-        data$sample_count_table$percentage_of_sub_pop <- data$sample_count_table$sample_count / data$sample_count_table$sub_population_size
-        data$sample_count_table$percentage_of_sub_pop <- round(data$sample_count_table$percentage_of_sub_pop, digits = 4)
-        result <- mapply(confidence_interval, data$sample_count_table$sample_count,
-                          data$sample_count_table$sub_population_size, 0.95)
+        data$sample_count_table$percentage_of_sub_pop <- (
+          data$sample_count_table$sample_count / data$sample_count_table$sub_population_size
+        )
+        data$sample_count_table$percentage_of_sub_pop <- round(
+          data$sample_count_table$percentage_of_sub_pop,
+          digits = 4
+        )
+        result <- mapply(
+          confidence_interval,
+          data$sample_count_table$sample_count,
+          data$sample_count_table$sub_population_size,
+          0.95
+        )
         data$sample_count_table$lower_95_CI <- round(result[1,], digits = 4)
         data$sample_count_table$upper_95_CI <- round(result[2,], digits = 4)
         data$sample_count_table$width <- data$sample_count_table$upper_95_CI - data$sample_count_table$lower_95_CI
@@ -442,16 +531,57 @@ run_analysis <- function(data, settings) {
       if (length(combined_data_f$ts) > 0) {
         # Copy data for saving
         logdebug('Copy data for saving', logger=logger)
-        combined_data_cols <- c("ts", "site_id", "c_id", "power_kW", "c_id_norm_power", "v", "vmin", "vmax", "vmean", "f", "s_state",
-                                "s_postcode", "pv_installation_year_month", "Standard_Version", "Grouping", "sum_ac",
-                                "clean", "manufacturer", "model", "site_performance_factor", "response_category",
-                                "zone", "distance", "lat", "lon", "e", "con_type", "first_ac", "polarity",
-                                "compliance_status","compliance_status_2020", "reconnection_compliance_status",
-                                "manual_droop_compliance", "manual_reconnect_compliance", "reconnection_time",
-                                "ramp_above_threshold", "c_id_daily_norm_power", "max_power", "ufls_status",
-                                "pre_event_sampled_seconds", "post_event_sampled_seconds", "ufls_status_v",
-                                "pre_event_v_mean", "post_event_v_mean", "vmin_na", "vmax_na", "vmean_na",
-                                "antiislanding_v_excursion_2015", "antiislanding_v_excursion_2020")
+        combined_data_cols <- c(
+          "ts",
+          "site_id",
+          "c_id",
+          "power_kW",
+          "c_id_norm_power",
+          "v",
+          "vmin",
+          "vmax",
+          "vmean",
+          "f",
+          "s_state",
+          "s_postcode",
+          "pv_installation_year_month",
+          "Standard_Version",
+          "Grouping",
+          "sum_ac",
+          "clean",
+          "manufacturer",
+          "model",
+          "site_performance_factor",
+          "response_category",
+          "zone",
+          "distance",
+          "lat",
+          "lon",
+          "e",
+          "con_type",
+          "first_ac",
+          "polarity",
+          "compliance_status",
+          "compliance_status_2020",
+          "reconnection_compliance_status",
+          "manual_droop_compliance",
+          "manual_reconnect_compliance",
+          "reconnection_time",
+          "ramp_above_threshold",
+          "c_id_daily_norm_power",
+          "max_power",
+          "ufls_status",
+          "pre_event_sampled_seconds",
+          "post_event_sampled_seconds",
+          "ufls_status_v",
+          "pre_event_v_mean",
+          "post_event_v_mean",
+          "vmin_na",
+          "vmax_na",
+          "vmean_na",
+          "antiislanding_v_excursion_2015",
+          "antiislanding_v_excursion_2020"
+        )
         if ("Islanded" %in% names(combined_data_f)) {
           combined_data_cols <- append(combined_data_cols, c("Islanded", "island_assessment", "islanding_alert"), 34)
         }
@@ -459,9 +589,9 @@ run_analysis <- function(data, settings) {
 
         # Create copy of filtered data to use in upscaling
         combined_data_f2 <- combined_data_f
-          if (settings$raw_upscale) {
-            combined_data_f2 <- upscale(combined_data_f2, data$install_data)
-          }
+        if (settings$raw_upscale) {
+          combined_data_f2 <- upscale(combined_data_f2, data$install_data)
+        }
       }
 
       # Check that the filter does not result in an empty dataframe.
@@ -532,27 +662,40 @@ run_analysis <- function(data, settings) {
         if (is.null(git2r::discover_repository(path = ".", ceiling = NULL))) {
           data$circuit_summary$tool_hash <- Sys.Date()
         } else {
-          data$circuit_summary$tool_hash <-git2r::revparse_single(revision="HEAD")$sha
+          data$circuit_summary$tool_hash <- git2r::revparse_single(revision="HEAD")$sha
         }
 
         # Combine data sets that have the same grouping so they can be saved in a single file
         if (no_grouping) {
           #et <- settings$pre_event_interval
           # agg_norm_power <- event_normalised_power(agg_norm_power, et, keep_site_id=TRUE)
-          data$agg_power <- left_join(data$agg_power, data$agg_norm_power[, c("c_id_norm_power", "c_id", "Time")],
-                                    by=c("Time", "c_id"))
+          data$agg_power <- left_join(
+            data$agg_power,
+            data$agg_norm_power[, c("c_id_norm_power", "c_id", "Time")],
+            by=c("Time", "c_id")
+          )
         } else {
           #et <- settings$pre_event_interval
           # agg_norm_power <- event_normalised_power(agg_norm_power, et,  keep_site_id=FALSE)
-          data$agg_power <- left_join(data$agg_power, data$agg_norm_power[, c("c_id_norm_power", "series", "Time")],
-                                    by=c("Time", "series"))
+          data$agg_power <- left_join(
+            data$agg_power,
+            data$agg_norm_power[, c("c_id_norm_power", "series", "Time")],
+            by=c("Time", "series")
+          )
         }
-        data$agg_power <- left_join(data$agg_power, agg_f_and_v[, c("Time", "series", "Voltage", "Frequency")],
-                                  by=c("Time", "series"))
+        data$agg_power <- left_join(
+          data$agg_power,
+          agg_f_and_v[, c("Time", "series", "Voltage", "Frequency")],
+          by=c("Time", "series")
+        )
 
         # Summarise and upscale disconnections on a manufacturer basis.
         upscaling_results <- upscale_and_summarise_disconnections(
-          data$circuit_summary, data$manufacturer_install_data, settings$load_date, settings$region_to_load, settings$exclude_solar_edge
+          data$circuit_summary,
+          data$manufacturer_install_data,
+          settings$load_date,
+          settings$region_to_load,
+          settings$exclude_solar_edge
         )
         data$disconnection_summary <- upscaling_results$disconnection_summary
         data$upscaled_disconnections <- upscaling_results$upscaled_disconnections
@@ -561,8 +704,10 @@ run_analysis <- function(data, settings) {
         data$upscaled_disconnections_with_separate_ufls_counts <-
           upscaling_results$with_separate_ufls_counts$upscaled_disconnections
 
-        if (length(upscaling_results$manufacturers_missing_from_cer$manufacturer) > 0 |
-           length(upscaling_results$manufacturers_missing_from_input_db$manufacturer) > 0) {
+        if (
+          length(upscaling_results$manufacturers_missing_from_cer$manufacturer) > 0 |
+          length(upscaling_results$manufacturers_missing_from_input_db$manufacturer) > 0
+        ) {
           num_missing_from_cer <- length(upscaling_results$manufacturers_missing_from_cer$manufacturer)
           num_missing_from_input_db <- length(upscaling_results$manufacturers_missing_from_input_db$manufacturer)
           long_error_message <- c("%s manufacturers present in the input data could not be ",
@@ -571,10 +716,15 @@ run_analysis <- function(data, settings) {
                                   "files logging/manufacturers_missing_from_[dataset].csv. You may want to review the ",
                                   "mapping used in processing the input data and check the number and names of ",
                                   "missing manufacturers.")
-          long_error_message <- sprintf(paste(long_error_message, collapse = ''), num_missing_from_cer,
-                                        num_missing_from_input_db)
-          errors$warnings[[length(errors$warnings) + 1]] <- list(title="Manufacturers missing from datasets",
-                                                                 body=long_error_message)
+          long_error_message <- sprintf(
+            paste(long_error_message, collapse = ''),
+            num_missing_from_cer,
+            num_missing_from_input_db
+          )
+          errors$warnings[[length(errors$warnings) + 1]] <- list(
+            title="Manufacturers missing from datasets",
+            body=long_error_message
+          )
         }
       }
     }
