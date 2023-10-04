@@ -434,7 +434,7 @@ run_analysis <- function(data, settings) {
 
     no_grouping <- check_grouping(settings)
 
-    # Procced to  aggregation and plotting only if there is less than 1000 data series to plot, else stop and notify the
+    # Proceed to aggregation and plotting only if there is less than 1000 data series to plot, else stop and notify the
     # user.
     logdebug('Proceed to aggregation and plotting', logger=logger)
     if ((sum(data$sample_count_table$sample_count)<1000 & no_grouping) |
