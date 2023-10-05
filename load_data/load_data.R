@@ -65,7 +65,7 @@ validate_required_files <- function(errors) {
   }
   if (!file.exists(OFF_GRID_POSTCODES)) {
     long_error_message <- paste0(
-      "The required file off_grid_postcodes could not be found. "
+      "The required file off_grid_postcodes could not be found. ",
       "Please add it to the inbuilt_data directory."
     )
     errors$errors[[length(errors$errors) + 1]] <- list(
