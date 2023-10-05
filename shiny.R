@@ -3,7 +3,7 @@ source("load_tool_environment.R")
 
 # set up logging at info level
 basicConfig(level = 20)
-addHandler(writeToFile, logger = app_logger, file="logging/applogs.log")
+addHandler(writeToFile, logger = app_logger, file = "logging/applogs.log")
 
 
 ui <- fluidPage(
@@ -26,11 +26,11 @@ ui <- fluidPage(
           textInput("database_name", "SQLite database file", value = ""),
           fluidRow(
             div(
-              style="display:inline-block",
+              style = "display:inline-block",
               shinyFilesButton("choose_database", "Choose File", "Select database file ...", multiple = FALSE)
             ),
-            div(style="display:inline-block", actionButton("load_file_from_settings", "Load from settings file")),
-            div(style="display:inline-block", actionButton("connect_to_database", "Connect"))),
+            div(style = "display:inline-block", actionButton("load_file_from_settings", "Load from settings file")),
+            div(style = "display:inline-block", actionButton("connect_to_database", "Connect"))),
           tags$hr(),
           uiOutput("load_date"),
           uiOutput("load_time_start"),
@@ -107,7 +107,7 @@ ui <- fluidPage(
             selected = "none",
             inline = TRUE
           ),
-          materialSwitch(inputId="raw_upscale", label = strong("Upscaled Data"), status = "primary", right=FALSE),
+          materialSwitch(inputid = "raw_upscale", label = strong("Upscaled Data"), status = "primary", right = FALSE),
           tags$hr(),
           h4("Event information"),
           uiOutput("event_date"),
@@ -122,11 +122,11 @@ ui <- fluidPage(
           tags$hr(),
           uiOutput("update_plots"),
           actionButton("load_second_filter_settings", "Load from settings file"),
-          shinySaveButton("save_settings", "Save settings file", "Save file as ...", filetype = list('json'))
+          shinySaveButton("save_settings", "Save settings file", "Save file as ...", filetype = list("json"))
         ),
         #Output
         mainPanel(
-          plotlyOutput(outputId="PlotlyTest"),
+          plotlyOutput(outputid = "PlotlyTest"),
           uiOutput("save_agg_power"),
           HTML("<br>"),
           uiOutput("save_underlying"),
@@ -153,16 +153,16 @@ ui <- fluidPage(
           HTML("<br>"),
           uiOutput("save_voltage_excursion_summary"),
           HTML("<br><br>"),
-          plotlyOutput(outputId="NormPower"),
-          plotlyOutput(outputId="Frequency"),
-          plotlyOutput(outputId="Voltage"),
-          plotlyOutput(outputId="ResponseCount"),
+          plotlyOutput(outputid = "NormPower"),
+          plotlyOutput(outputid = "Frequency"),
+          plotlyOutput(outputid = "Voltage"),
+          plotlyOutput(outputid = "ResponseCount"),
           uiOutput("save_response_count"),
-          plotlyOutput(outputId="distance_response"),
-          uiOutput(outputId="save_distance_response"),
-          plotlyOutput(outputId="ZoneCount"),
+          plotlyOutput(outputid = "distance_response"),
+          uiOutput(outputid = "save_distance_response"),
+          plotlyOutput(outputid = "ZoneCount"),
           uiOutput("save_zone_count"),
-          plotlyOutput(outputId="map"),
+          plotlyOutput(outputid = "map"),
           HTML("<br><br>"),
           dataTableOutput("sample_count_table"),
           HTML("<br><br>"),
@@ -173,12 +173,14 @@ ui <- fluidPage(
     tabPanel("Data Cleaning", fluid = TRUE,
       mainPanel(
         plotlyOutput("site_plot"),
-        h4("Editing the tables below changes the connected database, to use these changes in the analysis data must
-           be reloaded on the main tab."),
+        h4(paste0(
+          "Editing the tables below changes the connected database, to use these changes in the analysis data must ",
+          "be reloaded on the main tab."
+        )),
         h4("Cleaned site data (select to view trace)"),
-        DTOutput('site_details_editor'),
+        DTOutput("site_details_editor"),
         h4("Cleaned Circuit data (select to view trace)"),
-        DTOutput('circuit_details_editor')
+        DTOutput("circuit_details_editor")
       )
     ),
     tabPanel(
@@ -186,15 +188,17 @@ ui <- fluidPage(
       fluid = TRUE,
       mainPanel(
         plotlyOutput("compliance_plot"),
-        h4("Editing the compliance value changes the connected database, to use these changes in the analysis data must
-            be reloaded on the main tab."),
+        h4(paste0(
+          "Editing the compliance value changes the connected database, to use these changes in the analysis data ",
+          "must be reloaded on the main tab."
+        )),
         uiOutput("manual_compliance_type"),
         uiOutput("compliance_cleaned_or_raw"),
         uiOutput("compliance_circuits"),
         uiOutput("set_c_id_compliance"),
         fluidRow(
-          div(style="display:inline-block", uiOutput("get_previous_c_id")),
-          div(style="display:inline-block", uiOutput("get_next_c_id")))
+          div(style = "display:inline-block", uiOutput("get_previous_c_id")),
+          div(style = "display:inline-block", uiOutput("get_next_c_id")))
       )
     ),
     tabPanel(
@@ -202,17 +206,17 @@ ui <- fluidPage(
       fluid = TRUE,
       sidebarLayout(
         sidebarPanel(
-          id="side_panel",
+          id = "side_panel",
           h3("Droop response compliance settings"),
-          numericInput("compliance_threshold", label = strong('Compliance threshold'), value = 0.5, max=1, min=0),
+          numericInput("compliance_threshold", label = strong("Compliance threshold"), value = 0.5, max = 1, min = 0),
           numericInput(
             "start_buffer",
-            label = strong('Start buffer, allowed time to reach compliance threshold, in seconds.'),
+            label = strong("Start buffer, allowed time to reach compliance threshold, in seconds."),
             value = 60
           ),
           numericInput(
             "end_buffer",
-            label = strong('End buffer, allowed time for system ending response early, in seconds.'),
+            label = strong("End buffer, allowed time for system ending response early, in seconds."),
             value = 60
           ),
           numericInput(
@@ -225,14 +229,14 @@ ui <- fluidPage(
           h3("Over-frequency droop response compliance settings AS4777.2:2020"),
           numericInput(
             "compliance_threshold_2020",
-            label = strong('Compliance threshold'),
+            label = strong("Compliance threshold"),
             value = 0.5,
-            max=1,
-            min=0
+            max = 1,
+            min = 0
           ),
           numericInput(
             "start_buffer_2020",
-            label = strong('Start buffer, allowed time to reach compliance threshold, in seconds.'),
+            label = strong("Start buffer, allowed time to reach compliance threshold, in seconds."),
             value = 10
           ),
           numericInput(
@@ -255,29 +259,29 @@ ui <- fluidPage(
           h3("Reconnection compliance settings"),
           numericInput(
             "reconnection_threshold",
-            label = strong('The level at which a circuit is considered to have reconnected.'),
+            label = strong("The level at which a circuit is considered to have reconnected."),
             value = 0.95,
             max = 1,
             min = 0
           ),
           numericInput(
             "ramp_rate_threshold",
-            label = strong('Reconnection ramp rate threshold for assessing compliance, in pct/min.'),
+            label = strong("Reconnection ramp rate threshold for assessing compliance, in pct/min."),
             value = 0.333
           ),
           numericInput(
             "total_ramp_threshold_for_compliance",
-            label = strong('Total ramp threshold for compliance, in pct'),
+            label = strong("Total ramp threshold for compliance, in pct"),
             value = 0.125
           ),
           numericInput(
             "total_ramp_threshold_for_non_compliance",
-            label = strong('Toatl ramp threshold for non compliance, in pct'),
+            label = strong("Total ramp threshold for non compliance, in pct"),
             value = 0.25
           ),
           numericInput(
             "ramp_rate_change_resource_limit_threshold",
-            label = strong('Ramp rate change threshold for detecting resource limitation, in pct/min'),
+            label = strong("Ramp rate change threshold for detecting resource limitation, in pct/min"),
             value = -0.1
           ),
           h3("UFLS settings"),
@@ -515,21 +519,21 @@ server <- function(input,output,session) {
     date_as_str <- as.character(input$date[1])
     time_as_str <- substr(input$time_start, 12,19)
     start_time_as_str <- paste(date_as_str, time_as_str)
-    start_date_time <- strptime(start_time_as_str, format="%Y-%m-%d %H:%M:%S", tz="Australia/Brisbane")
+    start_date_time <- strptime(start_time_as_str, format = "%Y-%m-%d %H:%M:%S", tz = "Australia/Brisbane")
     start_date_time
   })
   end_time <- reactive({
     date_as_str <- as.character(input$date[2])
     time_as_str <- substr(input$time_end, 12,19)
     end_time_as_str <- paste(date_as_str, time_as_str)
-    end_date_time <- strptime(end_time_as_str, format="%Y-%m-%d %H:%M:%S", tz="Australia/Brisbane")
+    end_date_time <- strptime(end_time_as_str, format = "%Y-%m-%d %H:%M:%S", tz = "Australia/Brisbane")
     end_date_time
   })
   pre_event_interval <- reactive({
     date_as_str <- as.character(input$event_date)
     time_as_str <- substr(input$pre_event_interval, 12, 19)
     date_time_as_str <- paste(date_as_str, time_as_str)
-    pre_event_interval_date_time <- strptime(date_time_as_str, format="%Y-%m-%d %H:%M:%S", tz="Australia/Brisbane")
+    pre_event_interval_date_time <- strptime(date_time_as_str, format = "%Y-%m-%d %H:%M:%S", tz = "Australia/Brisbane")
     pre_event_interval_date_time
   })
   agg_on_standard <- reactive({input$standard_agg})
@@ -615,16 +619,16 @@ server <- function(input,output,session) {
       max_timestamp <- v$db$get_max_timestamp()
 
       output$load_time_start <- renderUI({
-        timeInput("load_time_start", label = strong('Enter start time'), value = min_timestamp)
+        timeInput("load_time_start", label = strong("Enter start time"), value = min_timestamp)
       })
       output$load_time_end <- renderUI({
-        timeInput("load_time_end", label = strong('Enter end time'), value = max_timestamp)
+        timeInput("load_time_end", label = strong("Enter end time"), value = max_timestamp)
       })
 
       output$load_date <- renderUI({
         dateRangeInput(
           "load_date",
-          label = strong('Date range (yyyy-mm-dd):'),
+          label = strong("Date range (yyyy-mm-dd):"),
           start = strftime(min_timestamp, format = "%Y-%m-%d"),
           end = strftime(min_timestamp, format = "%Y-%m-%d"),
           min = strftime(min_timestamp, format = "%Y-%m-%d"),
@@ -676,7 +680,7 @@ server <- function(input,output,session) {
         logging::logerror(paste(error$title, error$body), logger = app_logger)
       }
     } else {
-      if (v$db$check_if_table_exists('site_details_cleaned')) {
+      if (v$db$check_if_table_exists("site_details_cleaned")) {
         v$site_details_for_editing <- v$db$get_site_details_cleaning_report()
         v$site_details_for_editing <- filter(v$site_details_for_editing, s_state == settings$region_to_load)
         output$site_details_editor <- renderDT(
@@ -685,10 +689,10 @@ server <- function(input,output,session) {
           rownames = FALSE,
           editable = TRUE
         )
-        v$proxy_site_details_editor <- dataTableProxy('site_details_editor')
+        v$proxy_site_details_editor <- dataTableProxy("site_details_editor")
       }
 
-      if (v$db$check_if_table_exists('circuit_details_cleaned')) {
+      if (v$db$check_if_table_exists("circuit_details_cleaned")) {
         v$circuit_details_for_editing <- v$db$get_circuit_details_cleaning_report()
         v$circuit_details_for_editing <- filter(
           v$circuit_details_for_editing, site_id %in% v$site_details_for_editing$site_id
@@ -699,7 +703,7 @@ server <- function(input,output,session) {
           rownames = FALSE,
           editable = TRUE
         )
-        v$proxy_circuit_details_editor <- dataTableProxy('circuit_details_editor')
+        v$proxy_circuit_details_editor <- dataTableProxy("circuit_details_editor")
       }
 
       # Filtering option widgets are rendered after the data is loaded, this is
@@ -749,7 +753,7 @@ server <- function(input,output,session) {
       shinyjs::show("standard_agg")
       output$size_groupings <- renderUI({
         checkboxGroupButtons(
-          inputId="size_groupings",
+          inputid = "size_groupings",
           label = strong("Size Groupings"),
           choices = list("30-100kW", "<30 kW"),
           selected = list("30-100kW", "<30 kW"),
@@ -762,7 +766,7 @@ server <- function(input,output,session) {
       })
       output$cleaned <- renderUI({
         checkboxGroupButtons(
-          inputId="cleaned",
+          inputid = "cleaned",
           label = strong("Data sets"),
           choices = list("clean", "raw"),
           selected = list("clean"),
@@ -775,7 +779,7 @@ server <- function(input,output,session) {
       })
       output$StdVersion <- renderUI({
         checkboxGroupButtons(
-          inputId="StdVersion",
+          inputid = "StdVersion",
           label = strong("AS47777 Version:"),
           choices = list(
             "AS4777.3:2005",
@@ -802,7 +806,7 @@ server <- function(input,output,session) {
       })
       output$responses <- renderUI({
         checkboxGroupButtons(
-          inputId="responses",
+          inputid = "responses",
           label = strong("Select Responses:"),
           choices = list(
             "1 Ride Through",
@@ -835,7 +839,7 @@ server <- function(input,output,session) {
       })
       output$zones <- renderUI({
         checkboxGroupButtons(
-          inputId="zones",
+          inputid = "zones",
           label = strong("Zones"),
           choices = list("1 Zone", "2 Zone", "3 Zone", "Undefined", NA),
           selected = list("1 Zone", "2 Zone", "3 Zone", "Undefined", NA),
@@ -848,7 +852,7 @@ server <- function(input,output,session) {
       })
       output$compliance <- renderUI({
         checkboxGroupButtons(
-          inputId="compliance",
+          inputid = "compliance",
           label = strong("Compliance"),
           choices = list(
             "Compliant",
@@ -881,7 +885,7 @@ server <- function(input,output,session) {
       })
       output$compliance_2020 <- renderUI({
         checkboxGroupButtons(
-          inputId="compliance_2020",
+          inputid = "compliance_2020",
           label = strong("Compliance 2020"),
           choices = list(
             "Compliant",
@@ -929,7 +933,7 @@ server <- function(input,output,session) {
       unique_offsets_filter_label <- make_offset_filter_label(sample_counts, v$unique_offsets)
       output$offsets <- renderUI({
         checkboxGroupButtons(
-          inputId="offsets",
+          inputid = "offsets",
           label = unique_offsets_filter_label,
           choices = v$unique_offsets,
           selected = c(v$unique_offsets[which.max(sample_counts)]),
@@ -959,16 +963,16 @@ server <- function(input,output,session) {
       output$event_date <- renderUI({
         dateInput(
           "event_date",
-          label = strong('Event date (yyyy-mm-dd):'),
-          value = strftime(floor_date(get_mode(v$combined_data$ts), "day"), format="%Y-%m-%d"),
+          label = strong("Event date (yyyy-mm-dd):"),
+          value = strftime(floor_date(get_mode(v$combined_data$ts), "day"), format = "%Y-%m-%d"),
           startview = "year"
         )
       })
       output$pre_event_interval <- renderUI({
         timeInput(
           "pre_event_interval",
-          label = strong('Pre-event time interval'),
-          value = as.POSIXct("12:13:55", format="%H:%M:%S")
+          label = strong("Pre-event time interval"),
+          value = as.POSIXct("12:13:55", format = "%H:%M:%S")
         )
       })
       output$window_length <- renderUI({
@@ -992,19 +996,19 @@ server <- function(input,output,session) {
         )
       })
       output$event_latitude <- renderUI({
-        numericInput("event_latitude", label = strong('Set event latitude'), value=-28.838132)
+        numericInput("event_latitude", label = strong("Set event latitude"), value = -28.838132)
       })
       output$event_longitude <- renderUI({
-        numericInput("event_longitude", label = strong('Set event longitude'), value=151.096832)
+        numericInput("event_longitude", label = strong("Set event longitude"), value = 151.096832)
       })
       output$zone_one_radius <- renderUI({
-        numericInput("zone_one_radius", label = strong('Set zone one outer radius (km)'), value=200)
+        numericInput("zone_one_radius", label = strong("Set zone one outer radius (km)"), value = 200)
       })
       output$zone_two_radius <- renderUI({
-        numericInput("zone_two_radius", label = strong('Set zone two outer radius (km)'), value=600)
+        numericInput("zone_two_radius", label = strong("Set zone two outer radius (km)"), value = 600)
       })
       output$zone_three_radius <- renderUI({
-        numericInput("zone_three_radius", label = strong('Set zone three outer radius (km)'), value=1000)
+        numericInput("zone_three_radius", label = strong("Set zone three outer radius (km)"), value = 1000)
       })
       output$update_plots <- renderUI({
         actionButton("update_plots", "Update plots")
@@ -1048,7 +1052,7 @@ server <- function(input,output,session) {
       (length(v$sample_count_table$sample_count)<1000 & !no_grouping)) {
       if (length(v$combined_data_f$ts) > 0) {
         # Create plots on main tab
-        logdebug('create plots', logger = app_logger)
+        logdebug("create plots", logger = app_logger)
 
         # -------- Render plots and save buttons --------
         # inputs:v$agg_power,  v$sample_count_table, ideal_response_to_plot, agg_norm_power, v$response_count, v$zone_count, v$agg_power, v$distance_response, geo_data, v$combined_data_f
@@ -1147,7 +1151,7 @@ server <- function(input,output,session) {
 
         if ("width" %in% names(v$sample_count_table)) {
           sample_count_table <- datatable(v$sample_count_table) %>%
-            formatStyle("width",  background = styleColorBar(c(0, 1), 'red'))
+            formatStyle("width",  background = styleColorBar(c(0, 1), "red"))
         } else {
           sample_count_table <- v$sample_count_table
         }
@@ -1183,7 +1187,7 @@ server <- function(input,output,session) {
               add_trace(
                 x = ~v$ideal_response_downsampled_2020$time_group,
                 y = ~v$ideal_response_downsampled_2020$norm_power,
-                name = 'Ideal Response Downsampled 2020',
+                name = "Ideal Response Downsampled 2020",
                 mode = "markers",
                 inherit = FALSE
               ) %>%
@@ -1301,7 +1305,7 @@ server <- function(input,output,session) {
             units = "km",
             poly.type = "gc.earth")
         )
-        output$map <- renderPlotly({plot_geo(v$geo_data, lat=~lat, lon=~lon, color = ~percentage_disconnect) %>%
+        output$map <- renderPlotly({plot_geo(v$geo_data, lat = ~lat, lon = ~lon, color = ~percentage_disconnect) %>%
             add_polygons(
               x = ~z1$lon,
               y = ~z1$lat,
@@ -1337,8 +1341,8 @@ server <- function(input,output,session) {
               legendgroup = list(title = "Percentage Disconnects"),
               marker = list(
                 color = ~percentage_disconnect,
-                colorbar=list(title='Percentage \n Disconnects'),
-                colorscale = 'Bluered'
+                colorbar = list(title = "Percentage \n Disconnects"),
+                colorscale = "Bluered"
               )
             ) %>%
             layout(
@@ -1389,7 +1393,7 @@ server <- function(input,output,session) {
       reset_chart_area(input, output, session)
       removeNotification(id)
     }
-    logdebug('Update plots completed', logger = app_logger)
+    logdebug("Update plots completed", logger = app_logger)
   })
 
   observeEvent(input$compliance_cleaned_or_raw, {
@@ -1460,7 +1464,10 @@ server <- function(input,output,session) {
           )
         })
       )
-      data_to_view <- filter(filter(v$combined_data_f, clean==compliance_cleaned_or_raw()), c_id==compliance_circuits())
+      data_to_view <- filter(
+        filter(v$combined_data_f, clean == compliance_cleaned_or_raw()),
+        c_id == compliance_circuits()
+      )
 
       if (manual_compliance_type() == "Over frequency") {
         output$set_c_id_compliance <- renderUI({
@@ -1515,14 +1522,14 @@ server <- function(input,output,session) {
               add_trace(
                 x = v$ideal_response_to_plot$ts,
                 y = v$ideal_response_to_plot$norm_power,
-                name = 'Ideal Response',
+                name = "Ideal Response",
                 mode = "markers",
                 inherit = FALSE
               ) %>%
               add_trace(
                 x = v$ideal_response_downsampled$time_group,
                 y = v$ideal_response_downsampled$norm_power,
-                name = 'Ideal Response Downsampled',
+                name = "Ideal Response Downsampled",
                 mode = "markers",
                 inherit = FALSE
               ) %>%
@@ -1540,7 +1547,7 @@ server <- function(input,output,session) {
             add_trace(
               x = v$reconnection_profile$ts,
               y = v$reconnection_profile$norm_power,
-              name = 'Ideal Response',
+              name = "Ideal Response",
               mode = "markers", inherit = FALSE
             ) %>%
             layout(yaxis = list(title = "Circuit power \n normalised to max circuit power"))
@@ -1575,7 +1582,12 @@ server <- function(input,output,session) {
       } else {
         v$circuit_details_raw <- mutate(
           v$circuit_details_raw,
-          manual_reconnect_compliance = ifelse(c_id==current_c_id, set_c_id_compliance(), manual_reconnect_compliance))
+          manual_reconnect_compliance = ifelse(
+            c_id == current_c_id,
+            set_c_id_compliance(),
+            manual_reconnect_compliance
+          )
+        )
       }
       v$db$update_circuit_details_raw(v$circuit_details_raw)
     }
@@ -1798,7 +1810,7 @@ server <- function(input,output,session) {
   })
 
   get_current_settings <- function() {
-    settings <- vector(mode='list')
+    settings <- vector(mode = "list")
 
     settings$database_name <- database_name()
 
@@ -1917,8 +1929,8 @@ server <- function(input,output,session) {
   observeEvent(input$load_first_filter_settings, {
     settings <- load_settings()
     if (length(settings) > 0) {
-      updateDateRangeInput(session, "load_date", start = strftime(settings$load_start_time, format="%Y-%m-%d"))
-      updateDateRangeInput(session, "load_date", end = strftime(settings$load_end_time, format="%Y-%m-%d"))
+      updateDateRangeInput(session, "load_date", start = strftime(settings$load_start_time, format = "%Y-%m-%d"))
+      updateDateRangeInput(session, "load_date", end = strftime(settings$load_end_time, format = "%Y-%m-%d"))
       updateTimeInput(session, "load_time_start", value = settings$load_start_time)
       updateTimeInput(session, "load_time_end", value = settings$load_end_time)
       updateRadioButtons(session, "duration", selected = settings$duration)
@@ -2041,11 +2053,11 @@ server <- function(input,output,session) {
     shinyFileSave(input, "batch_save", roots = volumes, session = session)
     fileinfo <- parseSavePath(volumes, input$batch_save)
     if (nrow(fileinfo) > 0) {
-      id <- showNotification("Doing batch save", duration=1000)
-      datapath <- strsplit(fileinfo$datapath, '[.]')[[1]][1]
-      write.csv(v$combined_data_f, paste0(datapath, '_underlying.csv'), row.names = FALSE)
-      write.csv(v$circuit_summary, paste0(datapath, '_circ_sum.csv'), row.names = FALSE)
-      write(meta_data, paste0(datapath, '_meta_data.json'))
+      id <- showNotification("Doing batch save", duration = 1000)
+      datapath <- strsplit(fileinfo$datapath, "[.]")[[1]][1]
+      write.csv(v$combined_data_f, paste0(datapath, "_underlying.csv"), row.names = FALSE)
+      write.csv(v$circuit_summary, paste0(datapath, "_circ_sum.csv"), row.names = FALSE)
+      write(meta_data, paste0(datapath, "_meta_data.json"))
       removeNotification(id)
     }
   })
@@ -2113,7 +2125,7 @@ server <- function(input,output,session) {
     # FIXME: check whether this if statement is wrong.
     if (length(input$circuit_details_editor_rows_selected == 1)) {
       c_id_to_plot <- v$circuit_details_for_editing$c_id[input$circuit_details_editor_rows_selected]
-      data_to_view <- filter(v$combined_data, c_id==c_id_to_plot)
+      data_to_view <- filter(v$combined_data, c_id == c_id_to_plot)
       output$site_plot <- renderPlotly({plot_ly(data_to_view, x = ~ts, y = ~power_kW, type = "scattergl")})
     }
 
@@ -2125,7 +2137,7 @@ server <- function(input,output,session) {
     # FIXME: check whether this if statement is wrong.
     if (length(input$site_details_editor_rows_selected == 1)) {
       site_id_to_plot <- v$site_details_for_editing$site_id[input$site_details_editor_rows_selected]
-      circuits <- filter(v$circuit_details_for_editing, site_id==site_id_to_plot)
+      circuits <- filter(v$circuit_details_for_editing, site_id == site_id_to_plot)
       circuits <- unique(circuits$c_id)
       data_to_view <- filter(v$combined_data, c_id %in% circuits)
       data_to_view <- mutate(data_to_view, c_id=as.character(c_id))
@@ -2145,7 +2157,12 @@ server <- function(input,output,session) {
     value <- info$value
     # FIXME: Check whether the double arrow is a thing in R.
     v$site_details_for_editing[i, j] <<- DT::coerceValue(value, v$site_details_for_editing[i, j])
-    replaceData(v$proxy_site_details_editor, v$site_details_for_editing, resetPaging=FALSE, rownames = FALSE) # important
+    replaceData(
+      v$proxy_site_details_editor,
+      v$site_details_for_editing,
+      resetPaging = FALSE,
+      rownames = FALSE
+    ) # important
     v$db$update_site_details_cleaned(v$site_details_for_editing)
   })
 
@@ -2158,7 +2175,12 @@ server <- function(input,output,session) {
     value <- info$value
     # FIXME: Check whether the double arrow is a thing in R.
     v$circuit_details_for_editing[i, j] <<- DT::coerceValue(value, v$circuit_details_for_editing[i, j])
-    replaceData(v$proxy_circuit_details_editor, v$circuit_details_for_editing, resetPaging=FALSE, rownames = FALSE) # important
+    replaceData(
+      v$proxy_circuit_details_editor,
+      v$circuit_details_for_editing,
+      resetPaging = FALSE,
+      rownames = FALSE
+    ) # important
     v$db$update_circuit_details_cleaned(v$circuit_details_for_editing)
   })
 }

@@ -794,9 +794,7 @@ DBInterface <- R6::R6Class(
       start_chunk_index <- (iteration_number - 1) * max_chunk_size + 1
       return(start_chunk_index)
     },
-    calc_end_chunk_index = function(number_of_ids,
-                                    max_chunk_size,
-                                    start_chunk_index) {
+    calc_end_chunk_index = function(number_of_ids, max_chunk_size, start_chunk_index) {
       end_chunk_index <- start_chunk_index + max_chunk_size - 1
       if (end_chunk_index > number_of_ids) {
         end_chunk_index <- number_of_ids
