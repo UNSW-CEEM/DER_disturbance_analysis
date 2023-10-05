@@ -308,7 +308,7 @@ ui <- fluidPage(
             "disconnecting_threshold",
             label = strong(
               paste0(
-                "Disconnecting threshold, level below which circuit is considered to have disconnected. "
+                "Disconnecting threshold, level below which circuit is considered to have disconnected. ",
                 "Note that this value is used in the compliance calculations but NOT the response categorisation."
               )
             ),
@@ -320,7 +320,7 @@ ui <- fluidPage(
             "NED_threshold",
             label = strong(
               paste0(
-                "Minimum proportion of sampled seconds allowed within post event interval to not have a Not enough "
+                "Minimum proportion of sampled seconds allowed within post event interval to not have a Not enough ",
                 "data response"
               )
             ),
