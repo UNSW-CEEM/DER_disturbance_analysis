@@ -19,9 +19,9 @@ get_time_series_unique_offsets <- function(time_series_data) {
 make_offset_filter_label <- function(sample_counts, unique_offsets) {
   label <- "Select time offset data subset to use, ("
   for(i in 1:length(unique_offsets)) {
-    label <- paste(label, unique_offsets[i], ": n=", sample_counts[i], ", ", sep = "")
+    label <- paste0(label, unique_offsets[i], ": n=", sample_counts[i], ", ")
   }
-  label <- paste(label, ")", sep = "")
+  label <- paste0(label, ")")
   return(label)
 }
 
