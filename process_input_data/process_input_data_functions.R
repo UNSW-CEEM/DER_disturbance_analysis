@@ -103,7 +103,7 @@ perform_power_calculations <- function(master_data_table) {
 
 process_install_data <- function(install_data) {
   assert_install_data_assumptions(install_data)
-  # Rename time column and catergorise data based on inverter standards.
+  # Rename time column and categorise data based on inverter standards.
   install_data <- setnames(
     install_data,
     c("state", "sizegroup", "date", "capacity"),
@@ -175,7 +175,7 @@ assert_install_data_assumptions <- function(install_data) {
 }
 
 size_grouping <- function(site_details) {
-  # Catergorise site by sample AC capacity.
+  # Categorise site by sample AC capacity.
   site_details <- mutate(site_details, Grouping = ifelse(first_ac >= 30, "30-100kW" ,"<30 kW"))
   return(site_details)
 }
@@ -201,7 +201,7 @@ assert_postcode_data_assumptions <- function(postcode_data) {
 
 site_categorisation <- function(combined_data) {
   # Processes installed month. Setting missing month values to jan 2005, and using assumed day of month as the 28th.
-  # Then catergorising into stanard version based on date.
+  # Then categorising into stanard version based on date.
   combined_data <- combined_data %>%
     mutate(
       pv_installation_year_month = ifelse(pv_installation_year_month == "", "2015-11", pv_installation_year_month)

@@ -1,4 +1,4 @@
-catergorise_row <- function(response_category,
+categorise_row <- function(response_category,
                             ramp_above_threshold,
                             ramp_threshold_for_compliance,
                             ramp_threshold_for_non_compliance) {
@@ -25,7 +25,7 @@ categorise_reconnection_compliance <- function(ramping_data,
                                                ramp_threshold_for_non_compliance) {
   ramping_data <- rowwise(ramping_data) %>%
     mutate(
-      reconnection_compliance_status = catergorise_row(
+      reconnection_compliance_status = categorise_row(
         response_category,
         ramp_above_threshold,
         ramp_threshold_for_compliance,

@@ -138,7 +138,7 @@ clean_connection_types <- function(combined_data, circuit_details, postcode_data
 }
 
 calc_sunrise_sunset_bounds <- function(postcode_data, event_date) {
-  # Need date of event to calaculate sunrise and sunset times.
+  # Need date of event to calculate sunrise and sunset times.
   postcode_data$date <- event_date
   # Find sunrise and sunset times on a postcode basis.
   postcode_data <- mutate(
