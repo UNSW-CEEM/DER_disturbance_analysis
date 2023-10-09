@@ -1,8 +1,8 @@
 if (!exists("app_logger")) {
-    logging::basicConfig()
-    logger <- getLogger()$name
+  logging::basicConfig()
+  logger <- getLogger()$name
 } else {
-    logger <- app_logger
+  logger <- app_logger
 }
 
 INSTALL_DATA_FILE <- "inbuilt_data/cer_cumulative_capacity_and_number.csv"
