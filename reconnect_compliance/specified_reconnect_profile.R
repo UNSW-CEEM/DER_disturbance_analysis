@@ -1,4 +1,3 @@
-
 create_reconnection_profile <- function(pre_event_time, ramp_length_minutes, time_step_seconds) {
   ramp_length_seconds <- ramp_length_minutes * 60
   reconnect_time <- pre_event_time + time_step_seconds + 60
@@ -8,4 +7,5 @@ create_reconnection_profile <- function(pre_event_time, ramp_length_minutes, tim
     ramp_time_series,
     norm_power = as.numeric((ts - reconnect_time) / ramp_length_seconds)
   )
+  return(ramp_time_series)
 }
