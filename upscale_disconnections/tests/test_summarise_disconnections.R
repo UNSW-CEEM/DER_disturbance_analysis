@@ -9,7 +9,6 @@ load_test_file <- function(text) {
 }
 
 testthat::test_that("group_disconnections_by_manufacturer", {
-
   circuit_summary <- "c_id, Standard_Version, manufacturer, response_category
                          1,                y,          SMA, 6-Not-enough-data
                          2,                y,          SMA,         Undefined
@@ -33,9 +32,7 @@ testthat::test_that("group_disconnections_by_manufacturer", {
   testthat::expect_equivalent(output, expected_output, tolerance = 1e-4)
 })
 
-testthat::test_that("join_circuit_summary_and_cer_manufacturer_data",{
-
-
+testthat::test_that("join_circuit_summary_and_cer_manufacturer_data", {
   disconnection_summary <- "Standard_Version, manufacturer, disconnections, sample_size
                                            y,          SMA,              2,           3
                                            y,            x,              1,           1
@@ -59,9 +56,7 @@ testthat::test_that("join_circuit_summary_and_cer_manufacturer_data",{
   testthat::expect_equal(output, expected_output, tolerance = 1e-4)
 })
 
-testthat::test_that("impose_sample_size_threshold",{
-
-
+testthat::test_that("impose_sample_size_threshold", {
   input <- "Standard_Version, manufacturer, disconnections, sample_size, cer_capacity
                            y,        Other,             NA,          NA,           11
                            y,          SMA,              2,           3,           10
@@ -69,7 +64,6 @@ testthat::test_that("impose_sample_size_threshold",{
                            y,       Unkown,              1,           1,           NA
                            y,        Other,              1,           1,           NA
                            z,            x,              0,          30,           12"
-
 
   expected_output <- "Standard_Version, manufacturer, disconnections, sample_size, cer_capacity, proportion
                                      y,        Other,              5,           6,           21,  0.8333333
@@ -82,9 +76,7 @@ testthat::test_that("impose_sample_size_threshold",{
   testthat::expect_equal(output, expected_output, tolerance = 1e-4)
 })
 
-testthat::test_that("calc_confidence_intervals_for_disconnections",{
-
-
+testthat::test_that("calc_confidence_intervals_for_disconnections", {
   input <- "Standard_Version, manufacturer, disconnections, sample_size, cer_capacity, proportion
                            y,        Other,              5,           6,           21,  0.8333333
                            z,            x,              0,          30,           12,          0"
@@ -103,8 +95,7 @@ testthat::test_that("calc_confidence_intervals_for_disconnections",{
   testthat::expect_equal(output, expected_output, tolerance = 1e-4)
 })
 
-testthat::test_that("calc_upscale_kw_loss",{
-
+testthat::test_that("calc_upscale_kw_loss", {
   input <- "Standard_Version, manufacturer, disconnections, sample_size, cer_capacity, proportion, lower_bound, upper_bound
                            y,        Other,              5,           6,           21,  0.8333333,   0.3587654,   0.9957893
                            z,            x,              0,          30,           12,          0,         0.0,   0.1157033"
