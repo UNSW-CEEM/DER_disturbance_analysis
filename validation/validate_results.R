@@ -41,7 +41,7 @@ if (base_directory_name == "DER_disturbance_analysis") {
 }
 source(sprintf("%s/db_interface/interface.R", tool_directory))
 
-data_dirs <- list.dirs("validation/data", recursive=FALSE)
+data_dirs <- list.dirs("validation/data", recursive = FALSE)
 
 ref_db_name <- sprintf("%s.db", ref_prefix)
 test_db_name <- sprintf("%s.db", test_prefix)
@@ -70,7 +70,7 @@ difference_between_lists <- function(reference_list, test_list) {
 }
 
 
-compare_dbs <- function(ref_db_con, test_db_con, compare_values=FALSE, event_name=NA) {
+compare_dbs <- function(ref_db_con, test_db_con, compare_values = FALSE, event_name = NA) {
   diff_found <- FALSE
   # compare tables
   ref_tables <- RSQLite::dbGetQuery(ref_db_con, table_name_query)$name
@@ -159,7 +159,7 @@ compare_dbs <- function(ref_db_con, test_db_con, compare_values=FALSE, event_nam
 }
 
 
-compare_dfs <- function(reference, test, event_name=NA) {
+compare_dfs <- function(reference, test, event_name = NA) {
   # 1. check for new columns
   ref_columns <- names(reference)
   test_columns <- names(test)
@@ -213,10 +213,10 @@ if (length(data_dirs) > 0) {
 
         # check circuit summary
         logging::loginfo(sprintf("%s - Comparing circuit summaries...", dir))
-        compare_dfs(ref_circuit_summary, test_circuit_summary, event_name=dir)
+        compare_dfs(ref_circuit_summary, test_circuit_summary, event_name = dir)
         # check underlying data
         logging::loginfo(sprintf("%s - Comparing underlying data...", dir))
-        compare_dfs(ref_underlying_data, test_underlying_data, event_name=dir)
+        compare_dfs(ref_underlying_data, test_underlying_data, event_name = dir)
 
         RSQLite::dbDisconnect(ref_db_con)
         RSQLite::dbDisconnect(test_db_con)
