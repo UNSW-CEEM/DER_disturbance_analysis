@@ -1,12 +1,12 @@
 testthat::context("Testing finding first resource limited interval.")
 
 
-load_test_df <- function(text){
+load_test_df <- function(text) {
   df <- read.table(text = gsub(" ", "", text), sep = ",", header = TRUE, stringsAsFactors = FALSE)
   return(df)
 }
 
-testthat::test_that("Finding resource limited interval works.",{
+testthat::test_that("Finding resource limited interval works.", {
   event_time <- as.POSIXct("2018-01-01 00:01:00", tz = "Australia/Brisbane")
 
   disconnect_threshold <- 0.05
