@@ -63,7 +63,7 @@ testthat::test_that("test simple case no ufls dropout", {
           strptime("2021-01-01 13:00:00", format = "%Y-%m-%d %H:%M:%S", tz = "Australia/Brisbane") - 0,
           tz = "GMT"
         )
-        if (start_time < comp_time){
+        if (start_time < comp_time) {
           return(load_test_df(pre_event_samples))
         } else {
           return(load_test_df(post_event_samples))
