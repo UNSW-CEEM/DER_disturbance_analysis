@@ -462,7 +462,7 @@ test_that("Test assertion of s_postcode data assumptions, lon can be interpreted
   expect_error(process_postcode_data(postcode_data))
 })
 
-load_test_df <- function(text){
+load_test_df <- function(text) {
   text <- gsub(" ", "", text)
   text <- gsub("~", " ", text)
   df <- read.table(text = text, sep = ",", header = TRUE, stringsAsFactors = FALSE)
