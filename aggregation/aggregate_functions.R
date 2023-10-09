@@ -1,4 +1,3 @@
-
 find_grouping_cols <- function(settings) {
   grouping_cols <- c("clean")
   if (settings$standard_agg == TRUE) {
