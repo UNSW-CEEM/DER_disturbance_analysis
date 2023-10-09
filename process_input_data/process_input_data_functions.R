@@ -140,7 +140,7 @@ process_install_data <- function(install_data) {
   )
   # Join the intial capacity to the cumulative capacity table.
   install_data <- inner_join(install_data, installed_start_standard, by = c("Standard_Version", "Grouping", "s_state"))
-  # Calaculate installed capacity by standard.
+  # Calculate installed capacity by standard.
   install_data <- mutate(install_data, standard_capacity = Capacity - initial_cap)
   return(install_data)
 }
