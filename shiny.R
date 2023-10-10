@@ -107,7 +107,7 @@ ui <- fluidPage(
             selected = "none",
             inline = TRUE
           ),
-          materialSwitch(inputid = "raw_upscale", label = strong("Upscaled Data"), status = "primary", right = FALSE),
+          materialSwitch(inputId = "raw_upscale", label = strong("Upscaled Data"), status = "primary", right = FALSE),
           tags$hr(),
           h4("Event information"),
           uiOutput("event_date"),
@@ -753,7 +753,7 @@ server <- function(input,output,session) {
       shinyjs::show("standard_agg")
       output$size_groupings <- renderUI({
         checkboxGroupButtons(
-          inputid = "size_groupings",
+          inputId = "size_groupings",
           label = strong("Size Groupings"),
           choices = list("30-100kW", "<30 kW"),
           selected = list("30-100kW", "<30 kW"),
@@ -766,7 +766,7 @@ server <- function(input,output,session) {
       })
       output$cleaned <- renderUI({
         checkboxGroupButtons(
-          inputid = "cleaned",
+          inputId = "cleaned",
           label = strong("Data sets"),
           choices = list("clean", "raw"),
           selected = list("clean"),
@@ -779,7 +779,7 @@ server <- function(input,output,session) {
       })
       output$StdVersion <- renderUI({
         checkboxGroupButtons(
-          inputid = "StdVersion",
+          inputId = "StdVersion",
           label = strong("AS47777 Version:"),
           choices = list(
             "AS4777.3:2005",
@@ -806,7 +806,7 @@ server <- function(input,output,session) {
       })
       output$responses <- renderUI({
         checkboxGroupButtons(
-          inputid = "responses",
+          inputId = "responses",
           label = strong("Select Responses:"),
           choices = list(
             "1 Ride Through",
@@ -839,7 +839,7 @@ server <- function(input,output,session) {
       })
       output$zones <- renderUI({
         checkboxGroupButtons(
-          inputid = "zones",
+          inputId = "zones",
           label = strong("Zones"),
           choices = list("1 Zone", "2 Zone", "3 Zone", "Undefined", NA),
           selected = list("1 Zone", "2 Zone", "3 Zone", "Undefined", NA),
@@ -852,7 +852,7 @@ server <- function(input,output,session) {
       })
       output$compliance <- renderUI({
         checkboxGroupButtons(
-          inputid = "compliance",
+          inputId = "compliance",
           label = strong("Compliance"),
           choices = list(
             "Compliant",
@@ -885,7 +885,7 @@ server <- function(input,output,session) {
       })
       output$compliance_2020 <- renderUI({
         checkboxGroupButtons(
-          inputid = "compliance_2020",
+          inputId = "compliance_2020",
           label = strong("Compliance 2020"),
           choices = list(
             "Compliant",
@@ -933,7 +933,7 @@ server <- function(input,output,session) {
       unique_offsets_filter_label <- make_offset_filter_label(sample_counts, v$unique_offsets)
       output$offsets <- renderUI({
         checkboxGroupButtons(
-          inputid = "offsets",
+          inputId = "offsets",
           label = unique_offsets_filter_label,
           choices = v$unique_offsets,
           selected = c(v$unique_offsets[which.max(sample_counts)]),
