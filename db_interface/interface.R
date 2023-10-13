@@ -214,8 +214,7 @@ DBInterface <- R6::R6Class(
         if (startsWith(conditionMessage(w), "Don't need to call dbFetch()"))
           invokeRestart("muffleWarning")
       })
-      null_replace_columns <-
-        c("e", "v", "vmin", "vmax", "vmean", "f", "fmin", "fmax")
+      null_replace_columns <- c("e", "v", "vmin", "vmax", "vmean", "f", "fmin", "fmax")
       for (col in null_replace_columns) {
         RSQLite::dbExecute(con, sprintf("UPDATE timeseries SET %s = NULL WHERE %s = ''", col, col))
       }
