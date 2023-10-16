@@ -65,7 +65,7 @@ test_that("Test checking of day vs night energy", {
   expect_equal(out, expected_out, tolerance = 0.01)
 })
 
-test_that("Test checking of reversed ploarity", {
+test_that("Test checking of reversed polarity", {
   # Test input data
   c_id <- c("800", "4064", "6019", "6018", "1000")
   con_type <- c("pv_site", "pv_site_net", "pv_inverter_net", "load", "pv_inverter_net")
@@ -112,7 +112,7 @@ test_that("Test checking of reversed ploarity", {
   expect_equal(out, expected_out, tolerance = 0.01)
 })
 
-test_that("Test checking of mixed ploarity",{
+test_that("Test checking of mixed polarity",{
   # Test input data
   c_id <- c("800", "4064", "6019", "6018", "1000")
   con_type <- c("pv_site", "pv_site_net", "pv_inverter_net", "load", "pv_inverter_net")
