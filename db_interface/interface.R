@@ -211,8 +211,9 @@ DBInterface <- R6::R6Class(
                             dbname = self$db_path_name)
         base::close(file_con)
       }, warning = function(w) {
-        if (startsWith(conditionMessage(w), "Don't need to call dbFetch()"))
+        if (startsWith(conditionMessage(w), "Don't need to call dbFetch()")) {
           invokeRestart("muffleWarning")
+        }
       })
       null_replace_columns <- c("e", "v", "vmin", "vmax", "vmean", "f", "fmin", "fmax")
       for (col in null_replace_columns) {
@@ -237,8 +238,9 @@ DBInterface <- R6::R6Class(
         sqldf::read.csv.sql(sql = circuit_details_build_query, eol = '\n', dbname = self$db_path_name)
         base::close(file_con)
       }, warning = function(w) {
-        if (startsWith(conditionMessage(w), "Don't need to call dbFetch()"))
+        if (startsWith(conditionMessage(w), "Don't need to call dbFetch()")) {
           invokeRestart("muffleWarning")
+        }
       })
 
       RSQLite::dbExecute(
@@ -266,8 +268,9 @@ DBInterface <- R6::R6Class(
       withCallingHandlers({
         sqldf::sqldf(site_details_build_query, dbname = self$db_path_name)
       }, warning = function(w) {
-        if (startsWith(conditionMessage(w), "Don't need to call dbFetch()"))
+        if (startsWith(conditionMessage(w), "Don't need to call dbFetch()")) {
           invokeRestart("muffleWarning")
+        }
       })
 
 
@@ -287,8 +290,9 @@ DBInterface <- R6::R6Class(
           sqldf::read.csv.sql(sql = alerts_build_query, eol = '\n', dbname = self$db_path_name)
           base::close(file_con)
         }, warning = function(w) {
-          if (startsWith(conditionMessage(w), "Don't need to call dbFetch()"))
+          if (startsWith(conditionMessage(w), "Don't need to call dbFetch()")) {
             invokeRestart("muffleWarning")
+          }
         })
       }
 
@@ -352,8 +356,7 @@ DBInterface <- R6::R6Class(
 
       for (name in column_names) {
         if (name %in% names(self$default_timeseries_column_aliases)) {
-          query <-
-            gsub(self$default_timeseries_column_aliases[[name]], name, query)
+          query <- gsub(self$default_timeseries_column_aliases[[name]], name, query)
         } else {
           error_message <- paste0(
             "The provided time series file should have the columns ts, c_id, d, e, v and f, ",
@@ -370,12 +373,7 @@ DBInterface <- R6::R6Class(
     get_circuit_details_build_query = function(circuit_details) {
       column_names <- names(read.csv(circuit_details, nrows = 3, header = TRUE))
 
-      column_aliases <- list(
-        c_id = '_c_id',
-        site_id = '_site_id',
-        con_type = '_con_type',
-        polarity = '_polarity'
-      )
+      column_aliases <- list(c_id = '_c_id', site_id = '_site_id', con_type = '_con_type', polarity = '_polarity')
 
       query <- "REPLACE INTO circuit_details_raw
           SELECT cast(_c_id AS integer) AS c_id, cast(_site_id AS integer) AS site_id, _con_type AS con_type,
@@ -421,9 +419,12 @@ DBInterface <- R6::R6Class(
           query <- gsub(column_aliases[[name]], name, query)
         } else {
           stop(
-            "The provided site details file should have the columns site_id, s_postcode, s_state, ac, dc, manufacturer,
-             model and pv_installation_year_month. The ac column should be in kW and the the dc in W. Please check this
-             file and try again."
+            paste0(
+              "The provided site details file should have the columns site_id, s_postcode, s_state, ac, dc,
+               manufacturer, model and pv_installation_year_month. The ac column should be in kW and the the dc in W.
+               Please check this file and try again. Currently cannot find ",
+              name
+            )
           )
         }
       }
@@ -840,8 +841,9 @@ DBInterface <- R6::R6Class(
           dbname = self$db_path_name
         )
       }, warning = function(w) {
-        if (startsWith(conditionMessage(w), "Don't need to call dbFetch()"))
+        if (startsWith(conditionMessage(w), "Don't need to call dbFetch()")) {
           invokeRestart("muffleWarning")
+        }
       })
     },
     perform_power_calculations = function(time_series) {
@@ -877,8 +879,9 @@ DBInterface <- R6::R6Class(
       withCallingHandlers({
         sqldf::sqldf(query, dbname = self$db_path_name)
       }, warning = function(w) {
-        if (startsWith(conditionMessage(w), "Don't need to call dbFetch()"))
+        if (startsWith(conditionMessage(w), "Don't need to call dbFetch()")) {
           invokeRestart("muffleWarning")
+        }
       })
     },
     update_site_details_cleaned = function(site_details) {
@@ -889,8 +892,9 @@ DBInterface <- R6::R6Class(
       withCallingHandlers({
         sqldf::sqldf(query, dbname = self$db_path_name)
       }, warning = function(w) {
-        if (startsWith(conditionMessage(w), "Don't need to call dbFetch()"))
+        if (startsWith(conditionMessage(w), "Don't need to call dbFetch()")) {
           invokeRestart("muffleWarning")
+        }
       })
     },
     create_circuit_details_cleaned_table = function() {
@@ -916,8 +920,9 @@ DBInterface <- R6::R6Class(
       withCallingHandlers({
         sqldf::sqldf(query, dbname = self$db_path_name)
       }, warning = function(w) {
-        if (startsWith(conditionMessage(w), "Don't need to call dbFetch()"))
+        if (startsWith(conditionMessage(w), "Don't need to call dbFetch()")) {
           invokeRestart("muffleWarning")
+        }
       })
     },
     update_circuit_details_cleaned = function(circuit_details) {
@@ -930,8 +935,9 @@ DBInterface <- R6::R6Class(
       withCallingHandlers({
         sqldf::sqldf(query, dbname = self$db_path_name)
       }, warning = function(w) {
-        if (startsWith(conditionMessage(w), "Don't need to call dbFetch()"))
+        if (startsWith(conditionMessage(w), "Don't need to call dbFetch()")) {
           invokeRestart("muffleWarning")
+        }
       })
     },
     update_circuit_details_raw = function(circuit_details) {
@@ -943,8 +949,9 @@ DBInterface <- R6::R6Class(
       withCallingHandlers({
         sqldf::sqldf(query, dbname = self$db_path_name)
       }, warning = function(w) {
-        if (startsWith(conditionMessage(w), "Don't need to call dbFetch()"))
+        if (startsWith(conditionMessage(w), "Don't need to call dbFetch()")) {
           invokeRestart("muffleWarning")
+        }
       })
     },
     add_postcode_lon_lat_to_database = function(file_path_name) {
@@ -967,8 +974,9 @@ DBInterface <- R6::R6Class(
       withCallingHandlers({
         invisible(sqldf::sqldf(query, dbname = self$db_path_name)) # stops an empty df being prinited.
       }, warning = function(w) {
-        if (startsWith(conditionMessage(w), "Don't need to call dbFetch()"))
+        if (startsWith(conditionMessage(w), "Don't need to call dbFetch()")) {
           invokeRestart("muffleWarning")
+        }
       })
     },
     add_manufacturer_mapping_table = function(file_path_name) {
@@ -991,8 +999,9 @@ DBInterface <- R6::R6Class(
       withCallingHandlers({
         invisible(sqldf::sqldf(query, dbname = self$db_path_name)) # stops an empty df being prinited.
       }, warning = function(w) {
-        if (startsWith(conditionMessage(w), "Don't need to call dbFetch()"))
+        if (startsWith(conditionMessage(w), "Don't need to call dbFetch()")) {
           invokeRestart("muffleWarning")
+        }
       })
     },
     get_min_timestamp = function() {
