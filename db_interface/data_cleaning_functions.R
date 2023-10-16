@@ -204,13 +204,13 @@ check_day_vs_night_energy <- function(combined_data) {
   combined_data <- mutate(
     combined_data,
     con_type = ifelse(
-    (
-      frac_day<0.75 &
+      (
+        frac_day < 0.75 &
         con_type %in% c("pv_site_net", "pv_site", "pv_inverter_net") &
         (energy_day+energy_night) > ac * 24 * 0.01
-    ),
-    "load",
-    con_type
+      ),
+      "load",
+      con_type
     )
   )
   return(combined_data)
@@ -222,22 +222,22 @@ check_for_reversed_polarity <- function(combined_data) {
   combined_data <- mutate(
     combined_data,
     polarity = ifelse(
-    (
-      abs(min_power) > abs(max_power) &
+      (
+        abs(min_power) > abs(max_power) &
         con_type %in% c("pv_site_net", "pv_site", "pv_inverter_net") &
         (energy_day + energy_day) > ac * 24 * 0.01 &
         min_power < 0.0
-    ),
-    polarity * -1,
-    polarity
+      ),
+      polarity * -1,
+      polarity
     )
   )
   return(combined_data)
 }
 
 check_for_mixed_polarity <- function(combined_data) {
-  # Check for power flowing in both negative and positive direction, if this occurs with values large than 10 % of the
-  # inverter capacity then change # connection type to 'mixed'
+  # Check for power flowing in both negative and positive direction, if this occurs with values large than 10% of the
+  # inverter capacity then change connection type to 'mixed'.
   combined_data <- mutate(
     combined_data,
     con_type = ifelse(max_power > ac * .1 & min_power * -1 > ac * 0.1, "mixed", con_type)
