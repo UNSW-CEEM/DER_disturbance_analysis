@@ -49,7 +49,6 @@ get_upscaling_results_excluding_ufls_affected_circuits <- function(circuit_summa
 group_disconnections_by_manufacturer <- function(circuit_summary, exclude_ufls_circuits = FALSE) {
   # Don't count circuits without a well defined response type.
   if (exclude_ufls_circuits) {
-    # FIXME: Why is 6 used?
     bad_categories <- c("6 Not enough data", "Undefined", "NA", "UFLS Dropout")
   } else {
     bad_categories <- c("6 Not enough data", "Undefined", "NA")
