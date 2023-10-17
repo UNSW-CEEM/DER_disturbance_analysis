@@ -2133,8 +2133,7 @@ server <- function(input,output,session) {
   # Plot the data for the circuit selected in the table
   observeEvent(input$circuit_details_editor_rows_selected, {
     v$proxy_site_details_editor %>% selectRows(NULL)
-    # FIXME: check whether this if statement is wrong.
-    if (length(input$circuit_details_editor_rows_selected == 1)) {
+    if (length(input$circuit_details_editor_rows_selected) == 1) {
       c_id_to_plot <- v$circuit_details_for_editing$c_id[input$circuit_details_editor_rows_selected]
       data_to_view <- filter(v$combined_data, c_id == c_id_to_plot)
       output$site_plot <- renderPlotly({plot_ly(data_to_view, x = ~ts, y = ~power_kW, type = "scattergl")})
@@ -2145,8 +2144,7 @@ server <- function(input,output,session) {
   # Plot the data for the site selected in the table
   observeEvent(input$site_details_editor_rows_selected, {
     v$proxy_circuit_details_editor %>% selectRows(NULL)
-    # FIXME: check whether this if statement is wrong.
-    if (length(input$site_details_editor_rows_selected == 1)) {
+    if (length(input$site_details_editor_rows_selected) == 1) {
       site_id_to_plot <- v$site_details_for_editing$site_id[input$site_details_editor_rows_selected]
       circuits <- filter(v$circuit_details_for_editing, site_id == site_id_to_plot)
       circuits <- unique(circuits$c_id)
