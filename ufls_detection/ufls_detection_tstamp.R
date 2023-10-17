@@ -33,16 +33,8 @@ ufls_detection_tstamp <- function(db,
     start_post_event_window_obj,
     end_event_window_obj
   )
-  # FIXME: This is super convoluted. Can it be fixed?
-  names(post_event_sample_counts)[names(post_event_sample_counts) == "sampled_seconds"] <-
-    "post_event_sampled_seconds"
-  sample_counts_by_c_id <- merge(
-    pre_event_sample_counts,
-    post_event_sample_counts,
-    # FIXME: Is this necessary? Doesn't just one c_id work?
-    by = c("c_id", "c_id"),
-    all = TRUE
-  )
+  names(post_event_sample_counts)[names(post_event_sample_counts) == "sampled_seconds"] <- "post_event_sampled_seconds"
+  sample_counts_by_c_id <- merge(pre_event_sample_counts, post_event_sample_counts, by = "c_id", all = TRUE)
   sample_counts_by_c_id <- mutate(
     sample_counts_by_c_id,
     pre_event_sampled_seconds = ifelse(is.na(pre_event_sampled_seconds), 0, pre_event_sampled_seconds)
