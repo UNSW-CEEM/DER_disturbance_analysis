@@ -10,9 +10,11 @@ ui <- fluidPage(
   tags$head(
     tags$style(HTML("hr {border-top: 1px solid #000000;}"))
   ),
+
   # Allows for the use of notifications.
   useShinyjs(),
   titlePanel("PV System Disturbance Analysis"),
+
   # Input Bar
   tabsetPanel(
     tabPanel("Main", fluid = TRUE,
@@ -170,6 +172,7 @@ ui <- fluidPage(
         )
       )
     ),
+
     tabPanel("Data Cleaning", fluid = TRUE,
       mainPanel(
         plotlyOutput("site_plot"),
@@ -183,6 +186,7 @@ ui <- fluidPage(
         DTOutput("circuit_details_editor")
       )
     ),
+
     tabPanel(
       "Manual compliance",
       fluid = TRUE,
