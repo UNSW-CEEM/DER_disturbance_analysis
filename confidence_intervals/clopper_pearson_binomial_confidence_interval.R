@@ -53,15 +53,17 @@ confidence_interval <- function(x, n, confidence = 0.95) {
   TOL <- 0.00001
 
   # Set upper bound such that the probability of the population proportion exceeding it is alpha/2.
-  # FIXME: don't do one liner functions
-  upper_bound_f <- function(p_est) upper_bound_function(x, n, p_est, alpha)
+  upper_bound_f <- function(p_est) {
+    return(upper_bound_function(x, n, p_est, alpha))
+  }
   upper_bound_left <- x/n
   upper_bound_right <- 1
   upper_bound <- bisection_method(upper_bound_f, upper_bound_left, upper_bound_right, TOL)
 
   # Also set lower bound s.t. the probability of the population proportion exceeding it is alpha/2.
-  # FIXME: don't do one liner functions
-  lower_bound_f <- function(p_est) lower_bound_function(x, n, p_est, alpha)
+  lower_bound_f <- function(p_est) {
+    return(lower_bound_function(x, n, p_est, alpha))
+  }
   lower_bound_left <- 0
   lower_bound_right <- x / n
   lower_bound <- bisection_method(lower_bound_f, lower_bound_left, lower_bound_right, TOL)
