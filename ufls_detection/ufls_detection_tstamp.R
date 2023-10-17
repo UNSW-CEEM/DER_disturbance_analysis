@@ -68,8 +68,7 @@ calc_sampled_time_per_circuit <- function(ts_data, start_time, end_time) {
   ts_data <- mutate(ts_data, min_join_time = ts - max_duration)
   query <- "select * from ts_data
             left join test_sampled_points
-           where ts >= test_point and
-                 test_point >= min_join_time"
+            where ts >= test_point and test_point >= min_join_time"
   ts_data <- sqldf(query)
   ts_data <- mutate(ts_data, ts = as.POSIXct(ts, origin="1970-01-01"))
   ts_data <- mutate(ts_data, t_delta = difftime(ts, test_point, units = "secs"))
