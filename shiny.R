@@ -1060,7 +1060,8 @@ server <- function(input,output,session) {
         logdebug("create plots", logger = app_logger)
 
         # -------- Render plots and save buttons --------
-        # inputs:v$agg_power,  v$sample_count_table, ideal_response_to_plot, agg_norm_power, v$response_count, v$zone_count, v$agg_power, v$distance_response, geo_data, v$combined_data_f
+        # inputs:v$agg_power,  v$sample_count_table, ideal_response_to_plot, agg_norm_power, v$response_count,
+        # v$zone_count, v$agg_power, v$distance_response, geo_data, v$combined_data_f
         # outputs: output$...
         # dependencies: event_longitude(), event_latitude(), zone_one_radius(), pre_event_interval(), duration()
         output$PlotlyTest <- renderPlotly({
@@ -1074,7 +1075,12 @@ server <- function(input,output,session) {
           shinySaveButton("save_underlying", "Save Underlying Data", "Save file as ...", filetype = list(xlsx = "csv"))
         })
         output$save_circuit_summary <- renderUI({
-          shinySaveButton("save_circuit_summary", "Save Circuit Summary", "Save file as ...", filetype = list(xlsx = "csv"))
+          shinySaveButton(
+            "save_circuit_summary",
+            "Save Circuit Summary",
+            "Save file as ...",
+            filetype = list(xlsx = "csv")
+          )
         })
 
         output$batch_save <- renderUI({
