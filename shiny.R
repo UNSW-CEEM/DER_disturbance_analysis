@@ -2164,7 +2164,6 @@ server <- function(input,output,session) {
     i <- info$row
     j <- info$col + 1
     value <- info$value
-    # FIXME: Check whether the double arrow is a thing in R.
     v$site_details_for_editing[i, j] <<- DT::coerceValue(value, v$site_details_for_editing[i, j])
     replaceData(
       v$proxy_site_details_editor,
@@ -2182,7 +2181,6 @@ server <- function(input,output,session) {
     i <- info$row
     j <- info$col + 1
     value <- info$value
-    # FIXME: Check whether the double arrow is a thing in R.
     v$circuit_details_for_editing[i, j] <<- DT::coerceValue(value, v$circuit_details_for_editing[i, j])
     replaceData(
       v$proxy_circuit_details_editor,
