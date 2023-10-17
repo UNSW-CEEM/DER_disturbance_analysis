@@ -16,13 +16,15 @@ manufacturer_install_data <- read.csv(
 
 circuits_to_summarise <- mutate(
   circuits_to_summarise,
-  # FIXME: Surely there is a better way than if else is.na
-  manufacturer = ifelse(is.na(manufacturer), 'Other', manufacturer)
+  # Use mutate_all to be as quick as possible.
+  # https://stackoverflow.com/questions/8161836/how-do-i-replace-na-values-with-zeros-in-an-r-dataframe
+  manufacturer = mutate_all(~replace(manufacturer, is.na(manufacturer), 'Other'))
 )
 manufacturer_install_data <- mutate(
   manufacturer_install_data,
-  # FIXME: Surely there is a better way than if else is.na
-  manufacturer = ifelse(is.na(manufacturer), 'Other', manufacturer)
+  # Use mutate_all to be as quick as possible.
+  # https://stackoverflow.com/questions/8161836/how-do-i-replace-na-values-with-zeros-in-an-r-dataframe
+  manufacturer = mutate_all(~replace(manufacturer, is.na(manufacturer), 'Other'))
 )
 
 manufacturer_install_data <- calc_installed_capacity_by_standard_and_manufacturer(manufacturer_install_data)
