@@ -27,9 +27,7 @@ base_directory_name <- basename(getwd())
 if (base_directory_name == "DER_disturbance_analysis") {
   tool_directory <- getwd()
 } else {
-  print("Script is not being run in DER_disturbance_analysis folder, make sure that tool directory has been set")
-  # FIXME: Remove all hardcoded filepaths
-  tool_directory <- "~/UNSW/MATCH/DER_disturbance_analysis"
+  stop("Script is not being run in DER_disturbance_analysis folder, make sure that tool directory has been set")
 }
 source(sprintf("%s/db_interface/interface.R", tool_directory))
 
