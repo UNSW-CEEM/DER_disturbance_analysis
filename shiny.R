@@ -205,6 +205,7 @@ ui <- fluidPage(
           div(style = "display:inline-block", uiOutput("get_next_c_id")))
       )
     ),
+
     tabPanel(
       "Settings",
       fluid = TRUE,
