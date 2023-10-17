@@ -23,8 +23,9 @@ ufls_detection_voltage <- function(combined_data,
   if (fill_nans) {
     voltage_by_c_id <- mutate(
       voltage_by_c_id,
-      # FIXME: there should be a function instad of this if else is.na combo.
-      post_event_v_mean = ifelse(is.na(post_event_v_mean), 0, post_event_v_mean)
+      # Use mutate_all to be as quick as possible.
+      # https://stackoverflow.com/questions/8161836/how-do-i-replace-na-values-with-zeros-in-an-r-dataframe
+      post_event_v_mean = mutate_all(~replace(post_event_v_mean, is.na(post_event_v_mean), 0))
     )
   }
 
