@@ -445,7 +445,8 @@ run_analysis <- function(data, settings) {
       # -------- determine AS4777.2:2015 over-frequency f-W compliance --------
       if (dim(data$ideal_response_to_plot)[1] > 0) {
         ideal_response_downsampled <- down_sample_1s(
-          data$ideal_response_to_plot, settings$duration, min(combined_data_f$ts))
+          data$ideal_response_to_plot, settings$duration, min(combined_data_f$ts)
+        )
         data$ideal_response_downsampled <- ideal_response_downsampled
         combined_data_f <- calc_error_metric_and_compliance_2(
           combined_data_f,

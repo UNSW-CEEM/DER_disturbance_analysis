@@ -16,7 +16,10 @@ ideal_response <- function(frequency_data, f_ulco, f_hyst, t_hyst, f_upper) {
   norm_power <- c()
   for (i in 1:length(frequency_data$ts)) {
     # Look at last t_hyst seconds of data (the 2015 std default is 60s, the 2020 std default is 20s)
-    last_60_seconds_of_data <- filter(frequency_data, (ts>frequency_data$ts[i] - t_hyst) & (ts <= frequency_data$ts[i]))
+    last_60_seconds_of_data <- filter(
+      frequency_data,
+      (ts > frequency_data$ts[i] - t_hyst) & (ts <= frequency_data$ts[i])
+    )
     # If there is a new over-frequency event (i.e. frequency goes above 50.25Hz and we're not already in a f-W droop)
     # then record this as a new start time.
     if (frequency_data$f[i] >= f_ulco & length(start_times) == length(end_times)) {
@@ -35,7 +38,7 @@ ideal_response <- function(frequency_data, f_ulco, f_hyst, t_hyst, f_upper) {
       # If so, then add this time to end_times, record the ts, set norm_power to the last value in the norm power list
       end_times <- c(end_times, frequency_data$ts[i])
       ts <- c(ts, frequency_data$ts[i])
-      norm_power <- c(norm_power, tail(norm_power, n=1))
+      norm_power <- c(norm_power, tail(norm_power, n = 1))
       f <- c(f, frequency_data$f[i])
     # If this interval is during a f-W droop window (may be the first interval!), then copy across these ts and
     # frequency data points
@@ -46,7 +49,7 @@ ideal_response <- function(frequency_data, f_ulco, f_hyst, t_hyst, f_upper) {
       if (frequency_data$f[i] >= f_ulco) {
         norm_power <- c(
           norm_power,
-          min(norm_p_over_frequency(frequency_data$f[i], f_ulco, f_upper), tail(norm_power, n=1))
+          min(norm_p_over_frequency(frequency_data$f[i], f_ulco, f_upper), tail(norm_power, n = 1))
         )
       } else {
         norm_power <- c(norm_power, tail(norm_power, n = 1))
@@ -109,25 +112,35 @@ calc_error_metric_and_compliance <- function(combined_data, ideal_response_downs
 }
 
 calc_error_metric <- function(combined_data, ideal_response_downsampled) {
-  combined_data <- distinct(combined_data, site_id, ts, .keep_all=TRUE)
-  combined_data <- inner_join(combined_data, ideal_response_downsampled, by=c("ts"="time_group"))
-  combined_data <- mutate(combined_data,
-                          abs_percent_diff_actual_cf_ideal=abs(Site_Event_Normalised_Power_kW-norm_power)/norm_power)
-  combined_data <- mutate(combined_data, percent_diff_actual_cf_ideal=(Site_Event_Normalised_Power_kW-norm_power)/norm_power)
+  combined_data <- distinct(combined_data, site_id, ts, .keep_all = TRUE)
+  combined_data <- inner_join(combined_data, ideal_response_downsampled, by = c("ts", "time_group"))
+  combined_data <- mutate(
+    combined_data,
+    abs_percent_diff_actual_cf_ideal = abs(Site_Event_Normalised_Power_kW - norm_power) / norm_power
+  )
+  combined_data <- mutate(
+    combined_data,
+    percent_diff_actual_cf_ideal = (Site_Event_Normalised_Power_kW - norm_power) / norm_power
+  )
   error_by_c_id <- group_by(combined_data, site_id)
-  error_by_c_id <- summarise(error_by_c_id,
-                             min_diff=min(percent_diff_actual_cf_ideal),
-                             max_diff=max(percent_diff_actual_cf_ideal),
-                             abs_percent_diff_actual_cf_ideal=mean(abs_percent_diff_actual_cf_ideal),
-                             percent_diff_actual_cf_ideal=mean(percent_diff_actual_cf_ideal))
+  error_by_c_id <- summarise(
+    error_by_c_id,
+    min_diff = min(percent_diff_actual_cf_ideal),
+    max_diff = max(percent_diff_actual_cf_ideal),
+    abs_percent_diff_actual_cf_ideal = mean(abs_percent_diff_actual_cf_ideal),
+    percent_diff_actual_cf_ideal = mean(percent_diff_actual_cf_ideal)
+  )
   error_by_c_id <- data.frame(error_by_c_id)
-  error_by_c_id <- mutate(error_by_c_id, mixed_wrt_spec=1)
-  error_by_c_id <- mutate(error_by_c_id, below_spec=ifelse(max_diff<=0,1,0))
-  error_by_c_id <- mutate(error_by_c_id, above_spec=ifelse(min_diff>=0,1,0))
-  error_by_c_id <- mutate(error_by_c_id, mixed_wrt_spec=mixed_wrt_spec-below_spec-above_spec)
-  error_by_c_id <- mutate(error_by_c_id,
-                          combined_error_metric=(below_spec+above_spec) * percent_diff_actual_cf_ideal
-                          + mixed_wrt_spec * abs_percent_diff_actual_cf_ideal)
+  error_by_c_id <- mutate(error_by_c_id, mixed_wrt_spec = 1)
+  error_by_c_id <- mutate(error_by_c_id, below_spec = ifelse(max_diff <= 0, 1, 0))
+  error_by_c_id <- mutate(error_by_c_id, above_spec = ifelse(min_diff >= 0, 1, 0))
+  error_by_c_id <- mutate(error_by_c_id, mixed_wrt_spec = mixed_wrt_spec - below_spec - above_spec)
+  error_by_c_id <- mutate(
+    error_by_c_id,
+    combined_error_metric = (
+      (below_spec + above_spec) * percent_diff_actual_cf_ideal + mixed_wrt_spec * abs_percent_diff_actual_cf_ideal
+    )
+  )
   return(error_by_c_id)
 }
 
@@ -156,7 +169,7 @@ calc_compliance_status <- function(error_by_c_id, threshold_error) {
 }
 
 calc_threshold_error <- function(ideal_response_downsampled) {
-  threshold_error <- mean((1 - ideal_response_downsampled$norm_power)/ideal_response_downsampled$norm_power)
+  threshold_error <- mean((1 - ideal_response_downsampled$norm_power) / ideal_response_downsampled$norm_power)
   return(threshold_error)
 }
 
@@ -180,8 +193,7 @@ calc_error_metric_and_compliance_2 <- function(combined_data,
   # First pass compliance
   ideal_response_downsampled_f <- filter(ideal_response_downsampled, time_group >= start_buffer_t)
   ideal_response_downsampled_f <- filter(ideal_response_downsampled_f, time_group <= end_buffer)
-  # FIXME: Check the by.
-  error_by_c_id <- inner_join(combined_data, ideal_response_downsampled_f, by = c("ts"="time_group"))
+  error_by_c_id <- inner_join(combined_data, ideal_response_downsampled_f, by = c("ts", "time_group"))
   error_by_c_id <- mutate(error_by_c_id, error = (1 - c_id_norm_power) - ((1 - norm_power) * threshold))
   error_by_c_id <- group_by(error_by_c_id, c_id, clean)
   error_by_c_id <- summarise(error_by_c_id, min_error = min(error))
@@ -192,14 +204,14 @@ calc_error_metric_and_compliance_2 <- function(combined_data,
   # Change 'Non compliant' to 'Non Compliant Responding' where complaint at start
   ideal_response_downsampled_f <- filter(ideal_response_downsampled, time_group <= end_buffer_responding)
   # FIXME: Check the by.
-  error_by_c_id <- inner_join(combined_data, ideal_response_downsampled_f, by = c("ts"="time_group"))
+  error_by_c_id <- inner_join(combined_data, ideal_response_downsampled_f, by = c("ts", "time_group"))
   error_by_c_id <- mutate(error_by_c_id, error = (1 - c_id_norm_power) - ((1 - norm_power) * threshold))
   error_by_c_id <- group_by(error_by_c_id, c_id, clean)
   error_by_c_id <- summarise(error_by_c_id, max_error=max(error), compliance_status=first(compliance_status))
   error_by_c_id <- mutate(
     error_by_c_id,
     compliance_status = ifelse(
-      (max_error>=0.0) & (compliance_status == 'Non-compliant'),
+      (max_error >= 0.0) & (compliance_status == 'Non-compliant'),
       'Non-compliant Responding',
       compliance_status
     )
