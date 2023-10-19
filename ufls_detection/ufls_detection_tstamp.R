@@ -35,17 +35,11 @@ ufls_detection_tstamp <- function(db,
   )
   names(post_event_sample_counts)[names(post_event_sample_counts) == "sampled_seconds"] <- "post_event_sampled_seconds"
   sample_counts_by_c_id <- merge(pre_event_sample_counts, post_event_sample_counts, by = "c_id", all = TRUE)
-  sample_counts_by_c_id <- mutate(
+  setnafill(
     sample_counts_by_c_id,
-    # Use mutate_all to be as quick as possible.
-    # https://stackoverflow.com/questions/8161836/how-do-i-replace-na-values-with-zeros-in-an-r-dataframe
-    pre_event_sampled_seconds = mutate_all(~replace(pre_event_sampled_seconds, is.na(pre_event_sampled_seconds), 0))
-  )
-  sample_counts_by_c_id <- mutate(
-    sample_counts_by_c_id,
-    # Use mutate_all to be as quick as possible.
-    # https://stackoverflow.com/questions/8161836/how-do-i-replace-na-values-with-zeros-in-an-r-dataframe
-    post_event_sampled_seconds = mutate_all(~replace(post_event_sampled_seconds, is.na(post_event_sampled_seconds), 0))
+    cols = c("pre_event_sampled_seconds", "post_event_sampled_seconds"),
+    fill = 0,
+    type = "const"
   )
   ufls_dropout <- mutate(
     sample_counts_by_c_id,

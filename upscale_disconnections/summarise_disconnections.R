@@ -108,28 +108,15 @@ join_circuit_summary_and_cer_manufacturer_data <- function(circuit_summary, cer_
 }
 
 impose_sample_size_threshold <- function(disconnection_summary, sample_threshold) {
-  circuit_summary <- mutate(
-    disconnection_summary,
-    sample_threshold,
-    # Use mutate_all to be as quick as possible.
-    # https://stackoverflow.com/questions/8161836/how-do-i-replace-na-values-with-zeros-in-an-r-dataframe
-    manufacturer = mutate_all(~replace(manufacturer, is.na(cer_capacity), "Other"))
-  )
-  circuit_summary <- mutate(
-    disconnection_summary,
-    sample_threshold,
-    # Use mutate_all to be as quick as possible.
-    # https://stackoverflow.com/questions/8161836/how-do-i-replace-na-values-with-zeros-in-an-r-dataframe
-    manufacturer = mutate_all(~replace(manufacturer, is.na(disconnections), "Other"))
-  )
-
-  # Create an Other group for manufacturers with a small sample size.
   disconnection_summary <- mutate(
     disconnection_summary,
     # Use mutate_all to be as quick as possible.
     # https://stackoverflow.com/questions/8161836/how-do-i-replace-na-values-with-zeros-in-an-r-dataframe
-    sample_size = mutate_all(~replace(sample_size, is.na(sample_size), 0))
+    manufacturer = mutate_all(~replace(manufacturer, is.na(disconnections) || is.na(cer_capacity), "Other"))
   )
+
+  # Create an Other group for manufacturers with a small sample size.
+  setnafill(disconnection_summary, cols = c("sample_size"), fill = "Other", type = "const")
   disconnection_summary <- mutate(
     disconnection_summary,
     # FIXME: Get rid of this nasty ifelse, or compartmentalise it.

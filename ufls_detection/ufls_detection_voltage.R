@@ -21,12 +21,7 @@ ufls_detection_voltage <- function(combined_data,
   voltage_by_c_id <- merge(pre_event_voltage, post_event_voltage, by = "c_id", all = TRUE)
 
   if (fill_nans) {
-    voltage_by_c_id <- mutate(
-      voltage_by_c_id,
-      # Use mutate_all to be as quick as possible.
-      # https://stackoverflow.com/questions/8161836/how-do-i-replace-na-values-with-zeros-in-an-r-dataframe
-      post_event_v_mean = mutate_all(~replace(post_event_v_mean, is.na(post_event_v_mean), 0))
-    )
+    setnafill(voltage_by_c_id, cols = c("post_event_v_mean"), fill = 0, type = "const")
   }
 
   ufls_dropout_voltage <- mutate(

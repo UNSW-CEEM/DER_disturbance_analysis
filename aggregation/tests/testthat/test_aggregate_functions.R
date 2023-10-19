@@ -280,12 +280,7 @@ test_that("Test the group by for zone count with just standard version", {
   expected_output <- read.csv(file = expected_output, header = TRUE, stringsAsFactors = FALSE)
   expected_output <- mutate(expected_output, zone = ifelse(zone=='NA', NA, zone))
   expected_output <- mutate(expected_output, response_category=ifelse(response_category == 'NA', NA, response_category))
-  expected_output <- mutate(
-    expected_output, serie
-    # Use mutate_all to be as quick as possible.
-    # https://stackoverflow.com/questions/8161836/how-do-i-replace-na-values-with-zeros-in-an-r-dataframe
-    s_y = mutate_all(~replace(series_y, is.na(series_y), 'NA'))
-  )
+  setnafill(expected_output, cols = c("series_y"), fill = "NA", type = "const")
   out <- out[order(out$series_x, out$series_y),]
   rownames(out) <- NULL
   expected_output <- expected_output[order(expected_output$series_x, expected_output$series_y),]

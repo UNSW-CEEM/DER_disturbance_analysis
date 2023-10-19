@@ -14,18 +14,8 @@ manufacturer_install_data <- read.csv(
   stringsAsFactors = FALSE
 )
 
-circuits_to_summarise <- mutate(
-  circuits_to_summarise,
-  # Use mutate_all to be as quick as possible.
-  # https://stackoverflow.com/questions/8161836/how-do-i-replace-na-values-with-zeros-in-an-r-dataframe
-  manufacturer = mutate_all(~replace(manufacturer, is.na(manufacturer), 'Other'))
-)
-manufacturer_install_data <- mutate(
-  manufacturer_install_data,
-  # Use mutate_all to be as quick as possible.
-  # https://stackoverflow.com/questions/8161836/how-do-i-replace-na-values-with-zeros-in-an-r-dataframe
-  manufacturer = mutate_all(~replace(manufacturer, is.na(manufacturer), 'Other'))
-)
+setnafill(circuits_to_summarise, cols = "manufacturer", fill = "Other", type = "const")
+setnafill(manufacturer_install_data, cols = "manufacturer", fill = "Other", type = "const")
 
 manufacturer_install_data <- calc_installed_capacity_by_standard_and_manufacturer(manufacturer_install_data)
 
