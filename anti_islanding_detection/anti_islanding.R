@@ -101,9 +101,9 @@ summarise_antiislanding_recurrences <- function(combined_data, antiislanding_col
       (!is.na(!!sym(antiislanding_column)) & is.na(lag(!!sym(antiislanding_column))))
     )
   )
-  combined_data <- ungroup(group_by(combined_data, !!sym(id_column) = cumsum(!is.na(is_initial) & is_initial)))
-  combined_data <- mutate(combined_data, !!id_column = ifelse(is.na(!!sym(antiislanding_column)), NA, !!sym(id_column)))
-  combined_data <- mutate(combined_data, !!recurrences_column = sequence(rle(!!sym(antiislanding_column))$length))
+  combined_data <- ungroup(group_by(combined_data, !!sym(id_column) := cumsum(!is.na(is_initial) & is_initial)))
+  combined_data <- mutate(combined_data, !!id_column := ifelse(is.na(!!sym(antiislanding_column)), NA, !!sym(id_column)))
+  combined_data <- mutate(combined_data, !!recurrences_column := sequence(rle(!!sym(antiislanding_column))$length))
 
   summary <- combined_data %>%
     group_by(!!sym(id_column)) %>%
@@ -114,8 +114,8 @@ summarise_antiislanding_recurrences <- function(combined_data, antiislanding_col
       vmax = max(vmax),
       vmean = mean(vmean),
       d = last(d),
-      !!antiislanding_column = first(!!sym(antiislanding_column)),
-      !!recurrences_column = max(!!sym(recurrences_column)),
+      !!antiislanding_column := first(!!sym(antiislanding_column)),
+      !!recurrences_column := max(!!sym(recurrences_column)),
       Standard_Version = first(Standard_Version),
       start_tstamp = min(ts),
       end_tstamp = max(ts)
