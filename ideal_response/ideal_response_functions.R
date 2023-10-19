@@ -203,7 +203,6 @@ calc_error_metric_and_compliance_2 <- function(combined_data,
 
   # Change 'Non compliant' to 'Non Compliant Responding' where complaint at start
   ideal_response_downsampled_f <- filter(ideal_response_downsampled, time_group <= end_buffer_responding)
-  # FIXME: Check the by.
   error_by_c_id <- inner_join(combined_data, ideal_response_downsampled_f, by = c("ts", "time_group"))
   error_by_c_id <- mutate(error_by_c_id, error = (1 - c_id_norm_power) - ((1 - norm_power) * threshold))
   error_by_c_id <- group_by(error_by_c_id, c_id, clean)
