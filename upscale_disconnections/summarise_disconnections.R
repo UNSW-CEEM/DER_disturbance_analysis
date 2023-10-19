@@ -124,7 +124,12 @@ impose_sample_size_threshold <- function(disconnection_summary, sample_threshold
   )
 
   # Create an Other group for manufacturers with a small sample size.
-  disconnection_summary <- mutate(disconnection_summary, sample_size = ifelse(is.na(sample_size), 0, sample_size))
+  disconnection_summary <- mutate(
+    disconnection_summary,
+    # Use mutate_all to be as quick as possible.
+    # https://stackoverflow.com/questions/8161836/how-do-i-replace-na-values-with-zeros-in-an-r-dataframe
+    sample_size = mutate_all(~replace(sample_size, is.na(sample_size), 0))
+  )
   disconnection_summary <- mutate(
     disconnection_summary,
     # FIXME: Get rid of this nasty ifelse, or compartmentalise it.
