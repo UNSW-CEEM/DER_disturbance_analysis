@@ -2,24 +2,24 @@
 
 testthat::context("Test anti-islanding functions.")
 
-DEFAULT_EVENT_TIMESTAMP <- fastPOSIXct("2022-01-01 12:00:00", tz="Australia/Brisbane")
-PRE_EVENT_INTERVAL <- fastPOSIXct("2022-01-01 11:59:55", tz="Australia/Brisbane")
+DEFAULT_EVENT_TIMESTAMP <- fastPOSIXct("2022-01-01 12:00:00", tz = "Australia/Brisbane")
+PRE_EVENT_INTERVAL <- fastPOSIXct("2022-01-01 11:59:55", tz = "Australia/Brisbane")
 WINDOW_LENGTH <- as.integer(5)
 COMBINED_DATA_TEMPLATE <- data.frame(
-  c_id=sample.int(1e6, 1),
-  v=240,
-  vmin=240,
-  vmean=240,
-  vmax=240,
-  ts=DEFAULT_EVENT_TIMESTAMP
+  c_id = sample.int(1e6, 1),
+  v = 240,
+  vmin = 240,
+  vmean = 240,
+  vmax = 240,
+  ts = DEFAULT_EVENT_TIMESTAMP
 )
 THRESHOLD_EXCURSION_RESULT_TEMPLATE <- data.frame(
-  in_event_window=TRUE,
-  vmin_na=FALSE,
-  vmax_na=FALSE,
-  vmean_na=FALSE,
-  antiislanding_v_excursion_2015=NA,
-  antiislanding_v_excursion_2020=NA
+  in_event_window = TRUE,
+  vmin_na = FALSE,
+  vmax_na = FALSE,
+  vmean_na = FALSE,
+  antiislanding_v_excursion_2015 = NA,
+  antiislanding_v_excursion_2020 = NA
 )
 
 test_that("Test 2015 undervoltage detected", {
