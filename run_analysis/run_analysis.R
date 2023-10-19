@@ -14,7 +14,7 @@ if (!exists("app_logger")) {
 validate_pre_event_interval <- function(pre_event_interval, load_start_time, load_end_time, window_length, data) {
   logdebug("Validating pre_event_interval", logger = logger)
   # check pre-event interval is on the selected time offset
-  errors <- list(errors=list(), warnings=list())
+  errors <- list(errors = list(), warnings = list())
   start_time <- as.POSIXct(load_start_time, tz = "Australia/Brisbane")
   end_time <- as.POSIXct(load_end_time, tz = "Australia/Brisbane")
   pre_event_interval <- as.POSIXct(pre_event_interval, tz = "Australia/Brisbane")
@@ -22,24 +22,24 @@ validate_pre_event_interval <- function(pre_event_interval, load_start_time, loa
   if (dim(data_at_set_pre_event_interval)[1] == 0) {
     long_error_message <- "The pre-event time interval does not match any time step in the time series data."
     errors$errors[[length(errors$errors) + 1]] <- list(
-      title="Error in pre-event time interval",
-      body=long_error_message
+      title = "Error in pre-event time interval",
+      body = long_error_message
     )
   }
   # check pre-event interval is inside the time window loaded
   if ((pre_event_interval < start_time) | (pre_event_interval > end_time)) {
     long_error_message <- "The pre-event interval must be within the time window of loaded data."
     errors$errors[[length(errors$errors) + 1]] <- list(
-      title="Error in pre-event time interval",
-      body=long_error_message
+      title = "Error in pre-event time interval",
+      body = long_error_message
     )
   }
   # check window length does not extend outside time window loaded.
   if ((pre_event_interval + window_length * 60) > end_time) {
     long_error_message <- "The event window length must be within the time window of loaded data."
     errors$errors[[length(errors$errors) + 1]] <- list(
-      title="Error in pre-event time interval",
-      body=long_error_message
+      title = "Error in pre-event time interval",
+      body = long_error_message
     )
   }
   return(errors)
@@ -189,10 +189,10 @@ determine_distance_zones <- function(
 normalise_c_id_power_by_pre_event <- function(combined_data_f, pre_event_interval) {
   logdebug('Calc event normalised power', logger = logger)
   event_powers <- filter(combined_data_f, ts > pre_event_interval - d & ts <= pre_event_interval)
-  event_powers <- mutate(event_powers, event_power=power_kW)
+  event_powers <- mutate(event_powers, event_power = power_kW)
   event_powers <- select(event_powers, c_id, clean, event_power)
-  combined_data_f <- left_join(combined_data_f, event_powers, by=c("c_id", "clean"))
-  combined_data_f <- mutate(combined_data_f, c_id_norm_power=power_kW/event_power)
+  combined_data_f <- left_join(combined_data_f, event_powers, by = c("c_id", "clean"))
+  combined_data_f <- mutate(combined_data_f, c_id_norm_power = power_kW / event_power)
   return(combined_data_f)
 }
 
@@ -201,13 +201,13 @@ normalise_c_id_power_by_pre_event <- function(combined_data_f, pre_event_interva
 #' @return An updated dataframe with the column c_id_daily_norm_power added
 normalise_c_id_power_by_daily_max <- function(combined_data, max_power, pre_event_interval) {
   logdebug('Calc daily normalised power', logger = logger)
-  combined_data_f <- left_join(combined_data, max_power, by=c("c_id", "clean"))
-  combined_data_f <- mutate(combined_data_f, c_id_daily_norm_power=power_kW/max_power)
+  combined_data_f <- left_join(combined_data, max_power, by = c("c_id", "clean"))
+  combined_data_f <- mutate(combined_data_f, c_id_daily_norm_power = power_kW / max_power)
   if (!missing(pre_event_interval)) {
     pre_event_daily_norm_power <- filter(combined_data_f, ts > pre_event_interval - d & ts <= pre_event_interval)
     pre_event_daily_norm_power <- mutate(pre_event_daily_norm_power, pre_event_norm_power = c_id_daily_norm_power)
     pre_event_daily_norm_power <- select(pre_event_daily_norm_power, clean, c_id, pre_event_norm_power)
-    combined_data_f <- left_join(combined_data_f, pre_event_daily_norm_power, by=c("c_id", "clean"))
+    combined_data_f <- left_join(combined_data_f, pre_event_daily_norm_power, by = c("c_id", "clean"))
   }
   return(combined_data_f)
 }
@@ -219,7 +219,7 @@ determine_performance_factors <- function(combined_data_f, pre_event_interval) {
   logdebug('Calc site peformance factors', logger = logger)
   combined_data_f <- calc_site_performance_factors(combined_data_f)
   combined_data_f <- setnames(combined_data_f, c("ts"), c("Time"))
-  combined_data_f <- event_normalised_power(combined_data_f, pre_event_interval, keep_site_id=TRUE)
+  combined_data_f <- event_normalised_power(combined_data_f, pre_event_interval, keep_site_id = TRUE)
   combined_data_f <- setnames(
     combined_data_f,
     c("Event_Normalised_Power_kW"),
@@ -258,12 +258,12 @@ upscale_and_summarise_disconnections <- function(circuit_summary, manufacturer_i
   write.csv(
     upscaling_results$manufacturers_missing_from_cer,
     "logging/manufacturers_missing_from_cer.csv",
-    row.names=FALSE
+    row.names = FALSE
   )
   write.csv(
     upscaling_results$manufacturers_missing_from_input_db,
     "logging/manufacturers_missing_from_input_db.csv",
-    row.names=FALSE
+    row.names = FALSE
   )
   return(upscaling_results)
 }
@@ -272,21 +272,21 @@ upscale_and_summarise_disconnections <- function(circuit_summary, manufacturer_i
 #' @return boolean no_grouping, TRUE when no grouping is occuring
 check_grouping <- function(settings) {
   if (
-    settings$standard_agg==FALSE &
-    settings$pst_agg==FALSE &
-    settings$grouping_agg==FALSE &
-    settings$manufacturer_agg==FALSE &
-    settings$model_agg==FALSE &
-    settings$zone_agg==FALSE &
-    settings$circuit_agg==TRUE &
-    settings$compliance_agg==TRUE &
-    settings$compliance_2020_agg==TRUE &
+    settings$standard_agg == FALSE &
+    settings$pst_agg == FALSE &
+    settings$grouping_agg == FALSE &
+    settings$manufacturer_agg == FALSE &
+    settings$model_agg == FALSE &
+    settings$zone_agg == FALSE &
+    settings$circuit_agg == TRUE &
+    settings$compliance_agg == TRUE &
+    settings$compliance_2020_agg == TRUE &
     settings$reconnection_compliance_agg &
-    settings$v_excursion_agg==FALSE
+    settings$v_excursion_agg == FALSE
   ) {
-    no_grouping=TRUE
+    no_grouping <- TRUE
   } else {
-    no_grouping=FALSE
+    no_grouping <- FALSE
   }
   return(no_grouping)
 }
@@ -368,7 +368,7 @@ run_analysis <- function(data, settings) {
       settings$window_length
     )
     voltage_data_summary <- summarise_voltage_data(combined_data_f)
-    combined_data_f <- left_join(combined_data_f, voltage_data_summary, by="c_id")
+    combined_data_f <- left_join(combined_data_f, voltage_data_summary, by = "c_id")
     data$antiislanding_summary <- antiislanding_summary(combined_data_f)
 
     if (length(combined_data_f$ts) > 0) {
@@ -463,7 +463,7 @@ run_analysis <- function(data, settings) {
           compliance_status = ifelse(compliance_status %in% c(NA), "NA", compliance_status)
         )
       } else {
-        combined_data_f <- mutate(combined_data_f, compliance_status="Undefined")
+        combined_data_f <- mutate(combined_data_f, compliance_status = "Undefined")
       }
       if (length(settings$compliance) < 8) {
         combined_data_f <- filter(combined_data_f, compliance_status %in% settings$compliance)
@@ -492,7 +492,7 @@ run_analysis <- function(data, settings) {
           compliance_status_2020 = ifelse(compliance_status_2020 %in% c(NA), "NA", compliance_status_2020)
         )
       } else {
-        combined_data_f <- mutate(combined_data_f, compliance_status_2020="Undefined")
+        combined_data_f <- mutate(combined_data_f, compliance_status_2020 = "Undefined")
       }
       if (length(settings$compliance_2020) < 8) {
         combined_data_f <- filter(combined_data_f, compliance_status_2020 %in% settings$compliance_2020)
@@ -527,8 +527,8 @@ run_analysis <- function(data, settings) {
       if (settings$confidence_category %in% grouping_cols) {
         population_groups <- grouping_cols[settings$confidence_category != grouping_cols]
         population_count_table <- vector_groupby_count(combined_data_f, population_groups)
-        population_count_table <- dplyr::rename(population_count_table, sub_population_size=sample_count)
-        data$sample_count_table <- left_join(population_count_table, data$sample_count_table, by=population_groups)
+        population_count_table <- dplyr::rename(population_count_table, sub_population_size = sample_count)
+        data$sample_count_table <- left_join(population_count_table, data$sample_count_table, by = population_groups)
         data$sample_count_table$percentage_of_sub_pop <- (
           data$sample_count_table$sample_count / data$sample_count_table$sub_population_size
         )
@@ -689,31 +689,27 @@ run_analysis <- function(data, settings) {
         if (is.null(git2r::discover_repository(path = ".", ceiling = NULL))) {
           data$circuit_summary$tool_hash <- Sys.Date()
         } else {
-          data$circuit_summary$tool_hash <- git2r::revparse_single(revision="HEAD")$sha
+          data$circuit_summary$tool_hash <- git2r::revparse_single(revision = "HEAD")$sha
         }
 
         # Combine data sets that have the same grouping so they can be saved in a single file
         if (no_grouping) {
-          #et <- settings$pre_event_interval
-          # agg_norm_power <- event_normalised_power(agg_norm_power, et, keep_site_id=TRUE)
           data$agg_power <- left_join(
             data$agg_power,
             data$agg_norm_power[, c("c_id_norm_power", "c_id", "Time")],
-            by=c("Time", "c_id")
+            by = c("Time", "c_id")
           )
         } else {
-          #et <- settings$pre_event_interval
-          # agg_norm_power <- event_normalised_power(agg_norm_power, et,  keep_site_id=FALSE)
           data$agg_power <- left_join(
             data$agg_power,
             data$agg_norm_power[, c("c_id_norm_power", "series", "Time")],
-            by=c("Time", "series")
+            by = c("Time", "series")
           )
         }
         data$agg_power <- left_join(
           data$agg_power,
           agg_f_and_v[, c("Time", "series", "Voltage", "Frequency")],
-          by=c("Time", "series")
+          by = c("Time", "series")
         )
 
         # Summarise and upscale disconnections on a manufacturer basis.
@@ -751,8 +747,8 @@ run_analysis <- function(data, settings) {
             num_missing_from_input_db
           )
           errors$warnings[[length(errors$warnings) + 1]] <- list(
-            title="Manufacturers missing from datasets",
-            body=long_error_message
+            title = "Manufacturers missing from datasets",
+            body = long_error_message
           )
         }
       }

@@ -1024,7 +1024,7 @@ server <- function(input,output,session) {
 
   # Create plots when update plots button is clicked.
   observeEvent(input$update_plots, {
-    id <- showNotification("Updating plots", duration=1000)
+    id <- showNotification("Updating plots", duration = 1000)
     logdebug("update_plots event triggered", logger = app_logger)
 
     data <- reactiveValuesToList(v)
