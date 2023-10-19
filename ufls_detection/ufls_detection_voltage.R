@@ -18,7 +18,7 @@ ufls_detection_voltage <- function(combined_data,
   post_event_voltage <- calc_average_voltage_per_circuit(post_event_window)
   names(post_event_voltage)[names(post_event_voltage) == "v_mean"] <- "post_event_v_mean"
 
-  voltage_by_c_id <- merge(pre_event_voltage, post_event_voltage, by = c("c_id", "c_id"), all = TRUE)
+  voltage_by_c_id <- merge(pre_event_voltage, post_event_voltage, by = "c_id", all = TRUE)
 
   if (fill_nans) {
     voltage_by_c_id <- mutate(
@@ -31,7 +31,6 @@ ufls_detection_voltage <- function(combined_data,
 
   ufls_dropout_voltage <- mutate(
     voltage_by_c_id,
-    # FIXME: Do not have nested if_elses.
     ufls_status_v = if_else(
       (pre_event_v_mean > 180) & (post_event_v_mean < 180),
       "UFLS Dropout",

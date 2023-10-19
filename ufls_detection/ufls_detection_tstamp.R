@@ -37,15 +37,18 @@ ufls_detection_tstamp <- function(db,
   sample_counts_by_c_id <- merge(pre_event_sample_counts, post_event_sample_counts, by = "c_id", all = TRUE)
   sample_counts_by_c_id <- mutate(
     sample_counts_by_c_id,
-    pre_event_sampled_seconds = ifelse(is.na(pre_event_sampled_seconds), 0, pre_event_sampled_seconds)
+    # Use mutate_all to be as quick as possible.
+    # https://stackoverflow.com/questions/8161836/how-do-i-replace-na-values-with-zeros-in-an-r-dataframe
+    pre_event_sampled_seconds = mutate_all(~replace(pre_event_sampled_seconds, is.na(pre_event_sampled_seconds), 0))
   )
   sample_counts_by_c_id <- mutate(
     sample_counts_by_c_id,
-    post_event_sampled_seconds = ifelse(is.na(post_event_sampled_seconds), 0, post_event_sampled_seconds)
+    # Use mutate_all to be as quick as possible.
+    # https://stackoverflow.com/questions/8161836/how-do-i-replace-na-values-with-zeros-in-an-r-dataframe
+    post_event_sampled_seconds = mutate_all(~replace(post_event_sampled_seconds, is.na(post_event_sampled_seconds), 0))
   )
   ufls_dropout <- mutate(
     sample_counts_by_c_id,
-    # FIXME: if else condition is far too complicated. Need to fix this.
     ufls_status = if_else(
       (
         (pre_event_sampled_seconds / (pre_event_window_length * 60) > pre_pct_sample_seconds_threshold) &
