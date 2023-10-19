@@ -214,10 +214,10 @@ site_categorisation <- function(combined_data) {
         pv_installation_year_month == "0/01/1900",
         "2015-11",
         pv_installation_year_month)
-    ) %>%
-    mutate(
-      pv_installation_year_month = ifelse(is.na(pv_installation_year_month), "2015-11", pv_installation_year_month)
-    ) %>%
+    )
+  column_index <- grep("^pv_installation_year_month$", colnames(combined_data))
+  set(combined_data, which(is.na(combined_data[[column_index]])), column_index, "2015-11")
+  combined_data <- combined_data %>%
     mutate(
       pv_installation_year_month = ifelse(
         nchar(pv_installation_year_month) == 10,
