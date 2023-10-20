@@ -88,8 +88,10 @@ scale_manufacturer_capacities_by_ufls <- function(disconnection_summary, ufls_st
   # Add a UFLS row to the disconnection summary
   ufls_row <- data.frame(
     Standard_Version = "UFLS_disconnections_and_totals_including_ULFS_affected_circuits",
-    manufacturer = "UFLS", disconnections = ufls_stats$disconnections,
-    sample_size = ufls_stats$sample_size, s_state = "UFLS",
+    manufacturer = "UFLS",
+    disconnections = ufls_stats$disconnections,
+    sample_size = ufls_stats$sample_size,
+    s_state = "UFLS",
     cer_capacity = sum(disconnection_summary$cer_capacity, na.rm = TRUE) / (1-ufls_proportion)
   )
   disconnection_summary <- rbind(disconnection_summary, ufls_row)
