@@ -215,6 +215,6 @@ documentation_panel <- function() {
         the updating plots on the main tab, in order to save the manually assigned categories to the manual_compliance column
         in the circuit summary data set the update plots step needs to be run again on the main tab. The circuits are order
         in randomised way but with consistent seed value, so order will be consistent.')
-    )
+  )
   return(panel)
-  }
+}
