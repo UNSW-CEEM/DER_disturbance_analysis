@@ -1,8 +1,8 @@
 source("load_tool_environment.R")
 
 exclude_solar_edge <- TRUE
-region_to_load <- 'SA'
-load_start_time <- '2021-01-24'
+region_to_load <- "SA"
+load_start_time <- "2021-01-24"
 circuit_summary <- read.csv(
   file = "data/2021-01-24/check_against_elisha/circuits_60s.csv",
   header = TRUE,
