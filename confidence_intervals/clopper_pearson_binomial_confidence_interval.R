@@ -1,7 +1,7 @@
 upper_bound_function <- function(x, n, p_estimate, alpha) {
   # At upper bound of Clopper-Pearson confidence interval, where alpha = 1 - confidence:
   # - observations of x successes or less should occur with probability alpha/2.
-  return(pbinom(x, n, p_estimate) - alpha/2)
+  return(pbinom(x, n, p_estimate) - alpha / 2)
 }
 
 lower_bound_function <- function(x, n, p_estimate, alpha) {
@@ -13,11 +13,10 @@ lower_bound_function <- function(x, n, p_estimate, alpha) {
 bisection_method <- function(func, lower_limit, upper_limit, TOL = 0.001, N_max = 100) {
   # Numerical method to find the root(s) of a function.
   # Lower and upper limits straddle the root, i.e. sign(lower_limit) != sign(upper_limit).
-
   N <- 1
   while (N < N_max) {
     midpoint <- (lower_limit + upper_limit) / 2
-    if ((upper_limit - lower_limit)/2 < TOL) {
+    if ((upper_limit - lower_limit) / 2 < TOL) {
       # Solution found, have closed in sufficiently tightly on the root of the function.
       break
     }
@@ -56,7 +55,7 @@ confidence_interval <- function(x, n, confidence = 0.95) {
   upper_bound_f <- function(p_est) {
     return(upper_bound_function(x, n, p_est, alpha))
   }
-  upper_bound_left <- x/n
+  upper_bound_left <- x / n
   upper_bound_right <- 1
   upper_bound <- bisection_method(upper_bound_f, upper_bound_left, upper_bound_right, TOL)
 
