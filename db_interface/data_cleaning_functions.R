@@ -12,9 +12,9 @@ calc_max_kw_per_site <- function(performance_data) {
 sum_manufacturers <- function(manufacturers) {
   unique_manufacturers <- unique(manufacturers)
   if (anyNA(unique_manufacturers)) {
-    manufacturer <- 'NA'
+    manufacturer <- "NA"
   } else if (length(unique_manufacturers) > 1) {
-    manufacturer <- 'Mixed'
+    manufacturer <- "Mixed"
   } else {
     manufacturer <- unique_manufacturers[1]
   }
@@ -33,7 +33,7 @@ group_site_details_to_one_row_per_site <- function(site_details) {
       sum_dc_old = sum(dc_old),
       ac_dc_ratio = mean(ac_dc_ratio),
       manufacturer = sum_manufacturers(manufacturer),
-      model = paste(model, collapse = ' '),
+      model = paste(model, collapse = " "),
       s_postcode = first(s_postcode),
       rows_grouped = length(ac)
     )
@@ -85,7 +85,7 @@ check_for_peak_power_greater_than_dc_capacity <- function(site_details) {
 
 check_for_ac_value_in_watts <- function(site_details) {
   # Calculate helper value
-  site_details <- mutate(site_details, ac_dc_ratio = ac/dc)
+  site_details <- mutate(site_details, ac_dc_ratio = ac / dc)
   # Check if AC value is in watts, if so divide by 1000.
   site_details <- mutate(site_details, ac = ifelse((ac_dc_ratio > 0.1) & (ac > 150), ac / 1000, ac))
   return(site_details)
@@ -146,7 +146,7 @@ calc_sunrise_sunset_bounds <- function(postcode_data, event_date) {
     sunrise = suncalc::getSunlightTimes(
       data = postcode_data,
       tz = "Australia/Brisbane",
-      keep = c('sunrise')
+      keep = c("sunrise")
     )$sunrise
   )
   postcode_data <- mutate(
@@ -154,13 +154,13 @@ calc_sunrise_sunset_bounds <- function(postcode_data, event_date) {
     sunset = suncalc::getSunlightTimes(
       data = postcode_data,
       tz = "Australia/Brisbane",
-      keep = c('sunset')
+      keep = c("sunset")
     )$sunset
   )
   # Create 1 hour buffer either side of sunrise and sunset to allow for large postcodes, as lat and lon is the
   # postcode centre.
-  postcode_data <- mutate(postcode_data, sunrise = sunrise-60*60)
-  postcode_data <- mutate(postcode_data, sunset = sunset+60*60)
+  postcode_data <- mutate(postcode_data, sunrise = sunrise - (60 * 60))
+  postcode_data <- mutate(postcode_data, sunset = sunset + (60 * 60))
   # Format sunrise and sunset as character so it is displayed in Brisbane time in GUI.
   postcode_data <- mutate(
     postcode_data,
@@ -195,11 +195,11 @@ clac_output_summary_values <- function(combined_data) {
   combined_data <- mutate(combined_data, energy_night = ifelse(is.na(energy_night), 0.0, energy_night))
   # Calculate the fraction of gen/load that occured during daylight hours.
   # Use absolute value of power as polarity has not been checked yet.
-  combined_data <- mutate(combined_data, frac_day = round(energy_day/(energy_day+energy_night), digits = 2))
+  combined_data <- mutate(combined_data, frac_day = round(energy_day / (energy_day + energy_night), digits = 2))
 }
 
 check_day_vs_night_energy <- function(combined_data) {
-  # Check for pv connection type, if the type is pv but more than 25% of the gen/load was outside daylight hours then
+  # Check for PV connection type, if the type is PV but more than 25% of the gen/load was outside daylight hours then
   # change to type 'load'. Only change if system has operated at above an average of 1% capacity.
   combined_data <- mutate(
     combined_data,
@@ -217,7 +217,7 @@ check_day_vs_night_energy <- function(combined_data) {
 }
 
 check_for_reversed_polarity <- function(combined_data) {
-  # Check for peak power occuring as a negative value i.e. reversed polarity, if this occurs for pv systems that have
+  # Check for peak power occuring as a negative value i.e. reversed polarity, if this occurs for PV systems that have
   # operated at above an average of 1% capacity then swap polarity.
   combined_data <- mutate(
     combined_data,
@@ -270,7 +270,7 @@ remove_outlying_voltages <- function(time_series) {
   time_series[, voltage_cols] <- (
     time_series[, voltage_cols] * voltage_extremes[match(time_series$c_id, voltage_extremes$c_id), voltage_cols]
   )
-  time_series['v_changed'] <- rowSums(
+  time_series["v_changed"] <- rowSums(
     is.na(time_series[, voltage_cols]) & !is.na(old_time_series[, voltage_cols])
   ) > 0
   return(time_series)
