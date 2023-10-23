@@ -124,7 +124,7 @@ DBInterface <- R6::R6Class(
     check_table_has_expected_columns = function(table, expected_columns) {
       con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)
       if (RSQLite::dbExistsTable(con, table)) {
-        table <- RSQLite::dbGetQuery(con, paste0("SELECT * FROM ", table,  " LIMIT 1"))
+        table <- RSQLite::dbGetQuery(con, paste0("SELECT * FROM ", table, " LIMIT 1"))
         table_column_names <- sort(names(table))
         expected_columns <- sort(expected_columns)
         if (!identical(table_column_names, expected_columns)) {
@@ -940,7 +940,7 @@ DBInterface <- R6::R6Class(
     },
     update_circuit_details_raw = function(circuit_details) {
       query <- "REPLACE INTO circuit_details_raw
-                                SELECT c_id, site_id,  con_type, polarity, manual_droop_compliance,
+                                SELECT c_id, site_id, con_type, polarity, manual_droop_compliance,
                                        manual_reconnect_compliance
                                   FROM circuit_details"
       # Suppress warning

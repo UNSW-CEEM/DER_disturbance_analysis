@@ -175,7 +175,7 @@ determine_distance_zones <- function(
     combined_data_f <- get_distance_from_event(combined_data_f, postcode_data, event_latitude, event_longitude)
     combined_data_f <- get_zones(combined_data_f, zone_one_radius, zone_two_radius, zone_three_radius)
     # FIXME: use setnafill.
-    combined_data_f <- mutate(combined_data_f,  zone = ifelse(zone %in% c(NA), "NA", zone))
+    combined_data_f <- mutate(combined_data_f, zone = ifelse(zone %in% c(NA), "NA", zone))
     if (length(zones) < 3) {
       combined_data_f <- filter(combined_data_f, zone %in% zones)
     }
@@ -639,7 +639,7 @@ run_analysis <- function(data, settings) {
 
         # -------- Initialise aggregate dataframes  --------
         if (settings$norm_power_filter_off_at_t0) {
-          combined_data_for_norm_power <- filter(combined_data_f,  response_category != "5 Off at t0")
+          combined_data_for_norm_power <- filter(combined_data_f, response_category != "5 Off at t0")
         } else {
           combined_data_for_norm_power <- combined_data_f
         }
