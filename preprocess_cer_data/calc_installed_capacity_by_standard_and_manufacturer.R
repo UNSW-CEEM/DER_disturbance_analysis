@@ -46,7 +46,7 @@ get_initial_cap <- function(install_data, min_date, state, man) {
   if (length(install_data$capacity) == 0) {
     initial_cap <- 0.0
   } else {
-    initial_cap <-max(install_data$capacity)
+    initial_cap <- max(install_data$capacity)
   }
   return(initial_cap)
 }
