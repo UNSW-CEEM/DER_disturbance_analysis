@@ -170,7 +170,6 @@ assert_install_data_assumptions <- function(install_data) {
     min(ymd(install_data$date))<ymd("2015-10-01"),
     msg = "Install data first entry does not predate start of transition period"
   )
-
 }
 
 size_grouping <- function(site_details) {
@@ -300,5 +299,5 @@ combine_data_tables <- function(time_series_data, circuit_details, site_details)
 
 get_mode <- function(x) {
   ux <- unique(x)
-  ux[which.max(tabulate(match(x, ux)))]
+  return(ux[which.max(tabulate(match(x, ux)))])
 }
