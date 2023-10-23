@@ -102,7 +102,10 @@ summarise_antiislanding_recurrences <- function(combined_data, antiislanding_col
     )
   )
   combined_data <- ungroup(group_by(combined_data, !!sym(id_column) := cumsum(!is.na(is_initial) & is_initial)))
-  combined_data <- mutate(combined_data, !!id_column := ifelse(is.na(!!sym(antiislanding_column)), NA, !!sym(id_column)))
+  combined_data <- mutate(
+    combined_data,
+    !!id_column := ifelse(is.na(!!sym(antiislanding_column)), NA, !!sym(id_column))
+  )
   combined_data <- mutate(combined_data, !!recurrences_column := sequence(rle(!!sym(antiislanding_column))$length))
 
   summary <- combined_data %>%
