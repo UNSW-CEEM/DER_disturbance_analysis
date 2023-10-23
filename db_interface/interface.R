@@ -17,25 +17,25 @@ DBInterface <- R6::R6Class(
   public = list(
     db_path_name = NULL,
     default_timeseries_column_aliases = list(
-      ts = '_ts',
-      time_stamp = '_ts',
-      utc_tstamp = '_ts',
-      c_id = '_c_id',
-      v = '_voltage',
-      voltage = '_voltage',
-      vmin = '_vmin',
-      vmax = '_vmax',
-      vmean = '_vmean',
-      f = '_frequency',
-      frequency = '_frequency',
-      fmin = '_fmin',
-      fmax = '_fmax',
-      e = '_e',
-      energy = '_e',
-      d = '_d',
-      duration = '_d',
-      p = '_p',
-      power = '_p'
+      ts = "_ts",
+      time_stamp = "_ts",
+      utc_tstamp = "_ts",
+      c_id = "_c_id",
+      v = "_voltage",
+      voltage = "_voltage",
+      vmin = "_vmin",
+      vmax = "_vmax",
+      vmean = "_vmean",
+      f = "_frequency",
+      frequency = "_frequency",
+      fmin = "_fmin",
+      fmax = "_fmax",
+      e = "_e",
+      energy = "_e",
+      d = "_d",
+      duration = "_d",
+      p = "_p",
+      power = "_p"
     ),
     connect_to_new_database = function(db_path_name) {
       if (file.exists(db_path_name)) {
@@ -61,16 +61,16 @@ DBInterface <- R6::R6Class(
     },
     check_tables_have_expected_columns = function() {
       self$check_table_has_expected_columns(
-        'timeseries',
+        "timeseries",
         c("ts", "c_id", "d", "d_key", "e", "f", "fmin", "fmax", "v", "vmin", "vmax", "vmean")
       )
       self$check_table_has_expected_columns(
-        'circuit_details_raw',
+        "circuit_details_raw",
         c("c_id", "site_id", "con_type", "polarity", "manual_droop_compliance", "manual_reconnect_compliance")
       )
-      if (self$check_if_table_exists('circuit_details_cleaned')) {
+      if (self$check_if_table_exists("circuit_details_cleaned")) {
         self$check_table_has_expected_columns(
-          'circuit_details_cleaned',
+          "circuit_details_cleaned",
           c(
             "c_id",
             "site_id",
@@ -90,13 +90,13 @@ DBInterface <- R6::R6Class(
         )
       }
       self$check_table_has_expected_columns(
-        'site_details_raw',
+        "site_details_raw",
         c("site_id", "s_postcode", "s_state", "ac", "dc", "manufacturer", "model", "pv_installation_year_month")
       )
 
-      if (self$check_if_table_exists('site_details_cleaned')) {
+      if (self$check_if_table_exists("site_details_cleaned")) {
         self$check_table_has_expected_columns(
-          'site_details_cleaned',
+          "site_details_cleaned",
           c(
             "site_id",
             "s_postcode",
@@ -117,8 +117,8 @@ DBInterface <- R6::R6Class(
         )
       }
 
-      if (self$check_if_table_exists('postcode_lon_lat')) {
-        self$check_table_has_expected_columns('postcode_lon_lat', c("postcode", "lon", "lat"))
+      if (self$check_if_table_exists("postcode_lon_lat")) {
+        self$check_table_has_expected_columns("postcode_lon_lat", c("postcode", "lon", "lat"))
       }
     },
     check_table_has_expected_columns = function(table, expected_columns) {
@@ -206,9 +206,7 @@ DBInterface <- R6::R6Class(
       # Suppress warning
       withCallingHandlers({
         file_con <- base::file(timeseries)
-        sqldf::read.csv.sql(sql = time_series_build_query,
-                            eol = '\n',
-                            dbname = self$db_path_name)
+        sqldf::read.csv.sql(sql = time_series_build_query, eol = "\n", dbname = self$db_path_name)
         base::close(file_con)
       }, warning = function(w) {
         if (startsWith(conditionMessage(w), "Don't need to call dbFetch()")) {
@@ -235,7 +233,7 @@ DBInterface <- R6::R6Class(
       # Suppress warning
       withCallingHandlers({
         file_con <- base::file(circuit_details)
-        sqldf::read.csv.sql(sql = circuit_details_build_query, eol = '\n', dbname = self$db_path_name)
+        sqldf::read.csv.sql(sql = circuit_details_build_query, eol = "\n", dbname = self$db_path_name)
         base::close(file_con)
       }, warning = function(w) {
         if (startsWith(conditionMessage(w), "Don't need to call dbFetch()")) {
@@ -287,7 +285,7 @@ DBInterface <- R6::R6Class(
         # Suppress warning
         withCallingHandlers({
           file_con <- base::file(alerts_file)
-          sqldf::read.csv.sql(sql = alerts_build_query, eol = '\n', dbname = self$db_path_name)
+          sqldf::read.csv.sql(sql = alerts_build_query, eol = "\n", dbname = self$db_path_name)
           base::close(file_con)
         }, warning = function(w) {
           if (startsWith(conditionMessage(w), "Don't need to call dbFetch()")) {
@@ -336,8 +334,8 @@ DBInterface <- R6::R6Class(
         replace_columns <- paste(", ", replace_columns)
         select_columns <- paste(", ", select_columns)
       } else {
-        replace_columns <- ''
-        select_columns <- ''
+        replace_columns <- ""
+        select_columns <- ""
       }
 
       query <- sprintf(
@@ -364,7 +362,7 @@ DBInterface <- R6::R6Class(
             "The columns _cols_ were found instead.\n\n",
             "Please override the column alaises in the database interface and try again."
           )
-          error_message <- gsub('_cols_', paste(column_names, collapse = ', '), error_message)
+          error_message <- gsub("_cols_", paste(column_names, collapse = ", "), error_message)
           stop(error_message)
         }
       }
@@ -373,7 +371,7 @@ DBInterface <- R6::R6Class(
     get_circuit_details_build_query = function(circuit_details) {
       column_names <- names(read.csv(circuit_details, nrows = 3, header = TRUE))
 
-      column_aliases <- list(c_id = '_c_id', site_id = '_site_id', con_type = '_con_type', polarity = '_polarity')
+      column_aliases <- list(c_id = "_c_id", site_id = "_site_id", con_type = "_con_type", polarity = "_polarity")
 
       query <- "REPLACE INTO circuit_details_raw
           SELECT cast(_c_id AS integer) AS c_id, cast(_site_id AS integer) AS site_id, _con_type AS con_type,
@@ -399,14 +397,14 @@ DBInterface <- R6::R6Class(
       column_names <- names(read.csv(site_details, nrows = 3, header = TRUE))
 
       column_aliases <- list(
-        site_id = '_site_id',
-        s_state = '_s_state',
-        ac = '_ac',
-        dc = '_dc',
-        manufacturer = '_manufacturer',
-        model = '_model',
-        s_postcode = '_s_postcode',
-        pv_installation_year_month = '_pv_installation_year_month'
+        site_id = "_site_id",
+        s_state = "_s_state",
+        ac = "_ac",
+        dc = "_dc",
+        manufacturer = "_manufacturer",
+        model = "_model",
+        s_postcode = "_s_postcode",
+        pv_installation_year_month = "_pv_installation_year_month"
       )
 
       query <- "REPLACE INTO site_details_raw
@@ -434,13 +432,13 @@ DBInterface <- R6::R6Class(
       column_names <- names(read.csv(alerts_file, nrows = 3, header = TRUE))
 
       column_aliases <- list(
-        c_id = '_c_id',
-        GridFaultContactorTrip = '_GridFaultContactorTrip',
-        SYNC_a038_DoOpenArguments = '_SYNC_a038_DoOpenArguments',
-        count_times_open = '_count_times_open',
-        first_timestamp = '_first_timestamp',
-        SYNC_a010_vfCheckFreqWobble = '_SYNC_a010_vfCheckFreqWobble',
-        SYNC_a005_vfCheckUnderVoltage = '_SYNC_a005_vfCheckUnderVoltage'
+        c_id = "_c_id",
+        GridFaultContactorTrip = "_GridFaultContactorTrip",
+        SYNC_a038_DoOpenArguments = "_SYNC_a038_DoOpenArguments",
+        count_times_open = "_count_times_open",
+        first_timestamp = "_first_timestamp",
+        SYNC_a010_vfCheckFreqWobble = "_SYNC_a010_vfCheckFreqWobble",
+        SYNC_a005_vfCheckUnderVoltage = "_SYNC_a005_vfCheckUnderVoltage"
       )
 
       query <- "REPLACE INTO alerts
@@ -514,7 +512,7 @@ DBInterface <- R6::R6Class(
       postcode_data <- self$get_postcode_lon_lat()
       manufacturer_mapping <- self$get_manufacturer_mapping()
 
-      site_details <- left_join(site_details, manufacturer_mapping, by = c('manufacturer' = 'sa'))
+      site_details <- left_join(site_details, manufacturer_mapping, by = c("manufacturer" = "sa"))
       site_details <- mutate(site_details, manufacturer = aemo)
       site_details <- site_details[, !(colnames(site_details) %in% c("sa", "aemo"))]
 
@@ -562,8 +560,8 @@ DBInterface <- R6::R6Class(
         site_details_cleaned_chunk <- site_details_data_cleaning_two(pv_time_series, sites_in_chunk)
         site_details_cleaned <- bind_rows(site_details_cleaned, site_details_cleaned_chunk)
 
-        details_to_add <- select(site_details_cleaned_chunk,  site_id, s_postcode, ac)
-        time_series <- inner_join(time_series, details_to_add, by = 'site_id')
+        details_to_add <- select(site_details_cleaned_chunk, site_id, s_postcode, ac)
+        time_series <- inner_join(time_series, details_to_add, by = "site_id")
 
         circuit_details_cleaned_chunk <- clean_connection_types(time_series, circuits, postcode_data)
         circuit_details_cleaned <- bind_rows(circuit_details_cleaned, circuit_details_cleaned_chunk)
@@ -727,9 +725,9 @@ DBInterface <- R6::R6Class(
         AND e != ''
         AND datetime(ts) >= datetime('start_time')
         AND datetime(ts) <= datetime('end_time')"
-      query <- gsub('duration', duration, query)
-      query <- gsub('start_time', start_time, query)
-      query <- gsub('end_time', end_time, query)
+      query <- gsub("duration", duration, query)
+      query <- gsub("start_time", start_time, query)
+      query <- gsub("end_time", end_time, query)
       time_series <- sqldf::sqldf(query, dbname = self$db_path_name)
       return(time_series)
     },
@@ -743,8 +741,8 @@ DBInterface <- R6::R6Class(
         AND e != ''
         AND datetime(ts) >= datetime('start_time')
         AND datetime(ts) <= datetime('end_time')"
-      query <- gsub('start_time', start_time, query)
-      query <- gsub('end_time', end_time, query)
+      query <- gsub("start_time", start_time, query)
+      query <- gsub("end_time", end_time, query)
       time_series <- sqldf::sqldf(query, dbname = self$db_path_name)
       return(time_series)
     },
@@ -762,8 +760,8 @@ DBInterface <- R6::R6Class(
                     GROUP BY c.c_id;
                    "
       max_power <- sqldf::sqldf(query, dbname = self$db_path_name)
-      max_power <- mutate(max_power, clean = 'raw')
-      if (self$check_if_table_exists('circuit_details_cleaned')) {
+      max_power <- mutate(max_power, clean = "raw")
+      if (self$check_if_table_exists("circuit_details_cleaned")) {
         query <- "SELECT c.c_id AS c_id, max(c.e * c.polarity / (c.d * 1000)) AS max_power FROM
                         ((SELECT c_id, d, e FROM timeseries
                                 WHERE c_id in (SELECT c_id FROM circuit_in_state)) a
@@ -773,7 +771,7 @@ DBInterface <- R6::R6Class(
                     GROUP BY c.c_id;
                    "
         max_power_clean <- sqldf::sqldf(query, dbname = self$db_path_name)
-        max_power_clean <- mutate(max_power_clean, clean = 'clean')
+        max_power_clean <- mutate(max_power_clean, clean = "clean")
         max_power <- bind_rows(max_power, max_power_clean)
       }
       return(max_power)
@@ -855,7 +853,7 @@ DBInterface <- R6::R6Class(
     },
     add_meta_data_to_time_series = function(time_series, circuit_details) {
       details_to_add <- select(circuit_details, c_id, site_id, polarity, con_type)
-      time_series <- inner_join(time_series, details_to_add, by = 'c_id')
+      time_series <- inner_join(time_series, details_to_add, by = "c_id")
       return(time_series)
     },
     create_site_details_cleaned_table = function() {
@@ -972,7 +970,7 @@ DBInterface <- R6::R6Class(
       query <- "REPLACE INTO postcode_lon_lat SELECT * FROM postcode_lon_lat_df"
       # Suppress warning
       withCallingHandlers({
-        invisible(sqldf::sqldf(query, dbname = self$db_path_name)) # stops an empty df being prinited.
+        invisible(sqldf::sqldf(query, dbname = self$db_path_name)) # stops an empty dataframe being printed.
       }, warning = function(w) {
         if (startsWith(conditionMessage(w), "Don't need to call dbFetch()")) {
           invokeRestart("muffleWarning")
@@ -997,7 +995,7 @@ DBInterface <- R6::R6Class(
       query <- "REPLACE INTO manufacturer_mapping SELECT * FROM manufacturer_mapping_df"
       # Suppress warning
       withCallingHandlers({
-        invisible(sqldf::sqldf(query, dbname = self$db_path_name)) # stops an empty df being prinited.
+        invisible(sqldf::sqldf(query, dbname = self$db_path_name)) # stops an empty dataframe being printed.
       }, warning = function(w) {
         if (startsWith(conditionMessage(w), "Don't need to call dbFetch()")) {
           invokeRestart("muffleWarning")
@@ -1018,7 +1016,7 @@ DBInterface <- R6::R6Class(
     },
     check_if_table_exists = function(table_name) {
       query <- "SELECT count(*) AS flag FROM sqlite_master WHERE type='table' AND name='table_name'"
-      query <- gsub('table_name', table_name, query)
+      query <- gsub("table_name", table_name, query)
       con <- RSQLite::dbConnect(RSQLite::SQLite(), self$db_path_name)
       exists_flag <- RSQLite::dbGetQuery(con, query)
       RSQLite::dbDisconnect(con)
