@@ -95,7 +95,7 @@ assert_raw_site_details_assumptions <- function(site_details) {
 
 perform_power_calculations <- function(master_data_table) {
   # Calculate the average power output over the sample time base on the
-  # cumulative energy and duration length.Assuming energy is joules and duration is in seconds.
+  # cumulative energy and duration length.Assuming energy is Joules and duration is in seconds.
   master_data_table <- mutate(master_data_table, e_polarity = e*polarity)
   master_data_table <- mutate(master_data_table, power_kW = e_polarity/(d * 1000))
   return(master_data_table)
@@ -110,7 +110,7 @@ process_install_data <- function(install_data) {
     c("s_state", "Grouping", "pv_installation_year_month", "Capacity")
   )
   install_data <- site_categorisation(install_data)
-  # Convert column names to same format as solar analytics data.
+  # Convert column names to same format as Solar Analytics data.
   install_data <- setnames(install_data, c("pv_installation_year_month"), c("date"))
   # For each inverter standard group find the install capacity when the standard came into force.
   start_date <- min(install_data$date)
@@ -274,13 +274,8 @@ site_categorisation <- function(combined_data) {
 }
 
 assert_site_install_date_assumptions <- function(site_details) {
-  # Check in coming  data for conformance to data processing assumptions
-  # We assume that the pv installation year month will be either of the form
-  # YYYY-MM or YYYY-MM-DD
-  assert_that(
-    all(length(pv_installation_year_month) %in% c(7, 10)),
-    msg = "pv_installation_year_month has an unexpected format, should be YYYY-MM or YYYY-MM-DD"
-  )
+  # Check in coming  data for conformance to data processing assumptions.
+  # We assume that the PV installation year month will be either of the form YYYY-MM or YYYY-MM-DD
   assert_that(
     all(length(pv_installation_year_month) %in% c(7, 10)),
     msg = "pv_installation_year_month has an unexpected format, should be YYYY-MM or YYYY-MM-DD"

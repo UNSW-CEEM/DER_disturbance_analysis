@@ -40,7 +40,7 @@ install_data <- data.table(install_data)
 install_data <- install_data[, date = as.Date(date)]
 install_data <- setkey(install_data, state, sizegroup, date)
 
-combined <- as.data.frame(install_data[date_table, roll = T ])
+combined <- as.data.frame(install_data[date_table, roll = T])
 
 combined[is.na(combined)] <- 0
 

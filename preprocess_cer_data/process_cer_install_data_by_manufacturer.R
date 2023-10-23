@@ -11,7 +11,7 @@ date_vector <- seq(as.Date(start_date), as.Date(end_date), by = "days")
 manufacturers <- unique(install_data$manufacturer)
 
 state_table <- data.table(
-  state = c('QLD', 'NSW', "VIC", "TAS", 'SA', 'WA'),
+  state = c("QLD", "NSW", "VIC", "TAS", "SA", "WA"),
   dummy = 1
 )
 
@@ -36,9 +36,9 @@ install_data <- data.table(install_data)
 install_data <- install_data[, date = as.Date(date)]
 install_data <- setkey(install_data, state, manufacturer, date)
 
-combined <- as.data.frame(install_data[date_table, roll = T ])
+combined <- as.data.frame(install_data[date_table, roll = T])
 
-combined <- filter(combined, format(date, format = '%d') == "01")
+combined <- filter(combined, format(date, format = "%d") == "01")
 
 combined <- select(combined, date, state, manufacturer, capacity, number)
 
