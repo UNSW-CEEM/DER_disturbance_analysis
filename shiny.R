@@ -1060,7 +1060,7 @@ server <- function(input,output,session) {
         logdebug("create plots", logger = app_logger)
 
         # -------- Render plots and save buttons --------
-        # inputs:v$agg_power,  v$sample_count_table, ideal_response_to_plot, agg_norm_power, v$response_count,
+        # inputs:v$agg_power, v$sample_count_table, ideal_response_to_plot, agg_norm_power, v$response_count,
         # v$zone_count, v$agg_power, v$distance_response, geo_data, v$combined_data_f
         # outputs: output$...
         # dependencies: event_longitude(), event_latitude(), zone_one_radius(), pre_event_interval(), duration()
@@ -1162,7 +1162,7 @@ server <- function(input,output,session) {
 
         if ("width" %in% names(v$sample_count_table)) {
           sample_count_table <- datatable(v$sample_count_table) %>%
-            formatStyle("width",  background = styleColorBar(c(0, 1), "red"))
+            formatStyle("width", background = styleColorBar(c(0, 1), "red"))
         } else {
           sample_count_table <- v$sample_count_table
         }

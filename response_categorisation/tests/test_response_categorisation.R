@@ -132,7 +132,7 @@ test_that("Test a simple example with one systems through high level function", 
   power_kW <- c(10, 10, 10, 10, 10, 10)
   input_data <- data.frame(c_id, ts, power_kW, d, clean, stringsAsFactors = FALSE)
   NED_threshold_pct <- 0.8
-  out <- categorise_response(input_data, event_time, window_length,NED_threshold_pct)
+  out <- categorise_response(input_data, event_time, window_length, NED_threshold_pct)
   ts <- c(
     "2018-01-01 13:11:55",
     "2018-01-01 13:12:55",
@@ -177,7 +177,7 @@ test_that("Test a simple example with one systems with no pre event interval", {
   power_kW <- c(10, 10, 10, 10, 10, 10)
   input_data <- data.frame(c_id, ts, power_kW, d, clean, stringsAsFactors = FALSE)
   NED_threshold_pct <- 0.8
-  out <- categorise_response(input_data, event_time, window_length,NED_threshold_pct)
+  out <- categorise_response(input_data, event_time, window_length, NED_threshold_pct)
   ts <- c(
     "2018-01-01 13:10:55",
     "2018-01-01 13:12:55",
@@ -218,13 +218,13 @@ test_that("Test a simple example with one system with data points above threshol
     "2018-01-01 13:16:55"
   )
   ts <- as.POSIXct(strptime(ts, "%Y-%m-%d %H:%M:%S", tz = "Australia/Brisbane"))
-  d <- c(60, 60,  60, 60,60)
-  c_id <- c("1","1", "1", "1","1")
-  clean <- c("raw", "raw", "raw", "raw","raw")
-  power_kW <- c(10, 10, 10, 10,10)
+  d <- c(60, 60, 60, 60, 60)
+  c_id <- c("1", "1", "1", "1", "1")
+  clean <- c("raw", "raw", "raw", "raw", "raw")
+  power_kW <- c(10, 10, 10, 10, 10)
   input_data <- data.frame(c_id, ts, power_kW, d, clean, stringsAsFactors = FALSE)
   NED_threshold_pct <- 0.8
-  out <- categorise_response(input_data, event_time, window_length,NED_threshold_pct)
+  out <- categorise_response(input_data, event_time, window_length, NED_threshold_pct)
   ts <- c(
     "2018-01-01 13:11:55",
     "2018-01-01 13:12:55",
@@ -233,11 +233,11 @@ test_that("Test a simple example with one system with data points above threshol
     "2018-01-01 13:16:55"
   )
   ts <- as.POSIXct(strptime(ts, "%Y-%m-%d %H:%M:%S", tz = "Australia/Brisbane"))
-  d <- c(60, 60,  60, 60,60)
-  c_id <- c("1","1", "1", "1","1")
-  clean <- c("raw", "raw", "raw", "raw","raw")
-  power_kW <- c(10, 10, 10, 10,10)
-  response_category <- c("1 Ride Through", "1 Ride Through", "1 Ride Through", "1 Ride Through","1 Ride Through")
+  d <- c(60, 60, 60, 60, 60)
+  c_id <- c("1", "1", "1", "1", "1")
+  clean <- c("raw", "raw", "raw", "raw", "raw")
+  power_kW <- c(10, 10, 10, 10, 10)
+  response_category <- c("1 Ride Through", "1 Ride Through", "1 Ride Through", "1 Ride Through", "1 Ride Through")
 
   expected_output <- data.frame(c_id, ts, power_kW, d, clean, response_category, stringsAsFactors = FALSE)
   expect_equal(out, expected_output, tolerance = 0.001)
@@ -251,18 +251,18 @@ test_that("Test a simple example with one system with data points below threshol
   ts <- as.POSIXct(strptime(ts, "%Y-%m-%d %H:%M:%S", tz = "Australia/Brisbane"))
   d <- c(60, 60, 60)
   c_id <- c("1", "1", "1")
-  clean <- c("raw",  "raw", "raw")
-  power_kW <- c(10,  10, 10)
+  clean <- c("raw", "raw", "raw")
+  power_kW <- c(10, 10, 10)
   input_data <- data.frame(c_id, ts, power_kW, d, clean, stringsAsFactors = FALSE)
   NED_threshold_pct <- 0.8
-  out <- categorise_response(input_data, event_time, window_length,NED_threshold_pct)
+  out <- categorise_response(input_data, event_time, window_length, NED_threshold_pct)
   ts <- c("2018-01-01 13:11:55", "2018-01-01 13:15:55", "2018-01-01 13:16:55")
   ts <- as.POSIXct(strptime(ts, "%Y-%m-%d %H:%M:%S", tz = "Australia/Brisbane"))
-  d <- c(60, 60,  60)
+  d <- c(60, 60, 60)
   c_id <- c("1", "1", "1")
   clean <- c("raw", "raw", "raw")
   power_kW <- c(10, 10, 10)
-  response_category <- c("6 Not enough data","6 Not enough data","6 Not enough data")
+  response_category <- c("6 Not enough data", "6 Not enough data", "6 Not enough data")
 
   expected_output <- data.frame(c_id, ts, power_kW, d, clean, response_category, stringsAsFactors = FALSE)
 
@@ -283,12 +283,12 @@ test_that("Test a simple example with one system with data points below threshol
   )
   ts <- as.POSIXct(strptime(ts, "%Y-%m-%d %H:%M:%S", tz = "Australia/Brisbane"))
   d <- c(5,5,5,5,5,5)
-  c_id <- c("1", "1", "1","1", "1", "1")
-  clean <- c("raw",  "raw", "raw","raw",  "raw", "raw")
-  power_kW <- c(10,  10, 10,10,  10, 10)
+  c_id <- c("1", "1", "1", "1", "1", "1")
+  clean <- c("raw", "raw", "raw", "raw", "raw", "raw")
+  power_kW <- c(10, 10, 10, 10, 10, 10)
   input_data <- data.frame(c_id, ts, power_kW, d, clean, stringsAsFactors = FALSE)
   NED_threshold_pct <- 0.8
-  out <- categorise_response(input_data, event_time, window_length,NED_threshold_pct)
+  out <- categorise_response(input_data, event_time, window_length, NED_threshold_pct)
   ts <- c(
     "2018-01-01 13:11:55",
     "2018-01-01 13:12:00",
@@ -301,7 +301,7 @@ test_that("Test a simple example with one system with data points below threshol
   d <- c(5,5,5,5,5,5)
   c_id <- c("1", "1", "1", "1", "1", "1")
   clean <- c("raw", "raw", "raw", "raw", "raw", "raw")
-  power_kW <- c(10,  10, 10,10,  10, 10)
+  power_kW <- c(10, 10, 10, 10, 10, 10)
   response_category <- c(
     "6 Not enough data",
     "6 Not enough data",

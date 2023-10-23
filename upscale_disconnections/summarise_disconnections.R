@@ -184,7 +184,7 @@ get_manufacturer_capacities <- function(manufacturer_install_data, event_date, r
   manufacturer_install_data <- filter(manufacturer_install_data, s_state == region)
   manufacturer_install_data <- manufacturer_install_data[order(manufacturer_install_data$date), ]
   manufacturer_install_data <- filter(manufacturer_install_data, date <= event_date)
-  manufacturer_install_data <- group_by(manufacturer_install_data, Standard_Version, manufacturer,  s_state)
+  manufacturer_install_data <- group_by(manufacturer_install_data, Standard_Version, manufacturer, s_state)
   manufacturer_install_data <- summarise(manufacturer_install_data, capacity = last(standard_capacity))
   manufacturer_install_data <- as.data.frame(manufacturer_install_data)
   return(manufacturer_install_data)
