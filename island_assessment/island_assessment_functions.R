@@ -40,8 +40,8 @@ identify_islanded_sites <- function(combined_data, alert_data, event_time) {
 
   combined_data <- left_join(
     combined_data,
-    alert_data[,c('c_id', 'Islanded', 'SYNC_a005_vfCheckUnderVoltage', 'SYNC_a010_vfCheckFreqWobble')],
-    by = c('c_id')
+    alert_data[, c("c_id", "Islanded", "SYNC_a005_vfCheckUnderVoltage", "SYNC_a010_vfCheckFreqWobble")],
+    by = "c_id"
   )
   combined_data <- mutate(combined_data, Islanded = ifelse(is.na(Islanded), 0, Islanded))
 
@@ -97,7 +97,7 @@ assess_islands <- function(event_window_data) {
     event_window_data <- mutate(
       event_window_data,
       island_assessment = ifelse(
-        island_assessment == "Undefined" & response_category %in% c('3 Drop to Zero', '4 Disconnect'),
+        island_assessment == "Undefined" & response_category %in% c("3 Drop to Zero", "4 Disconnect"),
         "PV disconnect",
         island_assessment
       )
