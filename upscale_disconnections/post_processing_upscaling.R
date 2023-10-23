@@ -28,8 +28,8 @@ if (exclude_solar_edge) {
 }
 
 disconnection_summary <- group_disconnections_by_manufacturer(circuits_to_summarise)
-manufacturer_capacitys <- get_manufacturer_capacitys(manufacturer_install_data, load_start_time, region_to_load)
-disconnection_summary <- join_circuit_summary_and_cer_manufacturer_data(disconnection_summary, manufacturer_capacitys)
+manufacturer_capacities <- get_manufacturer_capacities(manufacturer_install_data, load_start_time, region_to_load)
+disconnection_summary <- join_circuit_summary_and_cer_manufacturer_data(disconnection_summary, manufacturer_capacities)
 manufacturers_missing_from_cer <- get_manufactures_in_input_db_but_not_cer(disconnection_summary)
 manufacturers_missing_from_input_db <- get_manufactures_in_cer_but_not_input_db(disconnection_summary)
 disconnection_summary <- impose_sample_size_threshold(disconnection_summary, sample_threshold = 30)

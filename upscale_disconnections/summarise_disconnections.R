@@ -2,8 +2,8 @@ get_upscaling_results <- function(circuit_summary, manufacturer_install_data, ev
   # Upscale the proportion of disconnecting circuits by manufacturer to better represent the installed capacity.
   out <- list()
   disconnection_summary <- group_disconnections_by_manufacturer(circuit_summary)
-  manufacturer_capacitys <- get_manufacturer_capacitys(manufacturer_install_data, event_date, region)
-  disconnection_summary <- join_circuit_summary_and_cer_manufacturer_data(disconnection_summary, manufacturer_capacitys)
+  manufacturer_capacities <- get_manufacturer_capacities(manufacturer_install_data, event_date, region)
+  disconnection_summary <- join_circuit_summary_and_cer_manufacturer_data(disconnection_summary, manufacturer_capacities)
   out$manufacturers_missing_from_cer <- get_manufactures_in_input_db_but_not_cer(disconnection_summary)
   out$manufacturers_missing_from_input_db <- get_manufactures_in_cer_but_not_input_db(disconnection_summary)
   disconnection_summary <- impose_sample_size_threshold(disconnection_summary, sample_threshold)
@@ -22,8 +22,8 @@ get_upscaling_results_excluding_ufls_affected_circuits <- function(circuit_summa
   out <- list()
   disconnection_summary <- group_disconnections_by_manufacturer(circuit_summary, exclude_ufls_circuits = TRUE)
   ufls_stats <- get_number_of_ufls_disconnections(circuit_summary$response_category)
-  manufacturer_capacitys <- get_manufacturer_capacitys(manufacturer_install_data, event_date, region)
-  disconnection_summary <- join_circuit_summary_and_cer_manufacturer_data(disconnection_summary, manufacturer_capacitys)
+  manufacturer_capacities <- get_manufacturer_capacities(manufacturer_install_data, event_date, region)
+  disconnection_summary <- join_circuit_summary_and_cer_manufacturer_data(disconnection_summary, manufacturer_capacities)
   out$manufacturers_missing_from_cer <- get_manufactures_in_input_db_but_not_cer(disconnection_summary)
   out$manufacturers_missing_from_input_db <- get_manufactures_in_cer_but_not_input_db(disconnection_summary)
   disconnection_summary <- scale_manufacturer_capacities_by_ufls(disconnection_summary, ufls_stats)
@@ -180,7 +180,7 @@ get_manufactures_in_cer_but_not_input_db <- function(disconnection_summary) {
   return(disconnection_summary)
 }
 
-get_manufacturer_capacitys <- function(manufacturer_install_data, event_date, region) {
+get_manufacturer_capacities <- function(manufacturer_install_data, event_date, region) {
   manufacturer_install_data <- filter(manufacturer_install_data, s_state == region)
   manufacturer_install_data <- manufacturer_install_data[order(manufacturer_install_data$date), ]
   manufacturer_install_data <- filter(manufacturer_install_data, date <= event_date)
