@@ -1,17 +1,17 @@
 categorise_row <- function(response_category,
-                            ramp_above_threshold,
-                            ramp_threshold_for_compliance,
-                            ramp_threshold_for_non_compliance) {
-  if (response_category %in% c('4 Disconnect', '3 Drop to Zero')) {
+                           ramp_above_threshold,
+                           ramp_threshold_for_compliance,
+                           ramp_threshold_for_non_compliance) {
+  if (response_category %in% c("4 Disconnect", "3 Drop to Zero")) {
     if (is.na(ramp_above_threshold)) {
-      category <- 'Cannot be set'
+      category <- "Cannot be set"
     } else {
       if (ramp_above_threshold < ramp_threshold_for_compliance) {
-        category <- 'Compliant'
+        category <- "Compliant"
       } else if (ramp_above_threshold > ramp_threshold_for_non_compliance) {
-        category <- 'Non Compliant'
+        category <- "Non Compliant"
       } else {
-        category <- 'Unsure'
+        category <- "Unsure"
       }
     }
   } else {
