@@ -115,7 +115,6 @@ process_install_data <- function(install_data) {
   # For each inverter standard group find the install capacity when the standard came into force.
   start_date <- min(install_data$date)
   installed_start_standard <- group_by(install_data, Standard_Version, Grouping, s_state)
-  # FIXME: the below is incredibly convoluted. Split out initial cap into a separate variable.
   installed_start_standard <- summarise(
     installed_start_standard,
     initial_cap = install_data$Capacity[
