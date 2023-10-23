@@ -174,6 +174,7 @@ determine_distance_zones <- function(
   if (length(combined_data_f$ts) > 0) {
     combined_data_f <- get_distance_from_event(combined_data_f, postcode_data, event_latitude, event_longitude)
     combined_data_f <- get_zones(combined_data_f, zone_one_radius, zone_two_radius, zone_three_radius)
+    # FIXME: use setnafill.
     combined_data_f <- mutate(combined_data_f,  zone = ifelse(zone %in% c(NA), "NA", zone))
     if (length(zones) < 3) {
       combined_data_f <- filter(combined_data_f, zone %in% zones)
@@ -231,7 +232,11 @@ determine_performance_factors <- function(combined_data_f, pre_event_interval) {
 
 #' Upscale disconnections
 #' @return A list of data objects summarising disconnections upscaled by manufacturer
-upscale_and_summarise_disconnections <- function(circuit_summary, manufacturer_install_data, load_date, region_to_load, exclude_solar_edge) {
+upscale_and_summarise_disconnections <- function(circuit_summary,
+                                                 manufacturer_install_data,
+                                                 load_date,
+                                                 region_to_load,
+                                                 exclude_solar_edge) {
   logdebug('Summarise and upscale disconnections on a manufacturer basis.', logger = logger)
   if (exclude_solar_edge) {
     circuits_to_summarise <- filter(circuit_summary, manufacturer != "SolarEdge" | is.na(manufacturer))
@@ -374,7 +379,12 @@ run_analysis <- function(data, settings) {
     if (length(combined_data_f$ts) > 0) {
       # -------- categorise response --------
       combined_data_f <- categorise_response(
-        combined_data_f, settings$pre_event_interval, settings$window_length, settings$NED_threshold)
+        combined_data_f,
+        settings$pre_event_interval,
+        settings$window_length,
+        settings$NED_threshold
+      )
+      # FIXME: use setnafill.
       combined_data_f <- mutate(
         combined_data_f,
         response_category = ifelse(response_category %in% c(NA), "NA", response_category)
@@ -458,6 +468,7 @@ run_analysis <- function(data, settings) {
           settings$end_buffer_responding,
           settings$disconnecting_threshold
         )
+        # FIXME: use setnafill.
         combined_data_f <- mutate(
           combined_data_f,
           compliance_status = ifelse(compliance_status %in% c(NA), "NA", compliance_status)
@@ -487,6 +498,7 @@ run_analysis <- function(data, settings) {
           settings$end_buffer_responding_2020,
           settings$disconnecting_threshold
         )
+        # FIXME: use setnafill.
         combined_data_f <- mutate(
           combined_data_f,
           compliance_status_2020 = ifelse(compliance_status_2020 %in% c(NA), "NA", compliance_status_2020)
