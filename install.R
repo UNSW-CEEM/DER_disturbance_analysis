@@ -4,13 +4,13 @@
 #' found, using will install it and then load it.
 #' @param ... The libraries / dependencies / packages to load.
 using <- function(...) {
-    libs <- unlist(list(...))
-    req <- unlist(lapply(libs, require, character.only = TRUE))
-    need <- libs[req == FALSE]
-    if (length(need) > 0) {
-        install.packages(need)
-        lapply(need, require, character.only = TRUE)
-    }
+  libs <- unlist(list(...))
+  req <- unlist(lapply(libs, require, character.only = TRUE))
+  need <- libs[req == FALSE]
+  if (length(need) > 0) {
+    install.packages(need)
+    lapply(need, require, character.only = TRUE)
+  }
 }
 
 using(
