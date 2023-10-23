@@ -44,7 +44,7 @@ vector_groupby_power <- function(data, grouping_cols) {
   grouping_cols <- c("ts", series_cols)
   data <- group_by(data, .dots = grouping_cols)
   data <- summarise(data , Power_kW = sum(power_kW, na.rm = TRUE))
-  data$series <- do.call(paste, c(data[series_cols], sep = "-" ))
+  data$series <- do.call(paste, c(data[series_cols], sep = "-"))
   data <- setnames(data, c("ts", "Power_kW"), c("Time", "Power_kW"))
   data <- as.data.frame(data)
   return(data)
@@ -55,7 +55,7 @@ vector_groupby_f_and_v <- function(data, grouping_cols) {
   grouping_cols <- c("ts", series_cols)
   data <- group_by(data, .dots = grouping_cols)
   data <- summarise(data, Frequency = mean(f, na.rm = TRUE), Voltage = mean(v, na.rm = TRUE))
-  data$series <- do.call(paste, c(data[series_cols], sep = "-" ))
+  data$series <- do.call(paste, c(data[series_cols], sep = "-"))
   data <- setnames(data, c("ts"), c("Time"))
   data <- as.data.frame(data)
   return(data)
@@ -66,7 +66,7 @@ vector_groupby_norm_power <- function(data, grouping_cols) {
   grouping_cols <- c("ts", series_cols)
   data <- group_by(data, .dots = grouping_cols)
   data <- summarise(data , c_id_norm_power = mean(c_id_norm_power, na.rm = TRUE))
-  data$series <- do.call(paste, c(data[series_cols], sep = "-" ))
+  data$series <- do.call(paste, c(data[series_cols], sep = "-"))
   data <- setnames(data, c("ts"), c("Time"))
   data <- as.data.frame(data)
   return(data)
@@ -87,9 +87,9 @@ vector_groupby_count_response <- function(data, grouping_cols) {
   add_cols <- grouping_cols[!grouping_cols %in% c("clean", "response_category")]
   data <- group_by(data, .dots = grouping_cols)
   data <- summarise(data , sample_count = length(unique(c_id)))
-  data$series_x <- do.call(paste, c(data[c("response_category", "clean")], sep = "-" ))
+  data$series_x <- do.call(paste, c(data[c("response_category", "clean")], sep = "-"))
   if (length(add_cols) >= 1) {
-    data$series_y <- do.call(paste, c(data[add_cols], sep = "-" ))
+    data$series_y <- do.call(paste, c(data[add_cols], sep = "-"))
   } else {
     data <- mutate(data, series_y = "All")
   }
@@ -109,9 +109,9 @@ vector_groupby_count_zones <- function(data, grouping_cols) {
   grouping_cols <- unique(c(grouping_cols, add_cols))
   data <- group_by(data, .dots = grouping_cols)
   data <- summarise(data , sample_count = length(unique(c_id)))
-  data$series_x <- do.call(paste, c(data[c("clean", "zone")], sep = "-" ))
+  data$series_x <- do.call(paste, c(data[c("clean", "zone")], sep = "-"))
   if (length(add_cols) >= 1) {
-    data$series_y <- do.call(paste, c(data[add_cols], sep = "-" ))
+    data$series_y <- do.call(paste, c(data[add_cols], sep = "-"))
   } else {
     data <- mutate(data, series_y = "All")
   }
@@ -170,6 +170,6 @@ vector_groupby_system <- function(data, grouping_cols) {
   data <- mutate(data, percentage_disconnect = round(num_disconnects / system_count, digits = 2))
   data <- as.data.frame(data)
   data$series <- data$percentage_disconnect
-  data$info <- do.call(paste, c(data[c("s_postcode", "percentage_disconnect", "system_count")], sep = "-" ))
+  data$info <- do.call(paste, c(data[c("s_postcode", "percentage_disconnect", "system_count")], sep = "-"))
   return(data)
 }
