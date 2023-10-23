@@ -56,7 +56,7 @@ ideal_response <- function(frequency_data, f_ulco, f_hyst, t_hyst, f_upper) {
       }
     }
   }
-  response_data <- data.frame(ts, f, norm_power, stringsAsFactors=FALSE)
+  response_data <- data.frame(ts, f, norm_power, stringsAsFactors = FALSE)
   return(response_data)
 }
 
@@ -85,20 +85,20 @@ down_sample_1s <- function(ideal_response_1_s, duration, offset) {
     colname = "time_group2",
     rounding = "down",
     by = "ts",
-    start_val=offset - as.numeric(duration)
+    start_val = offset - as.numeric(duration)
   )
-  ideal_response_1_s[ideal_response_1_s$ts == ideal_response_1_s$time_group2,]$time_group <-
-    ideal_response_1_s[ideal_response_1_s$ts == ideal_response_1_s$time_group2,]$time_group2
+  ideal_response_1_s[ideal_response_1_s$ts == ideal_response_1_s$time_group2, ]$time_group <-
+    ideal_response_1_s[ideal_response_1_s$ts == ideal_response_1_s$time_group2, ]$time_group2
   ideal_response_1_s <- filter(
     ideal_response_1_s,
-    ts <= max(ideal_response_1_s[ideal_response_1_s$ts == ideal_response_1_s$time_group2,]$time_group2)
+    ts <= max(ideal_response_1_s[ideal_response_1_s$ts == ideal_response_1_s$time_group2, ]$time_group2)
   )
   ideal_response_1_s <- filter(
     ideal_response_1_s,
-    ts >= min(ideal_response_1_s[ideal_response_1_s$ts == (ideal_response_1_s$time_group2+1),]$ts)
+    ts >= min(ideal_response_1_s[ideal_response_1_s$ts == (ideal_response_1_s$time_group2+1), ]$ts)
   )
   ideal_response_downsampled <- group_by(ideal_response_1_s, time_group)
-  ideal_response_downsampled <- summarise(ideal_response_downsampled, f=last(f), norm_power=mean(norm_power))
+  ideal_response_downsampled <- summarise(ideal_response_downsampled, f = last(f), norm_power = mean(norm_power))
   ideal_response_downsampled <- data.frame(ideal_response_downsampled)
   return(ideal_response_downsampled)
 }
@@ -107,7 +107,7 @@ calc_error_metric_and_compliance <- function(combined_data, ideal_response_downs
   error_by_c_id <- calc_error_metric(combined_data, ideal_response_downsampled)
   threshold_error <- calc_threshold_error(ideal_response_downsampled)
   error_by_c_id <- calc_compliance_status(error_by_c_id, threshold_error)
-  combined_data <- left_join(combined_data, error_by_c_id, by="site_id")
+  combined_data <- left_join(combined_data, error_by_c_id, by = "site_id")
   return(combined_data)
 }
 
@@ -210,8 +210,8 @@ calc_error_metric_and_compliance_2 <- function(combined_data,
   error_by_c_id <- mutate(
     error_by_c_id,
     compliance_status = ifelse(
-      (max_error >= 0.0) & (compliance_status == 'Non-compliant'),
-      'Non-compliant Responding',
+      (max_error >= 0.0) & (compliance_status == "Non-compliant"),
+      "Non-compliant Responding",
       compliance_status
     )
   )
@@ -229,30 +229,30 @@ calc_error_metric_and_compliance_2 <- function(combined_data,
   if (min_ideal_response > disconnecting_threshold) {
     combined_data <- mutate(
       combined_data,
-      compliance_status = ifelse(response_category == '4 Disconnect', 'Disconnect/Drop to Zero', compliance_status)
+      compliance_status = ifelse(response_category == "4 Disconnect", "Disconnect/Drop to Zero", compliance_status)
     )
     combined_data <- mutate(
       combined_data,
-      compliance_status = ifelse(response_category == '3 Drop to Zero', 'Disconnect/Drop to Zero', compliance_status)
+      compliance_status = ifelse(response_category == "3 Drop to Zero", "Disconnect/Drop to Zero", compliance_status)
     )
   }
 
   combined_data <- mutate(
     combined_data,
-    compliance_status = ifelse(response_category == '7 UFLS Dropout', 'UFLS Dropout', compliance_status)
+    compliance_status = ifelse(response_category == "7 UFLS Dropout", "UFLS Dropout", compliance_status)
   )
   combined_data <- mutate(
     combined_data,
-    compliance_status = ifelse(response_category == '5 Off at t0', 'Off at t0', compliance_status)
+    compliance_status = ifelse(response_category == "5 Off at t0", "Off at t0", compliance_status)
   )
   combined_data <- mutate(
     combined_data,
-    compliance_status = ifelse(response_category == '6 Not enough data', 'Not enough data', compliance_status)
+    compliance_status = ifelse(response_category == "6 Not enough data", "Not enough data", compliance_status)
   )
 
   # Now check for whether there was already a compliance_status col when the function was called, rename the new one to
   # 2020 std, and keep both in the output combined_data.
-  if ('compliance_status_2015' %in% colnames(combined_data)) {
+  if ("compliance_status_2015" %in% colnames(combined_data)) {
     combined_data <- dplyr::rename(combined_data, "compliance_status_2020" = "compliance_status")
     combined_data <- dplyr::rename(combined_data, "compliance_status" = "compliance_status_2015")
   }
