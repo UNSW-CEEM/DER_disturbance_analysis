@@ -554,7 +554,7 @@ DBInterface <- R6::R6Class(
           time_series,
           con_type %in% c("pv_site_net", "pv_site", "pv_inverter_net", "pv_inverter")
         )
-        pv_time_series <- pv_time_series[order(pv_time_series$d), ]
+        pv_time_series <- pv_time_series[order(pv_time_series$d),]
         pv_time_series <- distinct(pv_time_series, ts, c_id, .keep_all = TRUE)
 
         site_details_cleaned_chunk <- site_details_data_cleaning_two(pv_time_series, sites_in_chunk)

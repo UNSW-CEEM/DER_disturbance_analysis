@@ -27,9 +27,9 @@ testthat::test_that("1 minute ramp up profile, 60 sec duration",{
 
   output_profile <- create_reconnection_profile(event_time, ramp_length_minutes = 1, time_step_seconds = 60)
 
-  output_profile_first_3 <- output_profile[1:3, ]
+  output_profile_first_3 <- output_profile[1:3,]
   rownames(output_profile_first_3) <- NULL
-  output_profile_last_3 <- output_profile[59:61, ]
+  output_profile_last_3 <- output_profile[59:61,]
   rownames(output_profile_last_3) <- NULL
 
   testthat::expect_equal(output_profile_first_3, expected_profile_first_3, tolerance = 1e-4)

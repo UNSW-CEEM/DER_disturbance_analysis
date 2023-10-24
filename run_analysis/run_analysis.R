@@ -173,8 +173,8 @@ determine_distance_zones <- function(
 ) {
   if (length(combined_data_f$ts) > 0) {
     combined_data_f <- get_distance_from_event(combined_data_f, postcode_data, event_latitude, event_longitude)
-    combined_data_f <- get_zones(combined_data_f, zone_one_radius, zone_two_radius, zone_three_radius)
-    setnafill(combined_data_f, cols = c("zone"), fill = "NA", type = "const")
+    combined_data_f <- get_zones(combined_data_f, zone_one_radius, zone_two_radius, zone_three_radius) %>%
+      replace_na(list(zone = "NA"))
     if (length(zones) < 3) {
       combined_data_f <- filter(combined_data_f, zone %in% zones)
     }
@@ -382,9 +382,10 @@ run_analysis <- function(data, settings) {
         settings$pre_event_interval,
         settings$window_length,
         settings$NED_threshold
-      )
-      setnafill(combined_data_f, cols = c("response_category"), fill = "NA", type = "const")
-      combined_data_f <- filter(combined_data_f, response_category %in% settings$responses)
+      ) %>%
+        replace_na(list(response_category = "NA")) %>%
+        filter(response_category %in% settings$responses)
+
       combined_data_f <- ufls_detection(
         data$db,
         combined_data_f,
@@ -462,8 +463,8 @@ run_analysis <- function(data, settings) {
           settings$end_buffer,
           settings$end_buffer_responding,
           settings$disconnecting_threshold
-        )
-        setnafill(combined_data_f, cols = c("compliance_status"), fill = "NA", type = "const")
+        ) %>%
+          replace_na(list(compliance_status = "NA"))
       } else {
         combined_data_f <- mutate(combined_data_f, compliance_status = "Undefined")
       }
@@ -488,8 +489,8 @@ run_analysis <- function(data, settings) {
           settings$end_buffer_2020,
           settings$end_buffer_responding_2020,
           settings$disconnecting_threshold
-        )
-        setnafill(combined_data_f, cols = c("compliance_status_2020"), fill = "NA", type = "const")
+        ) %>%
+          replace_na(list(compliance_status_2020 = "NA"))
       } else {
         combined_data_f <- mutate(combined_data_f, compliance_status_2020 = "Undefined")
       }
