@@ -31,7 +31,7 @@ test_that("Test the calculation of summary values for circuit info cleaning", {
   input$dis_sunset <- "2018-08-25 18:00:00"
   input$sunrise <- fastPOSIXct("2018-08-25 06:00:00")
   input$sunset <- fastPOSIXct("2018-08-25 18:00:00")
-  input <- input %>%  mutate(ts = fastPOSIXct(ts))
+  input <- input %>% mutate(ts = fastPOSIXct(ts))
   out <- clac_output_summary_values(input)
   expected_output <- "data/test_out_c_id_cleaning.csv"
   expected_output <- read.csv(file = expected_output, header = TRUE, stringsAsFactors = FALSE)

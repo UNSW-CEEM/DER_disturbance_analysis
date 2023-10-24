@@ -274,7 +274,7 @@ site_categorisation <- function(combined_data) {
 }
 
 assert_site_install_date_assumptions <- function(site_details) {
-  # Check in coming  data for conformance to data processing assumptions.
+  # Check incoming data for conformance to data processing assumptions.
   # We assume that the PV installation year month will be either of the form YYYY-MM or YYYY-MM-DD
   assert_that(
     all(length(pv_installation_year_month) %in% c(7, 10)),

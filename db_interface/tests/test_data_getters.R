@@ -105,7 +105,7 @@ testthat::test_that("Test get_max_circuit_powers complex case", {
     c_id = c(1, 2, 3, 1, 2, 3),
     max_power = c(
       (100 / 5) / 1000,
-      (10000 / 60)  /1000,
+      (10000 / 60) / 1000,
       (-101 / 5) / 1000,
       (100 / 5) / 1000,
       (10000 / 60) / 1000,

@@ -62,7 +62,7 @@ documentation_panel <- function() {
                       the percentage, start buffer to change the time excluded at the start and the end buffer to change the
                       time excluded at the end.'),
             tags$li('"Non-compliant Responding" A fast but unsustained reduction in output. The system reduces power by at
-                      least  50 % of the ideal reduction for at least one measurement interval in the first two minutes.
+                      least 50 % of the ideal reduction for at least one measurement interval in the first two minutes.
                       The percentage can be set by changing the compliance thresold and the window to resopnd can be changed
                       using the response time.'),
             tags$li('"Non-compliant" Neither a fast nor sustained reduction in output. The system does not fit into the
@@ -102,7 +102,7 @@ documentation_panel <- function() {
             tags$li('For each time interval and combination of grouping variables the mean performance factor is found. Note
                     as finding the mean ignores missing data this method implicity ignores missing data from systems rather
                     than interpreting it as zero value'),
-            tags$li('Then the mean peformance factor for each  time interval and combination of grouping variables is
+            tags$li('Then the mean peformance factor for each time interval and combination of grouping variables is
                      multiplied by the corresponding intalled capacity number to find the upscaled aggregate power.')),
     h4('Event normalised power chart'),
     div('By default this chart shows event normalised circuit power on a basis determined by the grouping
@@ -135,7 +135,7 @@ documentation_panel <- function() {
         as the postcode centroids. Note the following grouping variables (that are heaviliy correlated with location)
         are ignored for this chart, Zone, Postcode and Circuit.'),
     h4('Zone responses chart'),
-    div('This chart shows the  break down of circuits responses by zone, the percentage is based on the number
+    div('This chart shows the breakdown of circuits responses by zone, the percentage is based on the number
         circuits remaining, post filtering, in each zone. Break down to further sub categories by color is
         based on the user specified grouping variables. Note the grouping variable Circuits is ignored for this chart.'),
     h4('Geospatial response chart'),
