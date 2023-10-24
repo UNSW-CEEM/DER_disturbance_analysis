@@ -96,8 +96,8 @@ assert_raw_site_details_assumptions <- function(site_details) {
 perform_power_calculations <- function(master_data_table) {
   # Calculate the average power output over the sample time base on the
   # cumulative energy and duration length.Assuming energy is Joules and duration is in seconds.
-  master_data_table <- mutate(master_data_table, e_polarity = e*polarity)
-  master_data_table <- mutate(master_data_table, power_kW = e_polarity/(d * 1000))
+  master_data_table <- mutate(master_data_table, e_polarity = e * polarity)
+  master_data_table <- mutate(master_data_table, power_kW = e_polarity / (d * 1000))
   return(master_data_table)
 }
 
