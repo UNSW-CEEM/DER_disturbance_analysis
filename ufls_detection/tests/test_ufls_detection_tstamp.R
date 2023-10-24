@@ -98,7 +98,7 @@ testthat::test_that("test simple case ufls dropout", {
                               2021-01-01~03:00:00,    1, 300
                               2021-01-01~03:00:00,    2, 300"
         post_event_samples <- "                 ts, c_id, d
-                              2021-01-01~03:01:00,    1, 5"
+                               2021-01-01~03:01:00,    1, 5"
         comp_time <- format(
           strptime("2021-01-01 13:00:00", format = "%Y-%m-%d %H:%M:%S", tz = "Australia/Brisbane") - 0,
           tz = "GMT"
@@ -122,7 +122,7 @@ testthat::test_that("test simple case ufls dropout", {
     pre_pct_sample_seconds_threshold = 0.8
   )
 
-  expected_results <- "c_id, pre_event_sampled_seconds, post_event_sampled_seconds,      ufls_status
+  expected_results <- "c_id,  pre_event_sampled_seconds, post_event_sampled_seconds,      ufls_status
                           1,                        300,                          5,   'No~UFLS~Dropout'
                           2,                        300,                          0,    'UFLS~Dropout'"
 
