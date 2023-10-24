@@ -3,8 +3,8 @@ library(data.table)
 intall_data_file <- "cer_data/cer_sizegroup_install_data.csv"
 install_data <- read.csv(file = intall_data_file, header = TRUE, stringsAsFactors = FALSE)
 
-start_date = min(install_data$date)
-end_date = max(install_data$date)
+start_date <- min(install_data$date)
+end_date <- max(install_data$date)
 date_vector <- seq(as.Date(start_date), as.Date(end_date), by = "days")
 
 type_table <- data.table(
