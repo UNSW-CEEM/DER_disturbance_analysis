@@ -54,20 +54,16 @@ validate_required_files <- function(errors) {
     errors$errors[[length(errors$errors) + 1]] <- list(title = "Error loading install data", body = long_error_message)
   }
   if (!file.exists(CER_MANUFACTURER_DATA)) {
-    long_error_message <- paste0(
-      "The required file cer_manufacturer_data could not be found. ",
-      "Please add it to the inbuilt_data directory."
-    )
+    long_error_message <-
+      "The required file cer_manufacturer_data could not be found. Please add it to the inbuilt_data directory."
     errors$errors[[length(errors$errors) + 1]] <- list(
       title = "Error loading manufacturer install data",
       body = long_error_message
     )
   }
   if (!file.exists(OFF_GRID_POSTCODES)) {
-    long_error_message <- paste0(
-      "The required file off_grid_postcodes could not be found. ",
-      "Please add it to the inbuilt_data directory."
-    )
+    long_error_message <-
+      "The required file off_grid_postcodes could not be found. Please add it to the inbuilt_data directory."
     errors$errors[[length(errors$errors) + 1]] <- list(
       title = "Error loading off grid post code data",
       body = long_error_message
@@ -123,7 +119,7 @@ validate_timeseries_data <- function(time_series_data, errors) {
     errors <- list(warnings = list(), errors = list())
   }
   if (dim(time_series_data)[1] == 0) {
-    long_error_message <- "The region and duration selected resulted in an empty dataset, please try another selection"
+    long_error_message <- "The region and duration selected resulted in an empty dataset, please try another selection."
     errors$errors[[length(errors$errors) + 1]] <- list(
       title = "Error loading timeseries data",
       body = long_error_message
