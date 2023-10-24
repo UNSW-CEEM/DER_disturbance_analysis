@@ -1559,7 +1559,8 @@ server <- function(input,output,session) {
               x = v$reconnection_profile$ts,
               y = v$reconnection_profile$norm_power,
               name = "Ideal Response",
-              mode = "markers", inherit = FALSE
+              mode = "markers",
+              inherit = FALSE
             ) %>%
             layout(yaxis = list(title = "Circuit power \n normalised to max circuit power"))
         })
