@@ -292,7 +292,7 @@ test_that("Test the categorisation of sites based on error metrics ", {
   norm_power <- c(1, 0.95, 0.95)
   ideal_response_downsampled <- data.frame(time_group, norm_power, stringsAsFactors = FALSE)
   out <- calc_compliance_status(input_data, calc_threshold_error(ideal_response_downsampled))
-  compliance_status <- c("Compliant", "Ambigous", "Non Complinant", "Above Ideal Response")
+  compliance_status <- c("Compliant", "Ambigous", "Non Compliant", "Above Ideal Response")
   expected_output <- data.frame(
     site_id,
     min_diff,
@@ -354,7 +354,7 @@ test_that("Test the calc of error metrics and categorisation", {
   above_spec <- c(0, 0, 1, 1)
   mixed_wrt_spec <- c(0, 1, 0, 0)
   combined_error_metric <- c(-0.03508772, 0.06842105, 0.1403509, 0.01754386)
-  compliance_status <- c("Compliant", "Ambigous", "Non Complinant", "Above Ideal Response")
+  compliance_status <- c("Compliant", "Ambigous", "Non Compliant", "Above Ideal Response")
   expected_output <- data.frame(
     site_id,
     min_diff,

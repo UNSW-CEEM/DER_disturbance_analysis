@@ -157,7 +157,7 @@ calc_compliance_status <- function(error_by_c_id, threshold_error) {
     error_by_c_id,
     compliance_status = ifelse(
       above_spec == 1 & combined_error_metric > threshold_error,
-      "Non Complinant",
+      "Non Compliant",
       compliance_status
     )
   )
