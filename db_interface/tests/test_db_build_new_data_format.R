@@ -1,6 +1,6 @@
 # Do not run this file directly, run testthat.R
 
-testthat::context("Testing the creation of a database from csv files.")
+testthat::context("Testing the creation of a database from CSV files.")
 is.nan.data.frame <- function(x) {
   do.call(cbind, lapply(x, is.nan))
 }
@@ -20,8 +20,8 @@ testthat::test_that("Building works when there are different duration values wit
   expected_timeseries <- load_test_file(timeseries_path_name)
   expected_site_details <- load_test_file(site_details_path_name)
   expected_circuit_details <- load_test_file(circuit_details_path_name)
-  expected_circuit_details <- mutate(expected_circuit_details, manual_droop_compliance = 'Not set')
-  expected_circuit_details <- mutate(expected_circuit_details, manual_reconnect_compliance = 'Not set')
+  expected_circuit_details <- mutate(expected_circuit_details, manual_droop_compliance = "Not set")
+  expected_circuit_details <- mutate(expected_circuit_details, manual_reconnect_compliance = "Not set")
 
   # Create the DBInterface and test creating the database.
   if (file.exists("test.db")) {
@@ -55,8 +55,8 @@ testthat::test_that("Building works when there are null duration values", {
   expected_timeseries <- load_test_file("data/timeseries_null_duration_cleaned.csv")
   expected_site_details <- load_test_file(site_details_path_name)
   expected_circuit_details <- load_test_file(circuit_details_path_name)
-  expected_circuit_details <- mutate(expected_circuit_details, manual_droop_compliance = 'Not set')
-  expected_circuit_details <- mutate(expected_circuit_details, manual_reconnect_compliance = 'Not set')
+  expected_circuit_details <- mutate(expected_circuit_details, manual_droop_compliance = "Not set")
+  expected_circuit_details <- mutate(expected_circuit_details, manual_reconnect_compliance = "Not set")
 
   # Create the DBInterface and test creating the database.
   if (file.exists("test.db")) {

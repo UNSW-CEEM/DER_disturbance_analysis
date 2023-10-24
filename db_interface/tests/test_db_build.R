@@ -1,6 +1,6 @@
 # Do not run this file directly, run testthat.R
 
-testthat::context("Testing the creation of a database from csv files.")
+testthat::context("Testing the creation of a database from CSV files.")
 is.nan.data.frame <- function(x) {
   do.call(cbind, lapply(x, is.nan))
 }
@@ -17,13 +17,12 @@ testthat::test_that("Building works when no column aliases are required.", {
   site_details_path_name <- "data/simple_site_details.csv"
   circuit_details_path_name <- "data/simple_circuit_details.csv"
 
-  # We expect the output of loading via the database to be the same as if we
-  # just read straight from csv.
+  # We expect the output of loading via the database to be the same as if we just read straight from CSV.
   expected_timeseries <- load_test_file(timeseries_path_name)
   expected_site_details <- load_test_file(site_details_path_name)
   expected_circuit_details <- load_test_file(circuit_details_path_name)
-  expected_circuit_details <- mutate(expected_circuit_details, manual_droop_compliance = 'Not set')
-  expected_circuit_details <- mutate(expected_circuit_details, manual_reconnect_compliance = 'Not set')
+  expected_circuit_details <- mutate(expected_circuit_details, manual_droop_compliance = "Not set")
+  expected_circuit_details <- mutate(expected_circuit_details, manual_reconnect_compliance = "Not set")
 
   # Create the DBInterface and test creating the database.
   if (file.exists("test.db")) {
@@ -56,8 +55,8 @@ testthat::test_that("Building works when there are duplicates in ts data.", {
   expected_timeseries <- load_test_file(timeseries_no_duplicates_path_name)
   expected_site_details <- load_test_file(site_details_path_name)
   expected_circuit_details <- load_test_file(circuit_details_path_name)
-  expected_circuit_details <- mutate(expected_circuit_details, manual_droop_compliance = 'Not set')
-  expected_circuit_details <- mutate(expected_circuit_details, manual_reconnect_compliance = 'Not set')
+  expected_circuit_details <- mutate(expected_circuit_details, manual_droop_compliance = "Not set")
+  expected_circuit_details <- mutate(expected_circuit_details, manual_reconnect_compliance = "Not set")
 
   # Create the DBInterface and test creating the database.
   if (file.exists("test.db")) {
@@ -90,8 +89,8 @@ testthat::test_that("Building works when there are extra headers in the ts data.
   expected_timeseries <- load_test_file(timeseries_no_extra_header)
   expected_site_details <- load_test_file(site_details_path_name)
   expected_circuit_details <- load_test_file(circuit_details_path_name)
-  expected_circuit_details <- mutate(expected_circuit_details, manual_droop_compliance = 'Not set')
-  expected_circuit_details <- mutate(expected_circuit_details, manual_reconnect_compliance = 'Not set')
+  expected_circuit_details <- mutate(expected_circuit_details, manual_droop_compliance = "Not set")
+  expected_circuit_details <- mutate(expected_circuit_details, manual_reconnect_compliance = "Not set")
 
   # Create the DBInterface and test creating the database.
   if (file.exists("test.db")) {
@@ -128,8 +127,8 @@ testthat::test_that("Test data cleaning with batch size smaller than number of c
   expected_site_details <- load_test_file(site_details_path_name)
   expected_site_details_cleaned <- load_test_file(site_details_cleaned_path_name)
   expected_circuit_details <- load_test_file(circuit_details_path_name)
-  expected_circuit_details <- mutate(expected_circuit_details, manual_droop_compliance = 'Not set')
-  expected_circuit_details <- mutate(expected_circuit_details, manual_reconnect_compliance = 'Not set')
+  expected_circuit_details <- mutate(expected_circuit_details, manual_droop_compliance = "Not set")
+  expected_circuit_details <- mutate(expected_circuit_details, manual_reconnect_compliance = "Not set")
 
   # Create the DBInterface and test creating the database.
   if (file.exists("test.db")) {
@@ -172,8 +171,8 @@ testthat::test_that(
   expected_site_details <- load_test_file(site_details_path_name)
   expected_site_details_cleaned <- load_test_file(site_details_cleaned_path_name)
   expected_circuit_details <- load_test_file(circuit_details_path_name)
-  expected_circuit_details <- mutate(expected_circuit_details, manual_droop_compliance = 'Not set')
-  expected_circuit_details <- mutate(expected_circuit_details, manual_reconnect_compliance = 'Not set')
+  expected_circuit_details <- mutate(expected_circuit_details, manual_droop_compliance = "Not set")
+  expected_circuit_details <- mutate(expected_circuit_details, manual_reconnect_compliance = "Not set")
 
   # Create the DBInterface and test creating the database.
   if (file.exists("test.db")) {
@@ -215,8 +214,8 @@ testthat::test_that("test calculating duration values works, with batch size gre
   expected_site_details <- load_test_file(site_details_path_name)
   expected_site_details_cleaned <- load_test_file(site_details_cleaned_path_name)
   expected_circuit_details <- load_test_file(circuit_details_path_name)
-  expected_circuit_details <- mutate(expected_circuit_details, manual_droop_compliance = 'Not set')
-  expected_circuit_details <- mutate(expected_circuit_details, manual_reconnect_compliance = 'Not set')
+  expected_circuit_details <- mutate(expected_circuit_details, manual_droop_compliance = "Not set")
+  expected_circuit_details <- mutate(expected_circuit_details, manual_reconnect_compliance = "Not set")
 
   if (file.exists("test.db")) {
     file.remove("test.db")
@@ -260,8 +259,8 @@ testthat::test_that("test calculating duration values works, with batch size equ
     site_details_cleaned_path_name
   )
   expected_circuit_details <- load_test_file(circuit_details_path_name)
-  expected_circuit_details <- mutate(expected_circuit_details, manual_droop_compliance = 'Not set')
-  expected_circuit_details <- mutate(expected_circuit_details, manual_reconnect_compliance = 'Not set')
+  expected_circuit_details <- mutate(expected_circuit_details, manual_droop_compliance = "Not set")
+  expected_circuit_details <- mutate(expected_circuit_details, manual_reconnect_compliance = "Not set")
 
   # Create the DBInterface and test creating the database.
   if (file.exists("test.db")) {
@@ -302,13 +301,13 @@ testthat::test_that("test circuit data cleaning, no cleaning required", {
   expected_timeseries <- load_test_file(timeseries)
   expected_site_details <- load_test_file(site_details_path_name)
   expected_circuit_details <- load_test_file(circuit_details_path_name)
-  expected_circuit_details <- mutate(expected_circuit_details, manual_droop_compliance = 'Not set')
-  expected_circuit_details <- mutate(expected_circuit_details, manual_reconnect_compliance = 'Not set')
+  expected_circuit_details <- mutate(expected_circuit_details, manual_droop_compliance = "Not set")
+  expected_circuit_details <- mutate(expected_circuit_details, manual_reconnect_compliance = "Not set")
   expected_circuit_details_cleaned <- load_test_file(circuit_details_path_name_clean)
-  expected_circuit_details_cleaned <- mutate(expected_circuit_details_cleaned, manual_droop_compliance = 'Not set')
+  expected_circuit_details_cleaned <- mutate(expected_circuit_details_cleaned, manual_droop_compliance = "Not set")
   expected_circuit_details_cleaned <- mutate(
     expected_circuit_details_cleaned,
-    manual_reconnect_compliance = 'Not set'
+    manual_reconnect_compliance = "Not set"
   )
 
   # Create the DBInterface and test creating the database.

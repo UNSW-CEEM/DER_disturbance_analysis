@@ -44,30 +44,30 @@ dp$run_data_cleaning_loop(max_chunk_size = 10)
 
 testthat::test_that("Test get_min_timestamp", {
   min_timestamp <- dp$get_min_timestamp()
-  expected_time <- fastPOSIXct('2018-01-01 00:00:05', tz = "Australia/Brisbane")
+  expected_time <- fastPOSIXct("2018-01-01 00:00:05", tz = "Australia/Brisbane")
   testthat::expect_equal(min_timestamp, expected_time)
 })
 
 testthat::test_that("Test get_max_timestamp", {
   max_timestamp <- dp$get_max_timestamp()
-  expected_time <- fastPOSIXct('2018-01-01 00:00:40',tz = "Australia/Brisbane")
+  expected_time <- fastPOSIXct("2018-01-01 00:00:40", tz = "Australia/Brisbane")
   testthat::expect_equal(max_timestamp, expected_time)
 })
 
 testthat::test_that("Test get_max_circuit_powers simple case", {
-  max_powers <- dp$get_max_circuit_powers('NSW')
+  max_powers <- dp$get_max_circuit_powers("NSW")
   expected_results <- data.frame(
     c_id = c(1, 1),
-    max_power = c((100/5)/1000, (100/5)/1000),
-    clean = c('raw', 'clean'),
+    max_power = c((100 / 5) / 1000, (100 / 5) / 1000),
+    clean = c("raw", "clean"),
     stringsAsFactors = FALSE)
   testthat::expect_equal(max_powers, expected_results)
 })
 
 testthat::test_that("Test check_if_table_exists works", {
-  flag <- dp$check_if_table_exists('timeseries')
+  flag <- dp$check_if_table_exists("timeseries")
   testthat::expect_equal(flag, TRUE)
-  flag <- dp$check_if_table_exists('blah')
+  flag <- dp$check_if_table_exists("blah")
   testthat::expect_equal(flag, FALSE)
 })
 
@@ -100,11 +100,18 @@ dp$add_manufacturer_mapping_table("data/manufacturer_mapping.csv")
 dp$run_data_cleaning_loop(max_chunk_size = 10)
 
 testthat::test_that("Test get_max_circuit_powers complex case", {
-  max_powers <- dp$get_max_circuit_powers('NSW')
+  max_powers <- dp$get_max_circuit_powers("NSW")
   expected_results <- data.frame(
     c_id = c(1, 2, 3, 1, 2, 3),
-    max_power = c((100/5)/1000, (10000/60)/1000, (-101/5)/1000, (100/5)/1000, (10000/60)/1000, (-101/5)/1000),
-    clean = c('raw', 'raw', 'raw', 'clean', 'clean', 'clean'),
+    max_power = c(
+      (100 / 5) / 1000,
+      (10000 / 60)  /1000,
+      (-101 / 5) / 1000,
+      (100 / 5) / 1000,
+      (10000 / 60) / 1000,
+      (-101 / 5) / 1000
+    ),
+    clean = c("raw", "raw", "raw", "clean", "clean", "clean"),
     stringsAsFactors = FALSE
   )
   testthat::expect_equal(max_powers, expected_results)

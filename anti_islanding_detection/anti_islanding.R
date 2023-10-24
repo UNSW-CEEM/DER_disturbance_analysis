@@ -93,7 +93,7 @@ detect_voltage_threshold_excursions <- function(combined_data, pre_event_interva
 #'       but I'm not going to fix them yet. Make changes at your own risk!
 summarise_antiislanding_recurrences <- function(combined_data, antiislanding_column, recurrences_column) {
   combined_data <- arrange(combined_data, c_id, ts)
-  id_column <- paste0(recurrences_column, '_id')
+  id_column <- paste0(recurrences_column, "_id")
   combined_data <- mutate(
     combined_data,
     is_initial = (
@@ -130,13 +130,13 @@ summarise_antiislanding_recurrences <- function(combined_data, antiislanding_col
 antiislanding_summary <- function(combined_data) {
   voltage_summary_2015 <- summarise_antiislanding_recurrences(
     combined_data,
-    'antiislanding_v_excursion_2015',
-    'va_2015_recurrences'
+    "antiislanding_v_excursion_2015",
+    "va_2015_recurrences"
   )
   voltage_summary_2020 <- summarise_antiislanding_recurrences(
     combined_data,
-    'antiislanding_v_excursion_2020',
-    'va_2020_recurrences'
+    "antiislanding_v_excursion_2020",
+    "va_2020_recurrences"
   )
   voltage_summary <- bind_rows(voltage_summary_2015, voltage_summary_2020)
   return(voltage_summary_2015)
