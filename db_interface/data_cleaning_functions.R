@@ -191,8 +191,7 @@ clac_output_summary_values <- function(combined_data) {
     polarity = first(polarity)
   )
   combined_data <- as.data.frame(combined_data)
-  combined_data <- mutate(combined_data, energy_day = ifelse(is.na(energy_day), 0.0, energy_day))
-  combined_data <- mutate(combined_data, energy_night = ifelse(is.na(energy_night), 0.0, energy_night))
+  setnafill(combined_data, cols = c("energy_day", "energy_night"), fill = 0.0, type = "const")
   # Calculate the fraction of gen/load that occured during daylight hours.
   # Use absolute value of power as polarity has not been checked yet.
   combined_data <- mutate(combined_data, frac_day = round(energy_day / (energy_day + energy_night), digits = 2))

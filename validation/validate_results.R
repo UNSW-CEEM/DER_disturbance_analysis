@@ -203,7 +203,7 @@ if (length(data_dirs) > 0) {
         test_db_con <- RSQLite::dbConnect(RSQLite::SQLite(), sprintf("%s/%s", dir, test_db_name))
         compare_dbs(ref_db_con, test_db_con, TRUE, dir)
 
-        # check csvs
+        # check CSVs
         ref_circuit_summary <- read.csv(sprintf("%s/%s", dir, ref_circuit_summary_fname))
         ref_underlying_data <- read.csv(sprintf("%s/%s", dir, ref_underlying_data_fname))
         test_circuit_summary <- read.csv(sprintf("%s/%s", dir, test_circuit_summary_fname))

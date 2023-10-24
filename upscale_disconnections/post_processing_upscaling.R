@@ -14,8 +14,8 @@ manufacturer_install_data <- read.csv(
   stringsAsFactors = FALSE
 )
 
-setnafill(circuits_to_summarise, cols = "manufacturer", fill = "Other", type = "const")
-setnafill(manufacturer_install_data, cols = "manufacturer", fill = "Other", type = "const")
+setnafill(circuits_to_summarise, cols = c("manufacturer"), fill = "Other", type = "const")
+setnafill(manufacturer_install_data, cols = c("manufacturer"), fill = "Other", type = "const")
 
 manufacturer_install_data <- calc_installed_capacity_by_standard_and_manufacturer(manufacturer_install_data)
 

@@ -14,7 +14,7 @@ identify_islanded_sites <- function(combined_data, alert_data, event_time) {
   if (!all(is.na(alert_data$first_timestamp))) {
     alert_data <- mutate(
       alert_data,
-      first_timestamp = as.POSIXct((first_timestamp)/1000, tz = "Australia/Brisbane", origin = "1970-01-01")
+      first_timestamp = as.POSIXct(first_timestamp / 1000, tz = "Australia/Brisbane", origin = "1970-01-01")
     )
     alert_data <- mutate(
       alert_data,
@@ -24,7 +24,7 @@ identify_islanded_sites <- function(combined_data, alert_data, event_time) {
         ifelse(
           (
             (GridFaultContactorTrip >= 1 | SYNC_a038_DoOpenArguments >= 1) &
-            ((first_timestamp < (event_time+60)) & (first_timestamp >= (event_time)))
+            ((first_timestamp < (event_time + 60)) & (first_timestamp >= event_time))
           ),
           1,
           0
@@ -34,7 +34,7 @@ identify_islanded_sites <- function(combined_data, alert_data, event_time) {
   } else {
     alert_data <- mutate(
       alert_data,
-      Islanded = ifelse((GridFaultContactorTrip >= 1 | SYNC_a038_DoOpenArguments >= 1), 1, 0)
+      Islanded = ifelse(GridFaultContactorTrip >= 1 | SYNC_a038_DoOpenArguments >= 1, 1, 0)
     )
   }
 
@@ -43,7 +43,7 @@ identify_islanded_sites <- function(combined_data, alert_data, event_time) {
     alert_data[, c("c_id", "Islanded", "SYNC_a005_vfCheckUnderVoltage", "SYNC_a010_vfCheckFreqWobble")],
     by = "c_id"
   )
-  combined_data <- mutate(combined_data, Islanded = ifelse(is.na(Islanded), 0, Islanded))
+  setnafill(combined_data, cols = c("Islanded"), fill = 0, type = "const")
 
   combined_data[c("SYNC_a005_vfCheckUnderVoltage", "SYNC_a010_vfCheckFreqWobble")][
     is.na(combined_data[c("SYNC_a005_vfCheckUnderVoltage", "SYNC_a010_vfCheckFreqWobble")])
