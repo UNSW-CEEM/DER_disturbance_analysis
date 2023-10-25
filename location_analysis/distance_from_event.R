@@ -1,7 +1,7 @@
 
 get_distance_from_event <- function(combined_data, postcode_data, event_lat, event_lon) {
   distances <- get_postcode_distance_from_event(postcode_data, event_lat, event_lon)
-  combined_data <- left_join(combined_data, distances, by = c("s_postcode", "postcode"))
+  combined_data <- left_join(combined_data, distances, by = c("s_postcode" = "postcode"))
   return(combined_data)
 }
 
