@@ -21,7 +21,7 @@ create_reconnection_summary <- function(combined_data_f,
     post_event_response,
     disconnect_threshold = disconnecting_threshold
   )
-  ramp_after_connection_begins <- inner_join(ramp_rates, reconnection_start_times, by = "c_id")
+  ramp_after_connection_begins <- inner_join(ramp_rates, reconnection_start_times, by = c("c_id"))
   ramp_after_connection_begins <- filter(ramp_after_connection_begins, ts >= pre_reconnection_time)
 
   resource_limited_intervals <- find_first_resource_limited_interval(
@@ -30,7 +30,7 @@ create_reconnection_summary <- function(combined_data_f,
   )
 
   reconnection_data <- inner_join(post_event_response, ramp_rates, by = c("c_id", "ts"))
-  reconnection_data <- left_join(reconnection_data, resource_limited_intervals, by = "c_id")
+  reconnection_data <- left_join(reconnection_data, resource_limited_intervals, by = c("c_id"))
   reconnection_data <- left_join(reconnection_data, select(combined_data_f, c_id, ts, d), by = c("c_id", "ts"))
 
   max_ramp_rates <- calculate_total_ramp_while_exceeding_ramp_rate_compliance_threshold(
@@ -46,8 +46,8 @@ create_reconnection_summary <- function(combined_data_f,
     response_category = first(response_category),
     pre_event_daily_norm_power = first(pre_event_norm_power)
   )
-  reconnection_summary <- left_join(reconnection_summary, reconnection_times, by = "c_id")
-  reconnection_summary <- left_join(reconnection_summary, max_ramp_rates, by = "c_id")
+  reconnection_summary <- left_join(reconnection_summary, reconnection_times, by = c("c_id"))
+  reconnection_summary <- left_join(reconnection_summary, max_ramp_rates, by = c("c_id"))
 
   if (dim(reconnection_summary)[1] == 0) {
     reconnection_categories <- data.frame(matrix(ncol = 2, nrow = 0))
@@ -64,7 +64,7 @@ create_reconnection_summary <- function(combined_data_f,
   reconnection_categories <- inner_join(
     reconnection_categories,
     select(reconnection_summary, c_id, reconnection_time, ramp_above_threshold, pre_event_daily_norm_power),
-    by = "c_id"
+    by = c("c_id")
   )
 
   reconnection_categories <- as.data.frame(reconnection_categories)

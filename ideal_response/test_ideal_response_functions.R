@@ -366,7 +366,7 @@ test_that("Test the calc of error metrics and categorisation", {
     compliance_status,
     stringsAsFactors = FALSE
   )
-  expected_output <- left_join(input_data, expected_output, by = "site_id")
+  expected_output <- left_join(input_data, expected_output, by = c("site_id"))
   expect_equal(out, expected_output, tolerance = 0.001)
 })
 
@@ -460,7 +460,7 @@ test_that("Test compliance categorisation ", {
     "Drop to Zero"
   )
   expected_output <- data.frame(site_id, compliance_status, stringsAsFactors = FALSE)
-  expected_output <- left_join(input_data, expected_output, by = "site_id")
+  expected_output <- left_join(input_data, expected_output, by = c("site_id"))
   expect_equal(out, expected_output, tolerance = 0.001)
 })
 
@@ -554,6 +554,6 @@ test_that("Test the calc of error metrics and categorisation", {
     "Non-compliant Responding"
   )
   expected_output <- data.frame(site_id, compliance_status, stringsAsFactors = FALSE)
-  expected_output <- left_join(input_data, expected_output, by = "site_id")
+  expected_output <- left_join(input_data, expected_output, by = c("site_id"))
   expect_equal(out, expected_output, tolerance = 0.001)
 })

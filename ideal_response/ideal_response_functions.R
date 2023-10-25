@@ -107,7 +107,7 @@ calc_error_metric_and_compliance <- function(combined_data, ideal_response_downs
   error_by_c_id <- calc_error_metric(combined_data, ideal_response_downsampled)
   threshold_error <- calc_threshold_error(ideal_response_downsampled)
   error_by_c_id <- calc_compliance_status(error_by_c_id, threshold_error)
-  combined_data <- left_join(combined_data, error_by_c_id, by = "site_id")
+  combined_data <- left_join(combined_data, error_by_c_id, by = c("site_id"))
   return(combined_data)
 }
 

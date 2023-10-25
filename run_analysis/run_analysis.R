@@ -372,7 +372,7 @@ run_analysis <- function(data, settings) {
       settings$window_length
     )
     voltage_data_summary <- summarise_voltage_data(combined_data_f)
-    combined_data_f <- left_join(combined_data_f, voltage_data_summary, by = "c_id")
+    combined_data_f <- left_join(combined_data_f, voltage_data_summary, by = c("c_id"))
     data$antiislanding_summary <- antiislanding_summary(combined_data_f)
 
     if (length(combined_data_f$ts) > 0) {

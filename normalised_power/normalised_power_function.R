@@ -4,10 +4,10 @@ event_normalised_power <- function(combined_data, event_time, keep_site_id) {
   if (keep_site_id) {
     event_time_data <- select(event_time_data, site_id, event_site_performance_factor)
     event_time_data <- distinct(event_time_data)
-    combined_data <- left_join(combined_data, event_time_data, by = "site_id")
+    combined_data <- left_join(combined_data, event_time_data, by = c("site_id"))
   } else {
     event_time_data <- select(event_time_data, series, event_site_performance_factor)
-    combined_data <- left_join(combined_data, event_time_data, by = "series")
+    combined_data <- left_join(combined_data, event_time_data, by = c("series"))
   }
   combined_data <- mutate(
     combined_data,

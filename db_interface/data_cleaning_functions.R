@@ -133,7 +133,7 @@ clean_connection_types <- function(combined_data, circuit_details, postcode_data
   # Select the values from the orginal circuit details that would not be changed by cleaning, then merge back in with
   # details updated or created by cleaning.
   circuit_details <- select(circuit_details, site_id, c_id, manual_droop_compliance, manual_reconnect_compliance)
-  combined_data <- left_join(combined_data, circuit_details, by = "c_id")
+  combined_data <- left_join(combined_data, circuit_details, by = c("c_id"))
   return(combined_data)
 }
 

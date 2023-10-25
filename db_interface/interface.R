@@ -561,7 +561,7 @@ DBInterface <- R6::R6Class(
         site_details_cleaned <- bind_rows(site_details_cleaned, site_details_cleaned_chunk)
 
         details_to_add <- select(site_details_cleaned_chunk, site_id, s_postcode, ac)
-        time_series <- inner_join(time_series, details_to_add, by = "site_id")
+        time_series <- inner_join(time_series, details_to_add, by = c("site_id"))
 
         circuit_details_cleaned_chunk <- clean_connection_types(time_series, circuits, postcode_data)
         circuit_details_cleaned <- bind_rows(circuit_details_cleaned, circuit_details_cleaned_chunk)
@@ -853,7 +853,7 @@ DBInterface <- R6::R6Class(
     },
     add_meta_data_to_time_series = function(time_series, circuit_details) {
       details_to_add <- select(circuit_details, c_id, site_id, polarity, con_type)
-      time_series <- inner_join(time_series, details_to_add, by = "c_id")
+      time_series <- inner_join(time_series, details_to_add, by = c("c_id"))
       return(time_series)
     },
     create_site_details_cleaned_table = function() {

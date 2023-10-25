@@ -41,7 +41,7 @@ identify_islanded_sites <- function(combined_data, alert_data, event_time) {
   combined_data <- left_join(
     combined_data,
     alert_data[, c("c_id", "Islanded", "SYNC_a005_vfCheckUnderVoltage", "SYNC_a010_vfCheckFreqWobble")],
-    by = "c_id"
+    by = c("c_id")
   )
   setnafill(combined_data, cols = c("Islanded"), fill = 0, type = "const")
 

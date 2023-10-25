@@ -15,13 +15,13 @@ calculate_max_reconnection_ramp_rate <- function(normalised_power_profiles,
     normalised_power_profiles,
     c_id_daily_norm_power > pre_event_norm_power * reconnect_threshold
   )
-  connected_intervals <- inner_join(connected_intervals, last_disconnected_interval, by = "c_id")
+  connected_intervals <- inner_join(connected_intervals, last_disconnected_interval, by = c("c_id"))
   connected_intervals <- filter(connected_intervals, ts > pre_reconnection_time)
   first_fully_connected_interval <- group_by(connected_intervals, c_id)
   first_fully_connected_interval <- summarise(first_fully_connected_interval, fully_connected_time = min(ts))
 
-  reconnection_times <- left_join(last_disconnected_interval, first_fully_connected_interval, by = "c_id")
-  normalised_power_profiles <- inner_join(normalised_power_profiles, reconnection_times, by = "c_id")
+  reconnection_times <- left_join(last_disconnected_interval, first_fully_connected_interval, by = c("c_id"))
+  normalised_power_profiles <- inner_join(normalised_power_profiles, reconnection_times, by = c("c_id"))
   normalised_power_profiles <- filter(normalised_power_profiles, ts >= pre_reconnection_time)
   normalised_power_profiles <- filter(
     normalised_power_profiles,
@@ -64,13 +64,13 @@ calculate_total_ramp_while_exceeding_ramp_rate_compliance_threshold <- function(
     normalised_power_profiles,
     c_id_daily_norm_power > pre_event_norm_power * reconnect_threshold
   )
-  connected_intervals <- inner_join(connected_intervals, last_disconnected_interval, by = "c_id")
+  connected_intervals <- inner_join(connected_intervals, last_disconnected_interval, by = c("c_id"))
   connected_intervals <- filter(connected_intervals, ts > pre_reconnection_time)
   first_fully_connected_interval <- group_by(connected_intervals, c_id)
   first_fully_connected_interval <- summarise(first_fully_connected_interval, fully_connected_time = min(ts))
 
-  reconnection_times <- left_join(last_disconnected_interval, first_fully_connected_interval, by = "c_id")
-  normalised_power_profiles <- inner_join(normalised_power_profiles, reconnection_times, by = "c_id")
+  reconnection_times <- left_join(last_disconnected_interval, first_fully_connected_interval, by = c("c_id"))
+  normalised_power_profiles <- inner_join(normalised_power_profiles, reconnection_times, by = c("c_id"))
   normalised_power_profiles <- filter(normalised_power_profiles, ts >= pre_reconnection_time)
   normalised_power_profiles <- filter(
     normalised_power_profiles,

@@ -177,7 +177,7 @@ load_data <- function(data, settings) {
 
     time_series_data <- process_time_series_data(time_series_data)
 
-    data$combined_data <- inner_join(time_series_data, data$circuit_details, by = "c_id")
+    data$combined_data <- inner_join(time_series_data, data$circuit_details, by = c("c_id"))
     data$combined_data <- inner_join(data$combined_data, data$site_details, by = c("site_id", "clean"))
 
     data$combined_data <- perform_power_calculations(data$combined_data)
