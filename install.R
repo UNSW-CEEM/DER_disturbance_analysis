@@ -35,6 +35,7 @@ using(
   "logging",
   "testthat",
   "shiny",
+  "httpuv",
   "shinyTime",
   "shinyWidgets",
   "shinyalert"
