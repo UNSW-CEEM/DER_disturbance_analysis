@@ -9,7 +9,7 @@ using <- function(...) {
   need <- libs[req == FALSE]
   if (length(need) > 0) {
     install.packages(need)
-    # lapply(need, require, character.only = TRUE)
+    lapply(need, require, character.only = TRUE)
   }
 }
 
@@ -35,7 +35,6 @@ using(
   "logging",
   "testthat",
   "shiny",
-  "httpuv",
   "shinyTime",
   "shinyWidgets",
   "shinyalert"
