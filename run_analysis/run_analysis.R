@@ -742,11 +742,10 @@ run_analysis <- function(data, settings) {
         num_missing_from_cer <- length(upscaling_results$manufacturers_missing_from_cer$manufacturer)
         num_missing_from_input_db <- length(upscaling_results$manufacturers_missing_from_input_db$manufacturer)
         long_error_message <- c(
-          "%s manufacturers present in the input data could not be ",
-          "matched to the CER data set. \n%s manufacturers present in the CER data could not be ",
-          "matched to the input data set. \nLists of each of these have been saved in the ",
-          "files logging/manufacturers_missing_from_[dataset].csv. You may want to review the ",
-          "mapping used in processing the input data and check the number and names of ",
+          "%s manufacturers present in the input data could not be matched to the CER data set. \n",
+          "%s manufacturers present in the CER data could not be matched to the input data set. \n",
+          "Lists of each of these have been saved in the files logging/manufacturers_missing_from_[dataset].csv. ",
+          "You may want to review the mapping used in processing the input data and check the number and names of ",
           "missing manufacturers."
         )
         long_error_message <- sprintf(
