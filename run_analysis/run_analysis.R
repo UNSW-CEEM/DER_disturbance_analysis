@@ -318,6 +318,7 @@ run_analysis <- function(data, settings) {
     return(results)
   }
 
+  # FIXME: Split this section into it's own function.
   # First get ideal response profile for 2015 standard, AS4777.2:2015.
   response_data <- ideal_response_from_frequency(
     data$frequency_data,
