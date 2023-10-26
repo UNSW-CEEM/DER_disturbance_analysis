@@ -295,9 +295,10 @@ check_grouping <- function(settings) {
   return(no_grouping)
 }
 
-#' Run a complete analysis of the data, based onf the current toll settings
-#' data and settings should be provided as list of objects
-#' @return list of data with analysis performed, many fields are update or added.
+#' Run a complete analysis of the data, using the settings given via the Shiny GUI.
+#' @param data The dataframe containing the loaded data.
+#' @param settings Settings as provided in the Shiny GUI.
+#' @return Results with data after analysis and any errors which occurred.
 run_analysis <- function(data, settings) {
   errors <- validate_pre_event_interval(
     settings$pre_event_interval,
