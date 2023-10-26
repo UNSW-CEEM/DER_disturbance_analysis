@@ -3,7 +3,10 @@ get_upscaling_results <- function(circuit_summary, manufacturer_install_data, ev
   out <- list()
   disconnection_summary <- group_disconnections_by_manufacturer(circuit_summary)
   manufacturer_capacities <- get_manufacturer_capacities(manufacturer_install_data, event_date, region)
-  disconnection_summary <- join_circuit_summary_and_cer_manufacturer_data(disconnection_summary, manufacturer_capacities)
+  disconnection_summary <- join_circuit_summary_and_cer_manufacturer_data(
+    disconnection_summary,
+    manufacturer_capacities
+  )
   out$manufacturers_missing_from_cer <- get_manufactures_in_input_db_but_not_cer(disconnection_summary)
   out$manufacturers_missing_from_input_db <- get_manufactures_in_cer_but_not_input_db(disconnection_summary)
   disconnection_summary <- impose_sample_size_threshold(disconnection_summary, sample_threshold)
@@ -23,7 +26,10 @@ get_upscaling_results_excluding_ufls_affected_circuits <- function(circuit_summa
   disconnection_summary <- group_disconnections_by_manufacturer(circuit_summary, exclude_ufls_circuits = TRUE)
   ufls_stats <- get_number_of_ufls_disconnections(circuit_summary$response_category)
   manufacturer_capacities <- get_manufacturer_capacities(manufacturer_install_data, event_date, region)
-  disconnection_summary <- join_circuit_summary_and_cer_manufacturer_data(disconnection_summary, manufacturer_capacities)
+  disconnection_summary <- join_circuit_summary_and_cer_manufacturer_data(
+    disconnection_summary,
+    manufacturer_capacities
+  )
   out$manufacturers_missing_from_cer <- get_manufactures_in_input_db_but_not_cer(disconnection_summary)
   out$manufacturers_missing_from_input_db <- get_manufactures_in_cer_but_not_input_db(disconnection_summary)
   disconnection_summary <- scale_manufacturer_capacities_by_ufls(disconnection_summary, ufls_stats)
@@ -57,9 +63,11 @@ group_disconnections_by_manufacturer <- function(circuit_summary, exclude_ufls_c
 
   # Get an initial summary of disconnection count and sample size by manufacturer.
   disconnection_summary <- group_by(circuit_summary, Standard_Version, manufacturer)
-  disconnection_summary <- summarise(disconnection_summary,
-                                     disconnections = get_number_of_disconnections(response_category),
-                                     sample_size = length(response_category))
+  disconnection_summary <- summarise(
+    disconnection_summary,
+    disconnections = get_number_of_disconnections(response_category),
+    sample_size = length(response_category)
+  )
   return(disconnection_summary)
 }
 
