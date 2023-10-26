@@ -383,7 +383,7 @@ run_analysis <- function(data, settings) {
         settings$window_length,
         settings$NED_threshold
       ) %>%
-        replace_na(list(response_category = "NA")) %>%
+        mutate(response_category = ifelse(is.na(response_category), "NA", response_category)) %>%
         filter(response_category %in% settings$responses)
 
       combined_data_f <- ufls_detection(
