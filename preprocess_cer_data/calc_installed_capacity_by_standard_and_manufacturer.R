@@ -1,3 +1,4 @@
+# FIXME: add RDoc description and figure out whether this can be removed and just have something hardcoded instead.
 calc_installed_capacity_by_standard_and_manufacturer <- function(install_data) {
   # Rename time column and categorise data based on inverter standards.
   install_data <- setnames(install_data, c("state", "date"), c("s_state", "pv_installation_year_month"))
@@ -8,6 +9,7 @@ calc_installed_capacity_by_standard_and_manufacturer <- function(install_data) {
   # For each inverter standard group find the intall capacity when the standard came into force.
   start_date = min(install_data$date)
   installed_start_standard <- group_by(install_data, Standard_Version, manufacturer, s_state)
+  # FIXME: Summarise currently takes forever and an age to do. It's probably due to get_initial_cap. Fix it.
   installed_start_standard <- summarise(
     installed_start_standard,
     initial_cap = get_initial_cap(install_data, min(date), first(s_state), first(manufacturer))
@@ -39,6 +41,7 @@ calc_installed_capacity_by_standard_and_manufacturer <- function(install_data) {
   return(install_data)
 }
 
+# FIXME: add RDoc description
 get_initial_cap <- function(install_data, min_date, state, man) {
   install_data <- filter(install_data, manufacturer == man)
   install_data <- filter(install_data, s_state == state)
