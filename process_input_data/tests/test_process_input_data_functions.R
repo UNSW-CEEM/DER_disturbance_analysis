@@ -188,7 +188,7 @@ test_that("Test the preprocessing of the site_details data", {
     stringsAsFactors = FALSE
   )
   # Call processing function
-  processed_site_details = process_raw_site_details(test_site_details)
+  processed_site_details <- process_raw_site_details(test_site_details)
   # Test the answer matches the expected answer
   expect_identical(processed_site_details, expected_answer)
 })

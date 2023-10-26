@@ -10,7 +10,7 @@ CER_MANUFACTURER_DATA <- "inbuilt_data/cer_cumulative_capacity_and_number_by_man
 OFF_GRID_POSTCODES <- "inbuilt_data/off_grid_postcodes.csv"
 POSTCODE_DATA_FILE <- "inbuilt_data/PostcodesLatLongQGIS.csv"
 
-#' Ensure that load times are valid
+#' Ensure that load times are valid.
 #' Optional errors argument will append errors & warnings to existing error list
 #' @return list of errors & warnings
 validate_load_times <- function(settings, errors) {
@@ -131,9 +131,8 @@ validate_timeseries_data <- function(time_series_data, errors) {
 #' Load input from CSVs specified in settings
 #' @return data object updated to included data from CSVs and any errors
 load_data <- function(data, settings) {
-  error_check_passed <- TRUE
-
   # Perform error checking before loading data.
+  # FIXME: Errors shouldn't need to need passing on. Just add them together.
   errors <- validate_load_times(settings)
   errors <- validate_required_files(errors)
   errors <- validate_frequency_data(settings, errors)
@@ -147,68 +146,77 @@ load_data <- function(data, settings) {
     start_time = start_time,
     end_time = end_time
   )
+
+  # FIXME: Errors shouldn't need to need passing on. Just add them together.
   errors <- validate_timeseries_data(time_series_data, errors)
 
-  # -------- data loading --------
-  if (length(errors$errors) == 0) {
-    site_details_raw <- data$db$get_site_details_raw()
-    site_details_raw <- process_raw_site_details(site_details_raw)
-    data$site_details <- mutate(site_details_raw, clean = "raw")
-
-    if (data$db$check_if_table_exists("site_details_cleaned")) {
-      site_details_clean <- data$db$get_site_details_cleaned()
-      site_details_clean <- process_raw_site_details(site_details_clean)
-      site_details_clean <- mutate(site_details_clean, clean = "clean")
-      data$site_details <- bind_rows(data$site_details, site_details_clean)
-    }
-
-    data$site_details <- site_categorisation(data$site_details)
-    data$site_details <- size_grouping(data$site_details)
-
-    circuit_details_raw <- data$db$get_circuit_details_raw()
-    data$circuit_details <- mutate(circuit_details_raw, clean = "raw")
-    data$circuit_details_raw <- data$circuit_details
-
-    if (data$db$check_if_table_exists("circuit_details_cleaned")) {
-      circuit_details_clean <- data$db$get_circuit_details_cleaned()
-      circuit_details_clean <- mutate(circuit_details_clean, clean = "clean")
-      data$circuit_details <- bind_rows(data$circuit_details, circuit_details_clean)
-    }
-
-    time_series_data <- process_time_series_data(time_series_data)
-
-    data$combined_data <- inner_join(time_series_data, data$circuit_details, by = c("c_id"))
-    data$combined_data <- inner_join(data$combined_data, data$site_details, by = c("site_id", "clean"))
-
-    data$combined_data <- perform_power_calculations(data$combined_data)
-
-    # Load in the install data from CSV.
-    install_data <- read.csv(file = INSTALL_DATA_FILE, header = TRUE, stringsAsFactors = FALSE)
-    data$install_data <- process_install_data(install_data)
-
-    manufacturer_install_data <- read.csv(file = CER_MANUFACTURER_DATA, header = TRUE, stringsAsFactors = FALSE)
-    data$manufacturer_install_data <- calc_installed_capacity_by_standard_and_manufacturer(manufacturer_install_data)
-
-    postcode_data <- read.csv(file=POSTCODE_DATA_FILE, header = TRUE, stringsAsFactors = FALSE)
-    data$postcode_data <- process_postcode_data(postcode_data)
-
-    data$off_grid_postcodes <- read.csv(file = OFF_GRID_POSTCODES, header = TRUE, stringsAsFactors = FALSE)
-    data$off_grid_postcodes <- data$off_grid_postcodes$postcodes
-
-    if(settings$frequency_data_file != "") {
-      data$frequency_data <- read.csv(file = settings$frequency_data_file, header = TRUE, stringsAsFactors = FALSE)
-      data$frequency_data <- mutate(
-        data$frequency_data,
-        ts = as.POSIXct(strptime(ts, "%Y-%m-%d %H:%M:%S", tz = "Australia/Brisbane"))
-      )
-    } else {
-      data$frequency_data <- data.frame()
-    }
-
-    # Get offset filter options and label
-    data$combined_data <- get_time_offsets(data$combined_data)
-    data$unique_offsets <- get_time_series_unique_offsets(data$combined_data)
+  if (length(errors$errors) > 0) {
+    logging::logerror("Errors found. Stop loading data.", logger = logger)
+    results <- list()
+    results$data <- data
+    results$errors <- errors
+    return(results)
   }
+
+  # -------- data loading --------
+  site_details_raw <- data$db$get_site_details_raw()
+  site_details_raw <- process_raw_site_details(site_details_raw)
+  data$site_details <- mutate(site_details_raw, clean = "raw")
+
+  if (data$db$check_if_table_exists("site_details_cleaned")) {
+    site_details_clean <- data$db$get_site_details_cleaned()
+    site_details_clean <- process_raw_site_details(site_details_clean)
+    site_details_clean <- mutate(site_details_clean, clean = "clean")
+    data$site_details <- bind_rows(data$site_details, site_details_clean)
+  }
+
+  data$site_details <- site_categorisation(data$site_details)
+  data$site_details <- size_grouping(data$site_details)
+
+  circuit_details_raw <- data$db$get_circuit_details_raw()
+  data$circuit_details <- mutate(circuit_details_raw, clean = "raw")
+  data$circuit_details_raw <- data$circuit_details
+
+  if (data$db$check_if_table_exists("circuit_details_cleaned")) {
+    circuit_details_clean <- data$db$get_circuit_details_cleaned()
+    circuit_details_clean <- mutate(circuit_details_clean, clean = "clean")
+    data$circuit_details <- bind_rows(data$circuit_details, circuit_details_clean)
+  }
+
+  time_series_data <- process_time_series_data(time_series_data)
+
+  data$combined_data <- inner_join(time_series_data, data$circuit_details, by = c("c_id"))
+  data$combined_data <- inner_join(data$combined_data, data$site_details, by = c("site_id", "clean"))
+
+  data$combined_data <- perform_power_calculations(data$combined_data)
+
+  # Load in the install data from CSV.
+  install_data <- read.csv(file = INSTALL_DATA_FILE, header = TRUE, stringsAsFactors = FALSE)
+  data$install_data <- process_install_data(install_data)
+
+  manufacturer_install_data <- read.csv(file = CER_MANUFACTURER_DATA, header = TRUE, stringsAsFactors = FALSE)
+  data$manufacturer_install_data <- calc_installed_capacity_by_standard_and_manufacturer(manufacturer_install_data)
+
+  postcode_data <- read.csv(file = POSTCODE_DATA_FILE, header = TRUE, stringsAsFactors = FALSE)
+  data$postcode_data <- process_postcode_data(postcode_data)
+
+  data$off_grid_postcodes <- read.csv(file = OFF_GRID_POSTCODES, header = TRUE, stringsAsFactors = FALSE)
+  data$off_grid_postcodes <- data$off_grid_postcodes$postcodes
+
+  if(settings$frequency_data_file != "") {
+    data$frequency_data <- read.csv(file = settings$frequency_data_file, header = TRUE, stringsAsFactors = FALSE)
+    data$frequency_data <- mutate(
+      data$frequency_data,
+      ts = as.POSIXct(strptime(ts, "%Y-%m-%d %H:%M:%S", tz = "Australia/Brisbane"))
+    )
+  } else {
+    data$frequency_data <- data.frame()
+  }
+
+  # Get offset filter options and label
+  data$combined_data <- get_time_offsets(data$combined_data)
+  data$unique_offsets <- get_time_series_unique_offsets(data$combined_data)
+
   results <- list()
   results$data <- data
   results$errors <- errors
