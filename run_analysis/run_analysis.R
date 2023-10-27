@@ -85,16 +85,16 @@ filter_combined_data <- function(
     combined_data_f <- filter(combined_data_f, clean %in% cleaned)
   }
   combined_data_f <- filter(combined_data_f, sum_ac <= 100)
-  if (length(site_types) > 0 ) {
+  if (length(site_types) > 0) {
     combined_data_f <- filter(combined_data_f, con_type %in% site_types)
   }
   if (length(off_grid_postcodes) > 0 ) {
     combined_data_f <- filter(combined_data_f, !(s_postcode %in% off_grid_postcodes))
   }
-  if (length(size_groupings) > 0 ) {
+  if (length(size_groupings) > 0) {
     combined_data_f <- filter(combined_data_f, Grouping %in% size_groupings)
   }
-  if (length(standards) > 0 ) {
+  if (length(standards) > 0) {
     combined_data_f <- filter(combined_data_f, Standard_Version %in% standards)
   }
   if (length(postcodes) > 0) {
@@ -187,7 +187,7 @@ determine_distance_zones <- function(
 #' Normalise power by c_id, based on pre-event interval power
 #' @return An updated dataframe with the column c_id_norm_power added
 normalise_c_id_power_by_pre_event <- function(combined_data_f, pre_event_interval) {
-  logging::logdebug('Calc event normalised power', logger = logger)
+  logging::logdebug("Calc event normalised power", logger = logger)
   event_powers <- filter(combined_data_f, ts > pre_event_interval - d & ts <= pre_event_interval)
   event_powers <- mutate(event_powers, event_power = power_kW)
   event_powers <- select(event_powers, c_id, clean, event_power)
@@ -200,7 +200,7 @@ normalise_c_id_power_by_pre_event <- function(combined_data_f, pre_event_interva
 #' Optionally adds pre event normalised power as a new column when pre_event_interval is provided
 #' @return An updated dataframe with the column c_id_daily_norm_power added
 normalise_c_id_power_by_daily_max <- function(combined_data, max_power, pre_event_interval) {
-  logging::logdebug('Calc daily normalised power', logger = logger)
+  logging::logdebug("Calc daily normalised power", logger = logger)
   combined_data_f <- left_join(combined_data, max_power, by = c("c_id", "clean"))
   combined_data_f <- mutate(combined_data_f, c_id_daily_norm_power = power_kW / max_power)
   if (!missing(pre_event_interval)) {
@@ -216,7 +216,7 @@ normalise_c_id_power_by_daily_max <- function(combined_data, max_power, pre_even
 #' Performance factor is calculated as power/ac_capacity at a site level
 #' @return An updated dataframe with site_performance_factor and event_normalised_performance_factor
 determine_performance_factors <- function(combined_data_f, pre_event_interval) {
-  logging::logdebug('Calc site peformance factors', logger = logger)
+  logging::logdebug("Calc site peformance factors", logger = logger)
   combined_data_f <- calc_site_performance_factors(combined_data_f)
   combined_data_f <- setnames(combined_data_f, c("ts"), c("Time"))
   combined_data_f <- event_normalised_power(combined_data_f, pre_event_interval, keep_site_id = TRUE)
@@ -236,7 +236,7 @@ upscale_and_summarise_disconnections <- function(circuit_summary,
                                                  load_date,
                                                  region_to_load,
                                                  exclude_solar_edge) {
-  logging::logdebug('Summarise and upscale disconnections on a manufacturer basis.', logger = logger)
+  logging::logdebug("Summarise and upscale disconnections on a manufacturer basis.", logger = logger)
   if (exclude_solar_edge) {
     circuits_to_summarise <- filter(circuit_summary, manufacturer != "SolarEdge" | is.na(manufacturer))
     manufacturer_install_data <- filter(manufacturer_install_data, manufacturer != "SolarEdge" | is.na(manufacturer))
@@ -337,17 +337,17 @@ run_analysis <- function(data, settings) {
     f_ulco <- 50.15
     f_hyst <- 0.1
     t_hyst <- 20
-    f_upper <- 52.00
+    f_upper <- 52.0
   } else if (settings$region_to_load == "TAS") {
     f_ulco <- 50.5
     f_hyst <- 0.05
     t_hyst <- 20
-    f_upper <- 55.00
+    f_upper <- 55.0
   } else {
     f_ulco <- 50.25
     f_hyst <- 0.1
     t_hyst <- 20
-    f_upper <- 52.00
+    f_upper <- 52.0
   }
   response_data_2020 <- ideal_response_from_frequency(
     data$frequency_data,
@@ -447,7 +447,7 @@ run_analysis <- function(data, settings) {
   )
 
   # -------- filter by time window --------
-  logging::logdebug('filter by time window', logger = logger)
+  logging::logdebug("filter by time window", logger = logger)
   if (length(settings$offsets) < length(data$unique_offsets)) {
     combined_data_f <- filter(combined_data_f, time_offset %in% settings$offsets)
   }
@@ -508,7 +508,7 @@ run_analysis <- function(data, settings) {
     }
 
     # -------- determine reconnection compliace --------
-    logging::logdebug('Set reconnection compliance values', logger = logger)
+    logging::logdebug("Set reconnection compliance values", logger = logger)
     max_power <- data$db$get_max_circuit_powers(settings$region_to_load)
     combined_data_f <- normalise_c_id_power_by_daily_max(
       combined_data_f,
@@ -526,10 +526,10 @@ run_analysis <- function(data, settings) {
       ramp_threshold_for_non_compliance = settings$total_ramp_threshold_for_non_compliance,
       ramp_rate_change_resource_limit_threshold = settings$ramp_rate_change_resource_limit_threshold
     )
-    combined_data_f <- left_join(combined_data_f, reconnection_categories, by = 'c_id')
+    combined_data_f <- left_join(combined_data_f, reconnection_categories, by = "c_id")
 
     # -------- calculate summary stats --------
-    logging::logdebug('Count samples in each data series to be displayed', logger = logger)
+    logging::logdebug("Count samples in each data series to be displayed", logger = logger)
     grouping_cols <- find_grouping_cols(settings)
 
     data$sample_count_table <- vector_groupby_count(combined_data_f, grouping_cols)
@@ -561,14 +561,14 @@ run_analysis <- function(data, settings) {
 
   # Proceed to aggregation and plotting only if there is less than 1000 data series to plot, else stop and notify the
   # user.
-  logging::logdebug('Proceed to aggregation and plotting', logger = logger)
+  logging::logdebug("Proceed to aggregation and plotting", logger = logger)
   if (
     (sum(data$sample_count_table$sample_count) < 1000 & no_grouping) |
     (length(data$sample_count_table$sample_count) < 1000 & !no_grouping)
   ) {
     if (length(combined_data_f$ts) > 0) {
       # Copy data for saving
-      logging::logdebug('Copy data for saving', logger = logger)
+      logging::logdebug("Copy data for saving", logger = logger)
       combined_data_cols <- c(
         "ts",
         "site_id",
@@ -633,7 +633,7 @@ run_analysis <- function(data, settings) {
     }
 
     # Check that the filter does not result in an empty dataframe.
-    logging::logdebug('Check that the filter does not result in an empty dataframe.', logger = logger)
+    logging::logdebug("Check that the filter does not result in an empty dataframe.", logger = logger)
     if (length(combined_data_f$ts) > 0) {
 
       # -------- Initialise aggregate dataframes  --------
@@ -752,7 +752,7 @@ run_analysis <- function(data, settings) {
           "missing manufacturers."
         )
         long_error_message <- sprintf(
-          paste(long_error_message, collapse = ''),
+          paste(long_error_message, collapse = ""),
           num_missing_from_cer,
           num_missing_from_input_db
         )
