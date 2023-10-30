@@ -88,7 +88,7 @@ filter_combined_data <- function(
   if (length(site_types) > 0) {
     combined_data_f <- filter(combined_data_f, con_type %in% site_types)
   }
-  if (length(off_grid_postcodes) > 0 ) {
+  if (length(off_grid_postcodes) > 0) {
     combined_data_f <- filter(combined_data_f, !(s_postcode %in% off_grid_postcodes))
   }
   if (length(size_groupings) > 0) {
