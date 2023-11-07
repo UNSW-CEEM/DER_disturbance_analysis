@@ -14,17 +14,17 @@ knitr::opts_chunk$set(echo = TRUE)
 To use the database interface we need to source the file containing it.
 
 ```{R, message=FALSE}
-source("db_interface/R/interface.R")
+source("db_interface/interface.R")
 ```
 
-### Creating a sqlite database from Solar Analytics data
+### Creating a SQLite database from Solar Analytics data
 
 Define the paths of the Solar Analytics files to use in the database.
 
 ```{r}
-timeseries_path_name <- "db_interface/tests/testthat/data/simple_timeseries.csv"
-site_details_path_name <- "db_interface/tests/testthat/data/simple_site_details.csv"
-circuit_details_path_name <- "db_interface/tests/testthat/data/simple_circuit_details.csv"
+timeseries_path_name <- "db_interface/tests/data/simple_timeseries.csv"
+site_details_path_name <- "db_interface/tests/data/simple_site_details.csv"
+circuit_details_path_name <- "db_interface/tests/data/simple_circuit_details.csv"
 ```
 
 Create an instance of the database interface and use it to create a new database.
@@ -35,16 +35,18 @@ db <- DBInterface$new()
 db$connect_to_new_database("example_database.db")
 ```
 
-Add the Solar Analytics data to the new database, for 6 GB of raw Solar Analytics time series data this takes aproximately 20 min. For the examples in this document we use the extra setting check_dataset_ids_match=FALSE. This would check that at least 10 circuit and site ids match between the datasets provided, but the check will not pass for the small datasets used here.
+Add the Solar Analytics data to the new database. For 6 GB of raw Solar Analytics timeseries data, this takes approximately 20 min. For the examples in this document we use the extra setting check_dataset_ids_match=FALSE. This would check that at least 10 circuit and site IDs match between the datasets provided, but the check will not pass for the small datasets used here.
 
 ```{r, warning=FALSE}
-db$build_database(timeseries = timeseries_path_name,
-                  circuit_details = circuit_details_path_name,
-                  site_details = site_details_path_name,
-                  check_dataset_ids_match = FALSE)
+db$build_database(
+  timeseries = timeseries_path_name,
+  circuit_details = circuit_details_path_name,
+  site_details = site_details_path_name,
+  check_dataset_ids_match = FALSE
+)
 ```
 
-Now these data sets should be avaible through the interface, the methods for accessing them are explained
+Now these datasets should be available through the interface, the methods for accessing them are explained
 [here](#data-available-before-cleaning).
 
 #### Troubleshooting
@@ -54,96 +56,117 @@ You may receive three possible errors at this stage.
 ##### 3. If the timeseries CSV from Solar Analytics does not contain the expected header.
 
 ```{r, error=TRUE}
-timeseries_path_name <- "db_interface/tests/testthat/data/simple_timeseries_unknown_header.csv"
-site_details_path_name <- "db_interface/tests/testthat/data/simple_site_details.csv"
-circuit_details_path_name <- "db_interface/tests/testthat/data/simple_circuit_details.csv"
+timeseries_path_name <- "db_interface/tests/data/simple_timeseries_unknown_header.csv"
+site_details_path_name <- "db_interface/tests/data/simple_site_details.csv"
+circuit_details_path_name <- "db_interface/tests/data/simple_circuit_details.csv"
 db_two <- DBInterface$new()
 db_two$connect_to_new_database("example_database_two.db")
-db_two$build_database(timeseries = timeseries_path_name,
-                  circuit_details = circuit_details_path_name,
-                  site_details = site_details_path_name,
-                  check_dataset_ids_match = FALSE)
+db_two$build_database(
+  timeseries = timeseries_path_name,
+  circuit_details = circuit_details_path_name,
+  site_details = site_details_path_name,
+  check_dataset_ids_match = FALSE
+)
 ```
-This is fixed by overiding the default timeseries columns, in this case the 'v' column is given the alias 'voltage'.
+This is fixed by overriding the default timeseries columns, in this case the "voltage" column is given the alias "voltages".
 
 ```{r}
-db_two$default_timeseries_column_aliases <- list(ts='_ts', time_stamp='_ts', c_id='_c_id', voltage='_v',
-                                                 f='_f', e='_e', d='_d')
+db_two$default_timeseries_column_aliases <- list(
+  ts = "_ts",
+  time_stamp = "_ts",
+  c_id = "_c_id",
+  voltages = "_voltage",
+  f = "_frequency",
+  e = "_e",
+  d = "_d",
+  vmin = "_vmin",
+  vmax = "_vmax",
+  vmean = "_vmean",
+  fmin = "_fmin",
+  fmax = "_fmax"
+)
 ```
 
 Then the build procedure needs to be rerun.
 
 ```{r, warning=FALSE}
-db_two$build_database(timeseries = timeseries_path_name,
-                  circuit_details = circuit_details_path_name,
-                  site_details = site_details_path_name,
-                  check_dataset_ids_match = FALSE)
+db_two$build_database(
+  timeseries = timeseries_path_name,
+  circuit_details = circuit_details_path_name,
+  site_details = site_details_path_name,
+  check_dataset_ids_match = FALSE
+)
 ```
 
 ##### 2. If the circuit details CSV from Solar Analytics does not contain the expected header.
 
 ```{r, error=TRUE, warning=FALSE}
-timeseries_path_name <- "db_interface/tests/testthat/data/simple_timeseries.csv"
-site_details_path_name <- "db_interface/tests/testthat/data/simple_site_details.csv"
-circuit_details_path_name <- "db_interface/tests/testthat/data/simple_circuit_details_unknown_header.csv"
+timeseries_path_name <- "db_interface/tests/data/simple_timeseries.csv"
+site_details_path_name <- "db_interface/tests/data/simple_site_details.csv"
+circuit_details_path_name <- "db_interface/tests/data/simple_circuit_details_unknown_header.csv"
 db_two <- DBInterface$new()
 db_two$connect_to_new_database("example_database_two.db")
-db_two$build_database(timeseries = timeseries_path_name,
-                  circuit_details = circuit_details_path_name,
-                  site_details = site_details_path_name,
-                  check_dataset_ids_match = FALSE)
+db_two$build_database(
+  timeseries = timeseries_path_name,
+  circuit_details = circuit_details_path_name,
+  site_details = site_details_path_name,
+  check_dataset_ids_match = FALSE
+)
 ```
 This is fixed by editing the circuit details file directly.
 
 ##### 3. If the site details CSV from Solar Analytics does not contain the expected header.
 
 ```{r, error=TRUE, warning=FALSE}
-timeseries_path_name <- "db_interface/tests/testthat/data/simple_timeseries.csv"
-site_details_path_name <- "db_interface/tests/testthat/data/simple_site_details_unknown_header.csv"
-circuit_details_path_name <- "db_interface/tests/testthat/data/simple_circuit_details.csv"
+timeseries_path_name <- "db_interface/tests/data/simple_timeseries.csv"
+site_details_path_name <- "db_interface/tests/data/simple_site_details_unknown_header.csv"
+circuit_details_path_name <- "db_interface/tests/data/simple_circuit_details.csv"
 db_two <- DBInterface$new()
 db_two$connect_to_new_database("example_database_two.db")
-db_two$build_database(timeseries = timeseries_path_name,
-                  circuit_details = circuit_details_path_name,
-                  site_details = site_details_path_name,
-                  check_dataset_ids_match = FALSE)
+db_two$build_database(
+  timeseries = timeseries_path_name,
+  circuit_details = circuit_details_path_name,
+  site_details = site_details_path_name,
+  check_dataset_ids_match = FALSE
+)
 ```
-This is fixed by editing the site details file directly and may require adjusting the ac and dc capacity units.
+This is fixed by editing the site details file directly and may require adjusting the AC and DC capacity units.
 
 
 ### Cleaning the database
 
 This step attempts to fill in missing sample duration values and correct errors in the ciruit and site details data.
 
-Before running data cleaning the postcode lattiude and longditude data needs to be added to the database, this is for calculating sunrise and sunset times that are used for validating if a pofile is from a PV system. Data mapping the manufacturer
-names provided by solar analytic to a consistent set of unique manufacture names also needs to be provided.
+Before running data cleaning, the postcode latiude and longitude data needs to be added to the database. This is for calculating sunrise and sunset times that are used for validating if a profile is from a PV system. Data mapping the manufacturer
+names provided by Solar Analytics to a consistent set of unique manufacturer names also needs to be provided.
 ```{r, warning=FALSE, message=FALSE}
-db$add_postcode_lon_lat_to_database("db_interface/tests/testthat/data/postcode_lon_lat.csv")
-db$add_manufacturer_mapping_table("manufacturer_mapping.csv")
+db$add_postcode_lon_lat_to_database("db_interface/tests/data/postcode_lon_lat.csv")
+db$add_manufacturer_mapping_table("db_interface/tests/data/manufacturer_mapping.csv")
 ```
 Then the data cleaning loop can be run.
 ```{r, warning=FALSE, message=FALSE}
 db$run_data_cleaning_loop()
 ```
-Now new cleaned data sets should be avaible through the interface, the methods for accessing them are explained
+Now new cleaned datasets should be available through the interface, the methods for accessing them are explained
 [here](#data-available-post-cleaing).
 
 ### Setting up a database for use with the disturbance analysis tool
 The disturbance analysis tool currently requires data cleaning to be performed. An example script for building the
-database ready for use by the tool is as follows. On data sets of 6 GB from Solar Analytics this takes aproximately 1 hr to clean.
-min to run.
+database ready for use by the tool is as follows. On datasets of 6 GB from Solar Analytics this takes approximately 1 hr to clean.
 ```{r, warning=FALSE, message=FALSE}
-timeseries_path_name <- "db_interface/tests/testthat/data/simple_timeseries.csv"
-site_details_path_name <- "db_interface/tests/testthat/data/simple_site_details.csv"
-circuit_details_path_name <- "db_interface/tests/testthat/data/simple_circuit_details.csv"
+timeseries_path_name <- "db_interface/tests/data/simple_timeseries.csv"
+site_details_path_name <- "db_interface/tests/data/simple_site_details.csv"
+circuit_details_path_name <- "db_interface/tests/data/simple_circuit_details.csv"
 db <- DBInterface$new()
-db$connect_to_new_database("example_database.db")
-db$build_database(timeseries = timeseries_path_name,
-                  circuit_details = circuit_details_path_name,
-                  site_details = site_details_path_name,
-                  check_dataset_ids_match = FALSE)
-db$add_postcode_lon_lat_to_database("db_interface/tests/testthat/data/postcode_lon_lat.csv")
-db$add_manufacturer_mapping_table("manufacturer_mapping.csv")
+db$connect_to_new_database("example_database3.db")
+db$build_database(
+  timeseries = timeseries_path_name,
+  circuit_details = circuit_details_path_name,
+  site_details = site_details_path_name,
+  check_dataset_ids_match = FALSE
+)
+db$add_postcode_lon_lat_to_database("db_interface/tests/data/postcode_lon_lat.csv")
+db$add_manufacturer_mapping_table("db_interface/tests/data/manufacturer_mapping.csv")
 db$run_data_cleaning_loop()
 ```
 
@@ -152,14 +175,14 @@ db$run_data_cleaning_loop()
 
 #### Data available before cleaning
 
-* Get the **complete set of time series data** in a dataframe
+* Get the **complete set of timeseries data** in a dataframe
 
 ```{r}
 db$get_time_series_data()
 ```
 
-* Get a **single circuit's time series data** in a dataframe, this is preferable to loading all time series data and then
-filter because selection is done before loading the data into memory.
+* Get a **single circuit's timeseries data** in a dataframe. This is preferable to loading all of the timeseries data and then
+filtering, because selection is done before loading the data into memory.
 
 ```{r}
 c_id <- c(1)
@@ -167,12 +190,16 @@ circuits_to_load <- data.frame(c_id)
 db$get_time_series_data_by_c_id(c_ids = circuits_to_load)
 ```
 
-* Get **time series data by state, duration and time**, this is preferable to loading all time series data and then
+* Get **timeseries data by state, duration and time**, this is preferable to loading all timeseries data and then
 filter because selection is done before loading the data into memory.
 
 ```{r}
-db$get_filtered_time_series_data(state = 'NSW', duration = 5, start_time = '2018-01-01 00:00:20',
-                                 end_time = '2018-01-01 00:00:30')
+db$get_filtered_time_series_data(
+  state = "NSW",
+  duration = 5,
+  start_time = "2018-01-01 00:00:20",
+  end_time = "2018-01-01 00:00:30"
+)
 ```
 
 * Get **raw circuit details**.
@@ -188,7 +215,7 @@ db$get_site_details_raw()
 ```
 
 #### Data available post cleaing
-After running the data cleaning loop additional outputs are available from the data base interface.
+After running the data cleaning loop additional outputs are available from the database interface.
 
 * Get **cleaned circuit details**.
 

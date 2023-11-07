@@ -34,7 +34,7 @@ ideal_response <- function(frequency_data, f_ulco, f_hyst, t_hyst, f_upper) {
       # Ideal response profile at this time (when frequency is > 50.25Hz for the first time) is set to 1
       norm_power <- c(norm_power, 1)
     # Check for whether the frequency has been below 50.15Hz for at least 60s for the first time since the droop start
-    } else if (max(last_60_seconds_of_data$f) <= (f_ulco-f_hyst) & length(start_times) > length(end_times)) {
+    } else if (max(last_60_seconds_of_data$f) <= (f_ulco - f_hyst) & length(start_times) > length(end_times)) {
       # If so, then add this time to end_times, record the ts, set norm_power to the last value in the norm power list
       end_times <- c(end_times, frequency_data$ts[i])
       ts <- c(ts, frequency_data$ts[i])
@@ -61,7 +61,7 @@ ideal_response <- function(frequency_data, f_ulco, f_hyst, t_hyst, f_upper) {
 }
 
 norm_p_over_frequency <- function(f, f_ulco, f_upper) {
-  if (f >= f_ulco & f <= f_upper) {
+  if (f >= f_ulco && f <= f_upper) {
     norm_p <- 1 - ((f - f_ulco) / (f_upper - f_ulco))
   } else if (f > f_upper) {
     norm_p <- 0.0
@@ -113,7 +113,7 @@ calc_error_metric_and_compliance <- function(combined_data, ideal_response_downs
 
 calc_error_metric <- function(combined_data, ideal_response_downsampled) {
   combined_data <- distinct(combined_data, site_id, ts, .keep_all = TRUE)
-  combined_data <- inner_join(combined_data, ideal_response_downsampled, by = c("ts", "time_group"))
+  combined_data <- inner_join(combined_data, ideal_response_downsampled, by = c("ts" = "time_group"))
   combined_data <- mutate(
     combined_data,
     abs_percent_diff_actual_cf_ideal = abs(Site_Event_Normalised_Power_kW - norm_power) / norm_power
@@ -193,7 +193,7 @@ calc_error_metric_and_compliance_2 <- function(combined_data,
   # First pass compliance
   ideal_response_downsampled_f <- filter(ideal_response_downsampled, time_group >= start_buffer_t)
   ideal_response_downsampled_f <- filter(ideal_response_downsampled_f, time_group <= end_buffer)
-  error_by_c_id <- inner_join(combined_data, ideal_response_downsampled_f, by = c("ts", "time_group"))
+  error_by_c_id <- inner_join(combined_data, ideal_response_downsampled_f, by = c("ts" = "time_group"))
   error_by_c_id <- mutate(error_by_c_id, error = (1 - c_id_norm_power) - ((1 - norm_power) * threshold))
   error_by_c_id <- group_by(error_by_c_id, c_id, clean)
   error_by_c_id <- summarise(error_by_c_id, min_error = min(error))
@@ -201,16 +201,16 @@ calc_error_metric_and_compliance_2 <- function(combined_data,
   error_by_c_id <- select(error_by_c_id, c_id, compliance_status, clean)
   combined_data <- left_join(combined_data, error_by_c_id, by = c("c_id", "clean"))
 
-  # Change 'Non compliant' to 'Non Compliant Responding' where complaint at start
+  # Change 'Non compliant' to 'Non Compliant Responding' where compliant at start
   ideal_response_downsampled_f <- filter(ideal_response_downsampled, time_group <= end_buffer_responding)
-  error_by_c_id <- inner_join(combined_data, ideal_response_downsampled_f, by = c("ts", "time_group"))
+  error_by_c_id <- inner_join(combined_data, ideal_response_downsampled_f, by = c("ts" = "time_group"))
   error_by_c_id <- mutate(error_by_c_id, error = (1 - c_id_norm_power) - ((1 - norm_power) * threshold))
   error_by_c_id <- group_by(error_by_c_id, c_id, clean)
   error_by_c_id <- summarise(error_by_c_id, max_error=max(error), compliance_status=first(compliance_status))
   error_by_c_id <- mutate(
     error_by_c_id,
     compliance_status = ifelse(
-      (max_error >= 0.0) & (compliance_status == "Non-compliant"),
+      (max_error >= 0.0) && (compliance_status == "Non-compliant"),
       "Non-compliant Responding",
       compliance_status
     )

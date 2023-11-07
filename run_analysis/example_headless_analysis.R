@@ -61,7 +61,7 @@ data <- load_results$data
 load_errors <- load_results$errors
 rm(load_results)
 
-# show errors & warnings on tool dash
+# show errors and warnings on tool dash
 if (length(load_errors$warnings) > 0) {
   for (warning in load_errors$warnings) {
     logging::logwarn(paste(warning$title, warning$body), logger = app_logger)

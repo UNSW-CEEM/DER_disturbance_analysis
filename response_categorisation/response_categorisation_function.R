@@ -10,7 +10,7 @@ categorise_response <- function(combined_data, event_time, window_length, NED_th
     event_power = first(power_kW),
     min_norm_power = min(power_kW / first(power_kW)),
     num_con_zeros = num_consecutive_zeros(power_kW),
-    num_data_points = length(power_kW)-1,
+    num_data_points = length(power_kW) - 1,
     first_ts = ifelse(first(ts) > event_time - d & first(ts) <= event_time, "sampled", "not sampled")
   )
   event_window_data <- categorise_by_response(event_window_data, window_length, NED_threshold_pct)
@@ -70,11 +70,7 @@ categorise_by_response <- function(event_window_data, window_length, NED_thresho
 
   event_window_data <- mutate(
     event_window_data,
-    response_category = ifelse(
-      response_category == "Undefined" & num_con_zeros > 1,
-      "4 Disconnect",
-      response_category
-    )
+    response_category = ifelse(response_category == "Undefined" & num_con_zeros > 1, "4 Disconnect", response_category)
   )
 
   return(event_window_data)
@@ -83,14 +79,14 @@ categorise_by_response <- function(event_window_data, window_length, NED_thresho
 num_consecutive_zeros <- function(event_power_vector) {
   num_con_zeros <- 0
   pt0 <- event_power_vector[1]
-  if (length(event_power_vector) > 1 & pt0 > 0.1) {
+  if (length(event_power_vector) > 1 && pt0 > 0.1) {
     for (i in 2:length(event_power_vector)) {
       if (num_con_zeros == 0) {
         if((event_power_vector[i] / pt0) < 0.05) {
           num_con_zeros <- num_con_zeros + 1
         }
       } else {
-        if (((event_power_vector[i] / pt0) < 0.05) & ((event_power_vector[i - 1] / pt0) < 0.05)) {
+        if (((event_power_vector[i] / pt0) < 0.05) && ((event_power_vector[i - 1] / pt0) < 0.05)) {
           num_con_zeros <- num_con_zeros + 1
         }
       }

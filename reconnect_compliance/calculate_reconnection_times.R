@@ -4,7 +4,7 @@ calculate_reconnection_times <- function(normalised_power_profiles,
                                          reconnect_threshold) {
   normalised_power_profiles <- filter(normalised_power_profiles, ts > event_time)
 
-  last_disconnected_interval <- find_last_distconnected_intervals(normalised_power_profiles, disconnect_threshold)
+  last_disconnected_interval <- find_last_disconnected_intervals(normalised_power_profiles, disconnect_threshold)
 
   connected_intervals <- filter(
     normalised_power_profiles,
@@ -12,6 +12,7 @@ calculate_reconnection_times <- function(normalised_power_profiles,
   )
   connected_intervals <- inner_join(connected_intervals, last_disconnected_interval, by = c("c_id"))
   connected_intervals <- filter(connected_intervals, ts > pre_reconnection_time)
+
   first_fully_connected_interval <- group_by(connected_intervals, c_id)
   first_fully_connected_interval <- summarise(first_fully_connected_interval, fully_connected_time = min(ts))
 
@@ -25,12 +26,10 @@ calculate_reconnection_times <- function(normalised_power_profiles,
   return(reconnection_times)
 }
 
-find_last_distconnected_intervals <- function(normalised_power_profiles, disconnect_threshold) {
-  distconnected_intervals <- filter(
-    normalised_power_profiles,
-    c_id_daily_norm_power < pre_event_norm_power * disconnect_threshold
-  )
-  last_disconnected_interval <- group_by(distconnected_intervals, c_id)
-  last_disconnected_interval <- summarise(last_disconnected_interval, pre_reconnection_time = max(ts))
+find_last_disconnected_intervals <- function(normalised_power_profiles, disconnect_threshold) {
+  last_disconnected_interval <- normalised_power_profiles %>%
+    filter(c_id_daily_norm_power < pre_event_norm_power * disconnect_threshold) %>%
+    group_by(c_id) %>%
+    summarise(pre_reconnection_time = max(ts))
   return(last_disconnected_interval)
 }

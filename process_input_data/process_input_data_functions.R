@@ -165,7 +165,7 @@ assert_install_data_assumptions <- function(install_data) {
     all(install_data$state %in% c("NSW", "VIC", "SA", "TAS", "QLD", "NT", "ACT", "WA")),
     msg = "State values in install data do not match the expected values"
   )
-  # Assert that the first date in the install data is before the start of the transition peroid
+  # Assert that the first date in the install data is before the start of the transition period
   assert_that(
     min(ymd(install_data$date))<ymd("2015-10-01"),
     msg = "Install data first entry does not predate start of transition period"

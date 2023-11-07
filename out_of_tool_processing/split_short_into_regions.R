@@ -1,6 +1,6 @@
 ###INPUT CSV FILES
 #Rename your csv file into the format: "short_YYYY-MM-DD.csv"
-temp.csv <- "short_2019-03-03.csv"
+temp.csv <- "short_YYYY-MM-DD.csv"
 
 ## Script to split
 df.c_id <- read.csv("circuit_details.csv", header = TRUE, stringsAsFactors = FALSE) %>%
@@ -12,14 +12,12 @@ df.site_id <- distinct(df.site_id)
 
 df.circuit_state <- left_join(df.c_id, df.site_id, by = "site_id") %>%
   select(c_id, s_state) %>%
-  mutate(c_id = as.character(c_id))
-
-df.circuit_state <- distinct(df.circuit_state)
+  distinct()
 
 row_count_file <- NULL
 row_count_region_file <- NULL
 
-temp.df <- read.csv(temp_csv, header = TRUE, stringsAsFactors = FALSE)
+temp.df <- read.csv(temp.csv, header = TRUE, stringsAsFactors = FALSE)
 
 df.ts_state <- left_join(temp.df, df.circuit_state, by = "c_id")
 
@@ -27,7 +25,7 @@ all_regions <- unique(df.ts_state$s_state)
 
 temp.row_count <- as.data.frame(nrow(temp.df)) %>%
   mutate(new_df_count = nrow(df.ts_state)) %>%
-  mutate(File = paste(temp_csv))
+  mutate(File = temp.csv)
 
 names(temp.row_count) <- c("OriginalRowCount", "NewRowCount", "File")
 
@@ -40,22 +38,22 @@ for (region in all_regions) {
     na.c_id <- as.data.frame(unique(temp.NA.df$c_id))
     names(na.c_id) <- "UnmatchedCiDs"
 
-    write.csv(na.c_id, paste(substr(temp_csv, 7, 16), "_", region, "short.csv"))
+    write.csv(na.c_id, paste0(substr(temp.csv, 7, 16), "_", region, "short.csv"))
 
     temp.row_count_region <- as.data.frame(nrow(temp.NA.df)) %>%
-      mutate(File = paste(temp_csv)) %>%
-      mutate(Region = paste(region))
+      mutate(File = temp.csv) %>%
+      mutate(Region = region)
 
     names(temp.row_count_region) <- c("RowCount", "File", "Region")
   } else {
     temp.region.df <- filter(df.ts_state, s_state == region) %>%
       select(c_id, utc_tstamp, energy, power, voltage, frequency, duration)
 
-    write.csv(temp.region.df, paste(substr(temp_csv, 7, 16), "_", region, "short.csv"))
+    write.csv(temp.region.df, paste0(substr(temp.csv, 7, 16), "_", region, "short.csv"))
 
     temp.row_count_region <- as.data.frame(nrow(temp.region.df)) %>%
-      mutate(File = paste(temp_csv)) %>%
-      mutate(Region = paste(region))
+      mutate(File = temp.csv) %>%
+      mutate(Region = region)
 
     names(temp.row_count_region) <- c("RowCount", "File", "Region")
   }

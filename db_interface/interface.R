@@ -324,8 +324,7 @@ DBInterface <- R6::R6Class(
       optional_columns <- c("vmin", "vmax", "vmean", "fmin", "fmax")
 
       if (any(optional_columns %in% column_names)) {
-        replace_columns <-
-          paste(optional_columns[optional_columns %in% column_names], collapse = ", ")
+        replace_columns <- paste(optional_columns[optional_columns %in% column_names], collapse = ", ")
         select_columns <- c()
         for (col in optional_columns[optional_columns %in% column_names]) {
           select_columns <- c(select_columns, sprintf("_%s AS %s", col, col))
@@ -355,12 +354,12 @@ DBInterface <- R6::R6Class(
       for (name in column_names) {
         if (name %in% names(self$default_timeseries_column_aliases)) {
           query <- gsub(self$default_timeseries_column_aliases[[name]], name, query)
-        } else {
+        } else if (!(name %in% optional_columns)) {
           error_message <- paste0(
             "The provided time series file should have the columns ts, c_id, d, e, v and f, ",
             "or known aliases of these columns.\n",
             "The columns _cols_ were found instead.\n\n",
-            "Please override the column alaises in the database interface and try again."
+            "Please override the column aliases in the database interface and try again."
           )
           error_message <- gsub("_cols_", paste(column_names, collapse = ", "), error_message)
           stop(error_message)

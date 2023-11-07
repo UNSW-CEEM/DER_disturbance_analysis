@@ -11,8 +11,8 @@ OFF_GRID_POSTCODES <- "inbuilt_data/off_grid_postcodes.csv"
 POSTCODE_DATA_FILE <- "inbuilt_data/PostcodesLatLongQGIS.csv"
 
 #' Ensure that load times are valid
-#' Optional errors argument will append errors & warnings to existing error list
-#' @return list of errors & warnings
+#' Optional errors argument will append errors and warnings to existing error list
+#' @return list of errors and warnings
 validate_load_times <- function(settings, errors) {
   if (missing(errors)) {
     errors <- list(warnings = list(), errors = list())
@@ -40,8 +40,8 @@ validate_load_times <- function(settings, errors) {
 }
 
 #' Validate requried CSVs
-#' Optional errors argument will append errors & warnings to existing error list
-#' @return list of errors & warnings
+#' Optional errors argument will append errors and warnings to existing error list
+#' @return list of errors and warnings
 validate_required_files <- function(errors) {
   if (missing(errors)) {
     errors <- list(warnings = list(), errors = list())
@@ -73,8 +73,8 @@ validate_required_files <- function(errors) {
 }
 
 #' Validates frequency CSV columns
-#' Optional errors argument will append errors & warnings to existing error list
-#' @return list of errors & warnings
+#' Optional errors argument will append errors and warnings to existing error list
+#' @return list of errors and warnings
 validate_frequency_data <- function(settings, errors) {
   if (missing(errors)) {
     errors <- list(warnings = list(), errors = list())
@@ -112,8 +112,8 @@ validate_frequency_data <- function(settings, errors) {
 }
 
 #' Validates timeseries data
-#' Optional errors argument will append errors & warnings to existing error list
-#' @return list of errors & warnings
+#' Optional errors argument will append errors and warnings to existing error list
+#' @return list of errors and warnings
 validate_timeseries_data <- function(time_series_data, errors) {
   if (missing(errors)) {
     errors <- list(warnings = list(), errors = list())

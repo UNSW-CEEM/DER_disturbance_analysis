@@ -17,7 +17,7 @@ create_reconnection_summary <- function(combined_data_f,
   )
 
   ramp_rates <- calculate_ramp_rates(combined_data_f)
-  reconnection_start_times <- find_last_distconnected_intervals(
+  reconnection_start_times <- find_last_disconnected_intervals(
     post_event_response,
     disconnect_threshold = disconnecting_threshold
   )

@@ -20,8 +20,9 @@ get_postcode_distance_from_event <- function(postcode_data, event_lat, event_lon
 }
 
 get_zones <- function(combined_data, radius_one, radius_two, radius_three) {
-  combined_data <- mutate(combined_data, zone = ifelse(distance < radius_one, "1 Zone", "4 Undefined"))
-  combined_data <- mutate(combined_data, zone = ifelse(distance < radius_two & zone == "4 Undefined", "2 Zone", zone))
-  combined_data <- mutate(combined_data, zone = ifelse(distance < radius_three & zone == "4 Undefined", "3 Zone", zone))
+  combined_data <- combined_data %>%
+    mutate(zone = ifelse(distance < radius_one, "1 Zone", "4 Undefined")) %>%
+    mutate(zone = ifelse(distance < radius_two & zone == "4 Undefined", "2 Zone", zone)) %>%
+    mutate(zone = ifelse(distance < radius_three & zone == "4 Undefined", "3 Zone", zone))
   return(combined_data)
 }

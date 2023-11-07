@@ -269,8 +269,6 @@ remove_outlying_voltages <- function(time_series) {
   time_series[, voltage_cols] <- (
     time_series[, voltage_cols] * voltage_extremes[match(time_series$c_id, voltage_extremes$c_id), voltage_cols]
   )
-  time_series["v_changed"] <- rowSums(
-    is.na(time_series[, voltage_cols]) & !is.na(old_time_series[, voltage_cols])
-  ) > 0
+  time_series["v_changed"] <- rowSums(is.na(time_series[, voltage_cols]) & !is.na(old_time_series[, voltage_cols])) > 0
   return(time_series)
 }

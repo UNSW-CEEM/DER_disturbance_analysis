@@ -1,7 +1,7 @@
 library(data.table)
 
-intall_data_file <- "cer_data/cer_sizegroup_install_data.csv"
-install_data <- read.csv(file = intall_data_file, header = TRUE, stringsAsFactors = FALSE)
+install_data_file <- "cer_data/cer_sizegroup_install_data.csv"
+install_data <- read.csv(file = install_data_file, header = TRUE, stringsAsFactors = FALSE)
 
 start_date <- min(install_data$date)
 end_date <- max(install_data$date)

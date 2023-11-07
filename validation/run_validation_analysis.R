@@ -80,7 +80,7 @@ run_analysis_from_settings <- function(settings) {
   load_errors <- load_results$errors
   rm(load_results)
 
-  # show errors & warnings on tool dash
+  # show errors and warnings on tool dash
   if (length(load_errors$warnings) > 0) {
     for (warning in load_errors$warnings) {
       logging::logwarn(paste(warning$title, warning$body), logger = app_logger)
@@ -99,7 +99,7 @@ run_analysis_from_settings <- function(settings) {
   # run analysis
   analysis_results <- run_analysis(data, settings)
 
-  # show errors & warnings on tool dash
+  # show errors and warnings on tool dash
   if (length(analysis_results$errors$warnings) > 0) {
     for (warning in load_errors$warnings) {
         logging::logwarn(paste(warning$title, warning$body), logger = app_logger)

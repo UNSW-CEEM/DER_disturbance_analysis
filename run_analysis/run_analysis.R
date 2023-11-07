@@ -66,18 +66,16 @@ ideal_response_from_frequency <- function(frequency_data, region_to_load, f_ulco
 }
 
 #' Apply user filters to combined data
-filter_combined_data <- function(
-  combined_data,
-  off_grid_postcodes,
-  cleaned,
-  size_groupings,
-  standards,
-  postcodes,
-  manufacturers,
-  models,
-  sites,
-  circuits
-) {
+filter_combined_data <- function(combined_data,
+                                 off_grid_postcodes,
+                                 cleaned,
+                                 size_groupings,
+                                 standards,
+                                 postcodes,
+                                 manufacturers,
+                                 models,
+                                 sites,
+                                 circuits) {
   logdebug("Apply user filters to combined data", logger = logger)
   combined_data_f <- combined_data
   site_types <- c("pv_site_net", "pv_site", "pv_inverter_net", "pv_inverter")
@@ -121,17 +119,15 @@ filter_combined_data <- function(
 #' * [ufls_detection_tstamp()] for detail of timestamp based UFLS detection
 #' * [ufls_detection_voltage()] for detail of voltage based UFLS detection
 #' @return An updated dataframe with columns for UFLS check results
-ufls_detection <- function(
-  db_interface,
-  combined_data_f,
-  region_to_load,
-  pre_event_interval,
-  window_length,
-  pre_event_ufls_window_length,
-  post_event_ufls_window_length,
-  pre_event_ufls_stability_threshold,
-  post_event_delay
-) {
+ufls_detection <- function(db_interface,
+                           combined_data_f,
+                           region_to_load,
+                           pre_event_interval,
+                           window_length,
+                           pre_event_ufls_window_length,
+                           post_event_ufls_window_length,
+                           pre_event_ufls_stability_threshold,
+                           post_event_delay) {
   logdebug("run ufls detection", logger = logger)
   ufls_statuses_ts <- ufls_detection_tstamp(
     db = db_interface,
@@ -161,16 +157,14 @@ ufls_detection <- function(
 #' Determine distance based zones for each site
 #' Distance is from input event location to the postcode the site is in
 #' @return An updated dataframe with zones added
-determine_distance_zones <- function(
-  combined_data_f,
-  postcode_data,
-  event_latitude,
-  event_longitude,
-  zone_one_radius,
-  zone_two_radius,
-  zone_three_radius,
-  zones
-) {
+determine_distance_zones <- function(combined_data_f,
+                                     postcode_data,
+                                     event_latitude,
+                                     event_longitude,
+                                     zone_one_radius,
+                                     zone_two_radius,
+                                     zone_three_radius,
+                                     zones) {
   if (length(combined_data_f$ts) > 0) {
     combined_data_f <- get_distance_from_event(combined_data_f, postcode_data, event_latitude, event_longitude)
     combined_data_f <- get_zones(combined_data_f, zone_one_radius, zone_two_radius, zone_three_radius) %>%
@@ -216,7 +210,7 @@ normalise_c_id_power_by_daily_max <- function(combined_data, max_power, pre_even
 #' Performance factor is calculated as power/ac_capacity at a site level
 #' @return An updated dataframe with site_performance_factor and event_normalised_performance_factor
 determine_performance_factors <- function(combined_data_f, pre_event_interval) {
-  logdebug('Calc site peformance factors', logger = logger)
+  logdebug('Calc site performance factors', logger = logger)
   combined_data_f <- calc_site_performance_factors(combined_data_f)
   combined_data_f <- setnames(combined_data_f, c("ts"), c("Time"))
   combined_data_f <- event_normalised_power(combined_data_f, pre_event_interval, keep_site_id = TRUE)
@@ -276,16 +270,16 @@ upscale_and_summarise_disconnections <- function(circuit_summary,
 #' @return boolean no_grouping, TRUE when no grouping is occuring
 check_grouping <- function(settings) {
   if (
-    settings$standard_agg == FALSE &
-    settings$pst_agg == FALSE &
-    settings$grouping_agg == FALSE &
-    settings$manufacturer_agg == FALSE &
-    settings$model_agg == FALSE &
-    settings$zone_agg == FALSE &
-    settings$circuit_agg == TRUE &
-    settings$compliance_agg == TRUE &
-    settings$compliance_2020_agg == TRUE &
-    settings$reconnection_compliance_agg &
+    settings$standard_agg == FALSE &&
+    settings$pst_agg == FALSE &&
+    settings$grouping_agg == FALSE &&
+    settings$manufacturer_agg == FALSE &&
+    settings$model_agg == FALSE &&
+    settings$zone_agg == FALSE &&
+    settings$circuit_agg == TRUE &&
+    settings$compliance_agg == TRUE &&
+    settings$compliance_2020_agg == TRUE &&
+    settings$reconnection_compliance_agg &&
     settings$v_excursion_agg == FALSE
   ) {
     no_grouping <- TRUE
@@ -553,8 +547,10 @@ run_analysis <- function(data, settings) {
     # Proceed to aggregation and plotting only if there is less than 1000 data series to plot, else stop and notify the
     # user.
     logdebug('Proceed to aggregation and plotting', logger = logger)
-    if ((sum(data$sample_count_table$sample_count)<1000 & no_grouping) |
-        (length(data$sample_count_table$sample_count)<1000 & !no_grouping)) {
+    if (
+      (sum(data$sample_count_table$sample_count) < 1000 & no_grouping) |
+      (length(data$sample_count_table$sample_count) < 1000 & !no_grouping)
+    ) {
       if (length(combined_data_f$ts) > 0) {
         # Copy data for saving
         logdebug('Copy data for saving', logger = logger)

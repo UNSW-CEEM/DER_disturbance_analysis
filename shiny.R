@@ -671,7 +671,7 @@ server <- function(input,output,session) {
     removeNotification(id)
 
 # -------- UI Code --------
-    # show errors & warnings on tool dash
+    # show errors and warnings on tool dash
     if (length(errors$warnings) > 0) {
       for (warning in errors$warnings) {
         shinyalert(warning$title, warning$body)
@@ -1053,8 +1053,10 @@ server <- function(input,output,session) {
 
     no_grouping <- check_grouping(settings)
 
-    if ((sum(v$sample_count_table$sample_count)<1000 & no_grouping) |
-      (length(v$sample_count_table$sample_count)<1000 & !no_grouping)) {
+    if (
+      (sum(v$sample_count_table$sample_count) < 1000 & no_grouping) |
+      (length(v$sample_count_table$sample_count) < 1000 & !no_grouping)
+    ) {
       if (length(v$combined_data_f$ts) > 0) {
         # Create plots on main tab
         logdebug("create plots", logger = app_logger)
