@@ -31,8 +31,7 @@ categorise_reconnection_compliance <- function(ramping_data,
         ramp_threshold_for_compliance,
         ramp_threshold_for_non_compliance
       )
-    )
-
-  ramping_data <- select(ramping_data, c_id, reconnection_compliance_status)
+    ) %>%
+    select(c_id, reconnection_compliance_status)
   return(ramping_data)
 }

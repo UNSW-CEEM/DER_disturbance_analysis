@@ -125,24 +125,23 @@ vector_groupby_cumulative_distance <- function(data, grouping_cols) {
   grouping_cols <- grouping_cols[!grouping_cols %in% c("zone", "s_postcode", "site_id", "c_id")]
   series_cols <- grouping_cols
   grouping_cols <- series_cols
-  data <- data[!is.na(data$s_postcode),]
-  data <- distinct(data, clean, c_id, .keep_all = TRUE)
-  data <- mutate(data, num_disconnects = ifelse(response_category %in% c("4 Disconnect", "3 Drop to Zero"), 1, 0))
-  data <- mutate(data, system_count=1)
-  data <- data[order(data$distance),]
-  data <- group_by(data, .dots=c(grouping_cols, "s_postcode"))
-  data <- summarise(
-    data,
-    distance = first(distance),
-    num_disconnects = sum(num_disconnects),
-    system_count = sum(system_count)
-  )
-  data <- as.data.frame(data)
-  data <- data[order(data$distance),]
-  data <- group_by(data, .dots = grouping_cols)
-  data <- mutate(data, num_disconnects = cumsum(num_disconnects))
-  data <- mutate(data, system_count = cumsum(system_count))
-  data <- as.data.frame(data)
+  data <- data[!is.na(data$s_postcode),] %>%
+    distinct(clean, c_id, .keep_all = TRUE) %>%
+    mutate(num_disconnects = ifelse(response_category %in% c("4 Disconnect", "3 Drop to Zero"), 1, 0)) %>%
+    mutate(system_count = 1)
+  data <- data[order(data$distance),] %>%
+    group_by(.dots=c(grouping_cols, "s_postcode")) %>%
+    summarise(
+      distance = first(distance),
+      num_disconnects = sum(num_disconnects),
+      system_count = sum(system_count)
+    ) %>%
+    as.data.frame()
+  data <- data[order(data$distance),] %>%
+    group_by(.dots = grouping_cols) %>%
+    mutate(num_disconnects = cumsum(num_disconnects)) %>%
+    mutate(system_count = cumsum(system_count)) %>%
+    as.data.frame()
   data$series <- do.call(paste, c(data[series_cols], sep = "-"))
   data <- mutate(data, percentage = num_disconnects / system_count)
   return(data)
@@ -156,19 +155,19 @@ vector_groupby_system <- function(data, grouping_cols) {
   } else {
     data = filter(data, clean == "raw")
   }
-  data <- distinct(data, c_id, .keep_all = TRUE)
-  data <- mutate(data, num_disconnects = ifelse(response_category %in% c("4 Disconnect", "3 Drop to Zero"), 1, 0))
-  data <- mutate(data, system_count = 1)
-  data <- group_by(data, .dots = c("s_postcode"))
-  data <- summarise(
-    data,
-    num_disconnects = sum(num_disconnects),
-    system_count = sum(system_count),
-    lat = first(lat),
-    lon = first(lon)
-  )
-  data <- mutate(data, percentage_disconnect = round(num_disconnects / system_count, digits = 2))
-  data <- as.data.frame(data)
+  data <- data %>%
+    distinct(c_id, .keep_all = TRUE) %>%
+    mutate(num_disconnects = ifelse(response_category %in% c("4 Disconnect", "3 Drop to Zero"), 1, 0)) %>%
+    mutate(system_count = 1) %>%
+    group_by(.dots = c("s_postcode")) %>%
+    summarise(
+      num_disconnects = sum(num_disconnects),
+      system_count = sum(system_count),
+      lat = first(lat),
+      lon = first(lon)
+    ) %>%
+    mutate(percentage_disconnect = round(num_disconnects / system_count, digits = 2)) %>%
+    as.data.frame()
   data$series <- data$percentage_disconnect
   data$info <- do.call(paste, c(data[c("s_postcode", "percentage_disconnect", "system_count")], sep = "-"))
   return(data)

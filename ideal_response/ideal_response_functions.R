@@ -89,17 +89,13 @@ down_sample_1s <- function(ideal_response_1_s, duration, offset) {
   )
   ideal_response_1_s[ideal_response_1_s$ts == ideal_response_1_s$time_group2,]$time_group <-
     ideal_response_1_s[ideal_response_1_s$ts == ideal_response_1_s$time_group2,]$time_group2
-  ideal_response_1_s <- filter(
-    ideal_response_1_s,
-    ts <= max(ideal_response_1_s[ideal_response_1_s$ts == ideal_response_1_s$time_group2,]$time_group2)
-  )
-  ideal_response_1_s <- filter(
-    ideal_response_1_s,
-    ts >= min(ideal_response_1_s[ideal_response_1_s$ts == (ideal_response_1_s$time_group2 + 1),]$ts)
-  )
-  ideal_response_downsampled <- group_by(ideal_response_1_s, time_group)
-  ideal_response_downsampled <- summarise(ideal_response_downsampled, f = last(f), norm_power = mean(norm_power))
-  ideal_response_downsampled <- data.frame(ideal_response_downsampled)
+  ideal_response_1_s <- ideal_response_1_s %>%
+    filter(ts <= max(ideal_response_1_s[ideal_response_1_s$ts == ideal_response_1_s$time_group2,]$time_group2)) %>%
+    filter(ts >= min(ideal_response_1_s[ideal_response_1_s$ts == (ideal_response_1_s$time_group2 + 1),]$ts))
+  ideal_response_downsampled <- ideal_response_1_s %>%
+    group_by(time_group) %>%
+    summarise(f = last(f), norm_power = mean(norm_power)) %>%
+    as.data.frame()
   return(ideal_response_downsampled)
 }
 
@@ -112,59 +108,44 @@ calc_error_metric_and_compliance <- function(combined_data, ideal_response_downs
 }
 
 calc_error_metric <- function(combined_data, ideal_response_downsampled) {
-  combined_data <- distinct(combined_data, site_id, ts, .keep_all = TRUE)
-  combined_data <- inner_join(combined_data, ideal_response_downsampled, by = c("ts" = "time_group"))
-  combined_data <- mutate(
-    combined_data,
-    abs_percent_diff_actual_cf_ideal = abs(Site_Event_Normalised_Power_kW - norm_power) / norm_power
-  )
-  combined_data <- mutate(
-    combined_data,
-    percent_diff_actual_cf_ideal = (Site_Event_Normalised_Power_kW - norm_power) / norm_power
-  )
-  error_by_c_id <- group_by(combined_data, site_id)
-  error_by_c_id <- summarise(
-    error_by_c_id,
-    min_diff = min(percent_diff_actual_cf_ideal),
-    max_diff = max(percent_diff_actual_cf_ideal),
-    abs_percent_diff_actual_cf_ideal = mean(abs_percent_diff_actual_cf_ideal),
-    percent_diff_actual_cf_ideal = mean(percent_diff_actual_cf_ideal)
-  )
-  error_by_c_id <- data.frame(error_by_c_id)
-  error_by_c_id <- mutate(error_by_c_id, mixed_wrt_spec = 1)
-  error_by_c_id <- mutate(error_by_c_id, below_spec = ifelse(max_diff <= 0, 1, 0))
-  error_by_c_id <- mutate(error_by_c_id, above_spec = ifelse(min_diff >= 0, 1, 0))
-  error_by_c_id <- mutate(error_by_c_id, mixed_wrt_spec = mixed_wrt_spec - below_spec - above_spec)
-  error_by_c_id <- mutate(
-    error_by_c_id,
-    combined_error_metric = (
-      (below_spec + above_spec) * percent_diff_actual_cf_ideal + mixed_wrt_spec * abs_percent_diff_actual_cf_ideal
+  combined_data <- combined_data %>%
+    distinct(site_id, ts, .keep_all = TRUE) %>%
+    inner_join(ideal_response_downsampled, by = c("ts" = "time_group")) %>%
+    mutate(abs_percent_diff_actual_cf_ideal = abs(Site_Event_Normalised_Power_kW - norm_power) / norm_power) %>%
+    mutate(percent_diff_actual_cf_ideal = (Site_Event_Normalised_Power_kW - norm_power) / norm_power)
+  error_by_c_id <- combined_data %>%
+    group_by(site_id) %>%
+    summarise(
+      min_diff = min(percent_diff_actual_cf_ideal),
+      max_diff = max(percent_diff_actual_cf_ideal),
+      abs_percent_diff_actual_cf_ideal = mean(abs_percent_diff_actual_cf_ideal),
+      percent_diff_actual_cf_ideal = mean(percent_diff_actual_cf_ideal)
+    ) %>%
+    as.data.frame() %>%
+    mutate(mixed_wrt_spec = 1) %>%
+    mutate(below_spec = ifelse(max_diff <= 0, 1, 0)) %>%
+    mutate(above_spec = ifelse(min_diff >= 0, 1, 0)) %>%
+    mutate(mixed_wrt_spec = mixed_wrt_spec - below_spec - above_spec) %>%
+    mutate(
+      combined_error_metric = (
+        (below_spec + above_spec) * percent_diff_actual_cf_ideal + mixed_wrt_spec * abs_percent_diff_actual_cf_ideal
+      )
     )
-  )
   return(error_by_c_id)
 }
 
 calc_compliance_status <- function(error_by_c_id, threshold_error) {
-  error_by_c_id <- mutate(
-    error_by_c_id,
-    compliance_status = ifelse(below_spec == 1, "Compliant", "Undefined")
-  )
-  error_by_c_id <- mutate(
-    error_by_c_id,
-    compliance_status = ifelse(above_spec == 1, "Above Ideal Response", compliance_status)
-  )
-  error_by_c_id <- mutate(
-    error_by_c_id,
-    compliance_status = ifelse(
-      above_spec == 1 & combined_error_metric > threshold_error,
-      "Non Compliant",
-      compliance_status
-    )
-  )
-  error_by_c_id <- mutate(
-    error_by_c_id,
-    compliance_status = ifelse(mixed_wrt_spec == 1, "Ambigous", compliance_status)
-  )
+  error_by_c_id <- error_by_c_id %>%
+    mutate(compliance_status = ifelse(below_spec == 1, "Compliant", "Undefined")) %>%
+    mutate(compliance_status = ifelse(above_spec == 1, "Above Ideal Response", compliance_status))
+    mutate(
+      compliance_status = ifelse(
+        above_spec == 1 & combined_error_metric > threshold_error,
+        "Non Compliant",
+        compliance_status
+      )
+    ) %>%
+    mutate(compliance_status = ifelse(mixed_wrt_spec == 1, "Ambigous", compliance_status))
   return(error_by_c_id)
 }
 
@@ -193,62 +174,51 @@ calc_error_metric_and_compliance_2 <- function(combined_data,
   # First pass compliance
   ideal_response_downsampled_f <- filter(ideal_response_downsampled, time_group >= start_buffer_t)
   ideal_response_downsampled_f <- filter(ideal_response_downsampled_f, time_group <= end_buffer)
-  error_by_c_id <- inner_join(combined_data, ideal_response_downsampled_f, by = c("ts" = "time_group"))
-  error_by_c_id <- mutate(error_by_c_id, error = (1 - c_id_norm_power) - ((1 - norm_power) * threshold))
-  error_by_c_id <- group_by(error_by_c_id, c_id, clean)
-  error_by_c_id <- summarise(error_by_c_id, min_error = min(error))
-  error_by_c_id <- mutate(error_by_c_id, compliance_status = ifelse(min_error >= 0.0, "Compliant", "Non-compliant"))
-  error_by_c_id <- select(error_by_c_id, c_id, compliance_status, clean)
+  error_by_c_id <- combined_data %>%
+    inner_join(ideal_response_downsampled_f, by = c("ts" = "time_group")) %>%
+    mutate(error = (1 - c_id_norm_power) - ((1 - norm_power) * threshold)) %>%
+    group_by(c_id, clean) %>%
+    summarise(min_error = min(error)) %>%
+    mutate(compliance_status = ifelse(min_error >= 0.0, "Compliant", "Non-compliant")) %>%
+    select(c_id, compliance_status, clean)
   combined_data <- left_join(combined_data, error_by_c_id, by = c("c_id", "clean"))
 
   # Change 'Non compliant' to 'Non Compliant Responding' where compliant at start
   ideal_response_downsampled_f <- filter(ideal_response_downsampled, time_group <= end_buffer_responding)
-  error_by_c_id <- inner_join(combined_data, ideal_response_downsampled_f, by = c("ts" = "time_group"))
-  error_by_c_id <- mutate(error_by_c_id, error = (1 - c_id_norm_power) - ((1 - norm_power) * threshold))
-  error_by_c_id <- group_by(error_by_c_id, c_id, clean)
-  error_by_c_id <- summarise(error_by_c_id, max_error=max(error), compliance_status=first(compliance_status))
-  error_by_c_id <- mutate(
-    error_by_c_id,
-    compliance_status = ifelse(
-      (max_error >= 0.0) && (compliance_status == "Non-compliant"),
-      "Non-compliant Responding",
-      compliance_status
-    )
-  )
-  error_by_c_id <- select(error_by_c_id, c_id, compliance_status, clean)
-  combined_data <- left_join(
-    subset(combined_data, select = -c(compliance_status)),
-    error_by_c_id,
-    by = c("c_id", "clean")
-  )
+  error_by_c_id <- combined_data %>%
+    inner_join(ideal_response_downsampled_f, by = c("ts" = "time_group")) %>%
+    mutate(error = (1 - c_id_norm_power) - ((1 - norm_power) * threshold)) %>%
+    group_by(c_id, clean) %>%
+    summarise(max_error = max(error), compliance_status = first(compliance_status)) %>%
+    mutate(
+      compliance_status = ifelse(
+        (max_error >= 0.0) && (compliance_status == "Non-compliant"),
+        "Non-compliant Responding",
+        compliance_status
+      )
+    ) %>%
+    select(c_id, compliance_status, clean)
+  combined_data <- subset(combined_data, select = -c(compliance_status))
+  combined_data <- left_join(combined_data, error_by_c_id, by = c("c_id", "clean"))
 
   # Set disconnecting categories
   # First check that the ideal response doesn't drop low (to close to zero), since many sites would therefore remain as
   # 'compliant' rather than 'Disconnect' etc.
   min_ideal_response <- min(ideal_response_downsampled$norm_power)
   if (min_ideal_response > disconnecting_threshold) {
-    combined_data <- mutate(
-      combined_data,
-      compliance_status = ifelse(response_category == "4 Disconnect", "Disconnect/Drop to Zero", compliance_status)
-    )
-    combined_data <- mutate(
-      combined_data,
-      compliance_status = ifelse(response_category == "3 Drop to Zero", "Disconnect/Drop to Zero", compliance_status)
-    )
+    combined_data <- combined_data %>%
+      mutate(
+        compliance_status = ifelse(response_category == "4 Disconnect", "Disconnect/Drop to Zero", compliance_status)
+      ) %>%
+      mutate(
+        compliance_status = ifelse(response_category == "3 Drop to Zero", "Disconnect/Drop to Zero", compliance_status)
+      )
   }
 
-  combined_data <- mutate(
-    combined_data,
-    compliance_status = ifelse(response_category == "7 UFLS Dropout", "UFLS Dropout", compliance_status)
-  )
-  combined_data <- mutate(
-    combined_data,
-    compliance_status = ifelse(response_category == "5 Off at t0", "Off at t0", compliance_status)
-  )
-  combined_data <- mutate(
-    combined_data,
-    compliance_status = ifelse(response_category == "6 Not enough data", "Not enough data", compliance_status)
-  )
+  combined_data <- combined_data %>%
+    mutate(compliance_status = ifelse(response_category == "7 UFLS Dropout", "UFLS Dropout", compliance_status)) %>%
+    mutate(compliance_status = ifelse(response_category == "5 Off at t0", "Off at t0", compliance_status)) %>%
+    mutate(compliance_status = ifelse(response_category == "6 Not enough data", "Not enough data", compliance_status))
 
   # Now check for whether there was already a compliance_status col when the function was called, rename the new one to
   # 2020 std, and keep both in the output combined_data.

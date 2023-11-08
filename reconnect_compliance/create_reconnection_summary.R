@@ -34,20 +34,21 @@ create_reconnection_summary <- function(combined_data_f,
   reconnection_data <- left_join(reconnection_data, select(combined_data_f, c_id, ts, d), by = c("c_id", "ts"))
 
   max_ramp_rates <- calculate_total_ramp_while_exceeding_ramp_rate_compliance_threshold(
-    reconnection_data, event_time = pre_event_interval,
+    reconnection_data,
+    event_time = pre_event_interval,
     disconnect_threshold = disconnecting_threshold,
     reconnect_threshold = reconnect_threshold,
     ramp_rate_threshold = ramp_rate_threshold
   )
 
-  reconnection_summary <- group_by(combined_data_f, c_id)
-  reconnection_summary <- summarise(
-    reconnection_summary,
-    response_category = first(response_category),
-    pre_event_daily_norm_power = first(pre_event_norm_power)
-  )
-  reconnection_summary <- left_join(reconnection_summary, reconnection_times, by = c("c_id"))
-  reconnection_summary <- left_join(reconnection_summary, max_ramp_rates, by = c("c_id"))
+  reconnection_summary <- combined_data_f %>%
+    group_by(c_id) %>%
+    summarise(
+      response_category = first(response_category),
+      pre_event_daily_norm_power = first(pre_event_norm_power)
+    ) %>%
+    left_join(reconnection_times, by = c("c_id")) %>%
+    left_join(max_ramp_rates, by = c("c_id"))
 
   if (dim(reconnection_summary)[1] == 0) {
     reconnection_categories <- data.frame(matrix(ncol = 2, nrow = 0))
@@ -61,13 +62,12 @@ create_reconnection_summary <- function(combined_data_f,
     )
   }
 
-  reconnection_categories <- inner_join(
-    reconnection_categories,
-    select(reconnection_summary, c_id, reconnection_time, ramp_above_threshold, pre_event_daily_norm_power),
-    by = c("c_id")
-  )
-
-  reconnection_categories <- as.data.frame(reconnection_categories)
+  reconnection_categories <- reconnection_categories %>%
+    inner_join(
+      select(reconnection_summary, c_id, reconnection_time, ramp_above_threshold, pre_event_daily_norm_power),
+      by = c("c_id")
+    ) %>%
+    as.data.frame()
 
   return(reconnection_categories)
 }

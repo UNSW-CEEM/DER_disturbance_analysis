@@ -844,10 +844,11 @@ DBInterface <- R6::R6Class(
       })
     },
     perform_power_calculations = function(time_series) {
-      time_series <- mutate(time_series, d = as.numeric(d))
-      time_series <- mutate(time_series, e = as.numeric(e))
-      time_series <- mutate(time_series, e_polarity = e * polarity)
-      time_series <- mutate(time_series, power_kW = e_polarity / (d * 1000))
+      time_series <- time_series %>%
+        mutate(d = as.numeric(d)) %>%
+        mutate(e = as.numeric(e)) %>%
+        mutate(e_polarity = e * polarity) %>%
+        mutate(power_kW = e_polarity / (d * 1000))
       return(time_series)
     },
     add_meta_data_to_time_series = function(time_series, circuit_details) {

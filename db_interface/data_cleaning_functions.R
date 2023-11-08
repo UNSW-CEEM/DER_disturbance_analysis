@@ -140,57 +140,50 @@ clean_connection_types <- function(combined_data, circuit_details, postcode_data
 calc_sunrise_sunset_bounds <- function(postcode_data, event_date) {
   # Need date of event to calculate sunrise and sunset times.
   postcode_data$date <- event_date
-  # Find sunrise and sunset times on a postcode basis.
-  postcode_data <- mutate(
-    postcode_data,
-    sunrise = suncalc::getSunlightTimes(
-      data = postcode_data,
-      tz = "Australia/Brisbane",
-      keep = c("sunrise")
-    )$sunrise
-  )
-  postcode_data <- mutate(
-    postcode_data,
-    sunset = suncalc::getSunlightTimes(
-      data = postcode_data,
-      tz = "Australia/Brisbane",
-      keep = c("sunset")
-    )$sunset
-  )
-  # Create 1 hour buffer either side of sunrise and sunset to allow for large postcodes, as lat and lon is the
-  # postcode centre.
-  postcode_data <- mutate(postcode_data, sunrise = sunrise - (60 * 60))
-  postcode_data <- mutate(postcode_data, sunset = sunset + (60 * 60))
-  # Format sunrise and sunset as character so it is displayed in Brisbane time in GUI.
-  postcode_data <- mutate(
-    postcode_data,
-    dis_sunrise = strftime(sunrise, tz = "Australia/Brisbane", format = "%H:%M:%S")
-  )
-  postcode_data <- mutate(
-    postcode_data,
-    dis_sunset = strftime(sunset, tz = "Australia/Brisbane", format = "%H:%M:%S")
-  )
+  postcode_data <- postcode_data %>%
+    # Find sunrise and sunset times on a postcode basis.
+    mutate(
+      sunrise = suncalc::getSunlightTimes(
+        data = postcode_data,
+        tz = "Australia/Brisbane",
+        keep = c("sunrise")
+      )$sunrise
+    ) %>%
+    mutate(
+      sunset = suncalc::getSunlightTimes(
+        data = postcode_data,
+        tz = "Australia/Brisbane",
+        keep = c("sunset")
+      )$sunset
+    ) %>%
+    # Create 1 hour buffer either side of sunrise and sunset to allow for large postcodes, as lat and lon is the
+    # postcode centre.
+    mutate(sunrise = sunrise - (60 * 60)) %>%
+    mutate(postcode_data, sunset = sunset + (60 * 60)) %>%
+    # Format sunrise and sunset as character so it is displayed in Brisbane time in GUI.
+    mutate(dis_sunrise = strftime(sunrise, tz = "Australia/Brisbane", format = "%H:%M:%S")) %>%
+    mutate(postcode_data, dis_sunset = strftime(sunset, tz = "Australia/Brisbane", format = "%H:%M:%S"))
   return(postcode_data)
 }
 
 clac_output_summary_values <- function(combined_data) {
   # Determine if a data point is during daylight hours or not.
-  combined_data <- mutate(combined_data, comp_t = strftime(ts, tz = "Australia/Brisbane", format = "%H:%M:%S"))
-  combined_data <- mutate(combined_data, sunrise = strftime(sunrise, tz = "Australia/Brisbane", format = "%H:%M:%S"))
-  combined_data <- mutate(combined_data, sunset = strftime(sunset, tz = "Australia/Brisbane", format = "%H:%M:%S"))
-  combined_data <- mutate(combined_data, daylight = ifelse((comp_t > sunrise) & (comp_t < sunset), 1, 0))
-  # Group data by c_id, calculating values needed to perform data cleaning
-  combined_data <- group_by(combined_data, c_id)
-  combined_data <- summarise(
-    combined_data,
-    energy_day = sum(abs(e[daylight == 1])) / 1000 / (60 * 60),
-    energy_night = sum(abs(e[daylight != 1])) / 1000 / (60 * 60),
-    con_type = first(con_type), sunrise = first(dis_sunrise),
-    sunset = first(dis_sunset), ac = first(ac),
-    min_power = min(power_kW, na.rm = TRUE), max_power = max(power_kW, na.rm = TRUE),
-    polarity = first(polarity)
-  )
-  combined_data <- as.data.frame(combined_data)
+  combined_data <- combined_data %>%
+    mutate(comp_t = strftime(ts, tz = "Australia/Brisbane", format = "%H:%M:%S")) %>%
+    mutate(sunrise = strftime(sunrise, tz = "Australia/Brisbane", format = "%H:%M:%S")) %>%
+    mutate(sunset = strftime(sunset, tz = "Australia/Brisbane", format = "%H:%M:%S")) %>%
+    mutate(daylight = ifelse((comp_t > sunrise) & (comp_t < sunset), 1, 0)) %>%
+    # Group data by c_id, calculating values needed to perform data cleaning
+    group_by(c_id) %>%
+    summarise(
+      energy_day = sum(abs(e[daylight == 1])) / 1000 / (60 * 60),
+      energy_night = sum(abs(e[daylight != 1])) / 1000 / (60 * 60),
+      con_type = first(con_type), sunrise = first(dis_sunrise),
+      sunset = first(dis_sunset), ac = first(ac),
+      min_power = min(power_kW, na.rm = TRUE), max_power = max(power_kW, na.rm = TRUE),
+      polarity = first(polarity)
+    ) %>%
+    as.data.frame()
   setnafill(combined_data, cols = c("energy_day", "energy_night"), fill = 0.0, type = "const")
   # Calculate the fraction of gen/load that occured during daylight hours.
   # Use absolute value of power as polarity has not been checked yet.

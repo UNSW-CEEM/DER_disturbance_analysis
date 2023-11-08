@@ -1,8 +1,9 @@
 process_time_series_data <- function(time_series_data) {
-  time_series_data <- mutate(time_series_data, ts = fastPOSIXct(ts, tz = "Australia/Brisbane"))
-  time_series_data <- mutate(time_series_data, e = as.numeric(e))
-  time_series_data <- mutate(time_series_data, v = as.numeric(v))
-  time_series_data <- mutate(time_series_data, f = as.numeric(f))
+  time_series_data <- time_series_data %>%
+    mutate(ts = fastPOSIXct(ts, tz = "Australia/Brisbane")) %>%
+    mutate(e = as.numeric(e)) %>%
+    mutate(v = as.numeric(v)) %>%
+    mutate(f = as.numeric(f))
   return(time_series_data)
 }
 
@@ -38,25 +39,26 @@ get_offset_sample_counts <- function(time_series_data, unique_offsets) {
 process_raw_site_details <- function(site_details) {
   site_details <- filter(site_details, !is.na(ac) & ac != "")
   assert_raw_site_details_assumptions(site_details)
-  # The data can contain duplicate site ids, these need to be sumarised so there
-  # is one row per site id. AC power is summed so sites with more than 100kW
-  # can be filtered out of the data set. The first ac value is taken as a sample
-  # of the site, it is not summed, as latter when the data is joined to the
+  # The data can contain duplicate site IDs. these need to be sumarised so there
+  # is one row per site ID. AC power is summed so sites with more than 100kW
+  # can be filtered out of the dataset. The first AC value is taken as a sample
+  # of the site, it is not summed, as later when the data is joined to the
   # circuit data (which may have mutiple rows be site_id) this would create
-  # apparent additional ac capacity.
-  site_details <- group_by(site_details, site_id)
-  processed_site_details <- summarise(
-    site_details,
-    s_state = first(s_state),
-    pv_installation_year_month = first(pv_installation_year_month),
-    sum_ac = sum(ac),
-    first_ac = first(ac),
-    s_postcode = first(s_postcode),
-    manufacturer = paste(manufacturer, collapse = " "),
-    model = paste(model, collapse = " ")
-  )
-  processed_site_details <- as.data.frame(processed_site_details)
-  return(processed_site_details)}
+  # apparent additional AC capacity.
+  processed_site_details <- site_details %>%
+    group_by(site_id) %>%
+    summarise(
+      s_state = first(s_state),
+      pv_installation_year_month = first(pv_installation_year_month),
+      sum_ac = sum(ac),
+      first_ac = first(ac),
+      s_postcode = first(s_postcode),
+      manufacturer = paste(manufacturer, collapse = " "),
+      model = paste(model, collapse = " ")
+    ) %>%
+    as.data.frame()
+  return(processed_site_details)
+}
 
 sum_manufacturers <- function(manufacturers) {
   unique_manufacturers <- unique(manufacturers)
@@ -114,30 +116,27 @@ process_install_data <- function(install_data) {
   install_data <- setnames(install_data, c("pv_installation_year_month"), c("date"))
   # For each inverter standard group find the install capacity when the standard came into force.
   start_date <- min(install_data$date)
-  installed_start_standard <- group_by(install_data, Standard_Version, Grouping, s_state)
-  installed_start_standard <- summarise(
-    installed_start_standard,
-    initial_cap = install_data$Capacity[
-      max(
-        c(
-          install_data$date[
-            (install_data$Capacity < min(Capacity)) &
-            (install_data$s_state == first(s_state)) &
-            (install_data$Grouping == first(Grouping))
-          ],
-          start_date
-        )
-      ) == install_data$date &
-      install_data$s_state == first(s_state) &
-      install_data$Grouping == first(Grouping)
-    ]
-  )
-  installed_start_standard <- as.data.frame(installed_start_standard)
-  installed_start_standard <- mutate(
-    installed_start_standard,
-    initial_cap = ifelse(Standard_Version == "AS4777.3:2005", 0, initial_cap)
-  )
-  # Join the intial capacity to the cumulative capacity table.
+  installed_start_standard <- install_data %>%
+    group_by(Standard_Version, Grouping, s_state) %>%
+    summarise(
+      initial_cap = install_data$Capacity[
+        max(
+          c(
+            install_data$date[
+              (install_data$Capacity < min(Capacity)) &
+              (install_data$s_state == first(s_state)) &
+              (install_data$Grouping == first(Grouping))
+            ],
+            start_date
+          )
+        ) == install_data$date &
+        install_data$s_state == first(s_state) &
+        install_data$Grouping == first(Grouping)
+      ]
+    ) %>%
+    as.data.frame() %>%
+    mutate(initial_cap = ifelse(Standard_Version == "AS4777.3:2005", 0, initial_cap))
+  # Join the initial capacity to the cumulative capacity table.
   install_data <- inner_join(install_data, installed_start_standard, by = c("Standard_Version", "Grouping", "s_state"))
   # Calculate installed capacity by standard.
   install_data <- mutate(install_data, standard_capacity = Capacity - initial_cap)

@@ -10,15 +10,9 @@ date_vector <- seq(as.Date(start_date), as.Date(end_date), by = "days")
 
 manufacturers <- unique(install_data$manufacturer)
 
-state_table <- data.table(
-  state = c("QLD", "NSW", "VIC", "TAS", "SA", "WA"),
-  dummy = 1
-)
+state_table <- data.table(state = c("QLD", "NSW", "VIC", "TAS", "SA", "WA"), dummy = 1)
 
-manufacturer_table <- data.table(
-  manufacturer = manufacturers,
-  dummy = 1
-)
+manufacturer_table <- data.table(manufacturer = manufacturers, dummy = 1)
 
 state_table <- setkey(state_table, dummy)
 manufacturer_table <- setkey(manufacturer_table, dummy)
