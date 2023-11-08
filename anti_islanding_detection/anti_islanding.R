@@ -46,7 +46,6 @@ detect_voltage_threshold_excursions <- function(combined_data, pre_event_interva
       )
     ) %>%
     mutate(
-      combined_data,
       antiislanding_v_excursion_2020 = ifelse((vmin < UNDERVOLTAGE_1_2020) & in_event_window, "undervoltage_1", NA)
     ) %>%
     mutate(

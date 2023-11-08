@@ -159,10 +159,10 @@ calc_sunrise_sunset_bounds <- function(postcode_data, event_date) {
     # Create 1 hour buffer either side of sunrise and sunset to allow for large postcodes, as lat and lon is the
     # postcode centre.
     mutate(sunrise = sunrise - (60 * 60)) %>%
-    mutate(postcode_data, sunset = sunset + (60 * 60)) %>%
+    mutate(sunset = sunset + (60 * 60)) %>%
     # Format sunrise and sunset as character so it is displayed in Brisbane time in GUI.
     mutate(dis_sunrise = strftime(sunrise, tz = "Australia/Brisbane", format = "%H:%M:%S")) %>%
-    mutate(postcode_data, dis_sunset = strftime(sunset, tz = "Australia/Brisbane", format = "%H:%M:%S"))
+    mutate(dis_sunset = strftime(sunset, tz = "Australia/Brisbane", format = "%H:%M:%S"))
   return(postcode_data)
 }
 

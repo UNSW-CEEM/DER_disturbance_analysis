@@ -6,7 +6,7 @@ get_distance_from_event <- function(combined_data, postcode_data, event_lat, eve
 }
 
 get_postcode_distance_from_event <- function(postcode_data, event_lat, event_lon) {
-  distances<- postcode_data %>%
+  distances <- postcode_data %>%
     mutate(
       distance = distHaversine(cbind(postcode_data$lon, postcode_data$lat), cbind(event_lon, event_lat)) / 1000
     ) %>%

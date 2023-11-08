@@ -137,7 +137,7 @@ calc_error_metric <- function(combined_data, ideal_response_downsampled) {
 calc_compliance_status <- function(error_by_c_id, threshold_error) {
   error_by_c_id <- error_by_c_id %>%
     mutate(compliance_status = ifelse(below_spec == 1, "Compliant", "Undefined")) %>%
-    mutate(compliance_status = ifelse(above_spec == 1, "Above Ideal Response", compliance_status))
+    mutate(compliance_status = ifelse(above_spec == 1, "Above Ideal Response", compliance_status)) %>%
     mutate(
       compliance_status = ifelse(
         above_spec == 1 & combined_error_metric > threshold_error,
@@ -198,8 +198,8 @@ calc_error_metric_and_compliance_2 <- function(combined_data,
       )
     ) %>%
     select(c_id, compliance_status, clean)
-  combined_data <- subset(combined_data, select = -c(compliance_status))
-  combined_data <- left_join(combined_data, error_by_c_id, by = c("c_id", "clean"))
+  combined_data_without_compliance_status <- subset(combined_data, select = -c(compliance_status))
+  combined_data <- left_join(combined_data_without_compliance_status, error_by_c_id, by = c("c_id", "clean"))
 
   # Set disconnecting categories
   # First check that the ideal response doesn't drop low (to close to zero), since many sites would therefore remain as

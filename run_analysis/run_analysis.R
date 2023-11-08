@@ -188,7 +188,7 @@ normalise_c_id_power_by_pre_event <- function(combined_data_f, pre_event_interva
     select(c_id, clean, event_power)
   combined_data_f <- combined_data_f %>%
     left_join(event_powers, by = c("c_id", "clean")) %>%
-    mutate(combined_data_f, c_id_norm_power = power_kW / event_power)
+    mutate(c_id_norm_power = power_kW / event_power)
   return(combined_data_f)
 }
 
