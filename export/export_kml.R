@@ -1,0 +1,78 @@
+#' Create a KML export of circuits to import to other mapping solutions
+#'
+# FIXME: finish writing out the comments here
+# FIXME: also create a test to make sure it's all correct.
+export_kml <- function(map_data, event_longitude, event_latitude) {
+  # Each KML file has to open with the following header.
+  # Document tag is needed because there can only be one parent element.
+  kml_header <- paste(
+    c(
+      "<?xml version=\"1.0\" encoding=\"UTF-8\"?>",
+      "<kml xmlns=\"http://www.opengis.net/kml/2.2\">",
+      "  <Document>",
+      "    <Style id=\"eventLocation\">",
+      "      <IconStyle>",
+      "        <color>ff0000ff</color>",
+      "        <Icon>",
+      "          <href>http://maps.google.com/mapfiles/kml/shapes/placemark_circle.png</href>",
+      "        </Icon>",
+      "      </IconStyle>",
+      "    </Style>",
+      "    <Style id=\"noDisconnections\">",
+      "      <IconStyle>",
+      "        <color>000000ff</color>",
+      "        <Icon>",
+      "          <href>http://maps.google.com/mapfiles/kml/shapes/placemark_circle.png</href>",
+      "        </Icon>",
+      "      </IconStyle>",
+      "    </Style>",
+      "    <Style id=\"disconnections\">",
+      "      <IconStyle>",
+      "        <color>0000ffff</color>",
+      "        <Icon>",
+      "          <href>http://maps.google.com/mapfiles/kml/shapes/placemark_circle.png</href>",
+      "        </Icon>",
+      "      </IconStyle>",
+      "    </Style>"
+    ),
+    collapse = "\n"
+  )
+
+  # Create KML for event location.
+  kml_event_location <- kml_snippet("Event location", event_longitude, event_latitude, "#eventLocation")
+  # Create KML for circuits: apply 1 means apply by row.
+  kml_circuits <- paste(apply(map_data, 1, kml_snippet_from_row), collapse = "\n")
+  kml_body <- paste(kml_event_location, kml_circuits, sep = "\n")
+  # FIXME: Add concentric circles.
+  # FIXME: Add save button for the power lines?
+
+  # Each KML has to end with the following footer.
+  kml_footer <- "  </Document>\n</kml>"
+  kml_output <- paste(c(kml_header, kml_body, kml_footer), collapse = "\n")
+  return(kml_output)
+}
+
+#' From each row within the map_data row, create KML snippet using its postcode, longitude and latitude.
+kml_snippet_from_row <- function(row) {
+  # FIXME: Change the colour depending on percentage of disconnections.
+  name <- paste0("Postcode ", row[["s_postcode"]])
+  kml <- kml_snippet(name, row[["lon"]], row[["lat"]])
+  return(kml)
+}
+
+#' Create KML snippet from name, longitude and latitude.
+kml_snippet <- function(name, lon, lat, styleUrl) {
+  snippet <- paste(
+    c(
+      "    <Placemark>",
+      paste0("      <name>", name, "</name>"),
+      paste0("      <styleUrl>", styleUrl, "</styleUrl>"),
+      "      <Point>",
+      paste0("        <coordinates>", lon, ",", lat, "</coordinates>"),
+      "      </Point>",
+      "    </Placemark>"
+    ),
+    collapse = "\n"
+  )
+  return(snippet)
+}

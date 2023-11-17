@@ -163,6 +163,7 @@ ui <- fluidPage(
           plotlyOutput(outputId = "distance_response"),
           uiOutput(outputId = "save_distance_response"),
           plotlyOutput(outputId = "ZoneCount"),
+          uiOutput(outputId = "save_circuit_kml"),
           uiOutput("save_zone_count"),
           plotlyOutput(outputId = "map"),
           HTML("<br><br>"),
@@ -402,7 +403,9 @@ reset_sidebar <- function(input, output, session, stringsAsFactors) {
   output$update_plots <- renderUI({})
 }
 
-reset_chart_area <- function(input, output, session, stringsAsFactors) {
+reset_chart_area <- function(output) {
+  #' Clear all of the charts.
+  #' @param output
   output$PlotlyTest <- renderPlotly({})
   output$save_agg_power <- renderUI({})
   output$save_underlying <- renderUI({})
@@ -418,6 +421,7 @@ reset_chart_area <- function(input, output, session, stringsAsFactors) {
   output$Voltage <- renderPlotly({})
   output$distance_response <- renderPlotly({})
   output$save_distance_response <- renderUI({})
+  output$save_circuit_kml <- renderUI({})
   output$map <- renderPlotly({})
 }
 
@@ -428,7 +432,7 @@ reset_data_cleaning_tab <- function(input, output, session, stringsAsFactors) {
 }
 
 
-server <- function(input,output,session) {
+server <- function(input, output, session) {
   # Create radio button dyamically so label can be updated
   output$duration <- renderUI({
     radioButtons("duration", label = strong("Sampled duration (seconds), select one."),
@@ -1373,6 +1377,9 @@ server <- function(input,output,session) {
               )
             )
           })
+        output$save_circuit_kml <- renderUI({
+          shinySaveButton("save_circuit_kml", "Save KML", "Save file as ...", filetype = list(kml = "kml"))
+        })
 
         output$compliance_cleaned_or_raw <- renderUI({
           radioButtons(
@@ -1395,7 +1402,7 @@ server <- function(input,output,session) {
       } else {
         # If there is no data left after filtering, alert the user and create an empty plot.
         shinyalert("Oops", "There is no data to plot")
-        reset_chart_area(input, output, session)
+        reset_chart_area(output)
         removeNotification(id)
       }
     } else {
@@ -1403,7 +1410,7 @@ server <- function(input,output,session) {
         "Wow",
         "You are trying to plot more than 1000 series, maybe try narrowing down those filters and agg settings."
       )
-      reset_chart_area(input, output, session)
+      reset_chart_area(output)
       removeNotification(id)
     }
     logdebug("Update plots completed", logger = app_logger)
@@ -1724,6 +1731,17 @@ server <- function(input,output,session) {
     fileinfo <- parseSavePath(volumes, input$save_distance_response)
     if (nrow(fileinfo) > 0) {
       write.csv(v$distance_response, as.character(fileinfo$datapath), row.names = FALSE)
+    }
+  })
+
+  # Save spatial data on circuit responses
+  observeEvent(input$save_circuit_kml, {
+    volumes <- c(home = getwd())
+    shinyFileSave(input, "save_circuit_kml", roots = volumes, session = session)
+    fileinfo <- parseSavePath(volumes, input$save_circuit_kml)
+    if (nrow(fileinfo) > 0) {
+      kml_output <- export_kml(v$geo_data, event_longitude(), event_latitude())
+      write(kml_output, file = as.character(fileinfo$datapath))
     }
   })
 
