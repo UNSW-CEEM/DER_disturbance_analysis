@@ -5,6 +5,7 @@
 export_kml <- function(map_data, event_longitude, event_latitude) {
   # Each KML file has to open with the following header.
   # Document tag is needed because there can only be one parent element.
+  # Colours go #aabbggrr: where a is for alpha, b for blue, g for green, r for red.
   kml_header <- paste(
     c(
       "<?xml version=\"1.0\" encoding=\"UTF-8\"?>",
@@ -20,7 +21,7 @@ export_kml <- function(map_data, event_longitude, event_latitude) {
       "    </Style>",
       "    <Style id=\"noDisconnections\">",
       "      <IconStyle>",
-      "        <color>000000ff</color>",
+      "        <color>ff00ff00</color>",
       "        <Icon>",
       "          <href>http://maps.google.com/mapfiles/kml/shapes/placemark_circle.png</href>",
       "        </Icon>",
@@ -28,7 +29,7 @@ export_kml <- function(map_data, event_longitude, event_latitude) {
       "    </Style>",
       "    <Style id=\"disconnections\">",
       "      <IconStyle>",
-      "        <color>0000ffff</color>",
+      "        <color>ff0000ff</color>",
       "        <Icon>",
       "          <href>http://maps.google.com/mapfiles/kml/shapes/placemark_circle.png</href>",
       "        </Icon>",
@@ -52,20 +53,28 @@ export_kml <- function(map_data, event_longitude, event_latitude) {
   return(kml_output)
 }
 
-#' From each row within the map_data row, create KML snippet using its postcode, longitude and latitude.
+#' From each row within the map_data row, create KML snippet
+#' using its postcode, percentage of disconnections, longitude and latitude.
 kml_snippet_from_row <- function(row) {
   # FIXME: Change the colour depending on percentage of disconnections.
   name <- paste0("Postcode ", row[["s_postcode"]])
-  kml <- kml_snippet(name, row[["lon"]], row[["lat"]])
+  if (row[["num_disconnects"]] == 0) {
+    styleUrl <-"#noDisconnections"
+  } else {
+    styleUrl <-"#disconnections"
+  }
+  kml <- kml_snippet("", row[["lon"]], row[["lat"]], styleUrl, paste("Postcode", row[["s_postcode"]]))
   return(kml)
 }
 
-#' Create KML snippet from name, longitude and latitude.
-kml_snippet <- function(name, lon, lat, styleUrl) {
+#' Create KML snippet from name, longitude, latitude, styleUrl and description.
+# FIXME: Fill out these descriptions.
+kml_snippet <- function(name, lon, lat, styleUrl, description = "") {
   snippet <- paste(
     c(
       "    <Placemark>",
       paste0("      <name>", name, "</name>"),
+      paste0("      <description>", description, "</description>"),
       paste0("      <styleUrl>", styleUrl, "</styleUrl>"),
       "      <Point>",
       paste0("        <coordinates>", lon, ",", lat, "</coordinates>"),
