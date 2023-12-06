@@ -1740,7 +1740,14 @@ server <- function(input, output, session) {
     shinyFileSave(input, "save_circuit_kml", roots = volumes, session = session)
     fileinfo <- parseSavePath(volumes, input$save_circuit_kml)
     if (nrow(fileinfo) > 0) {
-      kml_output <- export_kml(v$geo_data, event_longitude(), event_latitude())
+      kml_output <- export_kml(
+        v$geo_data,
+        event_longitude(),
+        event_latitude(),
+        zone_one_radius(),
+        zone_two_radius(),
+        zone_three_radius()
+      )
       write(kml_output, file = as.character(fileinfo$datapath))
     }
   })
