@@ -1,3 +1,3 @@
 library(testthat)
 source("load_tool_environment.R")
-test_dir("upscaling/tests")
+testthat::test_dir("upscaling/tests")
