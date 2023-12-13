@@ -370,7 +370,13 @@ DBInterface <- R6::R6Class(
     get_circuit_details_build_query = function(circuit_details) {
       column_names <- names(read.csv(circuit_details, nrows = 3, header = TRUE))
 
-      column_aliases <- list(c_id = "_c_id", site_id = "_site_id", con_type = "_con_type", polarity = "_polarity")
+      column_aliases <- list(
+        c_id = "_c_id",
+        site_id = "_site_id",
+        con_type = "_con_type",
+        polarity = "_polarity",
+        X250ms_voltage = "_250ms_voltage"
+      )
 
       query <- "REPLACE INTO circuit_details_raw
           SELECT cast(_c_id AS integer) AS c_id, cast(_site_id AS integer) AS site_id, _con_type AS con_type,
@@ -398,17 +404,17 @@ DBInterface <- R6::R6Class(
       column_aliases <- list(
         site_id = "_site_id",
         s_state = "_s_state",
-        ac = "_ac",
-        dc = "_dc",
-        manufacturer = "_manufacturer",
-        model = "_model",
+        ac_cap_w = "_ac",
+        dc_cap_w = "_dc",
+        inverter_manufacturer = "_manufacturer",
+        inverter_model = "_model",
         s_postcode = "_s_postcode",
-        pv_installation_year_month = "_pv_installation_year_month"
+        pv_install_date = "_pv_installation_year_month"
       )
 
       query <- "REPLACE INTO site_details_raw
         SELECT cast(_site_id AS integer) AS site_id, cast(_s_postcode AS integer) AS s_postcode, _s_state AS s_state,
-        _ac AS ac, _dc AS dc, _manufacturer AS manufacturer, _model AS model,
+        _ac / 1000 AS ac, _dc AS dc, _manufacturer AS manufacturer, _model AS model,
         _pv_installation_year_month AS pv_installation_year_month FROM site_details"
 
       for (name in column_names) {
@@ -417,8 +423,8 @@ DBInterface <- R6::R6Class(
         } else {
           stop(
             paste0(
-              "The provided site details file should have the columns site_id, s_postcode, s_state, ac, dc,
-               manufacturer, model and pv_installation_year_month. The ac column should be in kW and the the dc in W.
+              "The provided site details file should have the columns site_id, s_postcode, s_state, ac_cap_w, dc_cap_w,
+               inverter_manufacturer, inverter_model and pv_install_date. The ac and dc columns should both be in W.
                Please check this file and try again. Currently cannot find ",
               name
             )
