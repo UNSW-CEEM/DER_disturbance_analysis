@@ -1270,13 +1270,30 @@ server <- function(input,output,session) {
             })
         } else {
           output$Frequency <- renderPlotly({
-            plot_ly(v$agg_power, x = ~Time, y = ~Frequency, color = ~series, type = "scattergl") %>%
+            plot_ly(v$agg_power, x = ~Time, y = ~Frequency) %>%
+              add_markers(color = ~series) %>%
+              add_trace(
+                x = c(strftime(pre_event_interval()), strftime(pre_event_interval())),
+                y = c(min(v$agg_power$Frequency, na.rm=TRUE), max(v$agg_power$Frequency, na.rm=TRUE)),
+                type = "scattergl",
+                mode = "lines",
+                line = list(color = 'red', dash='dash'),
+                name = "Pre-event interval"
+              ) %>%
+              add_trace(
+                x = ~Time,
+                y = 50.25,
+                type = "scattergl",
+                mode = "lines",
+                line = list(color = 'grey'),
+                name = "Freq-Watt threshold"
+              ) %>%
               layout(yaxis = list(title = "Average frequency (Hz)"))
           })
         }
         output$Voltage <- renderPlotly({
           plot_ly(v$agg_power, x = ~Time, y = ~Voltage, color = ~series, type = "scattergl") %>%
-            layout(yaxis = list(title = "Average volatge (V)"))
+            layout(yaxis = list(title = "Average voltage (V)"))
         })
         output$distance_response <- renderPlotly({
           plot_ly(v$distance_response, x = ~distance, y = ~percentage, color = ~series, type = "scattergl") %>%
