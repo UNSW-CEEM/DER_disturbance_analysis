@@ -1258,13 +1258,34 @@ server <- function(input,output,session) {
         })
         if (dim(v$frequency_data)[1] > 0) {
           output$Frequency <- renderPlotly({
-            plot_ly(v$agg_power, x = ~Time, y = ~Frequency, color = ~series, type = "scattergl") %>%
+            plot_ly(v$agg_power, x = ~Time, y = ~Frequency) %>%
+              add_markers(color = ~series) %>%
               add_trace(
                 x = ~v$region_frequency$ts,
                 y = ~v$region_frequency$f,
                 name = "High Speed Data",
                 mode = "markers",
                 inherit = FALSE
+              ) %>%
+              add_trace(
+                x = strftime(pre_event_interval()),
+                y = c(min(c(v$agg_power$Frequency, v$region_frequency$f), na.rm=TRUE),
+                      max(c(v$agg_power$Frequency, v$region_frequency$f), na.rm=TRUE)
+                      ),
+                type = "scattergl",
+                mode = "lines",
+                line = list(color = 'red', dash='dash'),
+                name = "Pre-event interval"
+              ) %>%
+              add_trace(
+                x = c(min(c(v$agg_power$Time, v$region_frequency$ts), na.rm=TRUE),
+                      max(c(v$agg_power$Time, v$region_frequency$ts), na.rm=TRUE)
+                ),
+                y = 50.25,
+                type = "scattergl",
+                mode = "lines",
+                line = list(color = 'grey'),
+                name = "Freq-Watt threshold"
               ) %>%
               layout(yaxis = list(title = "Average frequency (Hz)"))
             })
