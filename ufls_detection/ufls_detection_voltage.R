@@ -1,8 +1,27 @@
+<<<<<<< Updated upstream
+=======
+<<<<<<< Updated upstream
+
+ufls_detection_voltage <- function(combined_data, event_time, window_length, 
+                                   fill_nans = FALSE, post_event_delay = 0){
+=======
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
 ufls_detection_voltage <- function(combined_data,
                                    event_time,
                                    window_length,
                                    fill_nans = FALSE,
                                    post_event_delay = 0) {
+<<<<<<< Updated upstream
+=======
+=======
+
+ufls_detection_voltage <- function(combined_data, event_time, window_length, 
+                                   fill_nans = FALSE, post_event_delay = 0){
+  
+>>>>>>> Stashed changes
+>>>>>>> Stashed changes
+>>>>>>> Stashed changes
   pre_event_window_start <- event_time - 60 * window_length
   post_event_window_end <- event_time + 60 * window_length
   pre_event_window <- filter(combined_data, ts > pre_event_window_start, ts <= event_time)
@@ -38,6 +57,7 @@ ufls_detection_voltage <- function(combined_data,
 calc_average_voltage_per_circuit <- function(ts_data) {
   ts_data <- group_by(ts_data, c_id)
   ts_data <- mutate(ts_data, v = as.numeric(v))
-  ts_data <- data.frame(summarise(ts_data, v_mean = mean(v)))
+  # ts_data[is.na(ts_data)] <- 0
+  ts_data <- data.frame(summarise(ts_data, v_mean = mean(v,na.rm=TRUE)))
   return(ts_data)
 }
