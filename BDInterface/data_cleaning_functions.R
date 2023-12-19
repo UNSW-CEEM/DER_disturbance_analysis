@@ -25,6 +25,7 @@ group_site_details_to_one_row_per_site <- function(site_details){
   site_details <- site_details %>% group_by(site_id)
   processed_site_details <- site_details %>%
     summarise(s_state=first(s_state), 
+
               pv_installation_year_month=first(pv_installation_year_month),
               sum_ac=sum(ac), sum_dc=sum(dc),
               sum_ac_old=sum(ac_old), sum_dc_old=sum(dc_old),
@@ -66,9 +67,10 @@ check_for_peak_power_greater_than_dc_capacity <- function(site_details){
   # If dc capacity value doesn't make sense given peak power value then scale
   # dc capacity up, based on nearest interger scaling value that makes dc
   # capacity higher than peak power.
+
   site_details <- mutate( site_details, 
                           sum_dc=ifelse((sum_dc/1000)/abs(max_power_kW) < 0.9, 
-                                        ceiling(max_power_kW/(sum_dc/1000)) * sum_dc, sum_dc))
+                ceiling(max_power_kW/(sum_dc/1000)) * sum_dc, sum_dc))
   return(site_details)
 }
 
@@ -84,6 +86,7 @@ check_ac_capacity_less_than_peak_power <- function(site_details){
   # If ac value needs scaling to based on ratio to peak power and dc has not
   # been scaled, then scale to meet dc capacity, if dc was also scaled then 
   # scale to meet peak power value.
+
   site_details <- mutate(site_details, 
                          sum_ac=ifelse(sum_ac/abs(max_power_kW) < 0.6, 
                                        ifelse(change_dc==0,ceiling((sum_dc/1000)/sum_ac) * sum_ac, 
