@@ -46,11 +46,13 @@ calculate_max_reconnection_ramp_rate <- function(normalised_power_profiles,
   return(max_ramp_rates)
 }
 
+
 calculate_total_ramp_while_exceeding_ramp_rate_compliance_threshold <- function(normalised_power_profiles,
                                                                                 event_time,
                                                                                 disconnect_threshold,
                                                                                 reconnect_threshold,
                                                                                 ramp_rate_threshold) {
+
   normalised_power_profiles <- filter(normalised_power_profiles, ts > event_time)
 
   disconnected_intervals <- filter(
@@ -73,6 +75,7 @@ calculate_total_ramp_while_exceeding_ramp_rate_compliance_threshold <- function(
   reconnection_times <- left_join(last_disconnected_interval, first_fully_connected_interval, by = c("c_id"))
   normalised_power_profiles <- inner_join(normalised_power_profiles, reconnection_times, by = c("c_id"))
   normalised_power_profiles <- filter(normalised_power_profiles, ts >= pre_reconnection_time)
+
   normalised_power_profiles <- filter(
     normalised_power_profiles,
     ts <= fully_connected_time | is.na(fully_connected_time)
@@ -96,6 +99,19 @@ calculate_total_ramp_while_exceeding_ramp_rate_compliance_threshold <- function(
     ramp_above_threshold = ifelse(ramp_rate > ramp_rate_threshold, ramp_rate * (d / 60), 0.0)
   )
 
+
+  normalised_power_profiles <- filter(normalised_power_profiles, ts <= fully_connected_time | is.na(fully_connected_time))
+
+  normalised_power_profiles <- mutate(normalised_power_profiles, resource_limited_interval = 
+                                        ifelse(is.na(resource_limited_interval), 
+                                               fully_connected_time, 
+                                               resource_limited_interval))
+  normalised_power_profiles <- filter(normalised_power_profiles, ts <= resource_limited_interval | is.na(fully_connected_time))
+
+  normalised_power_profiles <- mutate(normalised_power_profiles, ramp_above_threshold = 
+                                        ifelse(ramp_rate > ramp_rate_threshold, 
+                                               ramp_rate * (d / 60), 0.0))
+  
   max_ramp_rates <- group_by(normalised_power_profiles, c_id)
   total_ramp_above_threshold <- as.data.frame(
     summarise(max_ramp_rates, ramp_above_threshold = sum(ramp_above_threshold, na.rm = TRUE))
