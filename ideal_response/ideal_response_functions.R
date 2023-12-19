@@ -96,6 +96,35 @@ down_sample_1s <- function(ideal_response_1_s, duration, offset) {
     group_by(time_group) %>%
     summarise(f = last(f), norm_power = mean(norm_power)) %>%
     as.data.frame()
+}
+
+down_sample_1s <- function(ideal_response_1_s, duration, offset){
+  if (duration != 1) {
+
+  ideal_response_1_s <- thicken(ideal_response_1_s, paste(duration,'s'), colname='time_group', rounding='up',
+                                start_val=offset - as.numeric(duration))
+  ideal_response_1_s <- thicken(ideal_response_1_s, paste(duration,'s'), colname='time_group2', rounding='down', 
+                                by='ts', start_val=offset - as.numeric(duration))
+  ideal_response_1_s[ideal_response_1_s$ts==ideal_response_1_s$time_group2,]$time_group <- 
+    ideal_response_1_s[ideal_response_1_s$ts==ideal_response_1_s$time_group2,]$time_group2
+  ideal_response_1_s <- filter(
+    ideal_response_1_s, 
+    ts<=max(ideal_response_1_s[ideal_response_1_s$ts==ideal_response_1_s$time_group2,]$time_group2))
+  ideal_response_1_s <- filter(
+    ideal_response_1_s, 
+    ts>=min(ideal_response_1_s[ideal_response_1_s$ts==(ideal_response_1_s$time_group2+1),]$ts))
+  ideal_response_downsampled <- group_by(ideal_response_1_s, time_group)
+  ideal_response_downsampled <- summarise(ideal_response_downsampled, f=last(f), norm_power=mean(norm_power))
+  ideal_response_downsampled <- data.frame(ideal_response_downsampled)
+
+  
+  } else if (duration == 1) { 
+  ideal_response_downsampled <- ideal_response_1_s
+  colnames(ideal_response_downsampled)[1] <- "time_group" 
+  
+  }
+  
+
   return(ideal_response_downsampled)
 }
 
@@ -174,6 +203,7 @@ calc_error_metric_and_compliance_2 <- function(combined_data,
   # First pass compliance
   ideal_response_downsampled_f <- filter(ideal_response_downsampled, time_group >= start_buffer_t)
   ideal_response_downsampled_f <- filter(ideal_response_downsampled_f, time_group <= end_buffer)
+
   error_by_c_id <- combined_data %>%
     inner_join(ideal_response_downsampled_f, by = c("ts" = "time_group")) %>%
     mutate(error = (1 - c_id_norm_power) - ((1 - norm_power) * threshold)) %>%
@@ -184,6 +214,20 @@ calc_error_metric_and_compliance_2 <- function(combined_data,
   combined_data <- left_join(combined_data, error_by_c_id, by = c("c_id", "clean"))
 
   # Change 'Non compliant' to 'Non Compliant Responding' where compliant at start
+
+  error_by_c_id <- inner_join(combined_data, ideal_response_downsampled_f, by=c("ts"="time_group"))
+  error_by_c_id <- mutate(error_by_c_id, error=(1 - c_id_norm_power) - ((1 - norm_power) * threshold))
+  error_by_c_id <- group_by(error_by_c_id, c_id, clean)
+  error_by_c_id <- summarise(error_by_c_id, min_error=min(error))
+  error_by_c_id <- mutate(error_by_c_id, compliance_status=ifelse(min_error>=0.0, 'Compliant', 'Non-compliant'))
+  error_by_c_id <- select(error_by_c_id, c_id, compliance_status, clean)
+  combined_data <- left_join(combined_data, error_by_c_id, by=c("c_id","clean"))
+  
+
+  # Change 'Non compliant' to 'Non Compliant Responding' where complaint at start
+
+  
+
   ideal_response_downsampled_f <- filter(ideal_response_downsampled, time_group <= end_buffer_responding)
   error_by_c_id <- combined_data %>%
     inner_join(ideal_response_downsampled_f, by = c("ts" = "time_group")) %>%
