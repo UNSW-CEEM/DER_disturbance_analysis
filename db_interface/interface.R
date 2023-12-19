@@ -826,7 +826,7 @@ DBInterface <- R6::R6Class(
     flag_duration_for_updating_if_value_non_standard_and_calced_interval_is_5s = function(time_series) {
       time_series <- dplyr::mutate(
         time_series,
-        d_change = ifelse((!d %in% c(5, 30, 60) & (interval == 5)), TRUE, FALSE)
+        d_change = ifelse((!d %in% c(1, 5, 30, 60) & (interval == 5)), TRUE, FALSE)
       )
       return(time_series)
     },
