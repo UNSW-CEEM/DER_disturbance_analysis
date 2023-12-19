@@ -205,6 +205,7 @@ ui <- fluidPage(
           div(style = "display:inline-block", uiOutput("get_next_c_id")))
       )
     ),
+<<<<<<< Updated upstream
 
     tabPanel(
       "Settings",
@@ -356,6 +357,83 @@ ui <- fluidPage(
     ),
     tabPanel("Assumptions and Methodology", fluid = TRUE, documentation_panel())
   )
+=======
+    tabPanel("Settings", fluid=TRUE, 
+             sidebarLayout(
+               sidebarPanel(id="side_panel",
+                            h3("Droop response compliance settings"),
+                            numericInput("compliance_threshold", 
+                                         label = strong('Compliance threshold'), 
+                                         value = 0.5, max=1, min=0),
+                            numericInput("start_buffer", 
+                                         label = strong('Start buffer, allowed time to reach compliance threshold, in seconds.'), 
+                                         value = 60),
+                            numericInput("end_buffer", 
+                                         label = strong('End buffer, allowed time for system ending response early, in seconds.'), 
+                                         value = 60),
+                            numericInput("end_buffer_responding", 
+                                         label = strong('Response time, window length for systems to be considered Non Compliant Responding, in seconds.'), 
+                                         value = 120),
+                            h3("Over-frequency droop response compliance settings AS4777.2:2020"),
+                            numericInput("compliance_threshold_2020", 
+                                         label = strong('Compliance threshold'), 
+                                         value = 0.5, max=1, min=0),
+                            numericInput("start_buffer_2020", 
+                                         label = strong('Start buffer, allowed time to reach compliance threshold, in seconds.'), 
+                                         value = 10),
+                            numericInput("end_buffer_2020", 
+                                         label = strong('End buffer, allowed time for system ending response early, in seconds. 
+                                                        Note, AS4777.2:2020 ideal response profile is calculated separately to the 2015 response profile.'), 
+                                         value = 0),
+                            numericInput("end_buffer_responding_2020", 
+                                         label = strong('Response time, window length for systems to be considered Non Compliant Responding, in seconds.'), 
+                                         value = 120),
+                            h3("Reconnection compliance settings"),
+                            numericInput("reconnection_threshold", 
+                                         label = strong('The level at which a circuit is considered to have reconnected.'), 
+                                         value = 0.95, max = 1, min = 0),
+                            numericInput("ramp_rate_threshold", 
+                                         label = strong('Reconnection ramp rate threshold for assessing compliance, in pct/min.'), value = 0.333),
+                            numericInput("total_ramp_threshold_for_compliance", 
+                                         label = strong('Total ramp threshold for compliance, in pct'), value = 0.125),
+                            numericInput("total_ramp_threshold_for_non_compliance", 
+                                         label = strong('Toatl ramp threshold for non compliance, in pct'), value = 0.25),
+                            numericInput("ramp_rate_change_resource_limit_threshold", 
+                                         label = strong('Ramp rate change threshold for detecting resource limitation, in pct/min'), value = -0.1),
+                            h3("UFLS settings"),
+                            numericInput("pre_event_ufls_window_length", 
+                                         label = strong('Pre-event UFLS Window: The time window before the 
+                                                         event used to determine if the connection with a 
+                                                         device is stable enough to determine its UFLS status, 
+                                                         in minutes.'), 
+                                         value = 5),
+                            numericInput("pre_event_ufls_stability_threshold", 
+                                         label = strong('The fraction of the Pre-event UFLS Window that needs to be 
+                                                         sampled for the connection with a device to be considered
+                                                         stable enough to determine its UFLS status.'), 
+                                         value = 0.6, max = 1, min = 0),
+                            h3("Misc settings"),
+                            numericInput("disconnecting_threshold", 
+                                         label = strong('Disconnecting threshold, level below which circuit is considered to
+                                                      have disconnected. Note that this value is used in the compliance
+                                                        calculations but NOT the response categorisation.'),
+                                         value = 0.05, max = 1, min = 0),
+                            numericInput("NED_threshold", 
+                                         label = strong('Minimum proportion of sampled seconds allowed within post event interval to not have a 6 Not enough data response'), 
+                                         value = 0.8, max = 1, min = 0),
+                            materialSwitch("exclude_solar_edge", label = strong("Exclude solar edge from reconnection summary."), 
+                                           status = "primary", value = FALSE),
+                            materialSwitch("exclude_islanded_circuits", label = strong("Exclude islanded circuits from figures and results"),
+                                           status = "primary", value = FALSE),
+                            actionButton("load_backend_settings", "Load from settings file")
+                            ),
+               mainPanel()
+               )
+             ),
+    tabPanel("Assumptions and Methodology", fluid=TRUE, documentation_panel())
+  ),
+  useShinyalert()
+>>>>>>> Stashed changes
 )
 
 reset_sidebar <- function(input, output, session, stringsAsFactors) {
@@ -430,12 +508,18 @@ reset_data_cleaning_tab <- function(input, output, session, stringsAsFactors) {
 
 server <- function(input,output,session) {
   # Create radio button dyamically so label can be updated
+<<<<<<< Updated upstream
   output$duration <- renderUI({
     radioButtons("duration", label = strong("Sampled duration (seconds), select one."),
     choices = list("5", "30", "60"),
     selected = "60",
     inline = TRUE)
   })
+=======
+  output$duration <- renderUI({radioButtons("duration", label=strong("Sampled duration (seconds), select one."), 
+                                            choices = list("1","5","30","60"), 
+                                            selected = "60", inline = TRUE)})
+>>>>>>> Stashed changes
   # Hide these inputs by default, they are shown once data is loaded.
   hide("frequency_data")
   hide("choose_frequency_data")
