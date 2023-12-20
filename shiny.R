@@ -432,7 +432,7 @@ server <- function(input,output,session) {
   # Create radio button dyamically so label can be updated
   output$duration <- renderUI({
     radioButtons("duration", label = strong("Sampled duration (seconds), select one."),
-    choices = list("5", "30", "60"),
+    choices = list("1","5", "30", "60"),
     selected = "60",
     inline = TRUE)
   })
