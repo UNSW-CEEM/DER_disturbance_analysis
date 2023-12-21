@@ -60,7 +60,7 @@ create_reconnection_summary <- function(combined_data_f,
 
   reconnection_data <- inner_join(post_event_response, ramp_rates, by = c("c_id", "ts"))
   reconnection_data <- left_join(reconnection_data, resource_limited_intervals, by = c("c_id"))
-  reconnection_data <- left_join(reconnection_data, select(combined_data_f, c_id, ts, d), by = c("c_id", "ts"))
+  # reconnection_data <- left_join(reconnection_data, select(combined_data_f, c_id, ts, d), by = c("c_id", "ts"))
 
   max_ramp_rates <- calculate_total_ramp_while_exceeding_ramp_rate_compliance_threshold(
     reconnection_data,
