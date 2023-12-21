@@ -73,7 +73,7 @@ norm_p_over_frequency <- function(f, f_ulco, f_upper) {
 
 down_sample_1s <- function(ideal_response_1_s, duration, offset) {
   if (duration != 1) {   # down-sampling is ignored for 1s data
-  ideal_response_1_s <- thicken(
+    ideal_response_1_s <- thicken(
     ideal_response_1_s,
     paste(duration, "s"),
     colname = "time_group",
@@ -99,8 +99,8 @@ down_sample_1s <- function(ideal_response_1_s, duration, offset) {
     as.data.frame()
   
   } else if (duration == 1) {
-    ideal_response_downsampled <- ideal_response_1_s
-    colnames(ideal_response_downsampled)[1] <- "time_group"  # only column name is changed from the ideal response (for 1s data analysis)
+      ideal_response_downsampled <- ideal_response_1_s
+      colnames(ideal_response_downsampled)[1] <- "time_group"  # only column name is changed from the ideal response (for 1s data analysis)
   }
     
   return(ideal_response_downsampled)
