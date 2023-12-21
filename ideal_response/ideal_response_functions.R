@@ -100,7 +100,7 @@ down_sample_1s <- function(ideal_response_1_s, duration, offset) {
   
   } else if (duration == 1) {
     ideal_response_downsampled <- ideal_response_1_s
-    colnames(ideal_response_downsampled)[1] <- "time_group"  # only column name is changes from the ideal response (for 1s data analysis)
+    colnames(ideal_response_downsampled)[1] <- "time_group"  # only column name is changed from the ideal response (for 1s data analysis)
   }
     
   return(ideal_response_downsampled)
