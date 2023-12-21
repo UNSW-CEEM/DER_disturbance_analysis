@@ -140,6 +140,11 @@ documentation_panel <- function() {
         "Categorised as NA if the circuit does not disconnect/drop to zero during the user specified event window."
       )
     ),
+    h4("Minor discrepancies in the definition of 'Reconnection compliance status' "),
+    div(
+      "Minor discrepancies were observed in the algorithm used for the definition of 'Reconnection compliance status'.
+       Refining the algorithm is anticipated to alleviate these discrepancies."
+    ),
     h3("Further methodology notes on a chart basis"),
     h4("Aggregate power chart"),
     div(
