@@ -9,6 +9,34 @@ create_reconnection_summary <- function(combined_data_f,
   post_event_response <- select(combined_data_f, ts, c_id, c_id_daily_norm_power, pre_event_norm_power)
   post_event_response <- filter(post_event_response, ts > pre_event_interval)
 
+  post_event_response <- post_event_response[order(post_event_response$c_id,post_event_response$ts),]
+  
+  # downsample to 5s during 1s data analysis
+  calculate_downsample <- function(post_event_response) {
+    time_intervals <- seq(min(post_event_response$ts), max(post_event_response$ts), by = 5)
+    avg_power <- sapply(time_intervals, function(interval) {
+      mean(post_event_response$c_id_daily_norm_power[post_event_response$ts >= interval & post_event_response$ts < interval + 5], na.rm = TRUE)
+    })
+    
+    post_event_response_5S <- data.frame(
+      c_id = unique(post_event_response$c_id)[1],
+      ts = time_intervals,
+      c_id_daily_norm_power = avg_power,
+      pre_event_norm_power = unique(post_event_response$pre_event_norm_power)[1]
+    )
+    return(post_event_response_5S)
+  }
+  
+  post_event_response_5S_ds <- post_event_response %>%
+    group_by(c_id) %>%
+    do(calculate_downsample(.)) %>%
+    ungroup()
+  
+  post_event_response_5S_ds$c_id_daily_norm_power[is.nan(post_event_response_5S_ds$c_id_daily_norm_power)] <- NA
+  post_event_response <- post_event_response_5S_ds
+  post_event_response$d<- 5
+  # end of downsampling and processing data for 1s
+  
   reconnection_times <- calculate_reconnection_times(
     post_event_response,
     event_time = pre_event_interval,
@@ -16,7 +44,8 @@ create_reconnection_summary <- function(combined_data_f,
     reconnect_threshold = reconnect_threshold
   )
 
-  ramp_rates <- calculate_ramp_rates(combined_data_f)
+  # ramp_rates <- calculate_ramp_rates(combined_data_f)
+  ramp_rates <- calculate_ramp_rates(post_event_response)
   reconnection_start_times <- find_last_disconnected_intervals(
     post_event_response,
     disconnect_threshold = disconnecting_threshold
