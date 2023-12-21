@@ -331,7 +331,7 @@ documentation_panel <- function() {
       are ordered randomly but with a consistent seed value, so the order will remain consistent."
     ),
     h4("Ideal Reponse Curve"),
-    div("'Ideal Response Curve (Ideal reconnection profile)' illustrates changes over dutation. Potential modifications
+    div("'Ideal Response Curve (Ideal reconnection profile)' illustrates changes over duration. Potential modifications
     to the code is necessary to align the 'Ideal Response Curve' with the 'reconnection power profile'."
         )
   )
