@@ -505,6 +505,7 @@ run_analysis <- function(data, settings) {
       event_window_data <- filter(combined_data_f, ts > settings$pre_event_interval - d)
       reconnection_categories <- create_reconnection_summary(
         event_window_data,
+        settings$duration,
         settings$pre_event_interval,
         settings$disconnecting_threshold,
         reconnect_threshold = settings$reconnection_threshold,
