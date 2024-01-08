@@ -411,25 +411,45 @@ DBInterface <- R6::R6Class(
         s_postcode = "_s_postcode",
         pv_install_date = "_pv_installation_year_month"
       )
-
-      query <- "REPLACE INTO site_details_raw
-        SELECT cast(_site_id AS integer) AS site_id, cast(_s_postcode AS integer) AS s_postcode, _s_state AS s_state,
-        _ac / 1000 AS ac, _dc AS dc, _manufacturer AS manufacturer, _model AS model,
-        _pv_installation_year_month AS pv_installation_year_month FROM site_details"
-
-      for (name in column_names) {
-        if (name %in% names(column_aliases)) {
+      
+      column_aliases_old <- list(
+        site_id = "_site_id",
+        s_state = "_s_state",
+        ac = "_ac",
+        dc = "_dc",
+        manufacturer = "_manufacturer",
+        model = "_model",
+        s_postcode = "_s_postcode",
+        pv_installation_year_month = "_pv_installation_year_month"
+      )
+      
+      if (all(column_names %in% names(column_aliases))) {
+        query <- "REPLACE INTO site_details_raw
+          SELECT cast(_site_id AS integer) AS site_id, cast(_s_postcode AS integer) AS s_postcode, _s_state AS s_state,
+          _ac / 1000 AS ac, _dc AS dc, _manufacturer AS manufacturer, _model AS model,
+          _pv_installation_year_month AS pv_installation_year_month FROM site_details"
+        
+        for (name in column_names) {
           query <- gsub(column_aliases[[name]], name, query)
-        } else {
-          stop(
-            paste0(
-              "The provided site details file should have the columns site_id, s_postcode, s_state, ac_cap_w, dc_cap_w,
-               inverter_manufacturer, inverter_model and pv_install_date. The ac and dc columns should both be in W.
-               Please check this file and try again. Currently cannot find ",
-              name
-            )
-          )
         }
+      } else if (all(column_names %in% names(column_aliases_old))) {
+        query <- "REPLACE INTO site_details_raw
+          SELECT cast(_site_id AS integer) AS site_id, cast(_s_postcode AS integer) AS s_postcode, _s_state AS s_state,
+          _ac AS ac, _dc AS dc, _manufacturer AS manufacturer, _model AS model,
+          _pv_installation_year_month AS pv_installation_year_month FROM site_details"
+        
+        for (name in column_names) {
+          query <- gsub(column_aliases_old[[name]], name, query)
+        }
+      } else {
+        stop(
+          paste0(
+            "The provided site details file should have the columns site_id, s_postcode, s_state, ac_cap_w, dc_cap_w,
+             inverter_manufacturer, inverter_model and pv_install_date. The ac and dc columns should both be in W.
+             Please check this file and try again. Currently cannot find ",
+            paste0(column_names[!column_names %in% names(column_aliases)], collapse = ", ")
+          )
+        )
       }
       return(query)
     },
