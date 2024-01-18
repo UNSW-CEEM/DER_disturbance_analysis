@@ -230,6 +230,12 @@ documentation_panel <- function() {
       Cleaned data is dispalyed if available else raw data is used. Be aware that the density of dots does not
       represent the density of pv systems, rather it represents the density of postcodes."
     ),
+    div(
+      "The chart is also available as a KML file, which can be imported into mapping programs (such as Google Earth)>
+      A copy of power lines data can be found here
+      (https://digital.atlas.gov.au/datasets/digitalatlas::electricity-transmission-lines/about).
+      To add voltage labels, follow the instructions in out_of_tool_processing/create_voltage_kml.R"
+    ),
     h4("Circuit count table"),
     div(
       "This table shows the number of circuits in each combination of the user specified grouping variables. Note for
