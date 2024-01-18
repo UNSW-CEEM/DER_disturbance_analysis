@@ -15,7 +15,6 @@ export_kml <- function(map_data,
                        zone_three_radius,
                        scaling = TRUE) {
   # TODO: Add in UFLS detection?
-  # TODO: Add in voltages manually as an RScript, with the correct colours. Outline voltage text (in black or white).
 
   # Each KML file has to open with the following header.
   # Document tag is needed because there can only be one parent element.
