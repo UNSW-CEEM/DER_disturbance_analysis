@@ -231,8 +231,8 @@ documentation_panel <- function() {
       represent the density of pv systems, rather it represents the density of postcodes."
     ),
     div(
-      "The chart is also available as a KML file, which can be imported into mapping programs (such as Google Earth)>
-      A copy of power lines data can be found here
+      "The chart is also available as a KML file, which can be imported into mapping programs (such as Google Earth).
+      A copy of the power lines data can be found here
       (https://digital.atlas.gov.au/datasets/digitalatlas::electricity-transmission-lines/about).
       To add voltage labels, follow the instructions in out_of_tool_processing/create_voltage_kml.R"
     ),
