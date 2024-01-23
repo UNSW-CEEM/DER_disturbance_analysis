@@ -163,9 +163,9 @@ ui <- fluidPage(
           plotlyOutput(outputId = "distance_response"),
           uiOutput(outputId = "save_distance_response"),
           plotlyOutput(outputId = "ZoneCount"),
-          uiOutput(outputId = "save_circuit_kml"),
           uiOutput("save_zone_count"),
           plotlyOutput(outputId = "map"),
+          uiOutput(outputId = "save_circuit_kml"),
           HTML("<br><br>"),
           dataTableOutput("sample_count_table"),
           HTML("<br><br>"),
@@ -421,8 +421,8 @@ reset_chart_area <- function(output) {
   output$Voltage <- renderPlotly({})
   output$distance_response <- renderPlotly({})
   output$save_distance_response <- renderUI({})
-  output$save_circuit_kml <- renderUI({})
   output$map <- renderPlotly({})
+  output$save_circuit_kml <- renderUI({})
 }
 
 reset_data_cleaning_tab <- function(input, output, session, stringsAsFactors) {
@@ -1240,7 +1240,7 @@ server <- function(input, output, session) {
             )
         })
         output$save_response_count <- renderUI({
-          shinySaveButton("save_response_count", "Save data", "Save file as ...", filetype = list(xlsx = "csv"))
+          shinySaveButton("save_response_count", "Save response count data", "Save file as ...", filetype = list(xlsx = "csv"))
         })
 
         output$ZoneCount <- renderPlotly({
@@ -1258,7 +1258,7 @@ server <- function(input, output, session) {
             )
         })
         output$save_zone_count <- renderUI({
-          shinySaveButton("save_zone_count", "Save data", "Save file as ...", filetype = list(xlsx = "csv"))
+          shinySaveButton("save_zone_count", "Save zone response data", "Save file as ...", filetype = list(xlsx = "csv"))
         })
         if (dim(v$frequency_data)[1] > 0) {
           output$Frequency <- renderPlotly({
@@ -1292,7 +1292,7 @@ server <- function(input, output, session) {
             )
         })
         output$save_distance_response <- renderUI({
-          shinySaveButton("save_distance_response", "Save data", "Save file as ...", filetype = list(xlsx = "csv"))
+          shinySaveButton("save_distance_response", "Save cumulative distance response data", "Save file as ...", filetype = list(xlsx = "csv"))
         })
         z1 <- data.frame(
           circle.polygon(
@@ -1378,7 +1378,7 @@ server <- function(input, output, session) {
             )
           })
         output$save_circuit_kml <- renderUI({
-          shinySaveButton("save_circuit_kml", "Save KML", "Save file as ...", filetype = list(kml = "kml"))
+          shinySaveButton("save_circuit_kml", "Save map overlay for Google Earth", "Save file as ...", filetype = list(kml = "kml"))
         })
 
         output$compliance_cleaned_or_raw <- renderUI({
