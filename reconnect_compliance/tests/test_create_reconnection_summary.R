@@ -8,7 +8,7 @@ load_test_df <- function(text) {
   return(df)
 }
 
-testthat::test_that("Categorising a circuit with 5s data, and just a breif ramp rate violation works.", {
+testthat::test_that("Categorising a circuit with 5s data, and just a brief ramp rate violation works.", {
   event_time <- as.POSIXct("2018-01-01 00:01:00", tz = "Australia/Brisbane")
 
   ramp_rates <- "                       ts, c_id, d, response_category, c_id_daily_norm_power, pre_event_norm_power
@@ -34,6 +34,7 @@ testthat::test_that("Categorising a circuit with 5s data, and just a breif ramp 
 
   calculated_results <- create_reconnection_summary(
     ramp_rates,
+    duration = 5,
     event_time,
     disconnecting_threshold = 0.05,
     reconnect_threshold = 0.95,
@@ -71,6 +72,7 @@ testthat::test_that("Categorising a circuit with 5s data, sustained ramp rate vi
 
   calculated_results <- create_reconnection_summary(
     ramp_rates,
+    duration = 5,
     event_time,
     disconnecting_threshold = 0.05,
     reconnect_threshold = 0.95,
@@ -108,6 +110,7 @@ testthat::test_that("Categorising a circuit with 60s data, no ramp rate violatio
 
   calculated_results <- create_reconnection_summary(
     ramp_rates,
+    duration = 60,
     event_time,
     disconnecting_threshold = 0.05,
     reconnect_threshold = 0.95,
@@ -145,6 +148,7 @@ testthat::test_that("Categorising a circuit with 5s data, sustained ramp rate vi
 
   calculated_results <- create_reconnection_summary(
     ramp_rates,
+    duration = 60,
     event_time,
     disconnecting_threshold = 0.05,
     reconnect_threshold = 0.95,

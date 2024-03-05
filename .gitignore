@@ -98,3 +98,5 @@ access_database.R
 inbuilt_data/manufacturer_mapping_*
 *.log
 DERdat_results/*
+*.csv
+db_interface/example_build_db.R
