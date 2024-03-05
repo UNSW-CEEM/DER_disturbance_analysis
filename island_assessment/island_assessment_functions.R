@@ -63,10 +63,10 @@ assess_islands <- function(event_window_data) {
       group_by(c_id, clean) %>%
       summarise(
         response_category = first(response_category),
-        max_f = max(fmax,na.rm=TRUE),
-        min_f = min(fmin,na.rm=TRUE),
-        max_v = (max(vmax,na.rm=TRUE) - 240) / 240,
-        min_v = (240 - min(vmin,na.rm=TRUE)) / 240
+        max_f = max(fmax, na.rm = TRUE),
+        min_f = min(fmin, na.rm = TRUE),
+        max_v = (max(vmax, na.rm = TRUE) - 240) / 240,
+        min_v = (240 - min(vmin, na.rm = TRUE)) / 240
       ) %>%
       mutate(island_assessment = ifelse(max_f > 53, "Gateway curtailed", "Undefined")) %>%
       mutate(

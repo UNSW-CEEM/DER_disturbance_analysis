@@ -38,6 +38,6 @@ ufls_detection_voltage <- function(combined_data,
 calc_average_voltage_per_circuit <- function(ts_data) {
   ts_data <- group_by(ts_data, c_id)
   ts_data <- mutate(ts_data, v = as.numeric(v))
-  ts_data <- data.frame(summarise(ts_data, v_mean = mean(v, na.rm=TRUE)))
+  ts_data <- data.frame(summarise(ts_data, v_mean = mean(v, na.rm = TRUE)))
   return(ts_data)
 }
