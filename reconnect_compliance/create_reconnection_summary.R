@@ -14,10 +14,10 @@ create_reconnection_summary <- function(combined_data_f,
   
   # downsample to 5s only during 1s data analysis
     if (duration == 1) {
-    post_event_response_5s_ds <- downsample_for_reconnection(post_event_response)
-    post_event_response_5s_ds$c_id_daily_norm_power[is.nan(post_event_response_5s_ds$c_id_daily_norm_power)] <- NA
-    post_event_response <- post_event_response_5s_ds
-    post_event_response$d <- 5
+      post_event_response_5s_ds <- downsample_for_reconnection(post_event_response)
+      post_event_response_5s_ds$c_id_daily_norm_power[is.nan(post_event_response_5s_ds$c_id_daily_norm_power)] <- NA
+      post_event_response <- post_event_response_5s_ds
+      post_event_response$d <- 5
     } else {
       post_event_response <- post_event_response
     }
