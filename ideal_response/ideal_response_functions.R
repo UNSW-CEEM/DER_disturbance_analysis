@@ -74,20 +74,20 @@ norm_p_over_frequency <- function(f, f_ulco, f_upper) {
 down_sample_1s <- function(ideal_response_1_s, duration, offset) {
   if (duration != 1) {   # down-sampling is ignored for 1s data
     ideal_response_1_s <- thicken(
-    ideal_response_1_s,
-    paste(duration, "s"),
-    colname = "time_group",
-    rounding = "up",
-    start_val = offset - as.numeric(duration)
-  )
-  ideal_response_1_s <- thicken(
-    ideal_response_1_s,
-    paste(duration, "s"),
-    colname = "time_group2",
-    rounding = "down",
-    by = "ts",
-    start_val = offset - as.numeric(duration)
-  )
+      ideal_response_1_s,
+      paste(duration, "s"),
+      colname = "time_group",
+      rounding = "up",
+      start_val = offset - as.numeric(duration)
+    )
+    ideal_response_1_s <- thicken(
+      ideal_response_1_s,
+      paste(duration, "s"),
+      colname = "time_group2",
+      rounding = "down",
+      by = "ts",
+      start_val = offset - as.numeric(duration)
+    )
   ideal_response_1_s[ideal_response_1_s$ts == ideal_response_1_s$time_group2,]$time_group <-
     ideal_response_1_s[ideal_response_1_s$ts == ideal_response_1_s$time_group2,]$time_group2
   ideal_response_1_s <- ideal_response_1_s %>%
