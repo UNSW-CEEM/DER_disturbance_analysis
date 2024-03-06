@@ -142,14 +142,19 @@ documentation_panel <- function() {
     ),
     h4("Minor discrepancies in the definition of 'Reconnection compliance status' "),
     div(
-      "Minor discrepancies were observed in the algorithm used for the definition of 'Reconnection compliance status'.
-       Refining the algorithm is anticipated to alleviate these discrepancies."
+      'Minor discrepancies were identified in the algorithm for Reconnection_compliance_status.
+      The determination of Reconnection_compliance_status relies on on the variable Resource_limited_interval. 
+      The calculation of the Resource_limited_interval shows discrepancies for high resolution data (Ex: 1s duration).
+      Significant and abrupt alterations in ramp_rate_change are observed particularly when the resolution is higher 
+      which lead to inaccurate detection of the Resource_limited_interval.
+      As a temporary measure, the data with 1s duration is downsampled to 5s so that the existing algorithm can still be applied. 
+      However, there is a need to refine the algorithm to make it compatible with data of varying resolutions.'
     ),
     h3("Further methodology notes on a chart basis"),
     h4("Aggregate power chart"),
     div(
       'By default, this chart shows the aggregate power on a basis determined by the grouping variables chosen by the
-      user. If no grouping variables are chosen, the data is grouped on a cleaned/raw basis. If the additional
+      user. If no grouping variables are chosen, the data is grouped on a cleaned/raw basis. If the additional    
       processing of "Upscaling" is selected, then the aggregate power is upscaled to estimate the output of the
       population of systems. Note upscaling is only possible with grouping variable "AS4777". The upscaling methodology
       is as follows:'
