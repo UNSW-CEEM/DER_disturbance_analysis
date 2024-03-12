@@ -164,6 +164,8 @@ ui <- fluidPage(
           uiOutput(outputId = "save_distance_response"),
           plotlyOutput(outputId = "ZoneCount"),
           uiOutput("save_zone_count"),
+          plotlyOutput(outputId = "DisconnectionPercentage"),
+          uiOutput("save_disconnection_percentage"),
           plotlyOutput(outputId = "map"),
           uiOutput(outputId = "save_circuit_kml"),
           HTML("<br><br>"),
@@ -421,6 +423,8 @@ reset_chart_area <- function(output) {
   output$Voltage <- renderPlotly({})
   output$distance_response <- renderPlotly({})
   output$save_distance_response <- renderUI({})
+  output$DisconnectionPercentage <- renderPlotly({})
+  output$save_disconnection_percentage <- renderUI({})
   output$map <- renderPlotly({})
   output$save_circuit_kml <- renderUI({})
 }
@@ -602,6 +606,7 @@ server <- function(input, output, session) {
     postcode_data = data.frame(),
     response_count = data.frame(),
     zone_count = data.frame(),
+    disconnection_percentage = data.frame(),
     distance_response = data.frame(),
     frequency_data = data.frame(),
     unique_offsets = c(),
@@ -1260,6 +1265,26 @@ server <- function(input, output, session) {
         output$save_zone_count <- renderUI({
           shinySaveButton("save_zone_count", "Save zone response data", "Save file as ...", filetype = list(xlsx = "csv"))
         })
+        
+        # # adding a plot for disconnection percentages for each zone
+        output$DisconnectionPercentage <- renderPlotly({
+        plot_ly(
+          v$disconnection_percentage,
+          x = ~zone,
+          y = ~Percentage,
+          color = ~Voltage_Category,
+          type = "bar"
+        ) %>%
+          layout(
+            yaxis = list(title = "Disconnection/Drop to Zero Percentage (%))"),
+            xaxis = list(title = "Zone categories"),
+            barmode = "stack"
+          )
+        })
+        output$save_disconnection_percentage <- renderUI({
+          shinySaveButton("save_disconnection_percentage", "Save data", "Save file as ...", filetype=list(xlsx="csv"))
+        })
+        
         if (dim(v$frequency_data)[1] > 0) {
           output$Frequency <- renderPlotly({
             plot_ly(v$agg_power, x = ~Time, y = ~Frequency, color = ~series, type = "scattergl") %>%
@@ -1845,6 +1870,16 @@ server <- function(input, output, session) {
     fileinfo <- parseSavePath(volumes, input$save_voltage_excursion_summary)
     if (nrow(fileinfo) > 0) {
       write.csv(v$antiislanding_summary, as.character(fileinfo$datapath), row.names = FALSE)
+    }
+  })
+  
+  # Save data on disconnection percentage
+  observeEvent(input$save_disconnection_percentage, {
+    volumes <- c(home = getwd())
+    shinyFileSave(input, "save_disconnection_percentage", roots = volumes, session = session)
+    fileinfo <- parseSavePath(volumes, input$save_disconnection_percentage)
+    if (nrow(fileinfo) > 0) {
+      write.csv(v$disconnection_percentage, as.character(fileinfo$datapath), row.names = FALSE)
     }
   })
 
