@@ -751,7 +751,7 @@ run_analysis <- function(data, settings) {
           )
           
           # Adding disconnection percentage to data 
-          data$disconnection_percentage <- calc_percentage_disconnect_or_droptozero_DPVs(data$circuit_summary, data$combined_data_f)
+          data$disconnection_percentage <- calc_percentage_disconnect_or_droptozero_DPVs(data$circuit_summary, data$combined_data_f, settings$duration)
         }
       }
     }
