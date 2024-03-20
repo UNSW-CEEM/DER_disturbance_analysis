@@ -7,6 +7,7 @@ calc_percentage_disconnect_or_droptozero_DPVs <- function(circuit_summary, combi
   
   circuit_counts_for_voltage <- find_rows_disconnected_or_droptozero %>%
     mutate(Voltage_Category = case_when(
+      is.na(vmin_min) ~ "No voltage data",
       vmin_min >= 180 & vmin_min < 200 ~ "180V \u2264 Vmin < 200V", 
       vmin_min >= 200 & vmin_min < 220 ~ "200V \u2264 Vmin < 220V",
       vmin_min >= 220 & vmin_min < 240 ~ "220V \u2264 Vmin < 240V",
@@ -20,7 +21,6 @@ calc_percentage_disconnect_or_droptozero_DPVs <- function(circuit_summary, combi
     ungroup()
   
   circuit_counts_for_voltage <- data.frame(circuit_counts_for_voltage)
-  circuit_counts_for_voltage <- circuit_counts_for_voltage[complete.cases(circuit_counts_for_voltage$Voltage_Category), ] # remove NAs
   
   total_disconnect_droptozero_counts_per_zone <- circuit_counts_for_voltage %>%
     group_by(zone) %>%
