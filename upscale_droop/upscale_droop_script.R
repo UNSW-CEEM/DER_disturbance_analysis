@@ -3,10 +3,6 @@
 # Make sure to highlight and run the two functions at the bottom of the script first before running! 
 
 source("load_tool_environment.R")
-source("preprocess_cer_data/calc_installed_capacity_by_standard_and_manufacturer.R")
-source("process_input_data/process_input_data_functions.R")
-source("upscale_disconnections/summarise_disconnections.R")
-source("confidence_intervals/clopper_pearson_binomial_confidence_interval.R")
 source("upscale_droop/upscale_droop_functions.R")
 
 event_date <- "2022-11-12"
@@ -16,8 +12,8 @@ external_capacity_factor <- 0.28
 
 
 underlying_data_file <- "C:/Users/mtrollip/Local/GitHub/DER_disturbance_analysis/data/2022-11-12/phoebe_results_longer_window/20221112_underlying_35min_window.csv"
-CER_install_data_file <- "C:/Users/mtrollip/Local/GitHub/DER_disturbance_analysis/inbuilt_data/cer_cumulative_capacity_and_number.csv"
-CER_install_manufacturer_data_file <- "C:/Users/mtrollip/Local/GitHub/DER_disturbance_analysis/inbuilt_data/cer_cumulative_capacity_and_number_by_manufacturer.csv"
+CER_install_data_file <- "inbuilt_data/cer_cumulative_capacity_and_number.csv"
+CER_install_manufacturer_data_file <- "inbuilt_data/cer_cumulative_capacity_and_number_by_manufacturer.csv"
 
 # Where you want to store your outputted results
 output_directory <- "C:/Users/mtrollip/Local/GitHub/DER_disturbance_analysis/data/2022-11-12/phoebe_results_longer_window/droop_scale_response"
@@ -25,8 +21,7 @@ output_directory <- "C:/Users/mtrollip/Local/GitHub/DER_disturbance_analysis/dat
 ########################################### Read in Data ###################################
 
 # Underlying data 
-UD <- read.csv(file=underlying_data_file, header = TRUE, stringsAsFactors = FALSE)
-UD_raw <- UD
+UD_raw <- read.csv(file = underlying_data_file, header = TRUE, stringsAsFactors = FALSE)
 
 ########################################### Process Data ###################################
 
@@ -214,7 +209,3 @@ if(site_norm) {
     
     
 }
-
-
-
-
