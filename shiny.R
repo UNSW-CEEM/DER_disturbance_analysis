@@ -164,7 +164,7 @@ ui <- fluidPage(
           uiOutput(outputId = "save_distance_response"),
           plotlyOutput(outputId = "ZoneCount"),
           uiOutput("save_zone_count"),
-          plotlyOutput(outputId = "DisconnectionPercentage"),
+          plotlyOutput(outputId = "VoltageVisualization"),
           uiOutput("save_disconnection_percentage"),
           plotlyOutput(outputId = "map"),
           uiOutput(outputId = "save_circuit_kml"),
@@ -423,7 +423,7 @@ reset_chart_area <- function(output) {
   output$Voltage <- renderPlotly({})
   output$distance_response <- renderPlotly({})
   output$save_distance_response <- renderUI({})
-  output$DisconnectionPercentage <- renderPlotly({})
+  output$VoltageVisualization <- renderPlotly({})
   output$save_disconnection_percentage <- renderUI({})
   output$map <- renderPlotly({})
   output$save_circuit_kml <- renderUI({})
@@ -1267,7 +1267,7 @@ server <- function(input, output, session) {
         })
         
         # # adding a plot for disconnection percentages for each zone
-        output$DisconnectionPercentage <- renderPlotly({
+        output$VoltageVisualization <- renderPlotly({
         plot_ly(
           v$disconnection_percentage,
           x = ~zone,
