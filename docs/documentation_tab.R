@@ -140,6 +140,16 @@ documentation_panel <- function() {
         "Categorised as NA if the circuit does not disconnect/drop to zero during the user specified event window."
       )
     ),
+    h4("Minor discrepancies in the definition of 'Reconnection compliance status' "),
+    div(
+      'Minor discrepancies were identified in the algorithm for Reconnection_compliance_status.
+      The determination of Reconnection_compliance_status relies on on the variable Resource_limited_interval. 
+      The calculation of the Resource_limited_interval shows discrepancies for high resolution data (Ex: 1s duration).
+      Significant and abrupt alterations in ramp_rate_change are observed particularly when the resolution is higher 
+      which lead to inaccurate detection of the Resource_limited_interval.
+      As a temporary measure, the data with 1s duration is downsampled to 5s so that the existing algorithm can still be applied. 
+      However, there is a need to refine the algorithm to make it compatible with data of varying resolutions.'
+    ),
     h3("Further methodology notes on a chart basis"),
     h4("Aggregate power chart"),
     div(
@@ -330,7 +340,11 @@ documentation_panel <- function() {
       after updating plots on the main tab, in order to save the manually assigned categories to the manual_compliance
       column in the circuit summary dataset, the update plots step needs to be run again on the main tab. The circuits
       are ordered randomly but with a consistent seed value, so the order will remain consistent."
-    )
+    ),
+    h4("Ideal Reponse Curve"),
+    div("'Ideal Response Curve (Ideal reconnection profile)' illustrates changes over duration. Potential modifications
+    to the code is necessary to align the 'Ideal Response Curve' with the 'reconnection power profile'."
+        )
   )
   return(panel)
 }
