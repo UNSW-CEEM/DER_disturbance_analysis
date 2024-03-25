@@ -133,8 +133,8 @@ summarise_voltage_data <- function(combined_data) {
     filter(in_event_window) %>%
     group_by(c_id) %>%
     summarise(
-      vmax_max = max(ifelse(vmax_na, v, vmax), na.rm = TRUE),
-      vmin_min = min(ifelse(vmin_na, v, vmin), na.rm = TRUE),
+      vmax_max = max_with_missing(ifelse(vmax_na, v, vmax)),
+      vmin_min = min_with_missing(ifelse(vmin_na, v, vmin)),
       vmean_mean = mean(ifelse(vmean_na, v, vmean), na.rm = TRUE),
       vmin_na_all = all(vmin_na),
       vmax_na_all = all(vmax_na),
@@ -164,3 +164,7 @@ summarise_voltage_data <- function(combined_data) {
     )
   return(summarised_voltage_data)
 }
+
+max_with_missing <- function(x) ifelse(!all(is.na(x)), max(x, na.rm = TRUE), NA)
+
+min_with_missing <- function(x) ifelse(!all(is.na(x)), min(x, na.rm = TRUE), NA)
