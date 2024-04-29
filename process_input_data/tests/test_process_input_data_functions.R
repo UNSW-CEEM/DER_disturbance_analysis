@@ -227,9 +227,9 @@ test_that("Test the standard categorisation function", {
     "2016-10-09",
     "2017-10",
     "2020-10",
-    "2020-12-08",
     "2021-02",
-    "2022-01-14"
+    "2022-01-14",
+    "2023-09-12"
   )
   test_site_details <- data.frame(
     site_id,
@@ -253,22 +253,22 @@ test_that("Test the standard categorisation function", {
     ymd("2016-10-09"),
     ymd("2017-10-28"),
     ymd("2020-10-28"),
-    ymd("2020-12-08"),
     ymd("2021-02-28"),
-    ymd("2022-01-14")
+    ymd("2022-01-14"),
+    ymd("2023-09-12")
   )
   Standard_Version <- c(
-    "Transition",
-    "Transition",
     "AS4777.3:2005",
-    "Transition",
-    "Transition",
-    "Transition",
+    "AS4777.3:2005",
+    "AS4777.3:2005",
+    "AS4777.3:2005",
+    "AS4777.3:2005",
+    "AS4777.3:2005",
     "AS4777.2:2015",
-    "AS4777.2:2015 VDRT",
-    "Transition 2020-21",
-    "Transition 2020-21",
-    "AS4777.2:2020"
+    "AS4777.2:2015",
+    "AS4777.2:2015",
+    "AS4777.2:2015",
+    "AS4777.2:2020 (>=Apr'23)"
   )
   expected_answer <- data.frame(
     site_id,
@@ -308,7 +308,7 @@ test_that("Test assertion in install data processing functions triggers on incor
   expect_error(process_install_data(install_data))
 })
 
-test_that("Test assertion in install data processing functions triggers on unkown grouping cats", {
+test_that("Test assertion in install data processing functions triggers on unknown grouping cats", {
   index <- c("2015-09-01", "2017-01-02", "2017-01-03")
   State <- c("NSW", "NSW", "NSW")
   Grouping <- c("<30 kW", "<30 kW", "30-100 kW")
@@ -317,7 +317,7 @@ test_that("Test assertion in install data processing functions triggers on unkow
   expect_error(process_install_data(install_data))
 })
 
-test_that("Test assertion in install data processing functions triggers on non numeric capacity values", {
+test_that("Test assertion in install data processing functions triggers on non-numeric capacity values", {
   index <- c("2015-09-01", "2017-01-02", "2017-01-03")
   State <- c("NSW", "NSW", "NSW")
   Grouping <- c("<30 kW", "<30 kW", "30-100kW")
@@ -365,13 +365,13 @@ test_that("Test assertion in install data processing functions triggers on date 
 test_that("Install data processing works on simple case", {
   date <- c(
     "2015-09-01",
-    "2015-10-02",
+    "2023-10-02",
     "2017-01-01",
     "2015-09-01",
-    "2015-10-02",
+    "2023-10-02",
     "2017-01-01",
     "2015-09-01",
-    "2015-10-02",
+    "2023-10-02",
     "2017-01-01"
   )
   state <- c("NSW", "NSW", "NSW", "NSW", "NSW", "NSW", "SA", "SA", "SA")
@@ -380,13 +380,13 @@ test_that("Install data processing works on simple case", {
   install_data <- data.frame(date, state, sizegroup, capacity, stringsAsFactors = FALSE)
   date <- c(
     "2015-09-01",
-    "2015-10-02",
+    "2023-10-02",
     "2017-01-01",
     "2015-09-01",
-    "2015-10-02",
+    "2023-10-02",
     "2017-01-01",
     "2015-09-01",
-    "2015-10-02",
+    "2023-10-02",
     "2017-01-01"
   )
   s_state <- c("NSW", "NSW", "NSW", "NSW", "NSW", "NSW", "SA", "SA", "SA")
@@ -395,25 +395,25 @@ test_that("Install data processing works on simple case", {
   date <- ymd(
     c(
       "2015-09-01",
-      "2015-10-02",
+      "2023-10-02",
       "2017-01-01",
       "2015-09-01",
-      "2015-10-02",
+      "2023-10-02",
       "2017-01-01",
       "2015-09-01",
-      "2015-10-02",
+      "2023-10-02",
       "2017-01-01"
     )
   )
   Standard_Version <- c(
     "AS4777.3:2005",
-    "Transition",
+    "AS4777.2:2020 (>=Apr'23)",
     "AS4777.2:2015",
     "AS4777.3:2005",
-    "Transition",
+    "AS4777.2:2020 (>=Apr'23)",
     "AS4777.2:2015",
     "AS4777.3:2005",
-    "Transition",
+    "AS4777.2:2020 (>=Apr'23)",
     "AS4777.2:2015"
   )
   initial_cap <- c(0, 100, 150, 0, 50, 100, 0, 60, 70)
