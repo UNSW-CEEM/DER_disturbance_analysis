@@ -82,7 +82,7 @@ assert_raw_site_details_assumptions <- function(site_details) {
   )
   # Only one distinct s_state and s_postcode value for each site_id.
   site_details_grouped <- group_by(site_details, site_id) %>%
-    summarise(s_state = unique(s_state), s_postcode = unique(s_postcode))
+    reframe(s_state = unique(s_state), s_postcode = unique(s_postcode))
   assert_that(
     all(count(site_details_grouped, site_id, s_state)$n == 1),
     msg = "Some sites have mutiple distinct s_state values."
@@ -156,7 +156,7 @@ assert_install_data_assumptions <- function(install_data) {
   )
   # Assert that all capacity values can be converted to numeric without creating nas.
   assert_that(
-    all(!is.na(as.numeric(install_data$capacity))),
+    suppressWarnings(all(!is.na(as.numeric(install_data$capacity)))),
     msg = "Not all capacity values can convert to numeric in install data"
   )
   # Assert that State values are within expected set.
@@ -166,7 +166,7 @@ assert_install_data_assumptions <- function(install_data) {
   )
   # Assert that the first date in the install data is before the start of the transition period
   assert_that(
-    min(ymd(install_data$date))<ymd("2015-10-01"),
+    min(ymd(install_data$date)) < ymd("2015-10-01"),
     msg = "Install data first entry does not predate start of transition period"
   )
 }
@@ -186,12 +186,18 @@ process_postcode_data <- function(postcode_data) {
 
 assert_postcode_data_assumptions <- function(postcode_data) {
   # We assume that all values in the lat column can be safely converted to numeric type
-  assert_that(all(!is.na(as.numeric(postcode_data$lat))), msg = "Not all lat values could be interpreted as numbers")
+  assert_that(
+    suppressWarnings(all(!is.na(as.numeric(postcode_data$lat)))),
+    msg = "Not all lat values could be interpreted as numbers"
+  )
   # We assume that all values in the lon column can be safely converted to numeric type
-  assert_that(all(!is.na(as.numeric(postcode_data$lon))), msg = "Not all lat values could be interpreted as numbers")
+  assert_that(
+    suppressWarnings(all(!is.na(as.numeric(postcode_data$lon)))),
+    msg = "Not all lat values could be interpreted as numbers"
+  )
   # We assume that all values in the s_postcode column can be safely converted to numeric type
   assert_that(
-    all(!is.na(as.numeric(postcode_data$postcode))),
+    suppressWarnings(all(!is.na(as.numeric(postcode_data$postcode)))),
     msg = "Not all s_postcode values could be interpreted as numbers"
   )
 }

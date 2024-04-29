@@ -300,34 +300,34 @@ test_that("Power calculations are correct, example with different durations and 
 })
 
 test_that("Test assertion in install data processing functions triggers on incorrecttly formatted dates", {
-  index <- c("2015-09-01", "2017-01-02", "2017/01/03")
-  State <- c("NSW", "NSW", "NSW")
-  Grouping <- c("<30 kW", "<30 kW", "<30 kW")
-  Capacity <- c(100, 101, 102)
-  install_data <- data.frame(index, State, Grouping, Capacity, stringsAsFactors = FALSE)
+  date <- c("2015-09-01", "2017-01-02", "2017/01/03")
+  state <- c("NSW", "NSW", "NSW")
+  sizegroup <- c("<30 kW", "<30 kW", "<30 kW")
+  capacity <- c(100, 101, 102)
+  install_data <- data.frame(date, state, sizegroup, capacity, stringsAsFactors = FALSE)
   expect_error(process_install_data(install_data))
 })
 
 test_that("Test assertion in install data processing functions triggers on unknown grouping cats", {
-  index <- c("2015-09-01", "2017-01-02", "2017-01-03")
-  State <- c("NSW", "NSW", "NSW")
-  Grouping <- c("<30 kW", "<30 kW", "30-100 kW")
-  Capacity <- c(100, 101, 102)
-  install_data <- data.frame(index, State, Grouping, Capacity, stringsAsFactors = FALSE)
+  date <- c("2015-09-01", "2017-01-02", "2017-01-03")
+  state <- c("NSW", "NSW", "NSW")
+  sizegroup <- c("<30 kW", "<30 kW", "30-100 kW")
+  capacity <- c(100, 101, 102)
+  install_data <- data.frame(date, state, sizegroup, capacity, stringsAsFactors = FALSE)
   expect_error(process_install_data(install_data))
 })
 
 test_that("Test assertion in install data processing functions triggers on non-numeric capacity values", {
-  index <- c("2015-09-01", "2017-01-02", "2017-01-03")
-  State <- c("NSW", "NSW", "NSW")
-  Grouping <- c("<30 kW", "<30 kW", "30-100kW")
-  Capacity <- c(100, 101, "x")
-  install_data <- data.frame(index, State, Grouping, Capacity, stringsAsFactors = FALSE)
+  date <- c("2015-09-01", "2017-01-02", "2017-01-03")
+  state <- c("NSW", "NSW", "NSW")
+  sizegroup <- c("<30 kW", "<30 kW", "30-100kW")
+  capacity <- c(100, 101, "x")
+  install_data <- data.frame(date, state, sizegroup, capacity, stringsAsFactors = FALSE)
   expect_error(process_install_data(install_data))
 })
 
 test_that("Test assertion in install data processing functions triggers on unexpected state values", {
-  index <- c(
+  date <- c(
     "2015-09-01",
     "2017-01-01",
     "2017-01-01",
@@ -337,15 +337,15 @@ test_that("Test assertion in install data processing functions triggers on unexp
     "2017-01-01",
     "2017-01-01"
   )
-  State <- c("NSW", "VIC", "SA", "TAS", "QLD", "NT", "ACT", "x")
-  Grouping <- c("<30 kW", "<30 kW", "30-100kW", "<30 kW", "<30 kW", "30-100kW", "<30 kW", "<30 kW")
-  Capacity <- c(100, 101, 100, 100, 101, 100, 100, 101)
-  install_data <- data.frame(index, State, Grouping, Capacity, stringsAsFactors = FALSE)
+  state <- c("NSW", "VIC", "SA", "TAS", "QLD", "NT", "ACT", "x")
+  sizegroup <- c("<30 kW", "<30 kW", "30-100kW", "<30 kW", "<30 kW", "30-100kW", "<30 kW", "<30 kW")
+  capacity <- c(100, 101, 100, 100, 101, 100, 100, 101)
+  install_data <- data.frame(date, state, sizegroup, capacity, stringsAsFactors = FALSE)
   expect_error(process_install_data(install_data))
 })
 
 test_that("Test assertion in install data processing functions triggers on date with no preceding transition period", {
-  index <- c(
+  date <- c(
     "2015-10-01",
     "2017-01-01",
     "2017-01-01",
@@ -355,10 +355,10 @@ test_that("Test assertion in install data processing functions triggers on date 
     "2017-01-01",
     "2017-01-01"
   )
-  State <- c("NSW", "VIC", "SA", "TAS", "QLD", "NT", "ACT", "WA")
-  Grouping <- c("<30 kW", "<30 kW", "30-100kW", "<30 kW", "<30 kW", "30-100kW", "<30 kW", "<30 kW")
-  Capacity <- c(100, 101, 100, 100, 101, 100, 100, 101)
-  install_data <- data.frame(index, State, Grouping, Capacity, stringsAsFactors = FALSE)
+  state <- c("NSW", "VIC", "SA", "TAS", "QLD", "NT", "ACT", "WA")
+  sizegroup <- c("<30 kW", "<30 kW", "30-100kW", "<30 kW", "<30 kW", "30-100kW", "<30 kW", "<30 kW")
+  capacity <- c(100, 101, 100, 100, 101, 100, 100, 101)
+  install_data <- data.frame(date, state, sizegroup, capacity, stringsAsFactors = FALSE)
   expect_error(process_install_data(install_data))
 })
 
